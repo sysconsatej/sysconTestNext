@@ -1,0 +1,47 @@
+@page {
+  size: A4;
+  margin: 1mm 10mm 10mm 10mm;
+}
+
+.table-container {
+  width: 100%;
+  border: 1px solid black;
+}
+
+.table-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-container th,
+.table-container td {
+  border: 1px solid black;
+  padding: 4px; /* Adjusted padding for less space */
+  text-align: center; /* Ensuring text alignment for better readability */
+}
+
+.flex-container {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.flex-item {
+  width: 33.33%;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  border-right: 1px solid black;
+}
+
+.flex-item:last-child {
+  border-right: none;
+}
+
+.table-no-border th,
+.table-no-border td {
+  border: none;
+}
+
+.custom-font {
+  font-size: 9px !important;
+}

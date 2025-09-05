@@ -1,0 +1,76 @@
+.bgTheme {
+  background-color: var(--rp-bgColor, white);
+}
+
+.bgTheme h1,
+.bgTheme h2,
+.bgTheme h3,
+.bgTheme h4,
+.bgTheme h5,
+.bgTheme h6,
+.bgTheme div,
+.bgTheme p,
+.bgTheme span,
+.bgTheme input,
+.bgTheme th,
+.bgTheme td {
+  font-family: var(--rp-fontFamily), "Helvetica", "Arial", sans-serif !important;
+  color: var(--rp-textColor);
+  font-size: var(--rp-fontSize, 11px);
+}
+
+.bgTheme.removeFontSize h1,
+.bgTheme.removeFontSize h2,
+.bgTheme.removeFontSize h3,
+.bgTheme.removeFontSize h4,
+.bgTheme.removeFontSize h5,
+.bgTheme.removeFontSize h6,
+.bgTheme.removeFontSize div,
+.bgTheme.removeFontSize p,
+.bgTheme.removeFontSize span,
+.bgTheme.removeFontSize input,
+.bgTheme.removeFontSize th,
+.bgTheme.removeFontSize td {
+  font-size: unset;
+}
+
+.bgTheme h1 {
+  font-family: var(--rp-reportHeaderFontFamily) !important;
+  color: var(--rp-reportHeaderColor);
+  font-size: var(--rp-reportHeaderFontSize, 14px);
+}
+
+.bgTheme .headerTable table th {
+  background-color: var(--rp-tableBgColor, rgb(224, 224, 224));
+  color: var(--rp-tableTextColor);
+  font-size: var(--rp-tableTextFontSize, 12px);
+  font-family: var(--rp-tableTextFontFamily) !important;
+}
+
+.bgTheme .tableBg {
+  background-color: var(--rp-tableBgColor, rgb(224, 224, 224));
+  color: var(--rp-tableTextColor);
+  font-size: var(--rp-tableTextFontSize, 12px);
+  font-family: var(--rp-tableTextFontFamily) !important;
+}
+
+.bgTheme .tableBg th {
+  font-size: var(--rp-tableTextFontSize, 12px);
+  font-family: var(--rp-tableTextFontFamily) !important;
+  color: var(--rp-tableTextColor);
+}
+
+.mainPadding {
+  padding: 5mm;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .mainPadding {
+    padding: 0 !important;
+    margin: auto !important;
+  }
+}

@@ -1,0 +1,187 @@
+.sidebar {
+  margin-right: 10px !important;
+  width: 16% !important;
+  height: 90vh !important;
+  /* 60% of the viewport height */
+  color: white;
+  margin-bottom: 10px !important;
+  padding: 10px 20px !important;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Hide overflow initially */
+  border-radius: 8px;
+  /* Rounded corners */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  /* Subtle shadow for depth */
+}
+
+.sidebar h1.Fields {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1em;
+  /* Slightly larger font size */
+  color: #0056b3;
+  /* Color matching the button */
+}
+
+.sidebar ul {
+  list-style-type: none;
+  padding: 0;
+  overflow-y: auto;
+  /* Allow vertical scrolling */
+  flex-grow: 1;
+  /* Ensure the ul takes available space */
+}
+
+.sidebar li {
+  margin: 5px 0;
+  font-family: Arial, Helvetica, sans-serif;
+  padding-bottom: 5px;
+  /* Space below the text and above the line */
+  cursor: pointer;
+  transition: background-color 0.3s;
+  /* Smooth transition for hover effect */
+}
+
+.sidebar li:hover {
+  background-color: #e0e0e0;
+  /* Light gray background on hover */
+}
+
+.item-divider {
+  border: none;
+  border-bottom: 1px solid #ccc;
+  /* Light gray line */
+  margin: 0;
+  width: 100%;
+}
+
+.scrollable-list {
+  max-height: 310px;
+  /* Adjust the height as needed */
+  overflow-y: auto;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.draggable-item {
+  padding: 5px;
+  margin: 2px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+  white-space: pre-wrap;
+  /* Allows wrapping of text */
+  word-break: break-all;
+  /* Ensures long words break to fit */
+}
+
+.search-box {
+  margin-bottom: 15px;
+}
+
+/* Sun_Editer Styling  Additional Styling ---------- */
+
+.sun-editor .se-toolbar {
+  font-size: 16px;
+  padding: 10px;
+}
+
+.sun-editor .se-toolbar button {
+  font-size: 15px;
+  padding: 8px 12px;
+}
+
+.sun-editor .se-wrapper {
+  min-height: 300px;
+}
+
+.sun-editor .se-resizing-bar {
+  border-top: 1px solid #ddd;
+}
+
+.sun-editor-container {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  background-color: #fff;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+
+.sun-editor-container .sun-editor-editable {
+  font-family: "Arial", sans-serif;
+  /* Change font family */
+  font-size: 16px;
+  /* Set default font size */
+  line-height: 1.6;
+  /* Adjust line height */
+  color: #333;
+  /* Set text color */
+}
+
+.sun-editor-container .sun-editor-editable:focus {
+  outline: none;
+  /* Remove focus outline */
+  box-shadow: 0 0 0 2px rgba(50, 151, 211, 0.2);
+  /* Add custom focus effect */
+}
+
+ul.scrollable-list {
+  overflow-y: auto;
+  /* Enable vertical scrolling */
+  overflow-x: hidden;
+  /* Hide horizontal scrolling */
+  padding-right: 10px;
+  /* Adjust padding to prevent content from being hidden under the scrollbar */
+  font-size: 11px;
+}
+
+/* Custom vertical scrollbar styles */
+ul.scrollable-list::-webkit-scrollbar {
+  width: 6px;
+  /* Width of the scrollbar */
+}
+
+ul.scrollable-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  /* Background of the scrollbar track */
+}
+
+ul.scrollable-list::-webkit-scrollbar-thumb {
+  background: #888;
+  /* Background of the scrollbar thumb */
+  border-radius: 10px;
+  /* Rounded corners for the scrollbar thumb */
+}
+
+ul.scrollable-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+  /* Background of the scrollbar thumb on hover */
+}
+
+.draggable-item {
+  background-color: #fff;
+  /* Change this to your preferred background color */
+  border-radius: 10px;
+  /* Adjust the radius to get the desired rounded corners */
+  padding: 10px;
+  /* Optional: Adds some padding inside the list item */
+  margin: 5px 0;
+  /* Optional: Adds some space between list items */
+  border: 1px solid #ddd;
+  /* Optional: Adds a border around the list item */
+}
+
+/* Add this to your global CSS file */
+.MuiMenu-paper::-webkit-scrollbar {
+  width: 4px;
+  background-color: transparent; /* Optional */
+}
+
+.MuiMenu-paper::-webkit-scrollbar-thumb {
+  background-color: lightblue;
+  border-radius: 2px;
+}

@@ -1,0 +1,223 @@
+.hideScrollbar::-webkit-scrollbar {
+  width: 0.5em;
+}
+
+.hideScrollbar::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.hideScrollbar::-webkit-scrollbar-thumb {
+  background-color: transparent;
+}
+
+.thinScrollBar::-webkit-scrollbar {
+  width: 0.4em;
+  height: 0.4rem;
+  z-index: 10;
+}
+
+.thinScrollBar:hover::-webkit-scrollbar {
+  width: 0.6em;
+  height: 0.4em;
+  z-index: 10;
+}
+
+
+.thinScrollBar::-webkit-scrollbar-track {
+  background-color: var(--accordionBodyBg);
+
+}
+
+.thinScrollBar::-webkit-scrollbar-thumb {
+  background-color: var(--sidebarBg);
+  border-radius: 10px;
+}
+
+/* Add this to your styles.css file */
+.inputWhite::placeholder {
+  color: white;
+  opacity: 1;
+}
+
+.inputWhite:-ms-input-placeholder {
+  color: white;
+}
+
+.inputWhite::-ms-input-placeholder {
+  color: white;
+}
+
+.inputField {
+  box-shadow: 1px 2px 0px #0000000f;
+  border-radius: 4px;
+  background-color:var(--inputBg);
+  height: 27px;
+  border-color: var(--inputBorderColor);
+  color:var(--inputTextColor);
+  font-size: var(--inputFontSize);
+  font-weight: var(--inputFontWeight);
+}
+
+.inputField svg {
+   fill: var(--inputTextColor);
+}
+
+.searchField {
+  background: var(--unnamed-color-ffffff) 0% 0% no-repeat padding-box;
+  border: 0.5px solid var(--unnamed-color-cecece);
+  background: #ffffff 0% 0% no-repeat padding-box;
+  box-shadow: 2px 3px 8px #0000000f;
+  border: 0.5px solid #cecece;
+  border-radius: 4px;
+}
+
+.thinScrollBar2::-webkit-scrollbar {
+  width: 0.5em;
+  height: 0.5rem;
+  z-index: 10;
+}
+
+.thinScrollBar2::-webkit-scrollbar-track {
+  background-color: var(--accordionBodyBg);
+}
+
+.thinScrollBar2::-webkit-scrollbar-thumb {
+  background-color: var(--sidebarTextColor);
+  border-radius: 10px;
+}
+
+.MuiOutlinedInput-root {
+  height: 27px !important;
+}
+
+.labelRootStyle {
+  font-size: 10px !important;
+  align-items: center !important;
+  top: -3px !important;
+}
+
+.disabledButton {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.flexWrapCustom {
+  margin: 0px;
+  background-color: #1e5f91;
+}
+
+.bgPrimaryColor {
+  background-color: var(--bg-color);
+  color: var(--text-color-500);
+  border-color: var(--border-color);
+}
+
+.bgPrimaryColorList:hover .sidebarTxtColor{
+  color: var(--bg-color) !important;
+  background-color: var(--table-hover-bg) !important;
+}
+
+.bgPrimaryColorBtn {
+  background-color: var(--buttonBg);
+  color: var(--buttonTextColor);
+  border-color: var(--buttonTextColor);
+}
+
+.bgPrimaryColorBtn:hover {
+  background-color: var(--buttonHoverBg);
+  color: var(--buttonTextHoverColor);
+}
+
+.tableHoverBg:hover {
+  background-color: var(--table-hover-bg);
+}
+
+.txtColorDark {
+  color: var(--commonTextColor);
+}
+
+.txtColor {
+  color: var(--text-color-500);
+}
+
+/* Sidebar Text and Icon Color on Hover */
+.sidebarTxtColor {
+  color: var(--text-color-500) !important;
+  background-color: var(--bg-color) !important;
+}
+
+.sidebarTxtColor:hover {
+  color: var(--table-hover-bg) !important;
+}
+
+
+.pageBackground {
+  background-color: var(--page-bg-color);
+}
+
+.paginationBackgroundColor {
+  background-color: var(--bg-color);
+}
+
+.paginationTextColor {
+  color: var(--text-color-500);
+}
+
+.modalTextColor {
+  color: var(--commonTextColor);
+}
+
+.modalBg {
+  background-color: var(--commonBg, white);
+}
+
+.inputTextColor {
+  color: var(--inputLabelTextColor);
+}
+
+.accordianSummaryBg {
+  background-color: var(--commonBg);
+}
+
+.labelStyles {
+  display: flex;
+  flex-direction: column;
+  width: 12rem;
+  height: 27px;
+}
+
+.dummyLabelStyles {
+  color: var(--table-text-color);
+}
+
+.menuStyles {
+  background-color: var(--page-bg-color);
+  color: var(--table-text-color);
+  box-shadow: "none";
+  border-color: var(--border-color);
+  border-width: 0.5px;
+}
+
+.menuStylesList {
+  background-color: var(--page-bg-color);
+  color: var(--table-text-color);
+  box-shadow: "none";
+ 
+}
+
+.menuStylesList:hover {
+  background-color: var(--table-hover-bg);
+  /* add opacity to background color */
+}
+
+.hoverBg:hover {
+  background-color: var(--tableRowBg);
+  color: var(--text-color-dark);
+}
+
+/* Ensure that text inherits the hover color change */
+.hoverBg:hover .txtColor {
+  color: var(--text-color-dark);
+}
+
+

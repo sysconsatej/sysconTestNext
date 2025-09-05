@@ -1,0 +1,68 @@
+/* :root {
+    --column-text: 0.73rem;
+}
+
+th,
+td {
+    padding-bottom: 10px;
+}
+
+.hrRow {
+    border: 1px solid black;
+}
+
+.bodyColour {
+    background-color: white;
+} */
+
+#bgColour {
+    background-color: #e1e1e1;
+}
+
+/* .report-spacing {
+    margin-bottom: 25px;
+}
+
+.auto-adjust-table th,
+.auto-adjust-table td {
+    min-width: 100px;
+    padding: 8px;
+}
+
+.custom-table .header {
+    width: 10%;
+}
+
+.custom-table td {
+    width: 40%;
+}
+
+.custom-table {
+    table-layout: auto;
+}
+
+.custom-table th,
+.custom-table td {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+* {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+.container {
+    max-width: 100%;
+    padding: 0 20px;
+    margin: 0 auto;
+}
+
+.heading {
+    font-size: 15px;
+} */
+
