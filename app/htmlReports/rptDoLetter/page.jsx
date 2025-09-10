@@ -212,8 +212,7 @@ function rptDoLetter() {
       <img
         src="https://expresswayshipping.com/sql-api/uploads/sign1.jpg"
         width="20%"
-        height="15%"
-      ></img>
+        height="15%"></img>
     );
   };
 
@@ -239,14 +238,12 @@ function rptDoLetter() {
           <div className="flex items-end justify-end">
             <p
               className="text-black font-bold mr-2"
-              style={{ fontSize: "10px" }}
-            >
+              style={{ fontSize: "10px" }}>
               D/O No:
             </p>
             <p
               className="text-black"
-              style={{ fontSize: "10px", minWidth: "100px" }}
-            >
+              style={{ fontSize: "10px", minWidth: "100px" }}>
               {data[0]?.doNo || ""}
             </p>
           </div>
@@ -254,8 +251,7 @@ function rptDoLetter() {
             <div className="flex items-end justify-start w-[40%]">
               <p
                 className="text-black font-bold mr-2"
-                style={{ fontSize: "10px" }}
-              >
+                style={{ fontSize: "10px" }}>
                 To, <br />
                 The Manager,
                 <br />
@@ -268,14 +264,12 @@ function rptDoLetter() {
             <div className="flex items-start justify-end">
               <p
                 className="text-black font-bold mr-2"
-                style={{ fontSize: "10px" }}
-              >
+                style={{ fontSize: "10px" }}>
                 Date :
               </p>
               <p
                 className="text-black"
-                style={{ fontSize: "10px", minWidth: "100px" }}
-              >
+                style={{ fontSize: "10px", minWidth: "100px" }}>
                 {formatDateToYMD(data[0]?.doDate)}
               </p>
             </div>
@@ -507,16 +501,14 @@ function rptDoLetter() {
                   <td className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.containerNo || ""}
                     </p>
                   </td>
                   <td className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {(item.size || "") + "/" + (item.type || "")}
                     </p>
                   </td>
@@ -528,40 +520,35 @@ function rptDoLetter() {
                   <td className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {(item.grossWt || "") + " " + (item.weightUnitCode || "")}
                     </p>
                   </td>
                   <td className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.noOfPackages || ""} {item.packageCode || ""}
                     </p>
                   </td>
                   <td className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-right"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.customSealNo || ""}
                     </p>
                   </td>
                   <td className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.volume || ""} {item.volumeUnitCode || ""}
                     </p>
                   </td>
                   <td className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {/* {getValidTillDate(
                         data?.[0]?.arrivalDate,
                         data?.[0]?.destinationFreeDays
@@ -577,20 +564,17 @@ function rptDoLetter() {
               <td
                 colSpan={3}
                 className="border border-black p-1 font-bold text-right"
-                style={{ fontSize: "9px" }}
-              >
+                style={{ fontSize: "9px" }}>
                 TOTAL
               </td>
               <td
                 className="border border-black p-1 font-bold"
-                style={{ fontSize: "9px" }}
-              >
+                style={{ fontSize: "9px" }}>
                 {totalGrossWt.toFixed(2)} {weightUnit}
               </td>
               <td
                 className="border border-black p-1 font-bold"
-                style={{ fontSize: "9px" }}
-              >
+                style={{ fontSize: "9px" }}>
                 {totalPackages} {packageUnit}
               </td>
               <td colSpan={3} className="border border-black p-1"></td>
@@ -665,13 +649,11 @@ function rptDoLetter() {
           style={{
             bottom: "10px",
             width: "100%",
-          }}
-        >
+          }}>
           <div>
             <p
               className="text-black font-bold mt-2"
-              style={{ fontSize: "10px" }}
-            >
+              style={{ fontSize: "10px" }}>
               Thanking You, For {data[0]?.company} <br /> As Agent
             </p>
             <p style={{ width: "80%", height: "100%" }}>
@@ -711,12 +693,10 @@ function rptDoLetter() {
           <div style={{ width: "100%" }} className="flex justify-between">
             <div
               style={{ width: "40%" }}
-              className="flex items-end justify-start w-[40%]"
-            >
+              className="flex items-end justify-start w-[40%]">
               <p
                 className="text-black font-bold mr-2"
-                style={{ fontSize: "10px" }}
-              >
+                style={{ fontSize: "10px" }}>
                 To, <br />
                 The Manager,
                 <br />
@@ -734,14 +714,12 @@ function rptDoLetter() {
             <div className="flex items-start justify-end">
               <p
                 className="text-black font-bold mr-2"
-                style={{ fontSize: "10px" }}
-              >
+                style={{ fontSize: "10px" }}>
                 Date :
               </p>
               <p
                 className="text-black"
-                style={{ fontSize: "10px", minWidth: "100px" }}
-              >
+                style={{ fontSize: "10px", minWidth: "100px" }}>
                 {formatDateToYMD(data[0]?.doDate)}
               </p>
             </div>
@@ -963,16 +941,14 @@ function rptDoLetter() {
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.containerNo || ""}
                     </p>
                   </th>
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {(item.size || "") + "/" + (item.type || "")}
                     </p>
                   </th>
@@ -984,24 +960,21 @@ function rptDoLetter() {
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {(item.grossWt || "") + "" + (item.weightUnitCode || "")}
                     </p>
                   </th>
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.noOfPackages || ""} {item.packageCode || ""}
                     </p>
                   </th>
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-right"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.customSealNo || ""}
                     </p>
                   </th>
@@ -1040,13 +1013,11 @@ function rptDoLetter() {
           style={{
             bottom: "10px",
             width: "100%",
-          }}
-        >
+          }}>
           <div>
             <p
               className="text-black font-bold mt-2"
-              style={{ fontSize: "10px" }}
-            >
+              style={{ fontSize: "10px" }}>
               Thanking You, <br /> For {data[0]?.company}
             </p>
             <p style={{ width: "80%", height: "100%" }}>
@@ -1088,15 +1059,13 @@ function rptDoLetter() {
         <div className="flex items-end justify-end">
           <p
             className="text-black"
-            style={{ fontSize: "10px", minWidth: "100px" }}
-          ></p>
+            style={{ fontSize: "10px", minWidth: "100px" }}></p>
         </div>
         <div className="flex justify-between w-full">
           <div className="flex items-end justify-start w-[40%]">
             <p
               className="text-black font-bold mr-2"
-              style={{ fontSize: "10px" }}
-            >
+              style={{ fontSize: "10px" }}>
               To, <br />
               The Manager, <br />
               {data[0]?.emptyDepot || ""}
@@ -1107,14 +1076,12 @@ function rptDoLetter() {
           <div className="flex items-start justify-end">
             <p
               className="text-black font-bold mr-2"
-              style={{ fontSize: "10px" }}
-            >
+              style={{ fontSize: "10px" }}>
               Date :
             </p>
             <p
               className="text-black"
-              style={{ fontSize: "10px", minWidth: "100px" }}
-            >
+              style={{ fontSize: "10px", minWidth: "100px" }}>
               {formatDateToYMD(data[0]?.doDate)}
             </p>
           </div>
@@ -1197,16 +1164,14 @@ function rptDoLetter() {
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {item.containerNo || ""}
                   </p>
                 </th>
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal text-left"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {(item.size || "") + "/" + (item.type || "")}
                   </p>
                 </th>
@@ -1221,8 +1186,7 @@ function rptDoLetter() {
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {formatDateToYMD(data?.[0]?.doValidDate)}
                   </p>
                 </th>
@@ -1264,13 +1228,11 @@ function rptDoLetter() {
         style={{
           bottom: "10px",
           width: "100%",
-        }}
-      >
+        }}>
         <div>
           <p
             className="text-black font-bold mt-14"
-            style={{ fontSize: "10px" }}
-          >
+            style={{ fontSize: "10px" }}>
             Thanking You, <br />
             For {data[0]?.company} <br />
           </p>
@@ -1303,8 +1265,7 @@ function rptDoLetter() {
           <div className="flex items-end justify-start">
             <p
               className="text-black font-bold mr-2"
-              style={{ fontSize: "10px" }}
-            >
+              style={{ fontSize: "10px" }}>
               To, <br />
               The Manager, <br />
               {data[0]?.nominatedArea || ""}
@@ -1313,14 +1274,12 @@ function rptDoLetter() {
           <div className="flex items-start justify-end">
             <p
               className="text-black font-bold mr-2"
-              style={{ fontSize: "10px" }}
-            >
+              style={{ fontSize: "10px" }}>
               Date :
             </p>
             <p
               className="text-black"
-              style={{ fontSize: "10px", minWidth: "100px" }}
-            >
+              style={{ fontSize: "10px", minWidth: "100px" }}>
               {formatDateToYMD(data[0]?.doDate)}
             </p>
           </div>
@@ -1550,16 +1509,14 @@ function rptDoLetter() {
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {item.containerNo || ""}
                   </p>
                 </th>
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal text-left"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {(item.size || "") + "/" + (item.type || "")}
                   </p>
                 </th>
@@ -1571,32 +1528,28 @@ function rptDoLetter() {
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal text-left"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {(item.grossWt || "") + "" + (item.weightUnitCode || "")}
                   </p>
                 </th>
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal text-left"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {item.noOfPackages || ""} {item.packageCode || ""}
                   </p>
                 </th>
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal text-right"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {item.customSealNo || ""}
                   </p>
                 </th>
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal text-center"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {formatDateToYMD(data?.[0]?.doValidDate)}
                   </p>
                 </th>
@@ -1641,13 +1594,11 @@ function rptDoLetter() {
         style={{
           bottom: "10px",
           width: "100%",
-        }}
-      >
+        }}>
         <div>
           <p
             className="text-black font-bold mt-20"
-            style={{ fontSize: "10px" }}
-          >
+            style={{ fontSize: "10px" }}>
             Authorize Signatory
           </p>
         </div>
@@ -1799,8 +1750,7 @@ function rptDoLetter() {
               <td className="w-1/6 border-t border-b border-l border-black p-1">
                 <p
                   className="text-black font-bold"
-                  style={{ fontSize: "9px" }}
-                ></p>
+                  style={{ fontSize: "9px" }}></p>
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
                 <p className="text-black" style={{ fontSize: "9px" }}></p>
@@ -1843,8 +1793,7 @@ function rptDoLetter() {
             <div className="flex items-end justify-start">
               <p
                 className="text-black font-bold mr-2"
-                style={{ fontSize: "10px" }}
-              >
+                style={{ fontSize: "10px" }}>
                 To, <br />
                 The Assistant Commisioner of Custom, <br />
                 Container Cell <br />
@@ -1854,14 +1803,12 @@ function rptDoLetter() {
             <div className="flex items-start justify-end">
               <p
                 className="text-black font-bold mr-2"
-                style={{ fontSize: "10px" }}
-              >
+                style={{ fontSize: "10px" }}>
                 Date :
               </p>
               <p
                 className="text-black"
-                style={{ fontSize: "10px", minWidth: "100px" }}
-              >
+                style={{ fontSize: "10px", minWidth: "100px" }}>
                 {formatDateToYMD(data[0]?.doDate)}
               </p>
             </div>
@@ -1930,16 +1877,14 @@ function rptDoLetter() {
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.containerNo || ""}
                     </p>
                   </th>
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {(item.size || "") + "/" + (item.type || "")}
                     </p>
                   </th>
@@ -1951,32 +1896,28 @@ function rptDoLetter() {
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {(item.grossWt || "") + "" + (item.weightUnitCode || "")}
                     </p>
                   </th>
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.noOfPackages || ""} {item.packageCode || ""}
                     </p>
                   </th>
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-right"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.customSealNo || ""}
                     </p>
                   </th>
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-center"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {formatDateToYMD(data?.[0]?.doValidDate)}
                     </p>
                   </th>
@@ -2019,13 +1960,11 @@ function rptDoLetter() {
           style={{
             bottom: "10px",
             width: "100%",
-          }}
-        >
+          }}>
           <div>
             <p
               className="text-black font-bold mt-20"
-              style={{ fontSize: "10px" }}
-            >
+              style={{ fontSize: "10px" }}>
               Authorize Signatory
             </p>
           </div>
@@ -2255,16 +2194,14 @@ function rptDoLetter() {
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {item.containerNo || ""}
                   </p>
                 </th>
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal text-left"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {(item.size || "") + "/" + (item.type || "")}
                   </p>
                 </th>
@@ -2276,24 +2213,21 @@ function rptDoLetter() {
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal text-left"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {(item.grossWt || "") + "" + (item.weightUnitCode || "")}
                   </p>
                 </th>
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal text-left"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {item.noOfPackages || ""} {item.packageCode || ""}
                   </p>
                 </th>
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-normal text-right"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     {item.customSealNo || ""}
                   </p>
                 </th>
@@ -2332,8 +2266,7 @@ function rptDoLetter() {
         style={{
           bottom: "10px",
           width: "100%",
-        }}
-      >
+        }}>
         <div>
           <p className="text-black font-bold mt-2" style={{ fontSize: "10px" }}>
             Thanking You, <br /> For {data[0]?.company}
@@ -2346,8 +2279,7 @@ function rptDoLetter() {
           </p>
           <p
             className="text-black font-bold uppercase"
-            style={{ fontSize: "10px" }}
-          >
+            style={{ fontSize: "10px" }}>
             THIS DELIVERY ORDER AUTHORISES THE CONSIGNEE ONLY TO GET CARGO
             EXAMINED AND <br />
             APPRAISED BY THE CUSTOMS OFFICER AND CARGO CANNOT BE DELIVERED
@@ -2382,8 +2314,7 @@ function rptDoLetter() {
             <div className="flex items-end justify-start">
               <p
                 className="text-black font-bold mr-2"
-                style={{ fontSize: "10px" }}
-              >
+                style={{ fontSize: "10px" }}>
                 To, <br />
                 The Manager, <br />
                 {data[0]?.nominatedArea || ""}
@@ -2613,16 +2544,14 @@ function rptDoLetter() {
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.containerNo || ""}
                     </p>
                   </th>
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {(item.size || "") + "/" + (item.type || "")}
                     </p>
                   </th>
@@ -2634,24 +2563,21 @@ function rptDoLetter() {
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {(item.grossWt || "") + "" + (item.weightUnitCode || "")}
                     </p>
                   </th>
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.noOfPackages || ""} {item.packageCode || ""}
                     </p>
                   </th>
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-right"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.customSealNo || ""}
                     </p>
                   </th>
@@ -2664,13 +2590,11 @@ function rptDoLetter() {
           style={{
             bottom: "10px",
             width: "100%",
-          }}
-        >
+          }}>
           <div>
             <p
               className="text-black font-bold mt-2"
-              style={{ fontSize: "10px" }}
-            >
+              style={{ fontSize: "10px" }}>
               Thanking You, <br /> For {data[0]?.company}
             </p>
             <p style={{ width: "80%", height: "100%" }}>
@@ -2678,8 +2602,7 @@ function rptDoLetter() {
             </p>
             <p
               className="text-black mt-14 font-bold"
-              style={{ fontSize: "10px" }}
-            >
+              style={{ fontSize: "10px" }}>
               Authorize Signatory
             </p>
             {/* <p className="text-black mt-14" style={{ fontSize: "10px" }}>
@@ -2711,8 +2634,7 @@ function rptDoLetter() {
             <div className="flex items-end justify-start">
               <p
                 className="text-black font-bold mr-2"
-                style={{ fontSize: "10px" }}
-              >
+                style={{ fontSize: "10px" }}>
                 To, <br />
                 The Manager, <br />
                 {data[0]?.nominatedArea || ""}
@@ -2721,14 +2643,12 @@ function rptDoLetter() {
             <div className="flex items-start justify-end">
               <p
                 className="text-black font-bold mr-2"
-                style={{ fontSize: "10px" }}
-              >
+                style={{ fontSize: "10px" }}>
                 Date :
               </p>
               <p
                 className="text-black"
-                style={{ fontSize: "10px", minWidth: "100px" }}
-              >
+                style={{ fontSize: "10px", minWidth: "100px" }}>
                 {formatDateToYMD(data[0]?.doDate)}
               </p>
             </div>
@@ -2952,16 +2872,14 @@ function rptDoLetter() {
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.containerNo || ""}
                     </p>
                   </th>
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {(item.size || "") + "/" + (item.type || "")}
                     </p>
                   </th>
@@ -2973,24 +2891,21 @@ function rptDoLetter() {
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {(item.grossWt || "") + "" + (item.weightUnitCode || "")}
                     </p>
                   </th>
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.noOfPackages || ""} {item.packageCode || ""}
                     </p>
                   </th>
                   <th className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-right"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.customSealNo || ""}
                     </p>
                   </th>
@@ -3041,13 +2956,11 @@ function rptDoLetter() {
           style={{
             bottom: "10px",
             width: "100%",
-          }}
-        >
+          }}>
           <div>
             <p
               className="text-black font-bold mt-20"
-              style={{ fontSize: "10px" }}
-            >
+              style={{ fontSize: "10px" }}>
               Authorize Signatory
             </p>
           </div>
@@ -3125,8 +3038,7 @@ function rptDoLetter() {
         </p>
         <p
           className="text-black text-xs mt-6"
-          style={{ lineHeight: "20px", width: "80%" }}
-        >
+          style={{ lineHeight: "20px", width: "80%" }}>
           With ref. to the above mentioned shipment, please note that we have
           filed the IGM in the name of consignee "{data[0]?.company || ""}".
           Subsequently the said consignee has filed the CONSOL igm to the
@@ -3172,16 +3084,13 @@ function rptDoLetter() {
         <div className="mx-auto text-black">
           <div
             style={{ width: "100%" }}
-            className="flex justify-between w-full"
-          >
+            className="flex justify-between w-full">
             <div
               style={{ width: "40%" }}
-              className="flex items-end justify-start w-[40%]"
-            >
+              className="flex items-end justify-start w-[40%]">
               <p
                 className="text-black font-bold mr-2"
-                style={{ fontSize: "10px" }}
-              >
+                style={{ fontSize: "10px" }}>
                 To, <br />
                 KENYA PORTS AUTHORITY, KILINDINI
                 <br />
@@ -3209,8 +3118,7 @@ function rptDoLetter() {
             </p>
             <p
               className="text-black"
-              style={{ fontSize: "10px", marginLeft: "5px" }}
-            >
+              style={{ fontSize: "10px", marginLeft: "5px" }}>
               {data[0]?.customBrokerName || ""}
             </p>
           </div>
@@ -3392,40 +3300,35 @@ function rptDoLetter() {
                   <td className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-center"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.containerNo || ""}
                     </p>
                   </td>
                   <td className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {(item.size || "") + "/" + (item.type || "")}
                     </p>
                   </td>
                   <td className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-center "
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.customSealNo || ""}
                     </p>
                   </td>
                   <td className="w-1/8 border border-black p-1">
                     <p
                       className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {(item.grossWt || "") + " " + (item.weightUnitCode || "")}
                     </p>
                   </td>
                   <td className="w-1/8 border border-black p-1 text-left">
                     <p
                       className="text-black font-normal"
-                      style={{ fontSize: "9px" }}
-                    >
+                      style={{ fontSize: "9px" }}>
                       {item.volume || ""} {item.volumeUnitCode || ""}
                     </p>
                   </td>
@@ -3471,15 +3374,13 @@ function rptDoLetter() {
           <div className="flex items-end justify-end">
             <p
               className="text-black"
-              style={{ fontSize: "10px", minWidth: "100px" }}
-            ></p>
+              style={{ fontSize: "10px", minWidth: "100px" }}></p>
           </div>
           <div className="flex justify-between w-full">
             <div className="flex items-end justify-start w-[40%]">
               <p
                 className="text-black font-bold mr-2"
-                style={{ fontSize: "10px" }}
-              >
+                style={{ fontSize: "10px" }}>
                 To, <br />
                 {data[0]?.emptyDepot || ""}
                 <br />
@@ -3524,8 +3425,7 @@ function rptDoLetter() {
               </p>
               <p
                 className="text-black"
-                style={{ fontSize: "10px", marginLeft: "5px" }}
-              >
+                style={{ fontSize: "10px", marginLeft: "5px" }}>
                 {data[0]?.customBrokerName || ""}
               </p>
             </div>
@@ -3537,8 +3437,7 @@ function rptDoLetter() {
                 <td className="w-1/6 border-t border-b border-l border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     VESSEL :
                   </p>
                 </td>
@@ -3550,8 +3449,7 @@ function rptDoLetter() {
                 <td className="w-1/6 border-t border-b border-l border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     DATE :
                   </p>
                 </td>
@@ -3566,8 +3464,7 @@ function rptDoLetter() {
                 <td className="w-1/6 border-t border-b border-l border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     VOYAGE NO :
                   </p>
                 </td>
@@ -3579,8 +3476,7 @@ function rptDoLetter() {
                 <td className="w-1/6 border-t border-b border-l border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     B/L NO :
                   </p>
                 </td>
@@ -3595,8 +3491,7 @@ function rptDoLetter() {
                 <td className="w-1/6 border-t border-b border-l border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     ARRIVAL (ATB) :
                   </p>
                 </td>
@@ -3608,8 +3503,7 @@ function rptDoLetter() {
                 <td className="w-1/6 border-t border-b border-l border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     REFERENCE NO :
                   </p>
                 </td>
@@ -3624,8 +3518,7 @@ function rptDoLetter() {
                 <td className="w-1/6 border-t border-b border-l border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     PORT OF LOADING :
                   </p>
                 </td>
@@ -3637,8 +3530,7 @@ function rptDoLetter() {
                 <td className="w-1/6 border-t border-b border-l border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     BOOKING REF :
                   </p>
                 </td>
@@ -3653,8 +3545,7 @@ function rptDoLetter() {
                 <td className="w-1/6 border-t border-b border-l border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     PORT OF DISCHARGE :
                   </p>
                 </td>
@@ -3666,8 +3557,7 @@ function rptDoLetter() {
                 <td className="w-1/6 border-t border-b border-l border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     DELIVERY ORDER NO :
                   </p>
                 </td>
@@ -3682,8 +3572,7 @@ function rptDoLetter() {
                 <td className="w-1/6 border-t border-b border-l border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     DESTINATION :
                   </p>
                 </td>
@@ -3695,8 +3584,7 @@ function rptDoLetter() {
                 <td className="w-1/6 border-t border-b border-l border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     USER :
                   </p>
                 </td>
@@ -3724,32 +3612,28 @@ function rptDoLetter() {
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     Container No.
                   </p>
                 </th>
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     Size/Type
                   </p>
                 </th>
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     Start Date
                   </p>
                 </th>
                 <th className="w-1/8 border border-black p-1">
                   <p
                     className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
+                    style={{ fontSize: "9px" }}>
                     Validity Date
                   </p>
                 </th>
@@ -3762,24 +3646,21 @@ function rptDoLetter() {
                     <th className="w-1/8 border border-black p-1">
                       <p
                         className="text-black font-normal"
-                        style={{ fontSize: "9px" }}
-                      >
+                        style={{ fontSize: "9px" }}>
                         {item.containerNo || ""}
                       </p>
                     </th>
                     <th className="w-1/8 border border-black p-1">
                       <p
                         className="text-black font-normal "
-                        style={{ fontSize: "9px" }}
-                      >
+                        style={{ fontSize: "9px" }}>
                         {(item.size || "") + "/" + (item.type || "")}
                       </p>
                     </th>
                     <th className="w-1/8 border border-black p-1">
                       <p
                         className="text-black font-normal"
-                        style={{ fontSize: "9px" }}
-                      >
+                        style={{ fontSize: "9px" }}>
                         {/* {formatDateToYMD(data?.[0]?.doDate)tejasdo} */}
                       </p>
                     </th>
@@ -3787,8 +3668,7 @@ function rptDoLetter() {
                     <th className="w-1/8 border border-black p-1">
                       <p
                         className="text-black font-normal"
-                        style={{ fontSize: "9px" }}
-                      >
+                        style={{ fontSize: "9px" }}>
                         {formatDateToYMD(data?.[0]?.doValidDate)}
                       </p>
                     </th>
@@ -3817,7 +3697,7 @@ function rptDoLetter() {
               demurrage, or incidental costs.
             </p>
           </div>
-        </div> */}
+        </div>tejass */}
       </div>
     );
   };
@@ -3834,6 +3714,122 @@ function rptDoLetter() {
       <div>
         <div className="mx-auto">
           <CompanyImgModule />
+        </div>
+        <div className="mx-auto text-black border-b border-dashed border-gray-800 pb-1">
+          <h1 className="font-normal text-sm text-left">
+            EMPTY CONTAINER RETURN NOTIFICATION
+          </h1>
+        </div>
+        <table className="w-full mt-2 border-collapse text-xs">
+          <tbody>
+            <tr>
+              <td className="p-1.5 font-light w-1/3 text-gray-800">B/L #</td>
+              <td className="p-1.5 font-medium">: {data[0]?.blNo || ""}</td>
+            </tr>
+            <tr>
+              <td className="p-1.5 font-light text-gray-800">CONSIGNEE NAME</td>
+              <td className="p-1.5 font-normal">
+                : {data[0]?.consigneeText || ""}
+              </td>
+            </tr>
+            <tr>
+              <td className="p-1.5 font-light text-gray-800">
+                DISCHARGE VESSEL
+              </td>
+              <td className="p-1.5  font-normal">
+                : {data[0]?.podVessel || ""}
+              </td>
+            </tr>
+            <tr>
+              <td className="p-1.5 font-light text-gray-800">DISCHARGE DATE</td>
+              <td className="p-1.5 font-normal">: {data[0]?.dischargeDate}</td>
+            </tr>
+            <tr>
+              <td className="p-1.5 font-light text-gray-800">
+                MTY CONT. RETURN DEPO
+              </td>
+              <td className="p-1.5 font-normal">
+                : TO BE CONFIRMED AS PER PORT GATE-OUT
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        {/* Container Details Grid tejasss*/}
+        <div className="mt-2 w-full">
+          <h1 className="font-normal text-sm text-left underline">
+            CONTAINER DETAILS:
+          </h1>
+        </div>
+        <div style={{ width: "100%" }} className="mt-1 text-xs">
+          {/* Header Row */}
+          <div
+            style={{ width: "100%" }}
+            className="flex py-2 border-t border-b border-dashed border-gray-800 font-normal">
+            <div style={{ width: "7%" }} className="border-r pr-1">
+              SR. NO
+            </div>
+            <div style={{ width: "13%" }} className="border-r pr-1">
+              CONTAINER #
+            </div>
+            <div
+              style={{ width: "15%" }}
+              className="border-r pr-1 text-center ">
+              FREE TIME DAYS
+            </div>
+            <div style={{ width: "15%" }} className="border-r pr-1 text-center">
+              F/T END DATE
+            </div>
+            <div style={{ width: "10%" }} className="border-r pr-1 text-center">
+              TYPE
+            </div>
+            <div style={{ width: "5%" }} className="border-r pr-1 text-center">
+              SIZE
+            </div>
+            <div style={{ width: "35%" }} className="pr-1 text-center">
+              EXTENDED DATE / REMARKS
+            </div>
+          </div>
+
+          {/* Data Rows */}
+          {containers.length > 0 &&
+            containers.map((item, index) => (
+              <div
+                key={index}
+                style={{ width: "100%" }}
+                className="flex border-b border-gray-200 py-1 font-medium">
+                <div
+                  style={{ width: "7%" }}
+                  className="border-r pr-1 text-center">
+                  {index + 1}
+                </div>
+                <div style={{ width: "13%" }} className="border-r pr-1">
+                  {item.containerNo || ""}
+                </div>
+                <div
+                  style={{ width: "15%" }}
+                  className="border-r pr-1 text-right">
+                  {item.destinationFreeDays || ""}
+                </div>
+                <div
+                  style={{ width: "15%" }}
+                  className="border-r pr-1 text-center">
+                  {formatDateToYMD(item.validDate)}
+                </div>
+                <div
+                  style={{ width: "10%" }}
+                  className="border-r pr-1 text-center">
+                  {item.type || ""}
+                </div>
+                <div
+                  style={{ width: "5%" }}
+                  className="border-r pr-1 text-center">
+                  {item.size || ""}
+                </div>
+                <div style={{ width: "35%" }} className="pr-1">
+                  {item.remarks || ""}
+                </div>
+              </div>
+            ))}
         </div>
       </div>
     );
@@ -3878,13 +3874,11 @@ function rptDoLetter() {
                             display: "flex",
                             flexDirection: "column",
                             position: "relative",
-                          }}
-                        >
+                          }}>
                           {/* Printable Content */}
                           <div
                             className="flex-grow p-4"
-                            style={{ maxHeight: "275mm", minHeight: "275mm" }}
-                          >
+                            style={{ maxHeight: "275mm", minHeight: "275mm" }}>
                             {DoLetter(container, i)}{" "}
                             {/* container may be undefined here */}
                           </div>
@@ -3941,13 +3935,11 @@ function rptDoLetter() {
                             position: "relative",
                             pageBreakAfter:
                               index < reportIds.length - 1 ? "always" : "auto",
-                          }}
-                        >
+                          }}>
                           {/* Printable Content */}
                           <div
                             className="flex-grow p-4"
-                            style={{ maxHeight: "275mm", minHeight: "275mm" }}
-                          >
+                            style={{ maxHeight: "275mm", minHeight: "275mm" }}>
                             {SurveyLetter(container, i)}
                           </div>
                           <div className="pl-4">
@@ -4009,13 +4001,11 @@ function rptDoLetter() {
                           position: "relative",
                           pageBreakAfter:
                             index < reportIds.length - 1 ? "always" : "auto",
-                        }}
-                      >
+                        }}>
                         {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
-                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
-                        >
+                          style={{ maxHeight: "275mm", minHeight: "275mm" }}>
                           {EmptyOffLoadingLetter(container)}
                         </div>
                         <div className="pl-4">
@@ -4063,13 +4053,11 @@ function rptDoLetter() {
                       position: "relative",
                       pageBreakAfter:
                         index < reportIds.length - 1 ? "always" : "auto",
-                    }}
-                  >
+                    }}>
                     {/* Printable Content */}
                     <div
                       className="flex-grow p-4"
-                      style={{ paddingBottom: "100px" }}
-                    >
+                      style={{ paddingBottom: "100px" }}>
                       {GangLetter()}
                     </div>
 
@@ -4117,13 +4105,11 @@ function rptDoLetter() {
                             position: "relative",
                             pageBreakAfter:
                               index < reportIds.length - 1 ? "always" : "auto",
-                          }}
-                        >
+                          }}>
                           {/* Printable Content */}
                           <div
                             className="flex-grow p-4"
-                            style={{ maxHeight: "275mm", minHeight: "275mm" }}
-                          >
+                            style={{ maxHeight: "275mm", minHeight: "275mm" }}>
                             {CMCLetter(container)}
                           </div>
                           <div className="pl-4">
@@ -4172,13 +4158,11 @@ function rptDoLetter() {
                       position: "relative",
                       pageBreakAfter:
                         index < reportIds.length - 1 ? "always" : "auto",
-                    }}
-                  >
+                    }}>
                     {/* Printable Content */}
                     <div
                       className="flex-grow p-4"
-                      style={{ paddingBottom: "100px" }}
-                    >
+                      style={{ paddingBottom: "100px" }}>
                       {CustomsExaminationOrder()}
                     </div>
 
@@ -4228,13 +4212,11 @@ function rptDoLetter() {
                           position: "relative",
                           pageBreakAfter:
                             index < reportIds.length - 1 ? "always" : "auto",
-                        }}
-                      >
+                        }}>
                         {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
-                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
-                        >
+                          style={{ maxHeight: "275mm", minHeight: "275mm" }}>
                           {BondLetter(container)}
                         </div>
                         <div className="pl-4">
@@ -4292,13 +4274,11 @@ function rptDoLetter() {
                           position: "relative",
                           pageBreakAfter:
                             index < reportIds.length - 1 ? "always" : "auto",
-                        }}
-                      >
+                        }}>
                         {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
-                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
-                        >
+                          style={{ maxHeight: "275mm", minHeight: "275mm" }}>
                           {SealCuttingLetter(container)}
                         </div>
                         <div className="pl-4">
@@ -4346,8 +4326,7 @@ function rptDoLetter() {
                       position: "relative",
                       pageBreakAfter:
                         index < reportIds.length - 1 ? "always" : "auto",
-                    }}
-                  >
+                    }}>
                     {/* Printable Content */}
                     <div className="flex-grow p-4">{NOCForConsoleParty()}</div>
 
@@ -4392,13 +4371,11 @@ function rptDoLetter() {
                           display: "flex",
                           flexDirection: "column",
                           position: "relative",
-                        }}
-                      >
+                        }}>
                         {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
-                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
-                        >
+                          style={{ maxHeight: "275mm", minHeight: "275mm" }}>
                           {DoLetterKenya(container)}{" "}
                           {/* container can be undefined; DoLetterKenya should normalize */}
                         </div>
@@ -4406,8 +4383,7 @@ function rptDoLetter() {
                           <div>
                             <p
                               className="text-black  w-full text-left"
-                              style={{ fontSize: "10px" }}
-                            >
+                              style={{ fontSize: "10px" }}>
                               This Delivery Order is issued subject to vessel’s
                               safe arrival and the Bill of Lading terms.{" "}
                               <span style={{ textTransform: "uppercase" }}>
@@ -4494,13 +4470,11 @@ function rptDoLetter() {
                           position: "relative",
                           pageBreakAfter:
                             index < reportIds.length - 1 ? "always" : "auto",
-                        }}
-                      >
+                        }}>
                         {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
-                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
-                        >
+                          style={{ maxHeight: "275mm", minHeight: "275mm" }}>
                           {EmptyContainerOffLoadingLetter(container)}
                         </div>
 
@@ -4508,8 +4482,7 @@ function rptDoLetter() {
                           <div>
                             <p
                               className="text-black w-full text-left"
-                              style={{ fontSize: "10px" }}
-                            >
+                              style={{ fontSize: "10px" }}>
                               This document is non-negotiable and for{" "}
                               <span className="font-bold">
                                 KPA and Empty Depot reference only
@@ -4576,14 +4549,44 @@ function rptDoLetter() {
                           position: "relative",
                           pageBreakAfter:
                             index < reportIds.length - 1 ? "always" : "auto",
-                        }}
-                      >
+                        }}>
                         {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
-                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
-                        >
+                          style={{ maxHeight: "230mm", minHeight: "230mm" }}>
                           {EmptyContainerReturnNotificationRpt(container)}
+                        </div>
+                        <div>
+                          <div>
+                            <p className="text-red-600 underline font-normal border-t border-dashed border-gray-800">
+                              Note:
+                            </p>
+                            <p
+                              className="text-red-600 text-left font-normal"
+                              style={{ fontSize: "10px" }}>
+                              WITHIN THE FREE PERIOD, THE EMPTY CONTAINER MUST
+                              BE RETURNED TO THE ADVISED DEPOT AS PER ABOVE
+                              INSTRUCTION, CLEAN UNDAMAGED AND COMPLETELY FREE
+                              OF CARGO RESIDUES, CHEMICALS, DANGEROUS GOODS
+                              PLACARDS (IN ACCORDANCE WITH APPLICABLE
+                              REGULATIONS), FUMIGATION LABELS, STOWAGE AIDS AND
+                              LASHING ETC. FAILURE TO COMPLY WITH THIS
+                              REQUIREMENT MAY RESULT IN ADDITIONAL COSTS FOR
+                              ACCOUNT OF THE CARGO. CONTAINERS WILL NOT BE
+                              ALLOWED TO GATE OUT AND GATE IN WITHOUT THIS
+                              DOCUMENT. SO PLEASE KEEP IT ALONG WITH THE EIR.
+                              CONTAINERS WILL NOT BE ACCEPTED INTO THE DEPOT /
+                              TERMINAL AFTER THE ABOVE MENTIONED FREE TIME
+                              EXPIRY DATE. PLEASE APPROACH OUR OFFICE FOR
+                              EXTENSIONS BEFORE THE GATE IN OF THE ABOVE SAID
+                              CONTAINERS. THIS DOCUMENT TO BE SHOWED AT
+                              TERMINAL/DEPOT ALONG WITH EIR TO ALLOW CONTAINER
+                              TO BE GATE IN / OUT.
+                            </p>
+                            <p className="text-blue-800 font-normal">
+                              Contact Details:
+                            </p>
+                          </div>
                         </div>
 
                         {/* Print fix style */}
