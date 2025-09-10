@@ -1,0 +1,180 @@
+:root {
+  --column-text: 0.73rem;
+}
+
+th,
+td {
+  padding-bottom: 5px;
+}
+
+.hrRow {
+  border: 1px solid black;
+}
+
+.bodyColour {
+  background-color: white;
+}
+
+#bgColour {
+  background-color: #e1e1e1;
+}
+
+.report-spacing {
+  margin-bottom: 25px;
+}
+
+.auto-adjust-table th,
+.auto-adjust-table td {
+  min-width: 100px;
+  padding: 8px;
+}
+
+.custom-table .header {
+  width: 10%;
+}
+
+.custom-table td {
+  width: 40%;
+}
+
+.custom-table {
+  table-layout: auto;
+}
+
+.custom-table th,
+.custom-table td {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+* {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.container {
+  max-width: 100%;
+  padding: 0 20px;
+  margin: 0 auto;
+}
+
+.heading {
+  font-size: 15px;
+}
+
+@media screen and (max-width: 600px) {
+  .container {
+    padding: 0 10px;
+  }
+
+  .tblhead {
+    font-size: 6px !important;
+  }
+
+  .heading {
+    font-size: 8px !important;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .container {
+    max-width: 100%;
+  }
+
+  .tblhead {
+    font-size: 10px;
+  }
+
+  .heading {
+    font-size: 11px;
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .container {
+    max-width: 768px;
+  }
+
+  .tblhead {
+    font-size: 11px;
+  }
+
+  .heading {
+    font-size: 12px;
+  }
+}
+
+@media screen and (min-width: 1200px) {
+  .container {
+    max-width: 1200px;
+  }
+
+  .tblhead {
+    font-size: 12px;
+  }
+
+  .heading {
+    font-size: 20px;
+  }
+}
+
+@page {
+  size: A4;
+  margin: 5mm;
+}
+
+@media print {
+  .bodyColour {
+    background: none !important;
+  }
+
+  th,
+  td {
+    padding-bottom: 10px;
+  }
+
+  .hrRow {
+    border: 1px solid black;
+  }
+
+  .report-spacing {
+    margin-bottom: 25px;
+  }
+
+  .auto-adjust-table th,
+  .auto-adjust-table td {
+    min-width: 100px;
+    padding: 5px;
+  }
+
+  .custom-table .header {
+    width: 9%;
+  }
+
+  .custom-table td {
+    width: 40%;
+  }
+
+  .custom-table {
+    table-layout: auto;
+  }
+
+  .custom-table th,
+  .custom-table td {
+    padding: 5px;
+  }
+
+  .container {
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 2% !important;
+  }
+
+  .heading {
+    font-size: 12px;
+  }
+}

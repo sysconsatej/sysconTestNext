@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="27.36" height="36.91" viewBox="0 0 27.36 36.91">
+  <g id="office_chair" data-name="office chair" transform="translate(-3.415 -0.545)">
+    <path id="Path_57" data-name="Path 57" d="M13.483,1.5H20.7c3.984,0,7.213,1.71,7.213,3.82V13H6.27V5.32c0-2.11,3.23-3.82,7.213-3.82Z" transform="translate(0)" fill="none" stroke="#fff" stroke-linecap="square" stroke-width="1.91"/>
+    <path id="Path_58" data-name="Path 58" d="M8.337,13h17.5c2.2,0,3.983,1.07,3.983,2.39h0c0,.79-1.067,1.43-2.383,1.43H6.753c-1.316,0-2.383-.64-2.383-1.43h0c0-1.316,1.773-2.385,3.967-2.39Z" transform="translate(0 9.371)" fill="none" stroke="#fff" stroke-linecap="square" stroke-width="1.91"/>
+    <line id="Line_28" data-name="Line 28" y2="3.82" transform="translate(17.087 30.77)" fill="none" stroke="#fff" stroke-linecap="square" stroke-width="1.91"/>
+    <circle id="Ellipse_20" data-name="Ellipse 20" cx="0.95" cy="0.95" r="0.95" transform="translate(9.408 34.6)" fill="none" stroke="#fff" stroke-linecap="square" stroke-width="1.91"/>
+    <circle id="Ellipse_21" data-name="Ellipse 21" cx="0.95" cy="0.95" r="0.95" transform="translate(22.865 34.6)" fill="none" stroke="#fff" stroke-linecap="square" stroke-width="1.91"/>
+    <line id="Line_29" data-name="Line 29" x2="17.82" transform="translate(8.18 34.59)" fill="none" stroke="#fff" stroke-width="1.91"/>
+  </g>
+</svg>

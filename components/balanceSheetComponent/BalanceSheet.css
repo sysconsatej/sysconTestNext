@@ -1,0 +1,120 @@
+.scroll-container {
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: auto; /* Enable horizontal scrolling */
+  display: flex;
+  border: 1px solid #ddd;
+  width: 100%;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-row {
+  flex-direction: row;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+.flex-1 {
+  flex: 1;
+  width: 100%;
+  max-width: 50%; /* Ensure tables don't stretch too wide */
+}
+
+/* Sticky header styling */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  background-color: #f9f9f9;
+  z-index: 1;
+  padding: 8px;
+  border-bottom: 2px solid #ddd;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  position: relative; /* Ensure sticky headers work */
+}
+
+.table thead {
+  border: none;
+}
+
+.table th {
+  text-align: left;
+  border-bottom: 1px solid grey;
+  background-color: #0766ad;
+  color: white;
+  padding: 5px;
+  font-size: 11px;
+}
+
+.table td {
+  border: 1px solid grey;
+  padding: 5px;
+  font-size: 10px;
+}
+
+.table tbody tr:hover {
+  background-color: #d9dff1;
+}
+
+/* Optional: Remove margin on the last table */
+.flex-1:last-child {
+  margin-right: 0;
+}
+
+.hideScrollbar::-webkit-scrollbar {
+  width: 0.5em;
+}
+
+.hideScrollbar::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.hideScrollbar::-webkit-scrollbar-thumb {
+  background-color: transparent;
+}
+
+.thinScrollBar::-webkit-scrollbar {
+  width: 0.5em;
+  height: 0.5rem;
+}
+
+.thinScrollBar::-webkit-scrollbar-track {
+  background-color: var(--accordionBodyBg);
+}
+
+.thinScrollBar::-webkit-scrollbar-thumb {
+  background-color: var(--tableHeaderBg);
+  border-radius: 10px;
+}
+
+.subtotal-row {
+  background-color: #f2f2f2; /* Light gray */
+  font-weight: bold; /* Optional: Make subtotal rows bold */
+}
+
+.table-wrapper {
+  max-height: 400px; /* Set a max-height for the scrolling area */
+  overflow-y: auto; /* Enable vertical scrolling */
+  position: relative;
+}
+
+.sticky-header {
+  position: sticky !important;
+  top: 0;
+  background-color: white;
+}
+
+.sticky-footer {
+  position: sticky;
+  bottom: 0;
+  background-color: white;
+}
+
+.bold-text {
+  font-weight: bold !important;
+}

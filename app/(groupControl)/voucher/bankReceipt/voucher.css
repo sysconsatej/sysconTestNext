@@ -1,0 +1,11 @@
+.custom-btn {
+  font-size: 12px;
+  background-color: #0766AD;
+  color: white;
+  padding: 2px 8px;
+  text-transform: none;
+}
+
+.custom-btn:hover {
+  background-color: #2B84D2; /* lighter blue */
+}

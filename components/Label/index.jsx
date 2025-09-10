@@ -1,0 +1,1 @@
+export { CustomLabel } from './Label'

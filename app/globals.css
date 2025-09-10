@@ -1,0 +1,297 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+  /* default scroll bar */
+  --scroll-bar-bg: #7e9bcf;
+  /* default text color */
+  --text-color-500: #0054eb;
+  /* default sidebar color */
+  --sidebar-color-500: #0766ad;
+  /* default text color */
+  --blue-color: #0766ad;
+  /* default background color */
+  --bg-color: #f9f9f9;
+  /* default border color */
+  --border-color: #f9f9f9;
+  /* default table head color */
+  --table-head-bg: #0766ad;
+  /* default text color */
+  --text-color-dark: #0766ad;
+  /* default background hover color */
+  --bg-color-hover: #0987e5;
+  /* default page background color */
+  --page-bg-color: #f9f9f9;
+  /* default tablehover color */
+  --table-hover-bg: #d9dff1;
+  /* default pagination background color */
+  --pagination-bg: #0766ad;
+  /* default table background color */
+  --table-bg: #f9f9f9;
+  /* default table text color */
+  --table-text-color: #656565;
+  /* default accordion summary color */
+  --accordion-summary-bg: #f9f9f9;
+  /* default accordion text color */
+  --accordion-summary-text-color: #efefef;
+
+
+
+  /* New Format */
+  /* Common Background Color */
+  --commonBg:#f9f9f9;
+  /* Common Font Family */
+  --commonFontFamily:"Roboto", "Helvetica", "Arial", sans-serif;
+  /* Common Text Color */
+  --commonTextColor:'#000000';
+  /* Common Text Size */
+  --commonFontSize:10px;
+  /* Common Font Weight */
+  --commonFontWeight:400;
+  /* Navbar Background Color */
+  --navbarBg:#ffffff;
+  /* Navbar Text Color */
+  --navbarTextColor:#000000;
+  /* Navbar Text Size */
+  --navbarFontSize:10px;
+  /* Navbar Text Weight */
+  --navbarFontWeight:500;
+  /* Sidebar Background Color */
+  --sidebarBg:blue;
+  /* Sidebar Text Color */
+  --sidebarTextColor:white;
+  /* Sidebar Text Size */
+  --sidebarFontSize:12px;
+  /* Sidebar Font Size */
+  --sidebarFontWeight:500;
+  /* Sidebar Background Hover Color */
+  --sidebarBgHover:white;
+  /* Sidebar Text Hover Color */
+  --sidebarTextColorHover: blue;
+  /* Table Header Background Color */
+  --tableHeaderBg:blue;
+  /* Table Header Text Color */
+  --tableHeaderTextColor:white;
+  /* Table Header Text Size */
+  --tableHeaderFontSize:12px;
+  /* Table Header Font Weight */
+  --tableHeaderFontWeight:500;
+  /* Table Row Background Color */
+  --tableRowBg:white;
+  /* Table Row Text Color */
+  --tableRowTextColor:blue;
+  /* Table Row Font Size */
+  --tableRowFontSize:12px;
+  /* Table Row Font Size */
+  --tableRowFontWeight:500;
+  /* Table Row Background Hover Color */
+  --tableRowBgHover:blue;
+  /* Table Row Text Hover Color */
+  --tableRowTextColorHover:white;
+  /* Table Child Header Background Color */
+  --tableChildHeaderBg:white;
+  /* Table Child Text Color */
+  --tableChildHeaderTextColor:white;
+  /* Table Sub Child Background Color */
+  --tableSubChildHeaderBg:white;
+  /* Table Sub Child Text Color */
+  --tableSubChildHeaderTextColor:white;
+  /* Accordion Parent Header Background Color */
+  --accordionParentHeaderBg:white;
+  /* Accordion Parent Header Text Color */
+  --accordionParentHeaderTextColor:white;
+  /* Accordion Parent Header Font Size */
+  --accordionParentHeaderFontSize:12px;
+  /* Accordion Parent Header Font Weight */
+  --accordionParentHeaderFontWeight:500;
+  /* Accordion Child Header Background Color */
+  --accordionChildHeaderBg:white;
+  /* Accordion Child Header Text Color */
+  --accordionChildHeaderTextColor:white;
+  /* Accordion Child Header Font Size */
+  --accordionChildHeaderFontSize:12px;
+  /* Accordion Child Header Font Weight */
+  --accordionChildHeaderFontWeight:500;
+  /* Accordion Body Background Color */
+  --accordionBodyBg:white;
+  /* Input Background Color */
+  --inputBg:white;
+    /* Input Label Text Color */
+  --inputLabelTextColor:white;
+  /* Input Text Color */
+  --inputTextColor:white;
+  /* Input Border Color */
+  --inputBorderColor:white;
+  /* Input Font Size */
+  --inputFontSize:12px;
+  /* Input Font Weight */
+  --inputFontWeight:500;
+  /* Input Border Hover Color */
+  --inputBorderHoverColor:white;
+  /* Button Background Color */
+  --buttonBg:white;
+  /* Button Text Color */
+  --buttonTextColor:white;
+  /* Button Font Size */
+  --buttonFontSize:12px;
+  /* Button Font Weight */
+  --buttonFontWeight:500;
+  /* Button Background Hover Color */
+  --buttonHoverBg:white;
+  /* Button Text Hover Color */
+  --buttonTextHoverColor:white;
+
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  /* background: #f9f9f9; */
+  background: var(--commonBg);
+  font-family: "Roboto", "Helvetica", "Arial", sans-serif !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+div,
+p,
+span,
+input,
+th,
+td {
+  font-family: var(--commonFontFamily), "Helvetica", "Arial", sans-serif !important;
+}
+
+svg {
+  width: 0.5em !important;
+  height: 0.5em !important;
+}
+
+.gridIcons2 {
+  width: 16px !important;
+  height: 15px !important;
+}
+
+.MuiAccordion-root.Mui-expanded {
+  margin: 6px 0;
+  background-color: #fff;
+}
+
+.hideScrollbar::-webkit-scrollbar {
+  width: 0.5em;
+}
+
+.hideScrollbar::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.hideScrollbar::-webkit-scrollbar-thumb {
+  background-color: transparent;
+}
+
+.thinScrollBar::-webkit-scrollbar {
+  width: 0em;
+  height: 0.4rem;
+  z-index: 10;
+}
+
+.thinScrollBar::-webkit-scrollbar-track {
+  /* background-color: #ffffff; */
+  background-color: var(--accordionBodyBg);
+}
+
+.thinScrollBar::-webkit-scrollbar-thumb {
+  /* background-color: #7e9bcf; */
+  background-color: var(--tableHeaderBg);
+  border-radius: 10px;
+}
+
+.scrollBarBlue::-webkit-scrollbar {
+  width: 6px;
+  z-index: 10;
+}
+
+.scrollBarBlue::-webkit-scrollbar-track {
+  background-color: #ffffff;
+}
+
+.scrollBarBlue::-webkit-scrollbar-thumb {
+  background-color: #7e9bcf;
+  border-radius: 10px;
+}
+
+.required-asterisk {
+  position: relative;
+  color: transparent;
+}
+
+.required-asterisk::before {
+  content: "*";
+  color: red;
+  /* Change asterisk color to red */
+  position: absolute;
+  /* Position the asterisk relative to its parent */
+  top: 0;
+  /* Align the asterisk to the top of its parent */
+  left: 0;
+  /* Align the asterisk to the left of its parent */
+  margin-left: 3px;
+}
+
+.labelRootStyle {
+  font-size: 10px !important;
+  align-items: center !important;
+  height: auto !important;
+}
+
+.inputRootStyle {
+  font-size: 10px !important;
+  /* width: 18.83rem !important; */
+  height: 27px !important;
+  background-color: #fff;
+  border-radius: 4px;
+  padding: 0 !important;
+  box-shadow: 0px 1px 2px rgba(16, 24, 40, 0.05);
+}
+
+.MuiAccordion-root::before {
+  position: "static !important";
+}
+
+.MuiAccordion-root::before {
+  height: 0px !important;
+}
+
+.MuiDayCalendar-weekDayLabel {
+  color: var(--table-text-color) !important;
+}
+
+.MuiClockNumber-root {
+  color: var(--table-text-color) !important;
+}
+
+.customTextStyles {
+  padding: 0 15px !important;
+  font-size: 10px !important;
+  font-weight: 400 !important;
+}
+
+.chart > svg{
+  height: 100% !important;
+  width: 650px !important;
+}

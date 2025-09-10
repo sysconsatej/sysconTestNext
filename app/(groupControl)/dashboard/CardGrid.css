@@ -1,0 +1,666 @@
+.card_grid {
+  height: 100%;
+  width: 100%;
+  height: calc(100vh - 80px);
+  display: grid;
+  gap: 10px;
+  transition: all 0.5s ease-in-out;
+}
+
+.grid_format_1 {
+  grid-template-areas: "first";
+  grid-template-columns: repeat(1, 1fr);
+}
+
+.grid_format_2 {
+  grid-template-areas: "first  second";
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.grid_format_2.animation_1 {
+  grid-template-areas:
+    "first first first first first first first"
+    "first first first first first first first"
+    "second second . . . . .";
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_2.animation_2 {
+  grid-template-areas:
+    "second second second second second second second"
+    "second second second second second second second"
+    "first first . . . . .";
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_3 {
+  grid-template-areas: "first second third";
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.grid_format_3.animation_1 {
+  grid-template-areas:
+    "first first first first first first first first"
+    "first first first first first first first first"
+    "second second second second third third third third";
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_3.animation_2 {
+  grid-template-areas:
+    "second second second second second second second second"
+    "second second second second second second second second"
+    "first first first first third third third third";
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_3.animation_3 {
+  grid-template-areas:
+    "third third third third third third third third"
+    "third third third third third third third third"
+    "first first first first second second second second";
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_4 {
+  grid-template-areas:
+    "first second"
+    "third four";
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.grid_format_4.animation_1 {
+  grid-template-areas:
+    "first first first first first first"
+    "first first first first first first"
+    "second second third third four four";
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_4.animation_2 {
+  grid-template-areas:
+    "second second second second second second"
+    "second second second second second second"
+    "first first third third four four";
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_4.animation_3 {
+  grid-template-areas:
+    "third third third third third third"
+    "third third third third third third"
+    "first first second second four four";
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_4.animation_4 {
+  grid-template-areas:
+    "four four four four four four"
+    "four four four four four four"
+    "first first second second third third";
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_5 {
+  grid-template-areas:
+    "first first first first second second second second third third third third"
+    "four four four four four four five five five five five five";
+  grid-template-columns: repeat(12, 1fr);
+}
+
+.grid_format_5.animation_1 {
+  grid-template-areas:
+    "first first first first"
+    "first first first first"
+    "second third four five";
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_5.animation_2 {
+  grid-template-areas:
+    "second second second second"
+    "second second second second"
+    "first third four five";
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_5.animation_3 {
+  grid-template-areas:
+    "third third third third"
+    "third third third third"
+    "first second four five";
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_5.animation_4 {
+  grid-template-areas:
+    "four four four four"
+    "four four four four"
+    "first second third five";
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_5.animation_5 {
+  grid-template-areas:
+    "five five five five"
+    "five five five five"
+    "first second third four";
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_6 {
+  grid-template-areas:
+    "first second third"
+    "four five six";
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.grid_format_6.animation_1 {
+  grid-template-areas:
+    "first first first first first"
+    "first first first first first"
+    "second third four five six";
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_6.animation_2 {
+  grid-template-areas:
+    "second second second second second"
+    "second second second second second"
+    "first third four five six";
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_6.animation_3 {
+  grid-template-areas:
+    "third third third third third"
+    "third third third third third"
+    "first second four five six";
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_6.animation_4 {
+  grid-template-areas:
+    "four four four four four"
+    "four four four four four"
+    "first second third five six";
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_6.animation_5 {
+  grid-template-areas:
+    "five five five five five"
+    "five five five five five"
+    "first second third four six";
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_6.animation_6 {
+  grid-template-areas:
+    "six six six six six"
+    "six six six six six"
+    "first second third four five";
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_7 {
+  grid-template-areas:
+    "first first first second second second third third third four four four"
+    "five five five five six six six six seven seven seven seven";
+  grid-template-columns: repeat(12, 1fr);
+}
+
+.grid_format_7.animation_1 {
+  grid-template-areas:
+    "first first first first first first"
+    "first first first first first first"
+    "second third four five six seven";
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_7.animation_2 {
+  grid-template-areas:
+    "second second second second second second"
+    "second second second second second second"
+    "first third four five six seven";
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_7.animation_3 {
+  grid-template-areas:
+    "third third third third third third"
+    "third third third third third third"
+    "first second four five six seven";
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_7.animation_4 {
+  grid-template-areas:
+    "four four four four four four"
+    "four four four four four four"
+    "first second third five six seven";
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_7.animation_5 {
+  grid-template-areas:
+    "five five five five five five"
+    "five five five five five five"
+    "first second third four six seven";
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_7.animation_6 {
+  grid-template-areas:
+    "six six six six six six"
+    "six six six six six six"
+    "first second third four five seven";
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_7.animation_7 {
+  grid-template-areas:
+    "seven seven seven seven seven"
+    "seven seven seven seven seven"
+    "first second third four five six";
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_8 {
+  grid-template-areas:
+    "first second third four"
+    "five six seven eight";
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.grid_format_8.animation_1 {
+  grid-template-areas:
+    "first first first first first first first"
+    "first first first first first first first"
+    "second third four five six seven eight";
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_8.animation_2 {
+  grid-template-areas:
+    "second second second second second second second"
+    "second second second second second second second"
+    "first third four five six seven eight";
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_8.animation_3 {
+  grid-template-areas:
+    "third third third third third third third"
+    "third third third third third third third"
+    "first second four five six seven eight";
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_8.animation_4 {
+  grid-template-areas:
+    "four four four four four four four"
+    "four four four four four four four"
+    "first second third five six seven eight";
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_8.animation_5 {
+  grid-template-areas:
+    "five five five five five five five"
+    "five five five five five five five"
+    "first second third four six seven eight";
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_8.animation_6 {
+  grid-template-areas:
+    "six six six six six six six"
+    "six six six six six six six"
+    "first second third four five seven eight";
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_8.animation_7 {
+  grid-template-areas:
+    "seven seven seven seven seven seven seven"
+    "seven seven seven seven seven seven seven"
+    "first second third four five six eight";
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_8.animation_8 {
+  grid-template-areas:
+    "eight eight eight eight eight eight eight"
+    "eight eight eight eight eight eight eight"
+    "first second third four five six seven";
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_9 {
+  grid-template-areas:
+    "first first first first second second second second third third third third four four four four five five five five"
+    "six six six six six seven seven seven seven seven eight eight eight eight eight nine nine nine nine nine";
+  grid-template-columns: repeat(20, 1fr);
+}
+
+.grid_format_9.animation_1 {
+  grid-template-areas:
+    "first first first first first first first first"
+    "first first first first first first first first"
+    "second third four five six seven eight nine";
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_9.animation_2 {
+  grid-template-areas:
+    "second second second second second second second second"
+    "second second second second second second second second"
+    "first third four five six seven eight nine";
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_9.animation_3 {
+  grid-template-areas:
+    "third third third third third third third third"
+    "third third third third third third third third"
+    "first second four five six seven eight nine";
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_9.animation_4 {
+  grid-template-areas:
+    "four four four four four four four four"
+    "four four four four four four four four"
+    "first second third five six seven eight nine";
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_9.animation_5 {
+  grid-template-areas:
+    "five five five five five five five five"
+    "five five five five five five five five"
+    "first second third four six seven eight nine";
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_9.animation_6 {
+  grid-template-areas:
+    "six six six six six six six six"
+    "six six six six six six six six"
+    "first second third four five seven eight nine";
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_9.animation_7 {
+  grid-template-areas:
+    "seven seven seven seven seven seven seven seven"
+    "seven seven seven seven seven seven seven seven"
+    "first second third four five six eight nine";
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_9.animation_8 {
+  grid-template-areas:
+    "eight eight eight eight eight eight eight eight"
+    "eight eight eight eight eight eight eight eight"
+    "first second third four five six seven nine";
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_9.animation_9 {
+  grid-template-areas:
+    "nine nine nine nine nine nine nine nine"
+    "nine nine nine nine nine nine nine nine"
+    "first second third four five six seven eight";
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_10 {
+  grid-template-areas:
+    "first second third four five"
+    "six seven eight nine ten";
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.grid_format_10.animation_1 {
+  grid-template-areas:
+    "first first first first first first first first first"
+    "first first first first first first first first first"
+    "second third four five six seven eight nine ten";
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_10.animation_2 {
+  grid-template-areas:
+    "second second second second second second second second second"
+    "second second second second second second second second second"
+    "first third four five six seven eight nine ten";
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_10.animation_3 {
+  grid-template-areas:
+    "third third third third third third third third third"
+    "third third third third third third third third third"
+    "first second four five six seven eight nine ten";
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_10.animation_4 {
+  grid-template-areas:
+    "four four four four four four four four four"
+    "four four four four four four four four four"
+    "first second third five six seven eight nine ten";
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_10.animation_5 {
+  grid-template-areas:
+    "five five five five five five five five five"
+    "five five five five five five five five five"
+    "first second third four six seven eight nine ten";
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_10.animation_6 {
+  grid-template-areas:
+    "six six six six six six six six six"
+    "six six six six six six six six six"
+    "first second third four five seven eight nine ten";
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_10.animation_7 {
+  grid-template-areas:
+    "seven seven seven seven seven seven seven seven seven"
+    "seven seven seven seven seven seven seven seven seven"
+    "first second third four five six eight nine ten";
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_10.animation_8 {
+  grid-template-areas:
+    "eight eight eight eight eight eight eight eight eight"
+    "eight eight eight eight eight eight eight eight eight"
+    "first second third four five six seven nine ten";
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_10.animation_9 {
+  grid-template-areas:
+    "nine nine nine nine nine nine nine nine nine"
+    "nine nine nine nine nine nine nine nine nine"
+    "first second third four five six seven eight ten";
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.grid_format_10.animation_10 {
+  grid-template-areas:
+    "ten ten ten ten ten ten ten ten ten"
+    "ten ten ten ten ten ten ten ten ten"
+    "first second third four five six seven eight nine";
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: 1fr 1fr 30px;
+}
+
+.card_grid .card {
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.card_grid .card .icon {
+  width: 40px;
+  height: 30px;
+  position: absolute;
+  right: 0px;
+  top: 0px;
+  z-index: 50;
+  cursor: pointer;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: row;
+}
+
+.card_grid .card .icon svg {
+  height: 20px !important;
+  width: 20px !important;
+}
+
+.card_grid .card .icon p {
+  color: #7e9bcf;
+}
+
+.card_grid .card .content {
+  height: 100%;
+  width: 100%;
+  position: relative;
+  overflow: scroll;
+  padding: 0px;
+}
+
+.card_grid.active_bg .card .content::before {
+  position: absolute;
+  content: var(--content);
+  height: 100%;
+  width: 100%;
+  background: white;
+  z-index: 15;
+  background-color: rgba(255, 255, 255, 0.61);
+  backdrop-filter: blur(5px);
+  margin: 0;
+  font-weight: 400;
+  font-size: 1rem;
+  line-height: 1.5;
+  letter-spacing: 0.00938em;
+  font-size: 12px;
+  padding: 6px 10px;
+  color: #7e9bcf;
+}
+
+/* width */
+.card_grid .card .content::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+/* Track */
+.card_grid .card .content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+/* Handle */
+.card_grid .card .content::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.card_grid .card:first-child {
+  grid-area: first;
+}
+.card_grid .card:nth-child(2) {
+  grid-area: second;
+}
+.card_grid .card:nth-child(3) {
+  grid-area: third;
+}
+.card_grid .card:nth-child(4) {
+  grid-area: four;
+}
+.card_grid .card:nth-child(5) {
+  grid-area: five;
+}
+.card_grid .card:nth-child(6) {
+  grid-area: six;
+}
+.card_grid .card:nth-child(7) {
+  grid-area: seven;
+}
+.card_grid .card:nth-child(8) {
+  grid-area: eight;
+}
+.card_grid .card:nth-child(9) {
+  grid-area: nine;
+}
+.card_grid .card:nth-child(10) {
+  grid-area: ten;
+}

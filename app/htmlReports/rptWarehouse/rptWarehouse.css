@@ -1,0 +1,99 @@
+@page {
+  size: A4;
+  margin: 1mm 10mm 10mm 10mm;
+}
+
+@media print {
+  .bodyColour {
+    background: none !important;
+  }
+
+  .container {
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .custom-table {
+    width: 100% !important;
+    table-layout: fixed; /* Ensure the table doesn't exceed the container */
+  }
+
+  .custom-table th,
+  .custom-table td {
+    padding: 4px; /* Adjusted padding for less space */
+    word-wrap: break-word; /* Ensure long text wraps within the cell */
+  }
+
+  .auto-adjust-table th,
+  .auto-adjust-table td {
+    padding: 4px; /* Adjusted padding for less space */
+    word-wrap: break-word; /* Ensure long text wraps within the cell */
+  }
+
+  th,
+  td {
+    padding-bottom: 4px; /* Adjusted padding for less space */
+  }
+
+  .hrRow {
+    border: 1px solid black;
+  }
+
+  .report-spacing {
+    margin-bottom: 10px; /* Adjusted margin */
+  }
+
+  .heading {
+    font-size: 15px;
+  }
+
+  .hrRow {
+    border: 1px solid black;
+  }
+
+  hr {
+    border: 0;
+    border-top: 1px solid black;
+    margin: 0.5rem 0; /* Adjust margin as needed */
+  }
+}
+
+.table-container {
+  width: 100%;
+  border: 1px solid black;
+}
+
+.table-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-container th,
+.table-container td {
+  border: 1px solid black;
+  padding: 4px; /* Adjusted padding for less space */
+  text-align: center; /* Ensuring text alignment for better readability */
+}
+
+.flex-container {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.flex-item {
+  width: 33.33%;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  border-right: 1px solid black;
+}
+
+.flex-item:last-child {
+  border-right: none;
+}
+
+.table-no-border th,
+.table-no-border td {
+  border: none;
+}
