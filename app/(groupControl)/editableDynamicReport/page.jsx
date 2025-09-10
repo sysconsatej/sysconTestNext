@@ -2076,6 +2076,33 @@ export default function AddEditFormControll({ reportData }) {
             console.error("Error saving edited data:", error);
             toast.error(error.message);
           }
+        } else if (reportEditableType === "splitBl") {
+          try {
+            if (Array.isArray(fullRowJson) && fullRowJson.length > 0) {
+              const transformedData = fullRowJson.map((item) => {
+                const rec = item?.record ?? {};
+                return {
+                  ...rec,
+                  BLSrNos: rec["BL Sr Nos"] ?? "",
+                };
+              });
+              const json = {
+                ...updatedCondition,
+                data: transformedData,
+              };
+              let response = await saveEditedReport({
+                json,
+                spName: saveSpName,
+              });
+              if (response.success) {
+                console.log("response", response);
+                return toast.success(data?.message);
+              }
+            }
+          } catch (error) {
+            console.error("Error saving edited data:", error);
+            toast.error(error.message);
+          }
         } else {
           const getRowId = (row) => row?.Id ?? row?.id ?? row?.ID;
 
@@ -3083,9 +3110,8 @@ export default function AddEditFormControll({ reportData }) {
               updatedData[rowIndex] = enrichedRow;
               return updatedData;
             });
-console.log("enrichedRow", enrichedRow);
+            console.log("enrichedRow", enrichedRow);
             return [...prevSelectedRows, enrichedRow];
-            
           }
         });
       } else if (menuName === "Update Bl Line No Details") {
