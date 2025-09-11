@@ -2090,13 +2090,16 @@ export default function AddEditFormControll({ reportData }) {
                 ...updatedCondition,
                 data: transformedData,
               };
+              console.log("json", json);
               let response = await saveEditedReport({
                 json,
                 spName: saveSpName,
               });
               if (response.success) {
                 console.log("response", response);
-                return toast.success(data?.message);
+                return toast.success(response?.data?.message);
+              } else {
+                return toast.error(response?.data?.message);
               }
             }
           } catch (error) {
