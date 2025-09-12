@@ -2097,9 +2097,9 @@ export default function AddEditFormControll({ reportData }) {
               });
               if (response.success) {
                 console.log("response", response);
-                return toast.success(response?.data?.message);
+                return toast.success(response?.message);
               } else {
-                return toast.error(response?.data?.message);
+                return toast.error(response?.message);
               }
             }
           } catch (error) {
