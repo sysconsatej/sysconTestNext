@@ -2084,13 +2084,13 @@ export default function AddEditFormControll({ reportData }) {
                 return {
                   ...rec,
                   BLSrNos: rec["BL Sr Nos"] ?? "",
+                  ContainerNo: rec["Container No"] ?? "",
                 };
               });
               const json = {
                 ...updatedCondition,
                 data: transformedData,
               };
-              console.log("json", json);
               let response = await saveEditedReport({
                 json,
                 spName: saveSpName,
