@@ -880,26 +880,26 @@ export default function RowComponent({
                             return newState;
                           });
 
-                          // setSubmitNewState((prev) => {
-                          //   const newState = { ...prev };
-                          //   // Assuming you have the index of the item you want to update
-                          //   // For example, let's say the index is stored in childValuseObj.index
-                          //   const idToUpdate = childValuseObj.indexValue;
+                          setSubmitNewState((prev) => {
+                            const newState = { ...prev };
+                            // Assuming you have the index of the item you want to update
+                            // For example, let's say the index is stored in childValuseObj.index
+                            const idToUpdate = childValuseObj.indexValue;
 
-                          //   newState[sectionData.tableName] = newState[
-                          //     sectionData.tableName
-                          //   ].map((record) => {
-                          //     // Check if the record's id matches the idToUpdate
+                            newState[sectionData.tableName] = newState[
+                              sectionData.tableName
+                            ].map((record) => {
+                              // Check if the record's id matches the idToUpdate
 
-                          //     if (record.indexValue === idToUpdate) {
-                          //       // Update the record
-                          //       return childValuseObj;
-                          //     }
-                          //     return record;
-                          //   });
+                              if (record.indexValue === idToUpdate) {
+                                // Update the record
+                                return childValuseObj;
+                              }
+                              return record;
+                            });
 
-                          //   return newState;
-                          // });
+                            return newState;
+                          });
 
                           setRenderedData(newState[sectionData.tableName]);
                           toggleRow();

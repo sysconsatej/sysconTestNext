@@ -2068,6 +2068,7 @@ export default function AddEditFormControll({ reportData }) {
                 spName: saveSpName,
               });
               if (response.success) {
+                console.log("response", response);
                 return toast.success(data?.message);
               }
             }
@@ -2083,7 +2084,6 @@ export default function AddEditFormControll({ reportData }) {
                 return {
                   ...rec,
                   BLSrNos: rec["BL Sr Nos"] ?? "",
-                  ContainerNo: rec["Container No"] ?? "",
                 };
               });
               const json = {
@@ -2096,9 +2096,7 @@ export default function AddEditFormControll({ reportData }) {
               });
               if (response.success) {
                 console.log("response", response);
-                return toast.success(response?.message);
-              } else {
-                return toast.error(response?.message);
+                return toast.success(data?.message);
               }
             }
           } catch (error) {
@@ -3733,8 +3731,7 @@ export default function AddEditFormControll({ reportData }) {
                                                   const allIndexes = new Set(
                                                     dataToGetSelectedRowData.map(
                                                       //finalPaginatedData.map(
-                                                      // (_, idx) => idx
-                                                      (_, idx) => _?.rowIndex
+                                                      (_, idx) => idx
                                                     )
                                                   );
                                                   setselectedRow(allIndexes);

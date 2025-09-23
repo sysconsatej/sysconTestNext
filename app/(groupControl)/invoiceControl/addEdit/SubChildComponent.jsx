@@ -36,7 +36,6 @@ import {
 import EditNoteRoundedIcon from "@mui/icons-material/EditNoteRounded";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import * as onSubmitValidation from "@/helper/onSubmitFunction";
-import * as onDeleteFunction from "@/helper/onDeleteFunction";
 
 
 function sortJSON(jsonArray, field, sortOrder) {
@@ -92,49 +91,6 @@ function onSubmitFunctionCall(
         setStateVariable,
         childName,
         childIndex
-      });
-      return result;
-      // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
-    }
-  }
-}
-
-function onDeleteFunctionCall(
-  functionData,
-  newState,
-  formControlData,
-  childName,
-  childIndex,
-  index
-) {
-
-  const funcNameMatch = functionData?.match(/^(\w+)/);
-  const argsMatch = functionData?.match(/\((.*)\)/);
-  console.log(functionData, "functionData");
-  // Check if we have a function name match, and we have an argsMatch (even if there are no arguments)
-  if (funcNameMatch && argsMatch !== null) {
-    const funcName = funcNameMatch[1];
-    const argsStr = argsMatch[1] || "";
-
-    // Find the function in formControlValidation by the extracted name
-    const func = onDeleteFunction?.[funcName];
-
-    if (typeof func === "function") {
-      // Prepare arguments: If there are no arguments, argsStr will be an empty string
-      let args;
-      if (argsStr === "") {
-        args = {}; // No arguments, so pass an empty object or as per the function's expected parameters
-      } else {
-        args = argsStr; // Has arguments, pass them as an object
-      }
-      // Call the function with the prepared arguments
-      let result = onDeleteFunction?.[funcName]({
-        args,
-        newState,
-        formControlData,
-        childName,
-        childIndex,
-        valuesIndex: index
       });
       return result;
       // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
@@ -218,9 +174,6 @@ export default function SubChildComponent({
   const [copyChildValueObj, setCopyChildValueObj] = useState([]);
   const [columnTotals, setColumnTotals] = useState({ tableName: "" });
 
-
-
-
   const handleFieldSubChildrenValuesChange = (updatedValues) => {
     setSubChildObject((prev) => ({ ...prev, ...updatedValues }));
   };
@@ -299,14 +252,14 @@ export default function SubChildComponent({
         tmpData[childName][childIndex][subChild.tableName].push({
           ...subChildObject,
           isChecked: true,
-          indexValue: Math.floor(Math.random() * 100),
+          indexValue: tmpData[childName][childIndex][subChild.tableName].length
         });
       }
       else {
         tmpData[childName][childIndex][subChild.tableName] = [{
           ...subChildObject,
           isChecked: true,
-          indexValue: Math.floor(Math.random() * 100),
+          indexValue: 0
         }];
       }
       console.log("tmpData", tmpData);
@@ -397,47 +350,18 @@ export default function SubChildComponent({
   }, [newState]);
 
   const deleteSubChildRecord = (indexValue) => {
-    try {
-      // safer deep clone
-      let tmpData = structuredClone(newState);
-
-      if (subChild.functionOnDelete) {
-        for (const fun of subChild.functionOnDelete.split(";") || []) {
-          let updatedData = onDeleteFunctionCall(
-            fun,
-            tmpData, // use tmpData instead of newState
-            formControlData,
-            childName,
-            childIndex,
-            indexValue
-          );
-          if (updatedData?.newState) {
-            tmpData = { ...tmpData, ...updatedData.newState };
-          }
-        }
-      }
-
-      // immutably remove the record
-      tmpData[childName][childIndex][subChild.tableName] =
-        tmpData[childName][childIndex][subChild.tableName].filter(
-          (_, i) => i !== indexValue
-        );
-
-      console.log("tmpData", tmpData);
-
-      // directly set state
-      setNewState(tmpData);
-      setSubmitNewState(tmpData);
-
-      // explicitly hide inputs if empty
-      if (tmpData[childName][childIndex][subChild.tableName].length === 0) {
-        setHideSubChildInputs(true);
-      }
-    } catch (error) {
-      toast.error(error.message);
+    let tmpData = { ...newState };
+    tmpData[childName][childIndex][subChild.tableName].splice(indexValue, 1);
+    setNewState((prev) => {
+      return { ...prev, ...tmpData };
+    });
+    setSubmitNewState((prev) => {
+      return { ...prev, ...tmpData };
+    });
+    if (tmpData[childName][childIndex][subChild.tableName].length === 0) {
+      setHideSubChildInputs((prev) => !prev);
     }
   };
-
 
   // eslint-disable-next-line no-unused-vars
   const removeSubChildRecordFromInsert = (id, index) => {
@@ -806,19 +730,6 @@ export default function SubChildComponent({
       };
     });
   }
-
-  // useEffect(() => {
-  //   let defaultValues = {};
-  //   subChild.fields.forEach((field) => {
-  //     if (field.controlDefaultValue) {
-  //       defaultValues[field.fieldname] = Number(field.controlDefaultValue) || field.controlDefaultValue;
-  //     }
-  //   });
-  //   console.log("defaultValues", defaultValues);
-
-  //   setSubChildObject((prev) => ({ ...prev, ...defaultValues }));
-
-  // }, [subChild])
 
   return (
     <>

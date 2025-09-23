@@ -38,7 +38,6 @@ function rptInvoice() {
   const month = date.toLocaleString("en-US", { month: "short" }); // Gets short month name
   const year = date.getFullYear();
   const itemsPerPage = 10;
-  const itemsPerPageAtt = 50;
   const hsnSacItemPerPage = 5;
   const [termsAndConditions, setTermsAndConditions] = useState("");
   const [htmlContents, setHtmlContents] = useState({});
@@ -57,13 +56,6 @@ function rptInvoice() {
       }
     });
     setHtmlContents(collectedHtml);
-  };
-
-  const chunkForSLSKInvoicePrint = (arr = [], size = 20) => {
-    if (!Array.isArray(arr) || size <= 0) return [];
-    const out = [];
-    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-    return out;
   };
 
   useEffect(() => {
@@ -242,7 +234,7 @@ function rptInvoice() {
             );
             const resultAtt = splitIntoChunksWithExtraArray(
               allInvoiceDetails,
-              itemsPerPageAtt
+              itemsPerPage
             );
             console.log("Data received Abhi:", resultAtt);
 
@@ -456,25 +448,6 @@ function rptInvoice() {
       </div>
     );
   };
-
-  const CompanyImgFooterModule = () => {
-    const storedUserData = localStorage.getItem("userData");
-    let imageFooter = null;
-    if (storedUserData) {
-      const decryptedData = decrypt(storedUserData);
-      const userData = JSON.parse(decryptedData);
-      imageFooter = userData[0]?.footerLogoPath;
-    }
-    return (
-      <img
-        src={imageFooter ? baseUrlNext + imageFooter : ""}
-        //src="https://expresswayshipping.com/sql-api/uploads/1756889348213-SLSK LOGO.jpg"
-        style={{ width: "100%" }}
-        alt="Footer"
-      />
-    );
-  };
-
   const CompanyImgModuleInvoicePrint = ({ data }) => {
     return (
       <div className="flex border-t border-l border-r border-black w-full p-0.5">
@@ -545,7 +518,7 @@ function rptInvoice() {
           <div style={{ width: "20%" }}>
             <p style={{ fontSize: "9px" }}>
               <span className="font-bold">PAN No:</span>{" "}
-              {data[0]?.ownPanNo || ""}
+              {data[0]?.partyPanNo || ""}
             </p>
           </div>
         </div>
@@ -686,7 +659,7 @@ function rptInvoice() {
             <p className="font-bold" style={{ width: "35%" }}>
               PAN No. :{" "}
             </p>
-            <p style={{ width: "65%" }}>{data[0]?.partyPanNo || ""}</p>
+            <p style={{ width: "65%" }}>{data[0]?.ownPanNo || ""}</p>
           </div>
           <div className="flex pt-1 w-full">
             <p className="font-bold" style={{ width: "35%" }}>
@@ -1001,9 +974,7 @@ function rptInvoice() {
                 <p className="font-bold" style={{ width: "30%" }}>
                   Job No. :{" "}
                 </p>
-                <p style={{ width: "70%" }}>
-                  {data[0]?.containerTransaction || ""}
-                </p>
+                <p style={{ width: "70%" }}>{data[0]?.jobNo || ""}</p>
               </div>
               <div className="flex w-full" style={{ width: "35%" }}>
                 <p className="font-bold" style={{ width: "45%" }}>
@@ -1027,7 +998,12 @@ function rptInvoice() {
               </div>
             </div>
             <div className="flex w-full pb-1">
-              <div className="flex w-full" style={{ width: "65%" }}></div>
+              <div className="flex w-full" style={{ width: "65%" }}>
+                <p className="font-bold" style={{ width: "30%" }}>
+                  To Location :{" "}
+                </p>
+                <p style={{ width: "70%" }}>{data[0]?.fpd || ""}</p>
+              </div>
               <div className="flex w-full" style={{ width: "35%" }}>
                 <p className="font-bold" style={{ width: "45%" }}>
                   To Date :{" "}
@@ -1267,7 +1243,7 @@ function rptInvoice() {
             <p className="font-bold" style={{ width: "40%" }}>
               Consignee :{" "}
             </p>
-            <p style={{ width: "60%" }}>{data[0]?.consigneeText || ""}</p>
+            <p style={{ width: "60%" }}>{data[0]?.consignee || ""}</p>
           </div>
           <div className="flex pt-1 w-full">
             <p className="font-bold" style={{ width: "40%" }}>
@@ -1508,15 +1484,16 @@ function rptInvoice() {
             {charge[index]?.map((chargeData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
-                  }`}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b" : ""
+                }`}
                 style={{ fontSize: "9px", width: "100%" }}
               >
                 <p
                   className="pb-1 pl-2 border-r border-black ps-1"
                   style={{ width: "30%" }}
                 >
-                  {chargeData?.description || chargeData?.chargeGl || ""}
+                  {chargeData?.description || ""}
                 </p>
                 <p
                   className="pb-1 border-r border-black text-center ps-1"
@@ -1581,13 +1558,13 @@ function rptInvoice() {
                 <p className="pb-1 text-center" style={{ width: "7%" }}>
                   {(
                     Number(chargeData?.qty || 0) *
-                    Number(chargeData?.rate || 0) *
-                    Number(chargeData?.exchangeRate || 1) +
+                      Number(chargeData?.rate || 0) *
+                      Number(chargeData?.exchangeRate || 1) +
                     Number(
                       chargeData?.IGST ||
-                      chargeData?.CGST ||
-                      chargeData?.SGST ||
-                      0
+                        chargeData?.CGST ||
+                        chargeData?.SGST ||
+                        0
                     )
                   ).toFixed(2)}
                 </p>
@@ -1624,395 +1601,6 @@ function rptInvoice() {
       </>
     );
   };
-  const InvoicePrintDeteChargeDetails = ({
-    data,
-    charge,
-    chargeAtt,
-    index,
-    hsnSac,
-  }) => {
-    let totalAmount = 0;
-    charge.forEach((group) => {
-      group.forEach((item) => {
-        if (!isNaN(item.totalAmount) && item.totalAmount !== null) {
-          totalAmount += Number(item.totalAmount);
-        }
-      });
-    });
-
-    const gridTotal = data[0]?.tblInvoiceCharge?.reduce((acc, curr) => {
-      const qty = Number(curr.qty || 0);
-      const rate = Number(curr.rate || 0);
-      const exchangeRate = Number(curr.exchangeRate || 1);
-      const tax = Number(curr.IGST || curr.CGST || curr.SGST || 0);
-
-      // const rowTotal = qty * rate * exchangeRate + tax;
-      const rowTotal = Math.round(qty * rate * exchangeRate + tax);
-
-      return acc + rowTotal;
-    }, 0);
-
-    const totalAmountInWords = numberToWords(parseFloat(gridTotal), "INR");
-
-    // Calculate the number of charges on the current page
-    const currentPageLength = charge[index]?.length || 0;
-    const nextPageLength = charge[index + 1]?.length || 0;
-    const lastPageIndex = charge.length - 1;
-
-    const totalPages = charge.length;
-    // Determine if it's the last page
-    const isLastPage =
-      index === lastPageIndex ||
-      (index === lastPageIndex - 1 && nextPageLength < 4);
-
-    // Condition to check if there is only one page
-    const isSinglePage = charge.length === 1;
-
-    // Adjust the charge grid height based on whether it's a single page or not
-    // const chargeGridHeight = isSinglePage ? "490px" : "490px"; // Set to 100px for a single page, otherwise keep it 245px.
-
-    // // Show the second grid only if it's the last page or if more than 4 charges exist
-    // const showHsnGrid =
-    //   isLastPage || (currentPageLength > 4 && currentPageLength < 10);
-
-    return (
-      <>
-        {/* First Grid: Charge Details */}
-
-        {currentPageLength > 0 && !chargeAtt?.length && (
-          <div
-            className="flex w-full border-black border-r border-l border-b text-center font-bold"
-            style={{ fontSize: "9px", width: "100%" }}
-          >
-            <p className="p-1 border-r border-black" style={{ width: "45%" }}>
-              Charge
-            </p>
-            <p className="p-1 border-r border-black" style={{ width: "10%" }}>
-              Qty
-            </p>
-            <p className="p-1 border-r border-black" style={{ width: "10%" }}>
-              Rate
-            </p>
-            <p className="p-1 border-r border-black" style={{ width: "10%" }}>
-              Curr
-            </p>
-            <p className="p-1 border-r border-black" style={{ width: "10%" }}>
-              Ex. Rate
-            </p>
-            <p className="p-1 border-black" style={{ width: "15%" }}>
-              Amount
-            </p>
-          </div>
-        )}
-
-        {chargeAtt && chargeAtt.length > 0 && (
-          <div
-            className="flex w-full border-black border-r border-l border-b text-center font-bold"
-            style={{ fontSize: "9px", width: "100%" }}
-          >
-            <p className="p-1 border-r border-black" style={{ width: "47%" }}>
-              Charge
-            </p>
-            <p className="p-1 border-r border-black" style={{ width: "12%" }}>
-              Qty
-            </p>
-            <p className="p-1 border-r border-black" style={{ width: "12%" }}>
-              Curr
-            </p>
-            <p className="p-1 border-r border-black" style={{ width: "12%" }}>
-              Ex. Rate
-            </p>
-            <p className="p-1 border-black" style={{ width: "17%" }}>
-              Amount
-            </p>
-          </div>
-        )}
-
-        {/* Charge Grid */}
-        {currentPageLength > 0 && (
-          <div
-            className="border-black border-r border-l"
-            style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-          // style={{ height: chargeGridHeight, overflow: "hidden" }}
-          >
-            {!chargeAtt?.length &&
-              charge[index]?.map((chargeData, idx, array) => (
-                <div
-                  key={idx}
-                  className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                    }`}
-                  style={{ fontSize: "9px", width: "100%" }}
-                >
-                  <p
-                    className="pb-1 pl-2 border-r border-black "
-                    style={{ width: "45%" }}
-                  >
-                    {chargeData?.description || ""}
-                  </p>
-                  <p
-                    className="pb-1 border-r border-black text-center ps-1"
-                    style={{ width: "10%" }}
-                  >
-                    {chargeData?.qty || ""}
-                  </p>
-                  <p
-                    className="pb-1 border-r border-black text-center ps-1"
-                    style={{ width: "10%" }}
-                  >
-                    {chargeData?.rate || ""}
-                  </p>
-                  <p
-                    className="pb-1 border-r border-black text-center ps-1"
-                    style={{ width: "10%" }}
-                  >
-                    {chargeData?.chargeCurrency || ""}
-                  </p>
-                  <p
-                    className="pb-1 border-r border-black text-center ps-1"
-                    style={{ width: "10%" }}
-                  >
-                    {chargeData?.exchangeRate || ""}
-                  </p>
-                  <p
-                    className="pb-1 border-black text-center ps-1"
-                    style={{ width: "15%" }}
-                  >
-                    {chargeData?.totalAmountFc || ""}
-                  </p>
-                </div>
-              ))}
-
-            {chargeAtt &&
-              chargeAtt.length > 0 &&
-              charge[index]?.map((chargeData, idx, array) => (
-                <div
-                  key={idx}
-                  className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                    }`}
-                  style={{ fontSize: "9px", width: "100%" }}
-                >
-                  <p
-                    className="pb-1 pl-2 border-r border-black"
-                    style={{ width: "47%" }}
-                  >
-                    {chargeData?.description || ""}
-                  </p>
-                  <p
-                    className="pb-1 border-r border-black text-center ps-1"
-                    style={{ width: "12%" }}
-                  >
-                    {chargeData?.qty || ""}
-                  </p>
-                  <p
-                    className="pb-1 border-r border-black text-center ps-1"
-                    style={{ width: "12%" }}
-                  >
-                    {chargeData?.chargeCurrency || ""}
-                  </p>
-                  <p
-                    className="pb-1 border-r border-black text-center ps-1"
-                    style={{ width: "12%" }}
-                  >
-                    {chargeData?.exchangeRate || ""}
-                  </p>
-                  <p
-                    className="pb-1 border-black text-center ps-1"
-                    style={{ width: "17%" }}
-                  >
-                    {chargeData?.totalAmountFc || ""}
-                  </p>
-                </div>
-              ))}
-
-            {/* Final row - Amount in Words */}
-            <div
-              className="flex w-full border-b border-black"
-              style={{ fontSize: "9px", width: "100%" }}
-            >
-              <div className="border-r border-black" style={{ width: "50%" }}>
-                <div>
-                  <p className=" text-left pl-2">Note :</p>
-                </div>
-                <div>
-                  <p className=" text-left pl-2">
-                    {" "}
-                    ANY DISCREPANCY NOTED IN INVOICE, SHOULD BE BROUGHT TO OUR
-                    NOTICE WITH IN 7 (SEVEN) DAYS FROM DATE OF INVOICE.
-                  </p>
-                </div>
-              </div>
-              <div className="border-black" style={{ width: "50%" }}>
-                <div className="flex w-full border-b border-black pb-1 pt-1">
-                  <p className=" text-right" style={{ width: "60%" }}>
-                    Subtotal
-                  </p>
-                  <p className="text-right pr-1" style={{ width: "40%" }}>
-                    {gridTotal?.toFixed(2)}
-                  </p>
-                </div>
-                <div className="flex w-full pb-1 pt-1">
-                  <p className=" text-right" style={{ width: "60%" }}>
-                    Amount {data[0]?.currency || ""}
-                  </p>
-                  <p className="text-right pr-1" style={{ width: "40%" }}>
-                    {gridTotal?.toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div
-              className="flex w-full border-b border-black"
-              style={{ fontSize: "9px", width: "100%" }}
-            >
-              <p
-                className="p-1 uppercase"
-                style={{ width: "85%", paddingRight: "15px" }}
-              >
-                <span className="font-bold">Amount in Words </span>
-                {data[0]?.currency || ""} {totalAmountInWords || ""} Only
-              </p>
-            </div>
-
-            {chargeAtt[index] && chargeAtt[index].length > 0 && (
-              <div>
-                <div
-                  className="border-black text-Right font-bold pt-5"
-                  style={{ fontSize: "10px", width: "100%" }}
-                >
-                  <p className="p-1 border-black">
-                    Container Detention Details:-
-                  </p>
-                </div>
-
-                <div
-                  className="flex w-full border-black border-b border-t text-center font-bold "
-                  style={{ fontSize: "9px", width: "100%" }}
-                >
-                  <p
-                    className="p-1 border-r border-black"
-                    style={{ width: "20%" }}
-                  >
-                    Container No
-                  </p>
-                  <p
-                    className="p-1 border-r border-black"
-                    style={{ width: "15%" }}
-                  >
-                    From Date
-                  </p>
-                  <p
-                    className="p-1 border-r border-black"
-                    style={{ width: "15%" }}
-                  >
-                    To Date
-                  </p>
-                  <p
-                    className="p-1 border-r border-black"
-                    style={{ width: "15%" }}
-                  >
-                    No of Day's
-                  </p>
-                  <p
-                    className="p-1 border-r border-black"
-                    style={{ width: "15%" }}
-                  >
-                    Rate
-                  </p>
-                  <p className="p-1 border-black" style={{ width: "20%" }}>
-                    Total Amount(Rs.)
-                  </p>
-                </div>
-
-                <div className="w-full border-black border-b text-center">
-                  {chargeAtt[index]?.map((chargeAttData, idx, array) => (
-                    <div
-                      key={idx}
-                      className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
-                        }`}
-                      style={{ fontSize: "9px", width: "100%" }}
-                    >
-                      <p
-                        className="pb-1 pl-2 border-r border-black"
-                        style={{ width: "20%" }}
-                      >
-                        {chargeAttData?.containerNo || ""}
-                      </p>
-                      <p
-                        className="pb-1 border-r border-black text-center ps-1"
-                        style={{ width: "15%" }}
-                      >
-                        {chargeAttData?.fromDate || ""}
-                      </p>
-                      <p
-                        className="pb-1 border-r border-black text-center ps-1"
-                        style={{ width: "15%" }}
-                      >
-                        {chargeAttData?.toDate || ""}
-                      </p>
-                      <p
-                        className="pb-1 border-r border-black text-center ps-1"
-                        style={{ width: "15%" }}
-                      >
-                        {chargeAttData?.noOfDays || ""}
-                      </p>
-                      <p
-                        className="pb-1 border-r border-black text-center ps-1"
-                        style={{ width: "15%" }}
-                      >
-                        {chargeAttData?.rate || ""}
-                      </p>
-                      <p
-                        className="pb-1 border-black text-center ps-1"
-                        style={{ width: "20%" }}
-                      >
-                        {chargeAttData?.amountHc || ""}
-                      </p>
-                    </div>
-                  ))}
-
-                  {/* Totals Row */}
-                  <div
-                    className="flex w-full border-t border-black font-semibold"
-                    style={{ fontSize: "9px" }}
-                  >
-                    <p
-                      className="pb-1 pl-2 pr-2 border-r border-black text-right"
-                      style={{ width: "65%" }}
-                    >
-                      Total :
-                    </p>
-                    <p
-                      className="pb-1 border-r border-black text-center ps-1"
-                      style={{ width: "15%" }}
-                    >
-                      {chargeAtt[index]
-                        ?.reduce(
-                          (sum, curr) => sum + (parseFloat(curr?.rate) || 0),
-                          0
-                        )
-                        .toFixed(2)}
-                    </p>
-                    <p
-                      className="pb-1 border-black text-center ps-1"
-                      style={{ width: "20%" }}
-                    >
-                      {chargeAtt[index]
-                        ?.reduce(
-                          (sum, curr) =>
-                            sum + (parseFloat(curr?.amountHc) || 0),
-                          0
-                        )
-                        .toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </>
-    );
-  };
   const InvoicePrintChargeDetails = ({ data, charge, index, hsnSac }) => {
     let totalAmount = 0;
     charge.forEach((group) => {
@@ -2029,9 +1617,7 @@ function rptInvoice() {
       const exchangeRate = Number(curr.exchangeRate || 1);
       const tax = Number(curr.IGST || curr.CGST || curr.SGST || 0);
 
-      // const rowTotal = qty * rate * exchangeRate + tax;
-      const rowTotal = Math.round(qty * rate * exchangeRate + tax);
-
+      const rowTotal = qty * rate * exchangeRate + tax;
       return acc + rowTotal;
     }, 0);
 
@@ -2090,15 +1676,15 @@ function rptInvoice() {
         {/* Charge Grid */}
         {currentPageLength > 0 && (
           <div
-            className="border-black border-r border-l"
-            style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-          // style={{ height: chargeGridHeight, overflow: "hidden" }}
+            className="border-black border-r border-l" style={{maxheight: "540px",minHeight: "540px", height: "540px"}}
+            // style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {charge[index]?.map((chargeData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                  }`}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b border-black" : ""
+                }`}
                 style={{ fontSize: "9px", width: "100%" }}
               >
                 <p
@@ -2189,190 +1775,7 @@ function rptInvoice() {
             </div>
           </div>
         )}
-      </>
-    );
-  };
-  const InvoicePrintSubLeaseChargeDetails = ({
-    data,
-    charge,
-    index,
-    hsnSac,
-  }) => {
-    let totalAmount = 0;
-    charge.forEach((group) => {
-      group.forEach((item) => {
-        if (!isNaN(item.totalAmount) && item.totalAmount !== null) {
-          totalAmount += Number(item.totalAmount);
-        }
-      });
-    });
-
-    const gridTotal = data[0]?.tblInvoiceCharge?.reduce((acc, curr) => {
-      const qty = Number(curr.qty || 0);
-      const rate = Number(curr.rate || 0);
-      const exchangeRate = Number(curr.exchangeRate || 1);
-      const tax = Number(curr.IGST || curr.CGST || curr.SGST || 0);
-
-      // const rowTotal = qty * rate * exchangeRate + tax;
-      const rowTotal = Math.round(qty * rate * exchangeRate + tax);
-
-      return acc + rowTotal;
-    }, 0);
-
-    const totalAmountInWords = numberToWords(parseFloat(gridTotal), "INR");
-
-    // Calculate the number of charges on the current page
-    const currentPageLength = charge[index]?.length || 0;
-    const nextPageLength = charge[index + 1]?.length || 0;
-    const lastPageIndex = charge.length - 1;
-
-    const totalPages = charge.length;
-    // Determine if it's the last page
-    const isLastPage =
-      index === lastPageIndex ||
-      (index === lastPageIndex - 1 && nextPageLength < 4);
-
-    // Condition to check if there is only one page
-    const isSinglePage = charge.length === 1;
-
-    // Adjust the charge grid height based on whether it's a single page or not
-    // const chargeGridHeight = isSinglePage ? "490px" : "490px"; // Set to 100px for a single page, otherwise keep it 245px.
-
-    // // Show the second grid only if it's the last page or if more than 4 charges exist
-    // const showHsnGrid =
-    //   isLastPage || (currentPageLength > 4 && currentPageLength < 10);
-
-    return (
-      <>
-        {/* First Grid: Charge Details */}
-
-        {currentPageLength > 0 && (
-          <div
-            className="flex w-full border-black border-r border-l border-b text-center font-bold"
-            style={{ fontSize: "9px", width: "100%" }}
-          >
-            <p className="p-1 border-r border-black" style={{ width: "47%" }}>
-              Charge
-            </p>
-            <p className="p-1 border-r border-black" style={{ width: "12%" }}>
-              Qty
-            </p>
-            {/* <p className="p-1 border-r border-black" style={{ width: "10%" }}>
-              Rate
-            </p> */}
-            <p className="p-1 border-r border-black" style={{ width: "12%" }}>
-              Curr
-            </p>
-            <p className="p-1 border-r border-black" style={{ width: "12%" }}>
-              Ex. Rate
-            </p>
-            <p className="p-1 border-black" style={{ width: "17%" }}>
-              Amount
-            </p>
-          </div>
-        )}
-        {/* Charge Grid */}
-        {currentPageLength > 0 && (
-          <div
-            className="border-black border-r border-l"
-            style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-          // style={{ height: chargeGridHeight, overflow: "hidden" }}
-          >
-            {charge[index]?.map((chargeData, idx, array) => (
-              <div
-                key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                  }`}
-                style={{ fontSize: "9px", width: "100%" }}
-              >
-                <p
-                  className="pb-1 pl-2 border-r border-black "
-                  style={{ width: "47%" }}
-                >
-                  {chargeData?.description || ""}
-                </p>
-                <p
-                  className="pb-1 border-r border-black text-center ps-1"
-                  style={{ width: "12%" }}
-                >
-                  {chargeData?.qty || ""}
-                </p>
-                {/* <p
-                  className="pb-1 border-r border-black text-center ps-1"
-                  style={{ width: "10%" }}
-                >
-                  {chargeData?.rate || ""}
-                </p> */}
-                <p
-                  className="pb-1 border-r border-black text-center ps-1"
-                  style={{ width: "12%" }}
-                >
-                  {chargeData?.chargeCurrency || ""}
-                </p>
-                <p
-                  className="pb-1 border-r border-black text-center ps-1"
-                  style={{ width: "12%" }}
-                >
-                  {chargeData?.exchangeRate || ""}
-                </p>
-                <p
-                  className="pb-1 border-black text-center ps-1"
-                  style={{ width: "17%" }}
-                >
-                  {chargeData?.totalAmountFc || ""}
-                </p>
-              </div>
-            ))}
-            {/* Final row - Amount in Words */}
-            <div
-              className="flex w-full border-b border-black"
-              style={{ fontSize: "9px", width: "100%" }}
-            >
-              <div className="border-r border-black" style={{ width: "50%" }}>
-                <div>
-                  <p className=" text-left pl-2">Note :</p>
-                </div>
-                <div>
-                  <p className=" text-left pl-2">
-                    {" "}
-                    ANY DISCREPANCY NOTED IN INVOICE, SHOULD BE BROUGHT TO OUR
-                    NOTICE WITH IN 7 (SEVEN) DAYS FROM DATE OF INVOICE.
-                  </p>
-                </div>
-              </div>
-              <div className="border-black" style={{ width: "50%" }}>
-                <div className="flex w-full border-b border-black pb-1 pt-1">
-                  <p className=" text-right" style={{ width: "60%" }}>
-                    Subtotal
-                  </p>
-                  <p className="text-right pr-1" style={{ width: "40%" }}>
-                    {gridTotal?.toFixed(2)}
-                  </p>
-                </div>
-                <div className="flex w-full pb-1 pt-1">
-                  <p className=" text-right" style={{ width: "60%" }}>
-                    Amount {data[0]?.currency || ""}
-                  </p>
-                  <p className="text-right pr-1" style={{ width: "40%" }}>
-                    {gridTotal?.toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div
-              className="flex w-full border-b border-black"
-              style={{ fontSize: "9px", width: "100%" }}
-            >
-              <p
-                className="p-1 uppercase"
-                style={{ width: "85%", paddingRight: "15px" }}
-              >
-                <span className="font-bold">Amount in Words </span>
-                {data[0]?.currency || ""} {totalAmountInWords || ""} Only
-              </p>
-            </div>
-          </div>
-        )}
+        
       </>
     );
   };
@@ -2608,10 +2011,7 @@ function rptInvoice() {
           </div>
         </div>
         <div className="p-2 border-r border-l border-b border-black flex">
-          <div
-            className="font-bold"
-            style={{ width: "90%", fontSize: "9px", color: "black" }}
-          >
+          <div className="font-bold" style={{ width: "90%", fontSize: "9px", color: "black"}}>
             This is a computer generated invoice no stamp and signature is
             required.
           </div>
@@ -2781,16 +2181,12 @@ function rptInvoice() {
     );
   };
   const InvoiceNewTermAndCondition = () => {
+    
     return (
       <>
         <div
           className="p-2 border border-black"
-          style={{
-            fontSize: "9px",
-            color: "black",
-            width: "100%",
-            height: "278mm",
-          }}
+          style={{ fontSize: "9px", color: "black", width: "100%", height: "278mm" }}
         >
           <p className="font-bold mt-4 mb-2">Terms & Conditions </p>
           <p>
@@ -2962,10 +2358,7 @@ function rptInvoice() {
           </p>
         </div>
         <div className="p-2 border-r border-l border-b border-black flex">
-          <div
-            className="font-bold"
-            style={{ width: "90%", fontSize: "9px", color: "black" }}
-          >
+          <div className="font-bold" style={{ width: "90%", fontSize: "9px", color: "black" }}>
             This is a computer generated invoice no stamp and signature is
             required.
           </div>
@@ -2974,9 +2367,9 @@ function rptInvoice() {
             2
           </div> */}
         </div>
-      </>
-    );
-  };
+        </>
+    )
+}
   const TaxInvoiceHsnSummaryGrid = ({ hsnSac, data }) => {
     console.log("hsnSac=>", hsnSac);
     console.log("data=>", data);
@@ -3218,10 +2611,9 @@ function rptInvoice() {
         <InvoicePrintBillingDetails data={data} />
         {index === 0 && <InvoicePrintJobDetails data={data} />}
         <InvoicePrintRemarks data={data} />
-        <InvoicePrintDeteChargeDetails
+        <InvoicePrintChargeDetails
           data={data}
           charge={charge}
-          chargeAtt={chargeAtt}
           index={index}
           hsnSac={hsnSac}
         />
@@ -3305,7 +2697,7 @@ function rptInvoice() {
         <CompanyImgModuleInvoicePrint data={data} />
         <SubLeaseInvoicePrintHeader data={data} />
         <SubLeaseInvoicePrintBillingDetails data={data} />
-        <InvoicePrintSubLeaseChargeDetails
+        <InvoicePrintChargeDetails
           data={data}
           charge={charge}
           index={index}
@@ -3391,13 +2783,10 @@ function rptInvoice() {
             <p className="p-1 border-r border-black" style={{ width: "10%" }}>
               Sr No.
             </p>
-            <p className="p-1 border-r border-black" style={{ width: "25%" }}>
+            <p className="p-1 border-r border-black" style={{ width: "30%" }}>
               Container No.
             </p>
-            <p className="p-1 border-r border-black" style={{ width: "10%" }}>
-              NO Of Days
-            </p>
-            <p className="p-1 border-r border-black" style={{ width: "10%" }}>
+            <p className="p-1 border-r border-black" style={{ width: "15%" }}>
               Size/Type
             </p>
             <p className="p-1 border-r border-black" style={{ width: "10%" }}>
@@ -3414,14 +2803,15 @@ function rptInvoice() {
             </p>
           </div>
           <div
-            className="w-full border-black border-r border-l border-b"
+            className=" flex w-full border-black border-r border-l border-b"
             style={{ overflow: "hidden" }}
           >
             {chargeAtt[index]?.map((chargeAttData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
-                  }`}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b" : ""
+                }`}
                 style={{ fontSize: "9px", width: "100%" }}
               >
                 <p
@@ -3432,19 +2822,13 @@ function rptInvoice() {
                 </p>
                 <p
                   className="pb-1 border-r border-black text-center ps-1"
-                  style={{ width: "25%" }}
+                  style={{ width: "30%" }}
                 >
                   {chargeAttData?.containerNo || ""}
                 </p>
                 <p
                   className="pb-1 border-r border-black text-center ps-1"
-                  style={{ width: "10%" }}
-                >
-                  {chargeAttData?.noOfDays || ""}
-                </p>
-                <p
-                  className="pb-1 border-r border-black text-center ps-1"
-                  style={{ width: "10%" }}
+                  style={{ width: "15%" }}
                 >
                   {chargeAttData?.size || ""} / {chargeAttData?.typeCode || ""}
                 </p>
@@ -3482,12 +2866,7 @@ function rptInvoice() {
 
   const ChargeGrid = ({ data = [] }) => {
     // Accept either an array or an object with tblInvoiceCharge
-    const rows = (
-      Array.isArray(data) ? data : data?.tblInvoiceCharge || []
-    ).slice(0, 20);
-    const calculateTotal = Array.isArray(data)
-      ? data
-      : data?.tblInvoiceCharge || [];
+    const rows = Array.isArray(data) ? data : data?.tblInvoiceCharge || [];
 
     // simple number formatter; leave blank if null/undefined
     const fmt = (v, opts = { maximumFractionDigits: 2 }) =>
@@ -3495,39 +2874,14 @@ function rptInvoice() {
         ? ""
         : Number(v).toLocaleString(undefined, opts);
 
-    const totals = calculateTotal.reduce(
-      (acc, row) => {
-        acc.amount += Number(row.amount) || 0;
-        acc.rate += Number(row.rate) || 0;
-        acc.taxAmount += Number(row.taxAmount) || 0;
-        return acc;
-      },
-      { amount: 0, rate: 0, taxAmount: 0 }
-    );
-
-    // Format with 2 decimals
-    const formattedTotals = {
-      amount: totals.amount.toFixed(2),
-      rate: totals.rate.toFixed(2),
-      taxAmount: totals.taxAmount.toFixed(2),
-    };
-
     return (
-      <div
-        style={{
-          color: "black",
-          minHeight: "560px",
-          maxheight: "560px",
-          hight: "560px",
-        }}
-        className="w-full border-b border-l border-r border-black border-b"
-      >
-        <table className="w-full border-b border-black  text-[9px]">
+      <div className="w-full">
+        <table className="w-full border-b border-l border-r border-black border-collapse text-[9px]">
           <thead>
             <tr className="bg-gray-300">
               <th
                 rowSpan={2}
-                className="border-b border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
+                className="border-b border-l border-r border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
                 style={{ color: "black", fontSize: "9px" }}
               >
                 SNo
@@ -3583,7 +2937,7 @@ function rptInvoice() {
               </th>
               <th
                 colSpan={2}
-                className="border-b border-l  border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
+                className="border-b border-l border-r border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
                 style={{ color: "black", fontSize: "9px" }}
               >
                 Payable Amount
@@ -3591,13 +2945,13 @@ function rptInvoice() {
             </tr>
             <tr className="bg-gray-300">
               <th
-                className="border-b border-l  border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
+                className="border-b border-l border-r border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
                 style={{ color: "black", fontSize: "9px" }}
               >
                 in USD
               </th>
               <th
-                className="border-b border-l  border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
+                className="border-b border-l border-r border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
                 style={{ color: "black", fontSize: "9px" }}
               >
                 in KES
@@ -3609,13 +2963,15 @@ function rptInvoice() {
             style={{
               color: "black",
               fontSize: "9px",
+              minHeight: "545px",
+              height: "545px",
             }}
           >
             {rows.length > 0 ? (
               rows.map((r, i) => (
                 <tr key={i} className="align-top">
                   <td
-                    className="border-r border-t border-b border-black pl-1 pr-1 pt-0.5 pb-0.5"
+                    className="border border-black pl-1 pr-1 pt-0.5 pb-0.5"
                     style={{ color: "black", fontSize: "9px" }}
                   >
                     {i + 1}
@@ -3624,55 +2980,57 @@ function rptInvoice() {
                     className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-left"
                     style={{ color: "black", fontSize: "9px" }}
                   >
-                    {r?.description || ""}
+                    {r.description || r.chargeName || ""}
                   </td>
                   <td
                     className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
                     style={{ color: "black", fontSize: "9px" }}
                   >
-                    {Number(r?.rate || 0).toFixed(2)}
+                    {fmt(r.unitRate ?? r.rate)}
                   </td>
                   <td
                     className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
                     style={{ color: "black", fontSize: "9px" }}
                   >
-                    {fmt(r.exchangeRate)}
+                    {fmt(r.exchangeRate ?? r.roe)}
                   </td>
                   <td
                     className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
                     style={{ color: "black", fontSize: "9px" }}
                   >
-                    {fmt(r.qty)}
+                    {fmt(r.units ?? r.qty, { maximumFractionDigits: 3 })}
                   </td>
                   <td
                     className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
                     style={{ color: "black", fontSize: "9px" }}
                   >
-                    {Number(r?.amount || 0).toFixed(2)}
+                    {fmt(r.netAmount)}
                   </td>
                   <td
                     className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
                     style={{ color: "black", fontSize: "9px" }}
                   >
-                    {fmt(r.taxPercentage)}
+                    {fmt(r.vatPct ?? r.VAT ?? r.taxPercent, {
+                      maximumFractionDigits: 2,
+                    })}
                   </td>
                   <td
                     className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
                     style={{ color: "black", fontSize: "9px" }}
                   >
-                    {Number(r?.taxAmount || 0).toFixed(2)}
+                    {fmt(r.vatAmount ?? r.taxAmount)}
                   </td>
                   <td
                     className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
                     style={{ color: "black", fontSize: "9px" }}
                   >
-                    {Number(r?.rate || 0).toFixed(2)}
+                    {fmt(r.payableUSD)}
                   </td>
                   <td
-                    className="border-l border-t border-b border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
+                    className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
                     style={{ color: "black", fontSize: "9px" }}
                   >
-                    {Number(r?.amount || 0).toFixed(2)}
+                    {fmt(r.payableKES)}
                   </td>
                 </tr>
               ))
@@ -3683,18 +3041,23 @@ function rptInvoice() {
                   style={{
                     color: "black",
                     fontSize: "9px",
+                    minHeight: "545px",
+                    height: "545px",
                   }}
                   colSpan={10}
                 >
-                  No charges
+                  No charges to display
                 </td>
               </tr>
             )}
+          </tbody>
+          {/* Totals row */}
+          <tfoot>
             <tr>
               {/* Left merged note area */}
               <td
                 colSpan={6}
-                className="border-r border-t border-b border-black pl-1 pr-1 pt-0.5 pb-0.5 text-left"
+                className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-left"
               >
                 <span
                   className="font-semibold"
@@ -3714,295 +3077,34 @@ function rptInvoice() {
                   Total Amount:
                 </span>
               </td>
+
+              {/* Totals for VAT Amount, in USD, in KES */}
               <td
                 className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right font-bold"
                 style={{ color: "black", fontSize: "9px" }}
               >
-                {formattedTotals?.taxAmount}
+                {/* {fmt(totalVAT)} */}
               </td>
               <td
                 className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right font-bold"
                 style={{ color: "black", fontSize: "9px" }}
               >
-                {formattedTotals?.rate}
+                {/* {fmt(totalUSD)} */}
               </td>
               <td
-                className="border-l border-t border-b border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right font-bold"
+                className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right font-bold"
                 style={{ color: "black", fontSize: "9px" }}
               >
-                {formattedTotals?.amount}
+                {/* {fmt(totalKES)} */}
               </td>
             </tr>
-          </tbody>
-          {/* Totals row */}
+          </tfoot>
         </table>
       </div>
     );
   };
 
-  const ChargeGridAttachment = ({ data = [] }) => {
-    // Accept either an array or an object with tblInvoiceCharge
-    const rows = (
-      Array.isArray(data) ? data : data?.tblInvoiceCharge || []
-    ).slice(0, 20);
-    const calculateTotal = Array.isArray(data)
-      ? data
-      : data?.tblInvoiceCharge || [];
-
-    // simple number formatter; leave blank if null/undefined
-    const fmt = (v, opts = { maximumFractionDigits: 2 }) =>
-      v === null || v === undefined || v === ""
-        ? ""
-        : Number(v).toLocaleString(undefined, opts);
-
-    const totals = calculateTotal.reduce(
-      (acc, row) => {
-        acc.amount += Number(row.amount) || 0;
-        acc.rate += Number(row.rate) || 0;
-        acc.taxAmount += Number(row.taxAmount) || 0;
-        return acc;
-      },
-      { amount: 0, rate: 0, taxAmount: 0 }
-    );
-
-    // Format with 2 decimals
-    const formattedTotals = {
-      amount: totals.amount.toFixed(2),
-      rate: totals.rate.toFixed(2),
-      taxAmount: totals.taxAmount.toFixed(2),
-    };
-
-    return (
-      <>
-        <div
-          style={{
-            color: "black",
-            minHeight: "650px",
-            maxheight: "650px",
-            hight: "650px",
-          }}
-          className="w-full border-l border-r border-black"
-        >
-          <table className="w-full border-b border-black  text-[9px]">
-            <thead>
-              <tr className="bg-gray-300">
-                <th
-                  rowSpan={2}
-                  className="border-b border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  SNo
-                </th>
-                <th
-                  rowSpan={2}
-                  className="border-b border-l border-r border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  Description
-                </th>
-                <th
-                  rowSpan={2}
-                  className="border-b border-l border-r border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  Unit Rate
-                </th>
-                <th
-                  rowSpan={2}
-                  className="border-b border-l border-r border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  ROE
-                </th>
-                <th
-                  rowSpan={2}
-                  className="border-b border-l border-r border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  No. Of Units
-                </th>
-                <th
-                  rowSpan={2}
-                  className="border-b border-l border-r border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  Net Amount
-                </th>
-                <th
-                  rowSpan={2}
-                  className="border-b border-l border-r border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  VAT%
-                </th>
-                <th
-                  rowSpan={2}
-                  className="border-b border-l border-r border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  VAT Amount
-                </th>
-                <th
-                  colSpan={2}
-                  className="border-b border-l  border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  Payable Amount
-                </th>
-              </tr>
-              <tr className="bg-gray-300">
-                <th
-                  className="border-b border-l  border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  in USD
-                </th>
-                <th
-                  className="border-b border-l  border-black text-center pl-1 pr-1 pt-0.5 pb-0.5"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  in KES
-                </th>
-              </tr>
-            </thead>
-
-            <tbody
-              style={{
-                color: "black",
-                fontSize: "9px",
-              }}
-            >
-              {rows.length > 0 ? (
-                rows.map((r, i) => (
-                  <tr key={i} className="align-top">
-                    <td
-                      className="border-r border-t border-b border-black pl-1 pr-1 pt-0.5 pb-0.5"
-                      style={{ color: "black", fontSize: "9px" }}
-                    >
-                      {i + 1}
-                    </td>
-                    <td
-                      className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-left"
-                      style={{ color: "black", fontSize: "9px" }}
-                    >
-                      {r?.description || ""}
-                    </td>
-                    <td
-                      className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
-                      style={{ color: "black", fontSize: "9px" }}
-                    >
-                      {Number(r?.rate || 0).toFixed(2)}
-                    </td>
-                    <td
-                      className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
-                      style={{ color: "black", fontSize: "9px" }}
-                    >
-                      {fmt(r.exchangeRate)}
-                    </td>
-                    <td
-                      className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
-                      style={{ color: "black", fontSize: "9px" }}
-                    >
-                      {fmt(r.qty)}
-                    </td>
-                    <td
-                      className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
-                      style={{ color: "black", fontSize: "9px" }}
-                    >
-                      {Number(r?.amount || 0).toFixed(2)}
-                    </td>
-                    <td
-                      className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
-                      style={{ color: "black", fontSize: "9px" }}
-                    >
-                      {fmt(r.taxPercentage)}
-                    </td>
-                    <td
-                      className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
-                      style={{ color: "black", fontSize: "9px" }}
-                    >
-                      {Number(r?.taxAmount || 0).toFixed(2)}
-                    </td>
-                    <td
-                      className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
-                      style={{ color: "black", fontSize: "9px" }}
-                    >
-                      {Number(r?.rate || 0).toFixed(2)}
-                    </td>
-                    <td
-                      className="border-l border-t border-b border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right"
-                      style={{ color: "black", fontSize: "9px" }}
-                    >
-                      {Number(r?.amount || 0).toFixed(2)}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-center"
-                    style={{
-                      color: "black",
-                      fontSize: "9px",
-                    }}
-                    colSpan={10}
-                  >
-                    No charges
-                  </td>
-                </tr>
-              )}
-              <tr>
-                {/* Left merged note area */}
-                <td
-                  colSpan={6}
-                  className="border-r border-t border-b border-black pl-1 pr-1 pt-0.5 pb-0.5 text-left"
-                >
-                  <span
-                    className="font-semibold"
-                    style={{ color: "black", fontSize: "9px" }}
-                  >
-                    Demurrage Valid Till :
-                  </span>{" "}
-                  {/* {demurrageValidTill} */}
-                </td>
-
-                {/* â€œTotal Amount:â€ label in the VAT% column */}
-                <td className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right">
-                  <span
-                    className="font-semibold"
-                    style={{ color: "black", fontSize: "9px" }}
-                  >
-                    Total Amount:
-                  </span>
-                </td>
-                <td
-                  className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right font-bold"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  {formattedTotals?.taxAmount}
-                </td>
-                <td
-                  className="border border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right font-bold"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  {formattedTotals?.rate}
-                </td>
-                <td
-                  className="border-l border-t border-b border-black pl-1 pr-1 pt-0.5 pb-0.5 text-right font-bold"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  {formattedTotals?.taxAmount}
-                </td>
-              </tr>
-            </tbody>
-            {/* Totals row */}
-          </table>
-        </div>
-      </>
-    );
-  };
-
-  const HeadingGrid = ({ }) => {
+  const HeadingGrid = ({ data }) => {
     return (
       <div className="flex">
         {/* First Table */}
@@ -4042,9 +3144,7 @@ function rptInvoice() {
                   className="text-left text-black pt-0.5 pb-0.5"
                   style={{ fontSize: "9px", color: "black" }}
                 >
-                  {data[0]?.party || ""}
-                  <br />
-                  {data[0]?.billingPartyAddress || ""}
+                  Invoice to
                 </p>
               </div>
             </td>
@@ -4076,7 +3176,7 @@ function rptInvoice() {
                 className="text-left text-black pt-0.5 pb-0.5"
                 style={{ fontSize: "9px", color: "black" }}
               >
-                {data[0]?.partyPincode || ""}
+                {data?.partyPincode || ""}
               </p>
             </td>
           </tr>
@@ -4101,7 +3201,7 @@ function rptInvoice() {
                 className="text-left text-black pt-0.5 pb-0.5"
                 style={{ fontSize: "9px", color: "black" }}
               >
-                {data[0]?.partyGstin || ""}
+                Akash
               </p>
             </td>
           </tr>
@@ -4126,7 +3226,7 @@ function rptInvoice() {
                 className="text-left text-black pt-0.5 pb-0.5"
                 style={{ fontSize: "9px", color: "black" }}
               >
-                {data?.exchangeRate || ""}
+                Akash
               </p>
             </td>
           </tr>
@@ -4160,7 +3260,7 @@ function rptInvoice() {
                 className="text-left text-black pt-0.5 pb-0.5"
                 style={{ fontSize: "9px", color: "black" }}
               >
-                {data[0]?.invoiceDate || ""}
+                {/* value here */}
               </p>
             </td>
           </tr>
@@ -4185,7 +3285,7 @@ function rptInvoice() {
                 className="text-left text-black pt-0.5 pb-0.5"
                 style={{ fontSize: "9px", color: "black" }}
               >
-                {data[0]?.mblNo || data[0]?.hblNo || ""}
+                {/* value here */}
               </p>
             </td>
           </tr>
@@ -4210,9 +3310,7 @@ function rptInvoice() {
                 className="text-left text-black pt-0.5 pb-0.5"
                 style={{ fontSize: "9px", color: "black" }}
               >
-                {data[0]?.podVessel || ""}
-                {" /"}
-                {data[0]?.podVoyage || ""}
+                {/* value here */}
               </p>
             </td>
           </tr>
@@ -4237,7 +3335,7 @@ function rptInvoice() {
                 className="text-left text-black pt-0.5 pb-0.5"
                 style={{ fontSize: "9px", color: "black" }}
               >
-                {data[0]?.pol || ""}
+                {/* value here */}
               </p>
             </td>
           </tr>
@@ -4262,7 +3360,7 @@ function rptInvoice() {
                 className="text-left text-black pt-0.5 pb-0.5"
                 style={{ fontSize: "9px", color: "black" }}
               >
-                {data[0]?.pod || ""}
+                {/* value here */}
               </p>
             </td>
           </tr>
@@ -4287,7 +3385,7 @@ function rptInvoice() {
                 className="text-left text-black pt-0.5 pb-0.5"
                 style={{ fontSize: "9px", color: "black" }}
               >
-                {data[0]?.fpd || ""}
+                {/* value here */}
               </p>
             </td>
           </tr>
@@ -4312,7 +3410,7 @@ function rptInvoice() {
                 className="text-left text-black pt-0.5 pb-0.5"
                 style={{ fontSize: "9px", color: "black" }}
               >
-                {data[0]?.igmNo || ""}
+                {/* value here */}
               </p>
             </td>
           </tr>
@@ -4337,7 +3435,7 @@ function rptInvoice() {
                 className="text-left text-black pt-0.5 pb-0.5"
                 style={{ fontSize: "9px", color: "black" }}
               >
-                {data[0]?.arrivalDate || ""}
+                {/* value here */}
               </p>
             </td>
           </tr>
@@ -4346,12 +3444,12 @@ function rptInvoice() {
     );
   };
 
-  const BankDetailsGrid = ({ }) => {
+  const BankDetailsGrid = ({ data }) => {
     return (
       <>
         <div>
           <p
-            className="text-left text-black font-bold pt-1 pb-1 pl-1 pr-1 border-l border-r border-black underline"
+            className="text-left text-black font-bold pt-1 pb-1 pl-1 pr-1 border-l border-r border-black"
             style={{ fontSize: "9px", color: "black", width: "100%" }}
           >
             Bank Details
@@ -4362,7 +3460,7 @@ function rptInvoice() {
             className="text-left text-black font-bold pb-1 pl-1 pr-1 border-l border-r border-black"
             style={{ fontSize: "10px", color: "black", width: "100%" }}
           >
-            Beneficiary Name: <span>{data[0]?.company || ""}</span>
+            Beneficiary Name: <span>{data?.beneficiaryName || ""}</span>
           </p>
         </div>
         <table
@@ -4384,16 +3482,10 @@ function rptInvoice() {
                 }}
               >
                 <p
-                  className="text-left text-black font-bold pt-0.5"
+                  className="text-left text-black font-bold pt-0.5 pb-0.5"
                   style={{ fontSize: "9px", color: "black" }}
                 >
                   Beneficiary Bank:
-                </p>
-                <p
-                  className="text-left text-black pt-0.5"
-                  style={{ fontSize: "9px", color: "black" }}
-                >
-                  <span>{data[0]?.bankName || ""}</span>
                 </p>
               </td>
               <td
@@ -4420,16 +3512,10 @@ function rptInvoice() {
                 }}
               >
                 <p
-                  className="text-left text-black font-bold pt-0.5"
+                  className="text-left text-black font-bold pt-0.5 pb-0.5"
                   style={{ fontSize: "9px", color: "black" }}
                 >
                   Bank Swift Code:
-                </p>
-                <p
-                  className="text-left text-black pt-0.5"
-                  style={{ fontSize: "9px", color: "black" }}
-                >
-                  <span>{data[0]?.bankSwiftCode || ""}</span>
                 </p>
               </td>
             </tr>
@@ -4443,16 +3529,10 @@ function rptInvoice() {
                 }}
               >
                 <p
-                  className="text-left text-black font-bold pt-0.5"
+                  className="text-left text-black font-bold pt-0.5 pb-0.5"
                   style={{ fontSize: "9px", color: "black" }}
                 >
                   Currency:
-                </p>
-                <p
-                  className="text-left text-black pt-0.5"
-                  style={{ fontSize: "9px", color: "black" }}
-                >
-                  <span>{data[0]?.currency || ""}</span>
                 </p>
               </td>
               <td
@@ -4464,16 +3544,10 @@ function rptInvoice() {
                 }}
               >
                 <p
-                  className="text-left text-black font-bold pt-0.5"
+                  className="text-left text-black font-bold pt-0.5 pb-0.5"
                   style={{ fontSize: "9px", color: "black" }}
                 >
                   Account No:
-                </p>
-                <p
-                  className="text-left text-black  pt-0.5"
-                  style={{ fontSize: "9px", color: "black" }}
-                >
-                  <span>{data[0]?.bankAccountNo || ""}</span>
                 </p>
               </td>
               <td
@@ -4566,19 +3640,12 @@ function rptInvoice() {
     );
   };
 
-  const InvoiceSlsk = ({ data, rows }) => (
+  const Invoice = (index) => (
     <>
       <div>
         <CompanyImgModuleInvoice />
         <HeadingGrid />
-        <ChargeGrid
-          data={rows}
-          rows={
-            data &&
-            data[0]?.tblInvoiceCharge?.length > 0 &&
-            data[0]?.tblInvoiceCharge
-          }
-        />
+        <ChargeGrid />
         <BankDetailsGrid />
         <TermsAndConditionGrid />
       </div>
@@ -4586,1574 +3653,13 @@ function rptInvoice() {
   );
   console.log("printName", printName);
 
-  const InvoiceSlskAttachSheet = ({ data, rows }) => (
-    <>
-      <div>
-        <CompanyImgModuleInvoice />
-        <HeadingGrid />
-        <ChargeGridAttachment
-          data={rows}
-          rows={
-            data &&
-            data[0]?.tblInvoiceCharge?.length > 0 &&
-            data[0]?.tblInvoiceCharge
-          }
-        />
-        <div className="w-full border-black border-l border-r border-b border-t">
-          <div>
-            <p
-              className="!text-black print:!text-black w-full text-left p-2"
-              style={{ fontSize: "10px" }}
-            >
-              This document is non-negotiable and for{" "}
-              <span className="font-bold">
-                KPA and Empty Depot reference only
-              </span>{" "}
-              – not valid for cargo release. <br />
-              Do not accept this Offloading Letter if manually altered. <br />
-              Carriage to ICD Embakasi, Nairobi (whether TBL, Merchant Haulage,
-              or Client nomination) is subject to Kenya Ports Authority terms.{" "}
-              <br />
-              The carrier is not responsible for delays, truck detention,
-              demurrage, or incidental costs.
-            </p>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-
-  const taxInvoiceSaudi = () => (
-    <>
-      <CompanyImgModuleInvoice />
-      <HeadingGridSaudi />
-      <MainGridSaudi />
-      <ContainerGridSaudi />
-      <BankDetailsGridSaudi />
-    </>
-  );
-
-  const HeadingGridSaudi = () => {
-    return (
-      <table
-        className="border border-black"
-        style={{ width: "100%", color: "black" }}
-      >
-        <tr>
-          <td
-            style={{
-              width: "20%",
-              color: "black",
-              fontSize: "10px",
-              paddingLeft: "5px",
-            }}
-          >
-            Invoice Number :
-          </td>
-          <td
-            style={{
-              width: "60%",
-              color: "black",
-              fontSize: "10px",
-              textAlign: "center",
-            }}
-          >
-            {data[0]?.invoiceNo}
-          </td>
-          <td
-            style={{
-              width: "20%",
-              color: "black",
-              fontSize: "10px",
-              textAlign: "right",
-              paddingRight: "5px",
-            }}
-          >
-            : رقم الفاتورة
-          </td>
-        </tr>
-        <tr>
-          <td
-            style={{
-              width: "20%",
-              color: "black",
-              fontSize: "10px",
-              paddingLeft: "5px",
-            }}
-          >
-            Invoice Issue Date:
-          </td>
-          <td
-            style={{
-              width: "60%",
-              color: "black",
-              fontSize: "10px",
-              textAlign: "center",
-            }}
-          >
-            {data[0]?.invoiceDate}
-          </td>
-          <td
-            style={{
-              width: "20%",
-              color: "black",
-              fontSize: "10px",
-              textAlign: "right",
-              paddingRight: "5px",
-            }}
-          >
-            : تاريخ إصدار الفاتورة
-          </td>
-        </tr>
-        <tr>
-          <td
-            style={{
-              width: "20%",
-              color: "black",
-              fontSize: "10px",
-              paddingLeft: "5px",
-            }}
-          >
-            Invoice Due Date:
-          </td>
-          <td
-            style={{
-              width: "60%",
-              color: "black",
-              fontSize: "10px",
-              textAlign: "center",
-            }}
-          >
-            {data[0]?.dueDate}
-          </td>
-          <td
-            style={{
-              width: "20%",
-              color: "black",
-              fontSize: "10px",
-              textAlign: "right",
-              paddingRight: "5px",
-            }}
-          >
-            : تاريخ استحقاق الفاتورة
-          </td>
-        </tr>
-        <tr>
-          <td
-            style={{
-              width: "20%",
-              color: "black",
-              fontSize: "10px",
-              paddingLeft: "5px",
-            }}
-          >
-            Invoice Currency:
-          </td>
-          <td
-            style={{
-              width: "60%",
-              color: "black",
-              fontSize: "10px",
-              textAlign: "center",
-            }}
-          >
-            {data[0]?.currency}
-          </td>
-          <td
-            style={{
-              width: "20%",
-              color: "black",
-              fontSize: "10px",
-              textAlign: "right",
-              paddingRight: "5px",
-            }}
-          >
-            : عملة الفاتورة
-          </td>
-        </tr>
-      </table>
-    );
-  };
-
-  const MainGridSaudi = () => {
-    return (
-      <div className="w-full flex">
-        <table
-          className="border-b border-l border-black"
-          style={{ width: "50%", color: "black" }}
-        >
-          <tr className="border-b border-black bg-gray-200">
-            <td
-              colSpan={2}
-              style={{
-                width: "25%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-                fontWeight: "bold",
-              }}
-            >
-              Seller :
-            </td>
-            <td
-              colSpan={2}
-              style={{
-                width: "25%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-                fontWeight: "bold",
-              }}
-            >
-              البائع:
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              Name :
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "left",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.company}
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : رقم الفاتورة
-            </td>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : الاسم
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              Building No.:
-            </td>
-            <td
-              colSpan={2}
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "center",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.sellerBuildingNo}
-            </td>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : رقم المبنى
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              Postal Code :
-            </td>
-            <td
-              colSpan={2}
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "center",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.companyPincode}
-            </td>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : الرمز البريدي
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              Street Name :
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "left",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.sellerStreetName}
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              حي النخيل
-            </td>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : اسم الشارع
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              City & Region :
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "left",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.companyCity}
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              جدة
-            </td>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : المدينة والمنطقة
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              Country :
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "left",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.companyCountry}
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              المملكة العربية السعودية
-            </td>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : الدولة
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              VAT Number :
-            </td>
-            <td
-              colSpan={2}
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "center",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.companyVAT}
-            </td>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : الرقم الضريبي
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              CR No. :
-            </td>
-            <td
-              colSpan={2}
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "center",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.companyCrNo}
-            </td>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : رقم السجل التجاريع
-            </td>
-          </tr>
-          <tr>
-            <td colSpan={4}></td>
-          </tr>
-        </table>
-        {/* // second */}
-        <table
-          className="border-b border-r border-l border-black"
-          style={{ width: "50%", color: "black" }}
-        >
-          <tr className="border-b border-black bg-gray-200">
-            <td
-              colSpan={2}
-              style={{
-                width: "25%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-                fontWeight: "bold",
-              }}
-            >
-              Customer:
-            </td>
-            <td
-              colSpan={2}
-              style={{
-                width: "25%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                fontWeight: "bold",
-                paddingBottom: "0px",
-              }}
-            >
-              العميل:
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              Name :
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "left",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.billingPartyCompany}
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : رقم الفاتورة
-            </td>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : الاسم
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              Building No.:
-            </td>
-            <td
-              colSpan={2}
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "center",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.customerBuildingNo}
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : رقم المبنى
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              Postal Code :
-            </td>
-            <td
-              colSpan={2}
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "center",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.billingPartyPincode}
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : الرمز البريدي
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              Street Name :
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "left",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.customerStreetName}
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              حي النخيل
-            </td>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : اسم الشارع
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              City & Region :
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "left",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.billingPartyCity}
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              جدة
-            </td>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : المدينة والمنطقة
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              Country :
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "left",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.billingPartyCountry}
-            </td>
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              المملكة العربية السعودية
-            </td>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : الدولة
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              VAT Number :
-            </td>
-            <td
-              colSpan={2}
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "center",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.billingPartyVAT}
-            </td>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : الرقم الضريبي
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              Seller ID :
-            </td>
-            <td
-              colSpan={2}
-              style={{
-                width: "25%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "center",
-              }}
-            >
-              {data[0]?.sellerId}
-            </td>
-            {/* <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "center",
-                paddingBottom: "0px",
-              }}
-            ></td> */}
-            <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              : معرف البائع
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                paddingLeft: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              E-mail ID:
-            </td>
-            <td
-              colSpan={2}
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "center",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.billingPartyEmailId}
-            </td>
-            {/* <td
-              style={{
-                width: "30%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "left",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              {data[0]?.billingPartyEmailId}
-            </td> */}
-            <td
-              style={{
-                width: "20%",
-                color: "black",
-                fontSize: "9px",
-                textAlign: "right",
-                paddingRight: "5px",
-                paddingBottom: "0px",
-              }}
-            >
-              البريد الإلكتروني:
-            </td>
-          </tr>
-        </table>
-      </div>
-    );
-  };
-
-  const ContainerGridSaudi = () => {
-    const headerStyle = {
-      color: "black",
-      fontSize: "9px",
-      fontWeight: "bold",
-      textAlign: "center",
-      width: "10%",
-    };
-
-    const cellStyle = {
-      color: "black",
-      fontSize: "9px",
-      textAlign: "center",
-      borderRight: "1px solid black",
-      width: "10%",
-      wordBreak: "break-word",
-      padding: "2px",
-    };
-
-    return (
-      <>
-        <div
-          className="w-full border-l border-r border-black text-black text-[9px]"
-          style={{ height: "600px" }}
-        >
-          {/* Header Row */}
-          <div className="flex border-b border-black bg-gray-200">
-            <div
-              className="w-[5%] border-r border-black"
-              style={{
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-                width: "5%",
-              }}
-            ></div>
-            <div
-              className="w-[15%] border-r border-black"
-              style={{
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-                width: "15%",
-              }}
-            >
-              الرقم المرجعي للسلعة <br /> ITEM CODE
-            </div>
-            <div
-              className="w-[15%] border-r border-black"
-              style={{
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-                width: "15%",
-              }}
-            >
-              وصف <br /> DESCRIPTION
-            </div>
-            <div
-              className="w-[5%] border-r border-black"
-              style={{
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-                width: "5%",
-              }}
-            >
-              الكمية <br /> QTY
-            </div>
-            <div className="w-[10%] border-r border-black" style={headerStyle}>
-              سعر الوحدة <br /> UNIT PRICE
-            </div>
-            <div className="w-[10%] border-r border-black" style={headerStyle}>
-              % خصم <br /> DISCOUNT %
-            </div>
-            <div className="w-[10%] border-r border-black" style={headerStyle}>
-              مقدار الخصم <br /> DISCOUNT AMOUNT
-            </div>
-            <div className="w-[10%] border-r border-black" style={headerStyle}>
-              ضريبة القيمة المضافة % <br /> VAT %
-            </div>
-            <div className="w-[10%] border-r border-black" style={headerStyle}>
-              مبلغ ضريبة القيمة المضافة <br /> VAT AMOUNT
-            </div>
-            <div className="w-[10%]" style={headerStyle}>
-              المبلغ <br /> AMOUNT
-            </div>
-          </div>
-
-          {/* Body Rows */}
-          {data[0]?.tblInvoiceCharge?.length > 0 ? (
-            data[0]?.tblInvoiceCharge.map((item, index) => (
-              <div key={index} className="flex border-b border-black">
-                <div
-                  className="w-[5%] border-r border-black flex items-center justify-center"
-                  style={{
-                    color: "black",
-                    fontSize: "9px",
-                    textAlign: "center",
-                    borderRight: "1px solid black",
-                    width: "5%",
-                  }}
-                >
-                  {index + 1}
-                </div>
-                <div
-                  className="w-[15%] border-r border-black flex items-center justify-center"
-                  style={{
-                    color: "black",
-                    fontSize: "9px",
-                    textAlign: "center",
-                    borderRight: "1px solid black",
-                    width: "15%",
-                  }}
-                >
-                  {item.chargeCode}
-                </div>
-                <div
-                  className="w-[15%] border-r border-black flex items-center justify-center"
-                  style={{
-                    color: "black",
-                    fontSize: "9px",
-                    textAlign: "center",
-                    borderRight: "1px solid black",
-                    width: "15%",
-                  }}
-                >
-                  {item.description}
-                  <br />
-                  {item.descriptionLL}
-                </div>
-                <div
-                  className="w-[5%] border-r border-black flex items-center justify-center"
-                  style={{
-                    color: "black",
-                    fontSize: "9px",
-                    textAlign: "center",
-                    borderRight: "1px solid black",
-                    width: "5%",
-                  }}
-                >
-                  {item.qty}
-                </div>
-                <div
-                  className="w-[10%] border-r border-black flex items-center justify-center"
-                  style={cellStyle}
-                >
-                  {item?.rate
-                    ? `${data[0]?.currency} ${parseFloat(item.rate).toFixed(2)}`
-                    : `${data[0]?.currency}  0.00`}
-                </div>
-                <div
-                  className="w-[10%] border-r border-black flex items-center justify-center"
-                  style={cellStyle}
-                >
-                  {item.discountPercentage}
-                </div>
-                <div
-                  className="w-[10%] border-r border-black flex items-center justify-center"
-                  style={cellStyle}
-                >
-                  {item?.discountAmount
-                    ? `${data[0]?.currency} ${parseFloat(
-                      item.discountAmount
-                    ).toFixed(2)}`
-                    : `${data[0]?.currency}  0.00`}
-                </div>
-                <div
-                  className="w-[10%] border-r border-black flex items-center justify-center"
-                  style={cellStyle}
-                >
-                  {item?.tblInvoiceChargeTax[0]?.taxPercentage}
-                </div>
-                <div
-                  className="w-[10%] border-r border-black flex items-center justify-center"
-                  style={cellStyle}
-                >
-                  {item?.tblInvoiceChargeTax?.[0]?.taxAmountHc
-                    ? `${data[0]?.currency} ${parseFloat(
-                      item.tblInvoiceChargeTax[0].taxAmountHc
-                    ).toFixed(2)}`
-                    : `${data[0]?.currency}  0.00`}
-                </div>
-                <div
-                  className="w-[10%]  flex items-center justify-center"
-                  style={{
-                    color: "black",
-                    fontSize: "9px",
-                    textAlign: "center",
-                    width: "10%",
-                  }}
-                >
-                  {item?.totalAmount
-                    ? `${data[0]?.currency} ${parseFloat(
-                      item.totalAmount
-                    ).toFixed(2)}`
-                    : `${data[0]?.currency}  0.00`}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="flex border-b border-black">
-              <div
-                className="w-full text-center"
-                style={{ fontSize: "9px", color: "black" }}
-              >
-                لا يوجد بيانات
-              </div>
-            </div>
-          )}
-          <OthersGridSaudi />
-        </div>
-      </>
-    );
-  };
-
-  const OthersGridSaudi = () => {
-    const toNum = (v) => (v == null || v === "" ? 0 : parseFloat(v) || 0);
-
-    const totalAmount = data[0]?.tblInvoiceCharge?.reduce(
-      (total, item) => total + item.totalAmount,
-      0
-    );
-
-    const discountAmount = data[0]?.tblInvoiceCharge?.reduce(
-      (total, item) => total + item.discountAmount,
-      0
-    );
-
-    const grossTotalAmount = totalAmount - discountAmount;
-
-    const vatAmount =
-      data[0]?.tblInvoiceCharge?.reduce(
-        (total, item) =>
-          total +
-          (item?.tblInvoiceChargeTax?.reduce(
-            (taxTotal, tax) => taxTotal + (tax?.taxAmountHc || 0),
-            0
-          ) || 0),
-        0
-      ) ?? 0;
-
-    return (
-      <div className="w-full flex border-b border-black">
-        <div
-          className="border-r border-black"
-          style={{ width: "65%", padding: "5px" }}
-        >
-          <p style={{ fontSize: "9px", fontWeight: "bold", color: "black" }}>
-            <span style={{ fontWeight: "bold" }}>Remarks</span>
-          </p>
-          <p style={{ fontSize: "9px", color: "black" }}>
-            <span>{data[0]?.remarks}</span>
-          </p>
-        </div>
-        <table style={{ width: "35%" }}>
-          <tr className="border-b border-black">
-            <td
-              style={{
-                width: "50%",
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-                padding: "5px 0",
-              }}
-            >
-              المبلغ الإجمالي غير شامل الضريبة <br />
-              Subtotal (Excl. VAT)
-            </td>
-            <td
-              style={{
-                width: "50%",
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-              }}
-            >
-              {totalAmount
-                ? `${data[0]?.currency} ${parseFloat(totalAmount).toFixed(2)}`
-                : `${data[0]?.currency}  0.00`}
-            </td>
-          </tr>
-          <tr className="border-b border-black">
-            <td
-              style={{
-                width: "50%",
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-                padding: "5px 0",
-              }}
-            >
-              الخصم <br />
-              Discounts (Invoice Level)
-            </td>
-            <td
-              style={{
-                width: "50%",
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-              }}
-            >
-              {discountAmount
-                ? `${data[0]?.currency} ${parseFloat(discountAmount).toFixed(
-                  2
-                )}`
-                : `${data[0]?.currency}  0.00`}
-            </td>
-          </tr>
-          <tr className="border-b border-black">
-            <td
-              style={{
-                width: "50%",
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-                padding: "5px 0",
-              }}
-            >
-              المبلغ الإجمالي بعد الخصم <br />
-              Gross Total (Excl. VAT)
-            </td>
-            <td
-              style={{
-                width: "50%",
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-              }}
-            >
-              {grossTotalAmount
-                ? `${data[0]?.currency} ${parseFloat(grossTotalAmount).toFixed(
-                  2
-                )}`
-                : `${data[0]?.currency}  0.00`}
-            </td>
-          </tr>
-          <tr className="border-b border-black">
-            <td
-              style={{
-                width: "50%",
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-                padding: "5px 0",
-              }}
-            >
-              مبلغ ضريبة القيمة المضافة <br />
-              Total VAT
-            </td>
-            <td
-              style={{
-                width: "50%",
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-              }}
-            >
-              {`${data[0]?.currency} ${(parseFloat(vatAmount) || 0).toFixed(
-                2
-              )}`}
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "50%",
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-                padding: "5px 0",
-              }}
-            >
-              المبلغ الإجمالي شامل الضريبة <br /> Net Total (incl. VAT)
-            </td>
-            <td
-              style={{
-                width: "50%",
-                color: "black",
-                fontSize: "9px",
-                fontWeight: "bold",
-                textAlign: "center",
-              }}
-            >
-              {`${data[0]?.currency} ${(
-                (parseFloat(grossTotalAmount) || 0) +
-                (parseFloat(vatAmount) || 0)
-              ).toFixed(2)}`}
-            </td>
-          </tr>
-        </table>
-      </div>
-    );
-  };
-
-  const BankDetailsGridSaudi = () => {
-    return (
-      <div className="w-full flex border border-black">
-        <table style={{ width: "100%" }}>
-          <tr>
-            <td
-              colSpan={2}
-              style={{
-                width: "100%",
-                fontSize: "9px",
-                color: "black",
-                padding: "1px 5px",
-              }}
-            >
-              Kindly arrange the electronic payment in advance to avoid any
-              delays in the processing.
-            </td>
-          </tr>
-          <tr>
-            <td
-              colSpan={2}
-              style={{
-                width: "100%",
-                fontSize: "9px",
-                color: "black",
-                padding: "1px 5px",
-              }}
-            >
-              Please note that Cargo and B/L release will not be granted unless
-              full payment is reflected in our account.
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "10%",
-                fontSize: "9px",
-                color: "black",
-                padding: "1px 5px",
-              }}
-            >
-              Account Name:
-            </td>
-            <td
-              style={{
-                width: "90%",
-                fontSize: "9px",
-                color: "black",
-                padding: "1px 5px",
-              }}
-            >
-              {data[0]?.company || ""}
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "10%",
-                fontSize: "9px",
-                color: "black",
-                padding: "1px 5px",
-              }}
-            >
-              Bank name:
-            </td>
-            <td
-              style={{
-                width: "90%",
-                fontSize: "9px",
-                color: "black",
-                padding: "1px 5px",
-              }}
-            >
-              {data[0]?.bankName || ""}
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "10%",
-                fontSize: "9px",
-                color: "black",
-                padding: "1px 5px",
-              }}
-            >
-              Swift Code:
-            </td>
-            <td
-              style={{
-                width: "90%",
-                fontSize: "9px",
-                color: "black",
-                padding: "1px 5px",
-              }}
-            >
-              {data[0]?.bankSwiftCode || ""}
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "10%",
-                fontSize: "9px",
-                color: "black",
-                padding: "1px 5px",
-              }}
-            >
-              Account No.:
-            </td>
-            <td
-              style={{
-                width: "90%",
-                fontSize: "9px",
-                color: "black",
-                padding: "1px 5px",
-              }}
-            >
-              {data[0]?.bankAccountNo || ""}
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                width: "10%",
-                fontSize: "9px",
-                color: "black",
-                padding: "1px 5px",
-              }}
-            >
-              IBAN No.:
-            </td>
-            <td
-              style={{
-                width: "90%",
-                fontSize: "9px",
-                color: "black",
-                padding: "1px 5px",
-              }}
-            >
-              {data[0]?.ibanNo || ""}
-            </td>
-          </tr>
-        </table>
-      </div>
-    );
-  };
-
   return (
     <main>
       <div className="mt-5">
         <Print
           //key={reportId}
           enquiryModuleRefs={enquiryModuleRefs}
-          reportIds={printName?.length > 0 ? [printName] : reportIds}
+          reportIds={printName ? [printName] : reportIds}
           printOrientation="portrait"
         />
         {reportIds.map((reportId, index) => {
@@ -6679,103 +4185,13 @@ function rptInvoice() {
                 </>
               );
 
-            case "Invoice": {
-              // Normalize charges properly
-              const charges = Array.isArray(data)
-                ? data[0]?.tblInvoiceCharge || []
-                : data;
-              // If your input is like [{...}] where charges live at data[0].tblInvoiceCharge, then:
-              // const charges = data?.[0]?.tblInvoiceCharge || [];
-
-              const pages = chunkForSLSKInvoicePrint(charges, 20); // or 20 per your requirement
-              const totalPages = pages.length;
-
-              return (
-                <>
-                  {/* One WRAPPER so the ref captures ALL pages' HTML */}
-                  <div
-                    key={`invoice-wrapper-${index}`}
-                    ref={(el) => (enquiryModuleRefs.current[index] = el)}
-                    data-report={`invoice-${index}`}
-                    style={{ width: "210mm", margin: "auto" }}
-                  >
-                    {pages.map((rowsForPage, pgIndex) => {
-                      const isFirst = pgIndex === 0;
-                      const isLast = pgIndex === totalPages - 1;
-
-                      return (
-                        <div key={`invoice-block-${pgIndex}`}>
-                          {/* One printable page */}
-                          <div
-                            id={`invoice-${pgIndex}`}
-                            className="bgTheme removeFontSize black-text"
-                            style={{
-                              width: "210mm",
-                              minHeight: "297mm",
-                              margin: "auto",
-                              boxSizing: "border-box",
-                              padding: "5mm",
-                              display: "flex",
-                              flexDirection: "column",
-                              // page break after each page except the last
-                              breakAfter: isLast ? "auto" : "always",
-                            }}
-                          >
-                            <div
-                              style={{
-                                flex: 1,
-                                width: "100%",
-                                boxSizing: "border-box",
-                              }}
-                            >
-                              {isFirst ? (
-                                <InvoiceSlsk rows={rowsForPage} />
-                              ) : (
-                                <InvoiceSlskAttachSheet rows={rowsForPage} />
-                              )}
-                            </div>
-                          </div>
-
-                          {/* On-screen spacer only */}
-                          <div className="bg-gray-300 h-2 no-print" />
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Global print CSS once */}
-                  <style jsx global>{`
-                    @page {
-                      size: A4;
-                      margin: 0;
-                    }
-                    @media print {
-                      .no-print {
-                        display: none !important;
-                      }
-                      .black-text {
-                        color: black !important;
-                      }
-                      .bgTheme.removeFontSize {
-                        break-inside: avoid;
-                      }
-                    }
-                  `}</style>
-                </>
-              );
-            }
-            case "Tax Invoice Saudi":
+            case "Invoice":
               return (
                 <>
                   <div
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
-                    id="TaxInvoiceSaudi"
+                    id="Invoice"
                   >
-                    {/* {charge?.length > 0 ? (
-                      // Render taxInvoice if there are charges
-                      Array.from({
-                        length: charge?.length,
-                      }).map((_, index) => ( */}
                     <div
                       key={index}
                       style={{
@@ -6802,37 +4218,9 @@ function rptInvoice() {
                           fontFamily: "Arial sans-serif !important",
                         }}
                       >
-                        {taxInvoiceSaudi()}
+                        {Invoice()}
                       </div>
                     </div>
-                    {/* ))
-                    ) : (
-                      // Render taxInvoiceWithoutCharges if there are no charges
-                      <div
-                        style={{
-                          width: "210mm",
-                          height: "297mm",
-                          margin: "auto",
-                          boxSizing: "border-box",
-                          padding: "5mm", // space between page edge and inner border
-                          display: "flex",
-                          flexDirection: "column",
-                          marginBottom: "22px",
-                        }}
-                        className="bgTheme removeFontSize"
-                      >
-                        <div
-                          style={{
-                            flex: 1,
-                            width: "100%",
-                            boxSizing: "border-box",
-                            fontFamily: "Arial sans-serif !important",
-                          }}
-                        >
-                          {taxInvoiceWithoutCharges()}
-                        </div>
-                      </div>
-                    )}*/}
                   </div>
                 </>
               );

@@ -19,13 +19,13 @@ import appStyles from "@/app/app.module.css";
 import PropTypes from "prop-types";
 import { ClearIcon } from "@mui/x-date-pickers";
 import * as formControlValidation from "@/helper/formControlValidation";
+import { getUserDetails } from "@/helper/userDetails";
 import {
   fetchDataAPI,
   fetchReportData,
   dynamicDropDownFieldsData,
 } from "@/services/auth/FormControl.services";
 import { decrypt } from "@/helper/security";
-import { getUserDetails } from "@/helper/userDetails";
 
 const VendorModal = ({
   openModal,
@@ -57,7 +57,6 @@ const VendorModal = ({
   const [currency, setCurrency] = useState(null);
   const [currencyObject, setCurrencyObject] = useState([]);
   const [pageType, setPageType] = useState(isAdd);
-  const { clientId } = getUserDetails();
 
   useEffect(() => {
     const uniqueItemsMap = new Map();
@@ -448,7 +447,6 @@ const VendorModal = ({
   };
 
   const handleRateChange = (event, chargeGroupId, chargeId, indexValue) => {
-    console.log("result", result);
     const { name, value } = event.target;
     let childsFieldsObject = childsFields.find(
       (item) => item.tableName === "tblRateRequestCharge"
@@ -1016,18 +1014,16 @@ const VendorModal = ({
                     Buy Ex. Rate
                   </Typography>
 
-                  {Number(clientId) !== 10 && ( //ModifiedBy
-                    <Typography
-                      variant="body2" // use "body2" instead of "p" (MUI doesn’t support "p")
-                      className="!text-xs font-semibold"
-                      style={{
-                        display: transportModeType === "Air" ? "none" : "block",
-                        textAlign: "center",
-                      }}
-                    >
-                      Buy Margin
-                    </Typography>
-                  )}
+                  <Typography
+                    variant="p"
+                    className="!text-xs font-semibold"
+                    style={{
+                      display: transportModeType === "Air" ? "none" : "block",
+                      textAlign: "center",
+                    }}
+                  >
+                    Buy Margin
+                  </Typography>
 
                   <Typography
                     variant="p"
@@ -1036,15 +1032,14 @@ const VendorModal = ({
                   >
                     Buy Rate
                   </Typography>
-                  {Number(clientId) !== 10 && (
-                    <Typography
-                      variant="p"
-                      className="!text-xs font-semibold"
-                      style={{ textAlign: "center" }}
-                    >
-                      Sell Margin
-                    </Typography>
-                  )}
+
+                  <Typography
+                    variant="p"
+                    className="!text-xs font-semibold"
+                    style={{ textAlign: "center" }}
+                  >
+                    Sell Margin
+                  </Typography>
                   <Typography
                     variant="p"
                     className="!text-xs font-semibold"
@@ -1372,57 +1367,53 @@ const VendorModal = ({
                           />
 
                           {/* Buy Margin */}
-                          {Number(clientId) !== 10 && (
-                            <TextField
-                              type="number"
-                              name="buyMargin"
-                              style={{
-                                display:
-                                  transportModeType === "Air"
-                                    ? "none"
-                                    : "block",
-                              }}
-                              sx={{
-                                "& .MuiInputBase-input": {
-                                  padding: "4px 8px",
-                                  color: "var(--inputTextColor)",
-                                  fontSize: "10px !important",
-                                  height: "14px",
-                                  border: "1px solid var(--inputBorderColor)",
-                                  "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button":
-                                    {
-                                      display: "none",
-                                    },
-                                  "-moz-appearance": "textfield",
-                                },
-                                "& .MuiOutlinedInput-root": {
-                                  "&.Mui-focused fieldset": {
-                                    border: "1px solid var(--inputBorderColor)",
-                                  },
-                                },
-                                "&.Mui-focused .MuiOutlinedInput-notchedOutline":
+                          <TextField
+                            type="number"
+                            name="buyMargin"
+                            style={{
+                              display:
+                                transportModeType === "Air" ? "none" : "block",
+                            }}
+                            sx={{
+                              "& .MuiInputBase-input": {
+                                padding: "4px 8px",
+                                color: "var(--inputTextColor)",
+                                fontSize: "10px !important",
+                                height: "14px",
+                                border: "1px solid var(--inputBorderColor)",
+                                "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button":
                                   {
-                                    fontSize: "10px !important",
-                                    border: "1px solid var(--inputBorderColor)",
+                                    display: "none",
                                   },
-                              }}
-                              className="border border-[var(--inputBorderColor)] mb-[8px] rounded-[4px] max-w-[100px]"
-                              defaultValue={
-                                transportModeType === "Air"
-                                  ? "0"
-                                  : item?.buyMargin
-                              }
-                              onChange={(e) => {
-                                handleRateChange(
-                                  e,
-                                  item?.chargeGroupId,
-                                  item?.chargeId,
-                                  item?.indexValue
-                                );
-                                onModalValueChange(e, item);
-                              }}
-                            />
-                          )}
+                                "-moz-appearance": "textfield",
+                              },
+                              "& .MuiOutlinedInput-root": {
+                                "&.Mui-focused fieldset": {
+                                  border: "1px solid var(--inputBorderColor)",
+                                },
+                              },
+                              "&.Mui-focused .MuiOutlinedInput-notchedOutline":
+                                {
+                                  fontSize: "10px !important",
+                                  border: "1px solid var(--inputBorderColor)",
+                                },
+                            }}
+                            className="border border-[var(--inputBorderColor)] mb-[8px] rounded-[4px] max-w-[100px]"
+                            defaultValue={
+                              transportModeType === "Air"
+                                ? "0"
+                                : item?.buyMargin
+                            }
+                            onChange={(e) => {
+                              handleRateChange(
+                                e,
+                                item?.chargeGroupId,
+                                item?.chargeId,
+                                item?.indexValue
+                              );
+                              onModalValueChange(e, item);
+                            }}
+                          />
 
                           {/* Buy Rate */}
                           <TextField
@@ -1461,42 +1452,40 @@ const VendorModal = ({
                           />
 
                           {/* Sell Margin */}
-                          {Number(clientId) !== 10 && (
-                            <TextField
-                              type="number"
-                              name="sellMargin"
-                              sx={{
-                                "& .MuiInputBase-input": {
-                                  padding: "4px 8px",
-                                  color: "var(--inputTextColor)",
-                                  height: "14px",
-                                  fontSize: "10px !important",
-                                  border: "1px solid var(--inputBorderColor)",
-                                  "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button":
-                                    {
-                                      display: "none",
-                                    },
-                                  "-moz-appearance": "textfield",
-                                },
-                                "& .MuiOutlinedInput-root": {
-                                  "&.Mui-focused fieldset": {
-                                    border: "1px solid var(--inputBorderColor)",
+                          <TextField
+                            type="number"
+                            name="sellMargin"
+                            sx={{
+                              "& .MuiInputBase-input": {
+                                padding: "4px 8px",
+                                color: "var(--inputTextColor)",
+                                height: "14px",
+                                fontSize: "10px !important",
+                                border: "1px solid var(--inputBorderColor)",
+                                "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button":
+                                  {
+                                    display: "none",
                                   },
+                                "-moz-appearance": "textfield",
+                              },
+                              "& .MuiOutlinedInput-root": {
+                                "&.Mui-focused fieldset": {
+                                  border: "1px solid var(--inputBorderColor)",
                                 },
-                              }}
-                              className="border border-[var(--inputBorderColor)] mb-[8px] rounded-[4px] max-w-[100px]"
-                              defaultValue={item.sellMargin}
-                              onChange={(e) => {
-                                handleRateChange(
-                                  e,
-                                  item?.chargeGroupId,
-                                  item?.chargeId,
-                                  item?.indexValue
-                                );
-                                onModalValueChange(e, item);
-                              }}
-                            />
-                          )}
+                              },
+                            }}
+                            className="border border-[var(--inputBorderColor)] mb-[8px] rounded-[4px] max-w-[100px]"
+                            defaultValue={item.sellMargin}
+                            onChange={(e) => {
+                              handleRateChange(
+                                e,
+                                item?.chargeGroupId,
+                                item?.chargeId,
+                                item?.indexValue
+                              );
+                              onModalValueChange(e, item);
+                            }}
+                          />
 
                           {/* Sell Currency Select */}
                           {transportModeType !== "Air" && (

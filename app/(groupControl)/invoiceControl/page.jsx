@@ -35,7 +35,6 @@ import {
   fetchDataAPI,
   disableEdit,
   disableAdd,
-  disablePrint,
 } from "@/services/auth/FormControl.services.js";
 import {
   viewIcon,
@@ -99,7 +98,7 @@ import PrintModal from "@/components/Modal/printModal.jsx";
 
 export default function StickyHeadTable() {
   const router = useRouter();
-  const { clientId } = getUserDetails();
+   const { clientId } = getUserDetails();
   const searchParams = useSearchParams();
   const search = JSON.parse(searchParams.get("menuName")).id;
   const [menuSearch, setMenuSearch] = useState("");
@@ -274,18 +273,15 @@ export default function StickyHeadTable() {
   };
 
   const validateEdit = async (tableName, recordId) => {
-    //alert("working")
     const requestBody = {
       tableName: tableName,
       recordId: recordId.id,
-      clientId: clientId,
     };
     const data = await disableEdit(requestBody);
-    if (data.success === false) {
+    if (data.success === true) {
       setParaText(data.message);
       //setIsError(true);
       setOpenModal((prev) => !prev);
-      return;
     } else {
       addEditController(recordId);
     }
@@ -645,7 +641,7 @@ export default function StickyHeadTable() {
       setOpenModal((prev) => !prev);
     }
     // API call for delete
-    if (conformData.value && deleteData) {
+    if (conformData.value) {
       const payloadData = { ...deleteData };
       try {
         const responseData = await deleteMasterRecord(payloadData);
@@ -662,8 +658,6 @@ export default function StickyHeadTable() {
         console.error("Error in API call:", error);
         toast.error("An error occurred while processing the request");
       }
-    } else {
-      setOpenModal((prev) => !prev);
     }
   };
 
@@ -772,15 +766,10 @@ export default function StickyHeadTable() {
   const handleCustomRowsPerPageChange = (event) => {
     const value = parseInt(event.target.value, 10);
     if (!isNaN(value) && value >= 0) {
-      sessionStorage?.setItem("rowsPerPage", value);
       setRowsPerPage(value);
       setSelectedPageNumber(page);
     }
   };
-  useEffect(() => {
-    const storedRowsPerPage = sessionStorage.getItem("rowsPerPage");
-    setRowsPerPage(storedRowsPerPage ? parseInt(storedRowsPerPage) : 17);
-  }, [sessionStorage.getItem("rowsPerPage"), search]);
 
   function pageSelected(selectedValue) {
     // console.log("pageSelected - - - - - ", selectedValue);
@@ -790,22 +779,23 @@ export default function StickyHeadTable() {
   }
 
   useEffect(() => {
-    // console.log('checkMenuId', sessionStorage.getItem('menuId') == search);
-    if (sessionStorage?.getItem("menuId") == search) {
-      const menuId = JSON.parse(sessionStorage.getItem("advanceSearch"));
-      const dynamic = JSON.parse(sessionStorage.getItem("dynamic"));
-      console.log("dynamic", dynamic);
-      setadvanceSearch(menuId);
-      setDynamic(dynamic);
-      // setIsAdvanceSearchOpen(true);
-    } else {
-      sessionStorage.removeItem("advanceSearch");
-      sessionStorage.removeItem("menuId");
-      sessionStorage.removeItem("dynamic");
-      setadvanceSearch({});
-      setDynamic([]);
-    }
-  }, [search]);
+      // console.log('checkMenuId', sessionStorage.getItem('menuId') == search);
+      if (sessionStorage?.getItem('menuId') == search) {
+        const menuId = JSON.parse(sessionStorage.getItem('advanceSearch'));
+        const dynamic = JSON.parse(sessionStorage.getItem('dynamic'));
+        console.log("dynamic", dynamic)
+        setadvanceSearch(menuId);
+        setDynamic(dynamic);
+        // setIsAdvanceSearchOpen(true);
+      }
+      else {
+        sessionStorage.removeItem('advanceSearch');
+        sessionStorage.removeItem('menuId');
+        sessionStorage.removeItem('dynamic');
+        setadvanceSearch({});
+        setDynamic([]);
+      }
+    }, [search])
   // Function to handle sorting when a column header is clicked
   const handleSortBy = (elem) => {
     // If the same column is clicked again, toggle the sorting order
@@ -1126,9 +1116,9 @@ export default function StickyHeadTable() {
       Object.assign(tempObj, d.advanceSearch);
     });
     setadvanceSearch(tempObj);
-    sessionStorage.setItem("advanceSearch", JSON.stringify(tempObj));
-    sessionStorage.setItem("menuId", search);
-    sessionStorage.setItem("dynamic", JSON.stringify(dynamic));
+    sessionStorage.setItem('advanceSearch', JSON.stringify(tempObj));
+    sessionStorage.setItem('menuId', search);
+    sessionStorage.setItem('dynamic', JSON.stringify(dynamic));
     setSearchOpen(false);
   };
 
@@ -2203,7 +2193,6 @@ export default function StickyHeadTable() {
                                 onClick={async () => {
                                   handlePrint(row);
                                   setModalVisible(true);
-                                  //validateEditPrint(tableName, row)
                                 }}
                               />
                               {/* )} */}
@@ -2246,7 +2235,6 @@ export default function StickyHeadTable() {
                     submittedRecordId={submittedRecordId}
                     submittedMenuId={submittedMenuId}
                     openPrintModal={openPrintModal}
-                    tableName={tableName}
                     pageType={"searchPage"}
                   />
                 )}

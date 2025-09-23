@@ -629,7 +629,6 @@ export default function StickyHeadTable() {
     }
   };
 
-
   useEffect(() => {
     const fetchData = async () => {
       const storedUserData = localStorage.getItem("userData");
@@ -936,7 +935,6 @@ export default function StickyHeadTable() {
   const handleCustomRowsPerPageChange = (event) => {
     const value = parseInt(event.target.value, 10);
     if (!isNaN(value) && value >= 0) {
-      sessionStorage?.setItem("rowsPerPage", value);
       setRowsPerPage(value);
       setSelectedPageNumber(page);
       setRowsPerPage(value);
@@ -950,10 +948,6 @@ export default function StickyHeadTable() {
     }
   };
 
-  useEffect(() => {
-    const storedRowsPerPage = sessionStorage.getItem("rowsPerPage");
-    setRowsPerPage(storedRowsPerPage ? parseInt(storedRowsPerPage) : 17);
-  }, [sessionStorage.getItem("rowsPerPage"),search]);
   function pageSelected(selectedValue) {
     setSelectedPage(selectedValue);
     setPage(selectedValue);

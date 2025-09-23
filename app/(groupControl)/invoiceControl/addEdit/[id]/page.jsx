@@ -505,38 +505,41 @@ export default function AddEditFormControll() {
     }
   }, [isDataLoaded]);
 
- useEffect(() => {
+  useEffect(() => {
     console.log("changes in charges", newState?.tblInvoiceCharge);
     let totalAmount = newState?.tblInvoiceCharge?.reduce((acc, item) => {
-      return acc + Number(item?.totalAmountHc) || 0;
+      return acc + Number(item?.totalAmountHc);
     }, 0);
     let taxAmount = newState?.tblInvoiceCharge?.reduce((acc, item) => {
-      let temp = (item?.tblInvoiceChargeTax || [])?.reduce((acc1, item1) => {
+      let temp = item?.tblInvoiceChargeTax?.reduce((acc1, item1) => {
         if (item?.taxApplicable == "true" || item?.taxApplicable == true) {
-          return acc1 + Number(item1?.taxAmountHc) || 0;
+          return acc1 + Number(item1?.taxAmountHc);
         } else {
           return acc1;
         }
       }, 0);
-      return acc + (Number(temp) || 0);
+      return acc + temp;
     }, 0);
 
     let totalAmountFc = newState?.tblInvoiceCharge?.reduce((acc, item) => {
-      return acc + Number(item?.totalAmountFc) || 0;
+      return acc + Number(item?.totalAmountFc);
     }, 0);
     let taxAmountFc = newState?.tblInvoiceCharge?.reduce((acc, item) => {
-      let temp = (item?.tblInvoiceChargeTax || [])?.reduce((acc1, item1) => {
+      let temp = item?.tblInvoiceChargeTax?.reduce((acc1, item1) => {
         if (item?.taxApplicable == "true" || item?.taxApplicable == true) {
-          return acc1 + Number(item1?.taxAmountFc) || 0;
+          return acc1 + Number(item1?.taxAmountFc);
         } else {
           return acc1;
         }
-        // return acc1 + Number(item1?.taxAmountFc)
       }, 0);
       return acc + temp;
     }, 0);
     taxAmount = Number.isNaN(taxAmount) ? 0 : taxAmount;
     taxAmountFc = Number.isNaN(taxAmountFc) ? 0 : taxAmountFc;
+    console.log("totalAmount", totalAmount);
+    console.log("taxAmount", taxAmount);
+    console.log("totalAmountFc", totalAmountFc);
+    console.log("taxAmountFc", taxAmountFc);
     setNewState((prev) => {
       return {
         ...prev,
@@ -549,50 +552,6 @@ export default function AddEditFormControll() {
       };
     });
   }, [newState?.tblInvoiceCharge, newState?.tblInvoiceCharge?.length]);
-
-useEffect(() => {
-  // Prevent calculation if tblInvoiceCharge is empty or not available
-  if (!Array.isArray(newState?.tblInvoiceCharge)) return;
-
-  // Calculate updated charges
-  const updatedCharges = newState.tblInvoiceCharge.map((item) => {
-    const qty = parseFloat(item.qty) || 0;
-    const rate = parseFloat(item.rate) || 0;
-    const exchangeRate = parseFloat(item.exchangeRate) || 0;
-    const noOfDays = parseFloat(item.noOfDays);
-
-    // If noOfDays is null/undefined/0, ignore it in calculation
-    const effectiveNoOfDays =
-      isNaN(noOfDays) || noOfDays <= 0 ? 1 : noOfDays;
-
-    const totalAmountFc = qty * rate * effectiveNoOfDays;
-    const totalAmount = totalAmountFc * exchangeRate;
-
-    // Avoid unnecessary updates if values are already correct
-    if (
-      Number(item.totalAmountFc) === Number(totalAmountFc.toFixed(2)) &&
-      Number(item.totalAmountHc) === Number(totalAmount.toFixed(2))
-    ) {
-      return item; // no change
-    }
-
-    return {
-      ...item,
-      totalAmountFc: totalAmountFc.toFixed(2),
-      totalAmountHc: totalAmount.toFixed(2),
-    };
-  });
-
-  if (
-    JSON.stringify(updatedCharges) !==
-    JSON.stringify(newState.tblInvoiceCharge)
-  ) {
-    setNewState((prev) => ({
-      ...prev,
-      tblInvoiceCharge: updatedCharges,
-    }));
-  }
-}, [newState?.tblInvoiceCharge]);
 
   // Define your button click handlers
   const handleButtonClick = {

@@ -11,8 +11,7 @@ import { MenuItem } from "@mui/material";
 import {
   fetchReportData,
   dynamicDropDownFieldsData,
-  getContainerData,
-  editLastActivity
+  getContainerData
 } from "@/services/auth/FormControl.services";
 import { getUserDetails } from "@/helper/userDetails";
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
@@ -150,6 +149,54 @@ export default function AccordionUsage() {
           columnsToDisabled: null,
           columnsToHide: null,
         },
+        // {
+        //   id: 15768,
+        //   fieldname: "lastActivity",
+        //   yourlabel: "Last Activity",
+        //   controlname: "dropdown",
+        //   isControlShow: true,
+        //   isGridView: true,
+        //   isDataFlow: null,
+        //   copyMappingName: null,
+        //   isCommaSeparatedOrCount: null,
+        //   isAuditLog: null,
+        //   keyToShowOnGrid: null,
+        //   isDummy: false,
+        //   dropDownValues: null,
+        //   referenceTable: "tblContainerActivity",
+        //   hyperlinkValue: null,
+        //   referenceColumn: "name",
+        //   type: 6653,
+        //   typeValue: "number",
+        //   size: "100",
+        //   ordering: 1,
+        //   gridTotal: false,
+        //   gridTypeTotal: null,
+        //   toolTipMessage: null,
+        //   isRequired: false,
+        //   isEditable: true,
+        //   isSwitchToText: false,
+        //   isBreak: false,
+        //   dropdownFilter: null,
+        //   controlDefaultValue: null,
+        //   functionOnChange: null,
+        //   functionOnBlur: null,
+        //   functionOnKeyPress: null,
+        //   isEditableMode: "b",
+        //   sectionHeader: "container",
+        //   sectionOrder: 1,
+        //   isCopy: null,
+        //   isCopyEditable: null,
+        //   position: "top",
+        //   isHideGrid: false,
+        //   isHideGridHeader: false,
+        //   isGridExpandOnLoad: false,
+        //   clientId: 3,
+        //   isColumnVisible: null,
+        //   isColumnDisabled: null,
+        //   columnsToDisabled: null,
+        //   columnsToHide: null,
+        // },
         {
           id: 15767,
           fieldname: "lastActivity",
@@ -246,6 +293,54 @@ export default function AccordionUsage() {
           columnsToDisabled: null,
           columnsToHide: null,
         },
+        // {
+        //   id: 15767,
+        //   fieldname: "nextActivity",
+        //   yourlabel: "Next Activity",
+        //   controlname: "string",
+        //   isControlShow: true,
+        //   isGridView: true,
+        //   isDataFlow: null,
+        //   copyMappingName: null,
+        //   isCommaSeparatedOrCount: null,
+        //   isAuditLog: null,
+        //   keyToShowOnGrid: null,
+        //   isDummy: false,
+        //   dropDownValues: null,
+        //   referenceTable: null,
+        //   hyperlinkValue: null,
+        //   referenceColumn: null,
+        //   type: 6902,
+        //   typeValue: "string",
+        //   size: "100",
+        //   ordering: 4,
+        //   gridTotal: false,
+        //   gridTypeTotal: null,
+        //   toolTipMessage: null,
+        //   isRequired: false,
+        //   isEditable: true,
+        //   isSwitchToText: false,
+        //   isBreak: false,
+        //   dropdownFilter: null,
+        //   controlDefaultValue: null,
+        //   functionOnChange: null,
+        //   functionOnBlur: null,
+        //   functionOnKeyPress: null,
+        //   isEditableMode: "e",
+        //   sectionHeader: "container",
+        //   sectionOrder: 1,
+        //   isCopy: null,
+        //   isCopyEditable: null,
+        //   position: "top",
+        //   isHideGrid: false,
+        //   isHideGridHeader: false,
+        //   isGridExpandOnLoad: false,
+        //   clientId: 3,
+        //   isColumnVisible: null,
+        //   isColumnDisabled: null,
+        //   columnsToDisabled: null,
+        //   columnsToHide: null,
+        // },
         {
           id: 15768,
           fieldname: "activityId",
@@ -582,246 +677,6 @@ export default function AccordionUsage() {
           columnsToDisabled: null,
           columnsToHide: null,
         },
-        {
-          id: 15768,
-          fieldname: "jobId",
-          yourlabel: "Job No",
-          controlname: "dropdown",
-          isControlShow: false,
-          isGridView: false,
-          isDataFlow: null,
-          copyMappingName: null,
-          isCommaSeparatedOrCount: null,
-          isAuditLog: null,
-          keyToShowOnGrid: null,
-          isDummy: false,
-          dropDownValues: null,
-          referenceTable: "tblJob",
-          hyperlinkValue: null,
-          referenceColumn: "jobNo",
-          type: 6653,
-          typeValue: "number",
-          size: "100",
-          ordering: 1,
-          gridTotal: false,
-          gridTypeTotal: null,
-          toolTipMessage: null,
-          isRequired: false,
-          isEditable: true,
-          isSwitchToText: false,
-          isBreak: false,
-          dropdownFilter: null,
-          controlDefaultValue: null,
-          functionOnChange: null,
-          functionOnBlur: null,
-          functionOnKeyPress: null,
-          isEditableMode: "b",
-          sectionHeader: "container",
-          sectionOrder: 1,
-          isCopy: null,
-          isCopyEditable: null,
-          position: "top",
-          isHideGrid: false,
-          isHideGridHeader: false,
-          isGridExpandOnLoad: false,
-          clientId: 3,
-          isColumnVisible: null,
-          isColumnDisabled: null,
-          columnsToDisabled: null,
-          columnsToHide: null,
-        },
-         {
-          id: 15768,
-          fieldname: "importBlId",
-          yourlabel: "Import Bl",
-          controlname: "dropdown",
-          isControlShow: false,
-          isGridView: false,
-          isDataFlow: null,
-          copyMappingName: null,
-          isCommaSeparatedOrCount: null,
-          isAuditLog: null,
-          keyToShowOnGrid: null,
-          isDummy: false,
-          dropDownValues: null,
-          referenceTable: "tblBl",
-          hyperlinkValue: null,
-          referenceColumn: "mblNo",
-          type: 6653,
-          typeValue: "number",
-          size: "100",
-          ordering: 1,
-          gridTotal: false,
-          gridTypeTotal: null,
-          toolTipMessage: null,
-          isRequired: false,
-          isEditable: true,
-          isSwitchToText: false,
-          isBreak: false,
-          dropdownFilter: null,
-          controlDefaultValue: null,
-          functionOnChange: null,
-          functionOnBlur: null,
-          functionOnKeyPress: null,
-          isEditableMode: "b",
-          sectionHeader: "container",
-          sectionOrder: 1,
-          isCopy: null,
-          isCopyEditable: null,
-          position: "top",
-          isHideGrid: false,
-          isHideGridHeader: false,
-          isGridExpandOnLoad: false,
-          clientId: 3,
-          isColumnVisible: null,
-          isColumnDisabled: null,
-          columnsToDisabled: null,
-          columnsToHide: null,
-        },
-         {
-          id: 15768,
-          fieldname: "exportBlId",
-          yourlabel: "Export Bl",
-          controlname: "dropdown",
-          isControlShow: false,
-          isGridView: false,
-          isDataFlow: null,
-          copyMappingName: null,
-          isCommaSeparatedOrCount: null,
-          isAuditLog: null,
-          keyToShowOnGrid: null,
-          isDummy: false,
-          dropDownValues: null,
-          referenceTable: "tblBl",
-          hyperlinkValue: null,
-          referenceColumn: "mblNo",
-          type: 6653,
-          typeValue: "number",
-          size: "100",
-          ordering: 1,
-          gridTotal: false,
-          gridTypeTotal: null,
-          toolTipMessage: null,
-          isRequired: false,
-          isEditable: true,
-          isSwitchToText: false,
-          isBreak: false,
-          dropdownFilter: null,
-          controlDefaultValue: null,
-          functionOnChange: null,
-          functionOnBlur: null,
-          functionOnKeyPress: null,
-          isEditableMode: "b",
-          sectionHeader: "container",
-          sectionOrder: 1,
-          isCopy: null,
-          isCopyEditable: null,
-          position: "top",
-          isHideGrid: false,
-          isHideGridHeader: false,
-          isGridExpandOnLoad: false,
-          clientId: 3,
-          isColumnVisible: null,
-          isColumnDisabled: null,
-          columnsToDisabled: null,
-          columnsToHide: null,
-        },
-        {
-          id: 15768,
-          fieldname: "vesselId",
-          yourlabel: "Vessel",
-          controlname: "dropdown",
-          isControlShow: false,
-          isGridView: false,
-          isDataFlow: null,
-          copyMappingName: null,
-          isCommaSeparatedOrCount: null,
-          isAuditLog: null,
-          keyToShowOnGrid: null,
-          isDummy: false,
-          dropDownValues: null,
-          referenceTable: "tblVessel",
-          hyperlinkValue: null,
-          referenceColumn: "name",
-          type: 6653,
-          typeValue: "number",
-          size: "100",
-          ordering: 1,
-          gridTotal: false,
-          gridTypeTotal: null,
-          toolTipMessage: null,
-          isRequired: false,
-          isEditable: true,
-          isSwitchToText: false,
-          isBreak: false,
-          dropdownFilter: null,
-          controlDefaultValue: null,
-          functionOnChange: null,
-          functionOnBlur: null,
-          functionOnKeyPress: null,
-          isEditableMode: "b",
-          sectionHeader: "container",
-          sectionOrder: 1,
-          isCopy: null,
-          isCopyEditable: null,
-          position: "top",
-          isHideGrid: false,
-          isHideGridHeader: false,
-          isGridExpandOnLoad: false,
-          clientId: 13,
-          isColumnVisible: null,
-          isColumnDisabled: null,
-          columnsToDisabled: null,
-          columnsToHide: null,
-        },
-        {
-          id: 15768,
-          fieldname: "voyageId",
-          yourlabel: "voyage",
-          controlname: "dropdown",
-          isControlShow: false,
-          isGridView: false,
-          isDataFlow: null,
-          copyMappingName: null,
-          isCommaSeparatedOrCount: null,
-          isAuditLog: null,
-          keyToShowOnGrid: null,
-          isDummy: false,
-          dropDownValues: null,
-          referenceTable: "tblVoyage",
-          hyperlinkValue: null,
-          referenceColumn: "voyageNo",
-          type: 6653,
-          typeValue: "number",
-          size: "100",
-          ordering: 1,
-          gridTotal: false,
-          gridTypeTotal: null,
-          toolTipMessage: null,
-          isRequired: false,
-          isEditable: true,
-          isSwitchToText: false,
-          isBreak: false,
-          dropdownFilter: null,
-          controlDefaultValue: null,
-          functionOnChange: null,
-          functionOnBlur: null,
-          functionOnKeyPress: null,
-          isEditableMode: "b",
-          sectionHeader: "container",
-          sectionOrder: 1,
-          isCopy: null,
-          isCopyEditable: null,
-          position: "top",
-          isHideGrid: false,
-          isHideGridHeader: false,
-          isGridExpandOnLoad: false,
-          clientId: 13,
-          isColumnVisible: null,
-          isColumnDisabled: null,
-          columnsToDisabled: null,
-          columnsToHide: null,
-        },
       ],
       subChild: [],
     },
@@ -1008,151 +863,259 @@ export default function AccordionUsage() {
   const getLabelValue = (labelValue) => {
     setLabelName(labelValue);
   };
-  const handleGoClick = async () => {
-    try {
-      let allRows = [];
-      const { clientId, companyId, branchId, userId, financialYear } = getUserDetails();
-      // ✅ Common parameters for all API calls
-      const commonParams = {
-        clientId: clientId,
-        companyId: companyId,
-        companyBranchId: branchId,
-        financialyearId: financialYear,
-        userId: userId,
-      };
 
-      // ✅ From containerNo
-      if (newState?.containerNo && newState.containerNo.trim() !== "") {
-        const containerNumbers = newState.containerNo.split(",").map(c => c.trim());
 
-        for (const container of containerNumbers) {
-          const fetchResponse = await getContainerActivity({
-            containerNo: container,
-            ...commonParams,
-          });
+  // const handleGoClick = async () => {
+  //   try {
+  //     if (newState?.containerNo !== "" && newState?.containerNo !== undefined) {
+  //       const requestData = {
+  //         containerNo: newState?.containerNo,
+  //       };
+  //       const fetchResponse = await getContainerActivity(requestData);
+  //       if (fetchResponse?.success && Array.isArray(fetchResponse?.Chargers)) {
+  //         const mappedRows = fetchResponse.Chargers.map((item, idx) => {
+  //           return {
+  //             containerNo: String(item.containerId), // Use containerId as actual value
+  //             containerNodropdown: [
+  //               { value: item.containerId, label: item.containerNo },
+  //             ],
 
-          if (fetchResponse?.success && Array.isArray(fetchResponse?.Chargers) && fetchResponse.Chargers.length > 0) {
-            const mappedRows = fetchResponse.Chargers.map((item, idx) => ({
-              containerNo: String(item.containerId),
-              containerNodropdown: [{ value: item.containerId, label: item.containerNo }],
-              lastActivity: String(item.lastActivity),
-              lastActivitydropdown: [{ value: item.lastActivity, label: item.lastActivityname }],
-              agentId: String(item.agentId),
-              agentIddropdown: [{ value: item.agentId, label: item.agentName }],
-              agentBranchId: String(item.agentBranchId),
-              agentBranchIddropdown: [{ value: item.agentBranchId, label: item.agentBranch }],
-              fromLocationId: String(item.formLocationId),
-              fromLocationIddropdown: [{ value: item.formLocationId, label: item.fromLocation }],
-              lastActivityDate: item.activityDate,
-              remarks: item.remarks ?? "",
-              jobId: String(item.jobId),
-              vesselId: String(item.vesselId),
-              voyageId: String(item.voyageId),
-              importBlId: String(item.importBlId),
-              exportBlId: String(item.exportBlId),
-              lastActivity: item.lastActivityname ?? "",
-              indexValue: allRows.length + idx,
-              isChecked: true,
-            }));
-            allRows = [...allRows, ...mappedRows];
-          } else {
-            toast.warn(`No container data found for: ${container}`);
-          }
-        }
-      }
+  //             agentId: String(item.agentId),
+  //             agentIddropdown: [{ value: item.agentId, label: item.agentName }],
 
-      // ✅ From bookingNo
-      if (newState?.bookingNo && newState.bookingNo.trim() !== "") {
-        const fetchResponse = await getContainerActivity({
-          bookingNo: newState.bookingNo,
-          ...commonParams,
-        });
+  //             agentBranchId: String(item.agentBranchId),
+  //             agentBranchIddropdown: [
+  //               { value: item.agentBranchId, label: item.agentBranch },
+  //             ],
+
+  //             fromLocationId: String(item.formLocationId),
+  //             fromLocationIddropdown: [
+  //               { value: item.formLocationId, label: item.fromLocation },
+  //             ],
+
+  //             toLocationId: String(item.toLocationId),
+  //             toLocationIddropdown: [
+  //               { value: item.toLocationId, label: item.toLocation },
+  //             ],
+
+  //             lastActivityDate: item.activityDate,
+  //             remarks: item.remark ?? "",
+
+  //             indexValue: idx,
+  //             isChecked: true,
+  //           };
+  //         });
+
+  //         setNewState((prev) => ({
+  //           ...prev,
+  //           tblContainerMovement: mappedRows,
+  //         }));
+
+  //         setSubmitNewState((prev) => ({
+  //           ...prev,
+  //           tblContainerMovement: mappedRows,
+  //         }));
+  //       } else {
+  //         toast.warn("No container data found.");
+  //         setNewState((prev) => ({
+  //           ...prev,
+  //           tblContainerMovement: [],
+  //         }));
+  //       }
+  //     } else {
+  //       toast.error("Please enter a valid container number.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching container activity:", error);
+  //     toast.error("Something went wrong while fetching container data.");
+  //   }
+  // };
+  console.log("newState ", newState)
+
+  // const handleGoClick = async () => {
+  //   try {
+  //     if (newState?.containerNo && newState.containerNo.trim() !== "") {
+  //       const containerNumbers = newState.containerNo.split(",").map(c => c.trim());
+
+  //       let allRows = [...(newState.tblContainerMovement || [])];
+
+  //       for (const container of containerNumbers) {
+  //         const fetchResponse = await getContainerActivity({ containerNo: container });
+
+  //         if (fetchResponse?.success && Array.isArray(fetchResponse?.Chargers) && fetchResponse.Chargers.length > 0) {
+  //           const mappedRows = fetchResponse.Chargers.map((item, idx) => ({
+  //             containerNo: String(item.containerId),
+  //             containerNodropdown: [{ value: item.containerId, label: item.containerNo }],
+
+  //             lastActivity: String(item.lastActivity),
+  //             lastActivitydropdown: [{ value: item.lastActivity, label: item.lastActivityname }],
+
+  //             agentBranchId: String(item.agentBranchId),
+  //             agentBranchIddropdown: [{ value: item.agentBranchId, label: item.agentBranch }],
+
+  //             fromLocationId: String(item.formLocationId), // fixed fromLocationId typo
+  //             fromLocationIddropdown: [{ value: item.formLocationId, label: item.fromLocation }],
+
+  //             toLocationId: String(item.toLocationId),
+  //             toLocationIddropdown: [{ value: item.toLocationId, label: item.toLocation }],
+
+  //             lastActivityDate: item.activityDate,
+  //             remarks: item.remarks ?? "",
+  //             lastActivity: item.lastActivityname ?? "",
+
+
+  //             indexValue: allRows.length + idx,
+  //             isChecked: true,
+  //           }));
+
+  //           allRows = [...allRows, ...mappedRows];
+  //         } else {
+  //           toast.warn(`No container data found for: ${container}`);
+  //         }
+  //       }
+
+  //       setNewState(prev => ({
+  //         ...prev,
+  //         tblContainerMovement: allRows,
+  //       }));
+
+  //       setSubmitNewState(prev => ({
+  //         ...prev,
+  //         tblContainerMovement: allRows,
+  //       }));
+
+  //     } else {
+  //       toast.error("Please enter at least one container number.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching container activity:", error);
+  //     toast.error("Something went wrong while fetching container data.");
+  //   }
+  // };
+
+ const handleGoClick = async () => {
+  try {
+    let allRows = [];
+
+    // ✅ From containerNo
+    if (newState?.containerNo && newState.containerNo.trim() !== "") {
+      const containerNumbers = newState.containerNo.split(",").map(c => c.trim());
+
+      for (const container of containerNumbers) {
+        const fetchResponse = await getContainerActivity({ containerNo: container });
+
         if (fetchResponse?.success && Array.isArray(fetchResponse?.Chargers) && fetchResponse.Chargers.length > 0) {
           const mappedRows = fetchResponse.Chargers.map((item, idx) => ({
-            bookingNo: String(item.bookingNo),
             containerNo: String(item.containerId),
             containerNodropdown: [{ value: item.containerId, label: item.containerNo }],
+
             lastActivity: String(item.lastActivity),
             lastActivitydropdown: [{ value: item.lastActivity, label: item.lastActivityname }],
+
             agentId: String(item.agentId),
             agentIddropdown: [{ value: item.agentId, label: item.agentName }],
+
             agentBranchId: String(item.agentBranchId),
             agentBranchIddropdown: [{ value: item.agentBranchId, label: item.agentBranch }],
+
             fromLocationId: String(item.formLocationId),
             fromLocationIddropdown: [{ value: item.formLocationId, label: item.fromLocation }],
+
             lastActivityDate: item.activityDate,
             remarks: item.remarks ?? "",
-            jobId: String(item.jobId),
-              vesselId: String(item.vesselId),
-              voyageId: String(item.voyageId),
-              importBlId: String(item.importBlId),
-              exportBlId: String(item.exportBlId),
             lastActivity: item.lastActivityname ?? "",
+
             indexValue: allRows.length + idx,
             isChecked: true,
           }));
+
           allRows = [...allRows, ...mappedRows];
         } else {
-          toast.warn(`No booking data found for: ${newState.bookingNo}`);
+          toast.warn(`No container data found for: ${container}`);
         }
       }
-
-      // ✅ From blNo
-      if (newState?.blNo && newState.blNo.trim() !== "") {
-        const fetchResponse = await getContainerActivity({
-          blNo: newState.blNo,
-          ...commonParams,
-        });
-
-        if (fetchResponse?.success && Array.isArray(fetchResponse?.Chargers) && fetchResponse.Chargers.length > 0) {
-          const mappedRows = fetchResponse.Chargers.map((item, idx) => ({
-            blNo: String(item.blNo),
-            containerNo: String(item.containerId),
-            containerNodropdown: [{ value: item.containerId, label: item.containerNo }],
-            lastActivity: String(item.lastActivity),
-            lastActivitydropdown: [{ value: item.lastActivity, label: item.lastActivityname }],
-            agentId: String(item.agentId),
-            agentIddropdown: [{ value: item.agentId, label: item.agentName }],
-            agentBranchId: String(item.agentBranchId),
-            agentBranchIddropdown: [{ value: item.agentBranchId, label: item.agentBranch }],
-            fromLocationId: String(item.formLocationId),
-            fromLocationIddropdown: [{ value: item.formLocationId, label: item.fromLocation }],
-            lastActivityDate: item.activityDate,
-            remarks: item.remarks ?? "",
-            jobId: String(item.jobId),
-              vesselId: String(item.vesselId),
-              voyageId: String(item.voyageId),
-              importBlId: String(item.importBlId),
-              exportBlId: String(item.exportBlId),
-            lastActivity: item.lastActivityname ?? "",
-            indexValue: allRows.length + idx,
-            isChecked: true,
-          }));
-          allRows = [...allRows, ...mappedRows];
-        } else {
-          toast.warn(`No BL data found for: ${newState.blNo}`);
-        }
-      }
-
-      // ✅ Final update
-      if (allRows.length > 0) {
-        setNewState(prev => ({
-          ...prev,
-          tblContainerMovement: allRows,
-        }));
-
-        setSubmitNewState(prev => ({
-          ...prev,
-          tblContainerMovement: allRows,
-        }));
-      } else {
-        toast.error("No data found. Please enter container no, booking no, or BL no.");
-      }
-    } catch (error) {
-      console.error("Error fetching activity:", error);
-      toast.error("Something went wrong while fetching data.");
     }
-  };
+
+    // ✅ From bookingNo
+    if (newState?.bookingNo && newState.bookingNo.trim() !== "") {
+      const fetchResponse = await getContainerActivity({ bookingNo: newState.bookingNo });
+
+      if (fetchResponse?.success && Array.isArray(fetchResponse?.Chargers) && fetchResponse.Chargers.length > 0) {
+        const mappedRows = fetchResponse.Chargers.map((item, idx) => ({
+          bookingNo: String(item.bookingNo),
+          containerNo: String(item.containerId),
+          containerNodropdown: [{ value: item.containerId, label: item.containerNo }],
+          // reuse same mapping as container
+          lastActivity: String(item.lastActivity),
+          lastActivitydropdown: [{ value: item.lastActivity, label: item.lastActivityname }],
+          agentId: String(item.agentId),
+          agentIddropdown: [{ value: item.agentId, label: item.agentName }],
+          agentBranchId: String(item.agentBranchId),
+          agentBranchIddropdown: [{ value: item.agentBranchId, label: item.agentBranch }],
+          fromLocationId: String(item.formLocationId),
+          fromLocationIddropdown: [{ value: item.formLocationId, label: item.fromLocation }],
+          lastActivityDate: item.activityDate,
+          remarks: item.remarks ?? "",
+          lastActivity: item.lastActivityname ?? "",
+          indexValue: allRows.length + idx,
+          isChecked: true,
+        }));
+        allRows = [...allRows, ...mappedRows];
+      } else {
+        toast.warn(`No booking data found for: ${newState.bookingNo}`);
+      }
+    }
+
+    // ✅ From blNo
+    if (newState?.blNo && newState.blNo.trim() !== "") {
+      const fetchResponse = await getContainerActivity({ blNo: newState.blNo });
+
+      if (fetchResponse?.success && Array.isArray(fetchResponse?.Chargers) && fetchResponse.Chargers.length > 0) {
+        const mappedRows = fetchResponse.Chargers.map((item, idx) => ({
+          blNo: String(item.blNo),
+          containerNo: String(item.containerId),
+          containerNodropdown: [{ value: item.containerId, label: item.containerNo }],
+          lastActivity: String(item.lastActivity),
+          lastActivitydropdown: [{ value: item.lastActivity, label: item.lastActivityname }],
+          agentId: String(item.agentId),
+          agentIddropdown: [{ value: item.agentId, label: item.agentName }],
+          agentBranchId: String(item.agentBranchId),
+          agentBranchIddropdown: [{ value: item.agentBranchId, label: item.agentBranch }],
+          fromLocationId: String(item.formLocationId),
+          fromLocationIddropdown: [{ value: item.formLocationId, label: item.fromLocation }],
+          lastActivityDate: item.activityDate,
+          remarks: item.remarks ?? "",
+          lastActivity: item.lastActivityname ?? "",
+          indexValue: allRows.length + idx,
+          isChecked: true,
+        }));
+        allRows = [...allRows, ...mappedRows];
+      } else {
+        toast.warn(`No BL data found for: ${newState.blNo}`);
+      }
+    }
+
+    // ✅ Final update (only once)
+    if (allRows.length > 0) {
+      setNewState(prev => ({
+        ...prev,
+        tblContainerMovement: allRows,
+      }));
+
+      setSubmitNewState(prev => ({
+        ...prev,
+        tblContainerMovement: allRows,
+      }));
+    } else {
+      toast.error("No data found. Please enter container no, booking no, or BL no.");
+    }
+
+  } catch (error) {
+    console.error("Error fetching activity:", error);
+    toast.error("Something went wrong while fetching data.");
+  }
+};
+
 
 
   const handleClear = () => {
@@ -1180,163 +1143,36 @@ export default function AccordionUsage() {
     });
   };
 
+  const handleEditLastActivityClick = async () => {
+    try {
+      if (newState?.containerNo && newState.containerNo.trim() !== "") {
+        const containerNumbers = newState.containerNo.split(",").map(c => c.trim());
+        const requestData = {
+          columns: "id",
+          tableName: "tblContainer",
+          whereCondition: `containerNo ='${containerNumbers}'`,
+          clientIdCondition: `status=1 FOR JSON PATH , INCLUDE_NULL_VALUES `,
+        };
 
-// const handleEditLastActivityClick = async () => {
-//   try {
-//     if (newState?.containerNo && newState.containerNo.trim() !== "") {
-//       const containerNumbers = newState.containerNo.split(",").map(c => c.trim());
-//       const requestData = {
-//         columns: "id",
-//         tableName: "tblContainer",
-//         whereCondition: `containerNo ='${containerNumbers}'`,
-//         clientIdCondition: `status=1 FOR JSON PATH , INCLUDE_NULL_VALUES `,
-//       };
+        const containerData = await fetchReportData(requestData);
+        const containerIdData = containerData.data[0].id
+        const request = {
+          columns: "*",
+          tableName: "tblContainerMovement",
+          whereCondition: `containerId ='${containerIdData}'`,
+          clientIdCondition: `status=1 FOR JSON PATH , INCLUDE_NULL_VALUES `,
+        };
 
-//       const containerData = await fetchReportData(requestData);
-//       const containerIdData = containerData.data[0].id;
-
-//       const request = {
-//         clientId: clientId,
-//         containerId: containerIdData,
-//       };
-
-//       const containerEdit = await editLastActivity(request);
-//       console.log("containerEdit", containerEdit);
-
-//       if (containerEdit?.success && Array.isArray(containerEdit?.Chargers) && containerEdit.Chargers.length >= 1) {
-//         const firstRecord = containerEdit.Chargers[0];  // latest
-//         const secondRecord = containerEdit.Chargers.length >= 2 ? containerEdit.Chargers[1] : null;
-
-//         const updatedMovements = newState.tblContainerMovement.map((movement) => ({
-//           ...movement,
-
-//           // ✅ Last activity from 2nd if exists, else 1st
-//           lastActivity: secondRecord?.activityName ?? firstRecord.activityName ?? "",
-//           lastActivitydropdown: [
-//             {
-//               value: (secondRecord?.activityId ?? firstRecord.activityId),
-//               label: (secondRecord?.activityName ?? firstRecord.activityName),
-//             },
-//           ],
-//           lastActivityDate: secondRecord?.activityDate ?? firstRecord.activityDate ?? "",
-
-//           // ✅ FromLocation → 2nd record if exists, else 1st
-//           fromLocation: secondRecord?.fromLocationName ?? firstRecord.fromLocationName ?? "",
-//           fromLocationdropdown: [
-//             {
-//               value: (secondRecord?.fromLocationId ?? firstRecord.fromLocationId),
-//               label: (secondRecord?.fromLocationName ?? firstRecord.fromLocationName),
-//             },
-//           ],
-
-//           // ✅ ToLocation → 1st record if 2 exist, else empty
-//           toLocation: secondRecord ? (firstRecord.toLocationName ?? "") : "",
-//           toLocationdropdown: secondRecord
-//             ? [{ value: firstRecord.toLocationId, label: firstRecord.toLocationName }]
-//             : [],
-
-//           // ✅ ActivityId always from 1st
-//           activityId: firstRecord.activityId ?? "",
-//           activityIddropdown: [
-//             { value: firstRecord.activityId, label: firstRecord.activityName },
-//           ],
-//           activityDate: firstRecord.activityDate ?? "",
-//         }));
-
-//         setNewState({
-//           ...newState,
-//           tblContainerMovement: updatedMovements,
-//         });
-//       } else {
-//         toast.warn("No activity records found for this container.");
-//       }
-//     } else {
-//       toast.error("Please enter at least one container number.");
-//     }
-//   } catch (error) {
-//     console.error("Error fetching container activity:", error);
-//     toast.error("Something went wrong while fetching container data.");
-//   }
-// };
-
-
-const handleEditLastActivityClick = async () => {
-  try {
-    if (newState?.containerNo && newState.containerNo.trim() !== "") {
-      const containerNumbers = newState.containerNo.split(",").map(c => c.trim());
-      const requestData = {
-        columns: "id",
-        tableName: "tblContainer",
-        whereCondition: `containerNo ='${containerNumbers}'`,
-        clientIdCondition: `status=1 FOR JSON PATH , INCLUDE_NULL_VALUES `,
-      };
-
-      const containerData = await fetchReportData(requestData);
-      const containerIdData = containerData.data[0].id;
-
-      const request = {
-        clientId: clientId,
-        containerId: containerIdData,
-      };
-
-      const containerEdit = await editLastActivity(request);
-      console.log("containerEdit", containerEdit);
-
-      if (containerEdit?.success && Array.isArray(containerEdit?.Chargers) && containerEdit.Chargers.length >= 1) {
-        const firstRecord = containerEdit.Chargers[0];   // latest
-        const secondRecord = containerEdit.Chargers.length >= 2 ? containerEdit.Chargers[1] : null;
-
-        const updatedMovements = newState.tblContainerMovement.map((movement) => ({
-          ...movement,
-
-          // ✅ Last activity from 2nd if exists, else 1st
-          lastActivity: secondRecord?.activityName ?? firstRecord.activityName ?? "",
-          lastActivitydropdown: [
-            {
-              value: (secondRecord?.activityId ?? firstRecord.activityId),
-              label: (secondRecord?.activityName ?? firstRecord.activityName),
-            },
-          ],
-          lastActivityDate: secondRecord?.activityDate ?? firstRecord.activityDate ?? "",
-
-          // ✅ FromLocation always from 1st record
-          fromLocation: firstRecord.fromLocationName ?? "",
-          fromLocationdropdown: [
-            {
-              value: firstRecord.fromLocationId,
-              label: firstRecord.fromLocationName,
-            },
-          ],
-
-          // ✅ ToLocation from 2nd record (if exists), else empty
-          toLocation: secondRecord?.toLocationName ?? "",
-          toLocationdropdown: secondRecord
-            ? [{ value: secondRecord.toLocationId, label: secondRecord.toLocationName }]
-            : [],
-
-          // ✅ ActivityId always from 1st
-          activityId: firstRecord.activityId ?? "",
-          activityIddropdown: [
-            { value: firstRecord.activityId, label: firstRecord.activityName },
-          ],
-          activityDate: firstRecord.activityDate ?? "",
-        }));
-
-        setNewState({
-          ...newState,
-          tblContainerMovement: updatedMovements,
-        });
+        const containerEdit = await fetchReportData(request);
+        console.log("containerEdit", containerEdit);
       } else {
-        toast.warn("No activity records found for this container.");
+        toast.error("Please enter at least one container number.");
       }
-    } else {
-      toast.error("Please enter at least one container number.");
+    } catch (error) {
+      console.error("Error fetching container activity:", error);
+      toast.error("Something went wrong while fetching container data.");
     }
-  } catch (error) {
-    console.error("Error fetching container activity:", error);
-    toast.error("Something went wrong while fetching container data.");
-  }
-};
+  };
 
   const handleFieldValuesChange = (updatedValues) => {
     const entries = Object.entries(updatedValues);
@@ -1740,7 +1576,7 @@ function ChildAccordianComponent({
             childObject,
             feild.fieldname
           ) ||
-            String(childObject[feild.fieldname] || "").trim() === "")
+           String(childObject[feild.fieldname] || "").trim() === "")
         ) {
           toast.error(`Value for ${feild.yourlabel} is missing or empty.`);
           return;

@@ -1550,7 +1550,6 @@ export default function AddEditFormControll() {
           return toast.error(error.message);
         }
         try {
-          // return;
           const submitData = formControlData?._onSubmitResults?.result?.values
             ? formControlData?._onSubmitResults?.result?.values
             : submitNewState;
