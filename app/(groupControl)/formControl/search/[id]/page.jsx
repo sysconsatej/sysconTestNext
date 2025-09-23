@@ -725,21 +725,21 @@ export default function AddEditFormControll() {
         }
         try {
           if (
-            formControlData?.functionOnSubmit &&
-            formControlData?.functionOnSubmit !== null
+            fetchedApiResponseData?.functionOnSubmit &&
+            fetchedApiResponseData?.functionOnSubmit !== null
           ) {
             await Promise.all(
-              formControlData?.functionOnSubmit.split(";").map((e) =>
+              fetchedApiResponseData?.functionOnSubmit.split(";").map((e) =>
                 onSubmitFunctionCall(
                   e,
                   newState,
-                  formControlData,
+                  fetchedApiResponseData,
                   newState,
                   setNewState,
                   submitNewState,
                   setSubmitNewState
                 ).then((res) => {
-                  formControlData._onSubmitResults = {
+                  fetchedApiResponseData._onSubmitResults = {
                     function: e,
                     result: res,
                   };
@@ -751,6 +751,7 @@ export default function AddEditFormControll() {
           return toast.error(error.message);
         }
         try {
+          // return
           const submitData = formControlData?._onSubmitResults?.result?.values
             ? formControlData?._onSubmitResults?.result?.values
             : newState;
@@ -1292,21 +1293,21 @@ export default function AddEditFormControll() {
         }
         try {
           if (
-            formControlData.functionOnSubmit &&
-            formControlData.functionOnSubmit !== null
+            fetchedApiResponseData.functionOnSubmit &&
+            fetchedApiResponseData.functionOnSubmit !== null
           ) {
             await Promise.all(
-              formControlData?.functionOnSubmit.split(";").map((e) =>
+              fetchedApiResponseData?.functionOnSubmit.split(";").map((e) =>
                 onSubmitFunctionCall(
                   e,
                   newState,
-                  formControlData,
+                  fetchedApiResponseData,
                   newState,
                   setNewState,
                   submitNewState,
                   setSubmitNewState
                 ).then((res) => {
-                  formControlData._onSubmitResults = {
+                  fetchedApiResponseData._onSubmitResults = {
                     function: e,
                     result: res,
                   };
@@ -1466,7 +1467,7 @@ export default function AddEditFormControll() {
     fetchData();
   }, []);
   const fetchData = async () => {
-    debugger;
+    // debugger;
     try {
       const tableViewApiResponse = await formControlMenuList(uriDecodedMenu.id);
       let tempNewState = { ...newState };

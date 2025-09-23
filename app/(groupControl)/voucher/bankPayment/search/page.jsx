@@ -89,6 +89,8 @@ export default function VoucherBankReceiptAdd() {
   });
   const isView = false;
 
+  console.log("newState=>", newState);
+
   // helper to safely parse numbers
   const toNum = (v, fallback = 0) => {
     const n = parseFloat(v);
@@ -528,14 +530,24 @@ export default function VoucherBankReceiptAdd() {
   };
   const handleSubmit = async () => {
     try {
-      const { clientId, userId } = getUserDetails();
-      const payload = {
-        tblVoucherLedger: submitNewState.tblVoucherLedger,
-        clientId: clientId,
-        userId: userId,
-      };
+      const { clientId, userId, companyId, branchId, financialYear, emailId } =
+        getUserDetails();
+      // const payload = {
+      //   tblVoucherLedger: submitNewState.tblVoucherLedger,
+      //   clientId: clientId,
+      //   userId: userId,
+      // };
 
-      const result = await getContainerData(payload);
+      const insertData = {
+        ...newState,
+        clientId,
+        userId,
+        companyId,
+        branchId,
+        financialYear,
+        emailId,
+      };
+      console.log("insertData ==>", insertData);
 
       if (result.success) {
         toast.success("Saved successfully.");
@@ -5391,6 +5403,13 @@ const formState = {
       label: "DESTINATION CHARGES INCOME",
     },
   ],
+  voucherTypeId: 8,
+  voucherTypeIddropdown: [
+    {
+      value: 8,
+      label: "BANK PAYMENT",
+    },
+  ],
   paymentBank: 1554,
   voucherNo: null,
   voucherDate: null,
@@ -5410,7 +5429,6 @@ const formState = {
   balanceAmtFc: null,
   balanceAmtHc: null,
   narration: null,
-  voucherTypeId: null,
   tblVoucherLedger: [],
   tblVoucherLedgerDetails: [
     {

@@ -73,6 +73,7 @@ import { updateFlag } from "@/app/counterSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchReportData } from "@/services/auth/FormControl.services";
 import { encryptUrlFun } from "@/utils";
+import { getUserDetails } from "@/helper/userDetails";
 function sortJSON(jsonArray, field, sortOrder) {
   return jsonArray.sort((a, b) => {
     const valueA = a[field];
@@ -231,6 +232,7 @@ export default function AddEditFormControll() {
   // get label code starts here
   const [labelName, setLabelName] = useState("");
   const [isFormSaved, setIsFormSaved] = useState(false);
+  const { clientId } = getUserDetails();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -585,7 +587,7 @@ export default function AddEditFormControll() {
             toast.success(data.message);
             setIsFormSaved(true);
             if (isReportPresent) {
-              const id = data?.data?.recordset[0]?.id;
+             const id = data?.data?.recordset[0]?.id ?? data?.data?.recordset[0]?.ParentId;
               setOpenPrintModal((prev) => !prev);
               setSubmittedMenuId(uriDecodedMenu?.id);
               setSubmittedRecordId(id);

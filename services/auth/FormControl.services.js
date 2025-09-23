@@ -42,6 +42,61 @@ export async function masterTableList(data) {
     return false;
   }
 }
+export async function fetchSearchPageData(data) {
+  // masterTableList
+  try {
+    let insertedData = {
+      ...data,
+      companyId: sessionStorage.getItem("companyId"),
+      companyBranchId: sessionStorage.getItem("branchId"),
+      financialYearId: sessionStorage.getItem("financialYear"),
+    };
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${baseUrlSQl}/api/master/fetchVoucherSearchPageData`,
+      {
+        method: "POST",
+        // credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(insertedData),
+      }
+    ).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+export async function fetchVoucherData(data) {
+  // masterTableList
+  try {
+    let insertedData = {
+      ...data,
+      companyId: sessionStorage.getItem("companyId"),
+      companyBranchId: sessionStorage.getItem("branchId"),
+      financialYearId: sessionStorage.getItem("financialYear"),
+    };
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${baseUrlSQl}/api/master/fetchVoucherData`, {
+      method: "POST",
+      // credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": JSON.parse(token),
+      },
+      body: JSON.stringify(insertedData),
+    }).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
 // export async function masterTableInfo(data) {
 //   try {
 //     const token = localStorage.getItem("token");
@@ -1811,17 +1866,14 @@ export async function getGeneralLegerBillingParty(data) {
 export async function getVoucher(data) {
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(
-      `${baseUrl}/Sql/api/sp/getVoucher`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-access-token": JSON.parse(token),
-        },
-        body: JSON.stringify(data),
-      }
-    ).then((response) => response.json());
+    const response = await fetch(`${baseUrl}/Sql/api/sp/getVoucher`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": JSON.parse(token),
+      },
+      body: JSON.stringify(data),
+    }).then((response) => response.json());
     return response;
   } catch (error) {
     console.log(error);
@@ -1855,17 +1907,14 @@ export async function getContainerRepairDetails(data) {
 export async function fetchThirdLevelDetailsFromApi(data) {
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(
-      `${baseUrl}/Sql/api/sp/getThirdLevelDetails`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-access-token": JSON.parse(token),
-        },
-        body: JSON.stringify(data),
-      }
-    ).then((response) => response.json());
+    const response = await fetch(`${baseUrl}/Sql/api/sp/getThirdLevelDetails`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": JSON.parse(token),
+      },
+      body: JSON.stringify(data),
+    }).then((response) => response.json());
     return response;
   } catch (error) {
     console.log(error);
@@ -1877,17 +1926,14 @@ export async function fetchThirdLevelDetailsFromApi(data) {
 export async function getDetentionDetails(data) {
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(
-      `${baseUrl}/Sql/api/sp/getDetentionDetails`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-access-token": JSON.parse(token),
-        },
-        body: JSON.stringify(data),
-      }
-    ).then((response) => response.json());
+    const response = await fetch(`${baseUrl}/Sql/api/sp/getDetentionDetails`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": JSON.parse(token),
+      },
+      body: JSON.stringify(data),
+    }).then((response) => response.json());
     return response;
   } catch (error) {
     console.log(error);
@@ -1917,7 +1963,6 @@ export async function getThridDatePurchaseData(data) {
     return false;
   }
 }
-
 
 export async function calculateDetentionRateData(data) {
   try {
@@ -1977,6 +2022,54 @@ export async function fetchContainerNoData(data) {
         body: JSON.stringify(data),
       }
     ).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+
+export async function editLastActivity(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${baseUrl}/Sql/api/sp/editContainerMovement`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(data),
+      }
+    ).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+
+export async function disablePrint(data) {
+  try {
+    let requestBody = {
+      ...data,
+      loginCompanyId: sessionStorage.getItem("companyId"),
+      loginBranchId: sessionStorage.getItem("branchId"),
+      loginFinYearId: sessionStorage.getItem("financialYear"),
+    };
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${baseUrlSQl}/api/FormControl/disablePrint`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": JSON.parse(token),
+      },
+      body: JSON.stringify(requestBody),
+    }).then((response) => response.json());
+
     return response;
   } catch (error) {
     console.log(error);

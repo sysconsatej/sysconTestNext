@@ -341,7 +341,7 @@ function rptQuotation() {
     return `${dd}/${mm}/${yyyy}:${hh}:${min}`;
   };
 
-    const formatDate = (isoString) => {
+  const formatDate = (isoString) => {
     if (!isoString) return "";
 
     const date = new Date(isoString);
@@ -5045,8 +5045,8 @@ Operator/ Airport Authority or any other third party.
                   {data && data.length > 0 && data[0].volume !== ""
                     ? data[0].volume
                     : ""}{" "}
-                  {data && data.length > 0 && data[0].volumeUnitNameCode !== ""
-                    ? data[0].volumeUnitNameCode
+                  {data && data.length > 0 && data[0].volumeUnitCode !== ""
+                    ? data[0].volumeUnitCode
                     : ""}
                 </td>
               </tr>
@@ -5055,6 +5055,9 @@ Operator/ Airport Authority or any other third party.
                 <td className="pl-2 pt-0 pb-2">
                   {data && data.length > 0 && data[0].noOfPackages !== ""
                     ? data[0].noOfPackages
+                    : ""}{" "}
+                  {data && data.length > 0 && data[0].packageNameCode !== ""
+                    ? data[0].packageNameCode
                     : ""}
                 </td>
               </tr>
@@ -5183,188 +5186,193 @@ Operator/ Airport Authority or any other third party.
     // );
 
     return (
-      <div className="mt-1 flex flex-wrap headerTable ">
-        <table
-          className="mt-0 text-left text-xs "
-          style={{
-            borderTop: "1px solid black",
-            borderLeft: "1px solid black",
-            borderBottom: "1px solid black",
-            width: "100%",
-          }}
-        >
-          <thead>
-            <tr>
-              <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
-                CHARGE DESCRIPTION
-              </th>
-              <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
-                Size/Type
-              </th>
-              <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
-                Qty
-              </th>
-              <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
-                Curr
-              </th>
-              <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
-                Ex. Rate
-              </th>
-              <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
-                Rate
-              </th>
-              <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
-                Amount
-              </th>
-              <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
-                Total Amount
-              </th>
-              <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
-                Remarks:
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedRateRequestCharge.map((item, index, array) => {
-              // Render charge row
-              const rows = [
-                <tr key={`item-${index}`}>
-                  <td
-                    className="px-3 border-black border-b border-r py-px"
-                    style={{ maxWidth: "150px", overflowWrap: "break-word" }}
-                  >
-                    {`${item.chargeName || ""}`}
-                  </td>
-
-                  <td className="text-center border-black border-b border-r py-px">
-                    {item.sizeName &&
-                    item.sizeName !== "" &&
-                    item.sizeName !== "null"
-                      ? item.sizeName
-                      : ""}{" "}
-                    /{" "}
-                    {item.typeCode &&
-                    item.typeCode !== "" &&
-                    item.typeCode !== "null"
-                      ? item.typeCode
-                      : ""}
-                  </td>
-                  <td className="text-right border-black border-b border-r py-px">
-                    {typeof item.qty === "number" &&
-                    item.qty !== null &&
-                    item.qty !== ""
-                      ? item.qty.toFixed(2)
-                      : ""}
-                  </td>
-                  <td className="text-center border-black border-b border-r py-px">
-                    {item.sellCurrencyName &&
-                    item.sellCurrencyName !== "" &&
-                    item.sellCurrencyName !== "null"
-                      ? item.sellCurrencyName
-                      : ""}
-                  </td>
-                  <td className="text-right border-black border-b border-r py-px">
-                    {typeof item.sellExchangeRate === "number" &&
-                    item.sellExchangeRate !== null &&
-                    item.sellExchangeRate !== ""
-                      ? item.sellExchangeRate.toFixed(2)
-                      : ""}
-                  </td>
-                  <td className="text-right border-black border-b border-r py-px">
-                    {typeof item.sellRate === "number" &&
-                    item.sellRate !== null &&
-                    item.sellRate !== ""
-                      ? item.sellRate.toFixed(2)
-                      : ""}
-                  </td>
-                  <td className="text-right border-black border-b border-r py-px">
-                    {typeof item.sellAmount === "number" &&
-                    item.sellAmount !== null &&
-                    item.sellAmount !== ""
-                      ? item.sellAmount.toFixed(2)
-                      : ""}
-                  </td>
-                  <td className="text-right border-black border-b border-r py-px">
-                    {typeof item.sellTotalAmount === "number" &&
-                    item.sellTotalAmount !== null &&
-                    item.sellTotalAmount !== ""
-                      ? item.sellTotalAmount.toFixed(2)
-                      : ""}
-                  </td>
-                  <td
-                    className="text-left border-black border-b border-r py-px"
-                    style={{ maxWidth: "150px", overflowWrap: "break-word" }}
-                  >
-                    {item.remarks &&
-                    item.remarks !== "" &&
-                    item.remarks !== "null"
-                      ? item.remarks
-                      : ""}
-                  </td>
-                </tr>,
-              ];
-
-              // Check if this is the last item or the next item has a different currency
-              const lastOfCurrency =
-                index === array.length - 1 ||
-                array[index + 1].sellCurrencyName !== item.sellCurrencyName;
-              if (lastOfCurrency) {
-                // Add subtotal row
-                const subtotal = subtotals[item.sellCurrencyName];
-                rows.push(
-                  <tr key={`subtotal-${item.sellCurrencyName}`}>
-                    <td className="border-black border-b border-r font-bold py-px px-2">
-                      Total ({item.sellCurrencyName}):
-                    </td>
-                    <td className="text-center border-black border-b border-r"></td>
-                    <td className="text-center border-black border-b border-r"></td>
-                    <td className="text-center border-black border-b border-r"></td>
-                    <td className="text-center border-black border-b border-r"></td>
-                    <td className="text-center border-black border-b border-r"></td>
-                    <td className="text-center border-black border-b border-r font-bold py-px">
-                      {subtotal.amount.toFixed(2)}({item.sellCurrencyName}){" "}
-                      {/* {Amount.toFixed(2)} */}
-                    </td>
-                    <td className="text-center border-black border-b border-r font-bold py-px">
-                      {subtotal.totalAmount.toFixed(2)} ({item.sellCurrencyName}
-                      ){/* {totalAmount.toFixed(2)} */}
-                    </td>
-                    <td className="text-center border-black border-b border-r"></td>
-                  </tr>
-                );
-              }
-              return rows;
-            })}
-          </tbody>
-        </table>
-        <div
-          className="mt-2 flex flex-wrap"
-          style={{ width: "100%", marginTop: "5px" }}
-        >
-          <div
-            className="text-xs w-full flex justify-between"
+      <>
+        <div className="mt-1 flex flex-wrap headerTable ">
+          <table
+            className="mt-0 text-left text-xs "
             style={{
               borderTop: "1px solid black",
-              borderRight: "1px solid black",
               borderLeft: "1px solid black",
+              borderBottom: "1px solid black",
+              width: "100%",
             }}
           >
-            <div className="mt-1 font-bold py-px px-2">Grand Total:</div>
-            <div className="mt-1 mr-10 font-bold py-px">
-              {grandTotal.toFixed(2)}
-            </div>
-          </div>
+            <thead>
+              <tr>
+                <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
+                  CHARGE DESCRIPTION
+                </th>
+                <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
+                  Size/Type
+                </th>
+                <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
+                  Qty
+                </th>
+                <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
+                  Curr
+                </th>
+                <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
+                  Ex. Rate
+                </th>
+                <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
+                  Rate
+                </th>
+                <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
+                  Amount
+                </th>
+                <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
+                  Total Amount
+                </th>
+                <th className="text-center border-black border-b border-r pt-2  bg-gray-300">
+                  Remarks:
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedRateRequestCharge.map((item, index, array) => {
+                // Render charge row
+                const rows = [
+                  <tr key={`item-${index}`}>
+                    <td
+                      className="px-3 border-black border-b border-r py-px"
+                      style={{ maxWidth: "150px", overflowWrap: "break-word" }}
+                    >
+                      {`${item.chargeName || ""}`}
+                    </td>
+
+                    <td className="text-center border-black border-b border-r py-px">
+                      {item.sizeName &&
+                      item.sizeName !== "" &&
+                      item.sizeName !== "null"
+                        ? item.sizeName
+                        : ""}{" "}
+                      /{" "}
+                      {item.typeCode &&
+                      item.typeCode !== "" &&
+                      item.typeCode !== "null"
+                        ? item.typeCode
+                        : ""}
+                    </td>
+                    <td className="text-right border-black border-b border-r py-px">
+                      {typeof item.qty === "number" &&
+                      item.qty !== null &&
+                      item.qty !== ""
+                        ? item.qty.toFixed(2)
+                        : ""}
+                    </td>
+                    <td className="text-center border-black border-b border-r py-px">
+                      {item.sellCurrencyName &&
+                      item.sellCurrencyName !== "" &&
+                      item.sellCurrencyName !== "null"
+                        ? item.sellCurrencyName
+                        : ""}
+                    </td>
+                    <td className="text-right border-black border-b border-r py-px">
+                      {typeof item.sellExchangeRate === "number" &&
+                      item.sellExchangeRate !== null &&
+                      item.sellExchangeRate !== ""
+                        ? item.sellExchangeRate.toFixed(2)
+                        : ""}
+                    </td>
+                    <td className="text-right border-black border-b border-r py-px">
+                      {typeof item.sellRate === "number" &&
+                      item.sellRate !== null &&
+                      item.sellRate !== ""
+                        ? item.sellRate.toFixed(2)
+                        : ""}
+                    </td>
+                    <td className="text-right border-black border-b border-r py-px">
+                      {typeof item.sellAmount === "number" &&
+                      item.sellAmount !== null &&
+                      item.sellAmount !== ""
+                        ? item.sellAmount.toFixed(2)
+                        : ""}
+                    </td>
+                    <td className="text-right border-black border-b border-r py-px">
+                      {typeof item.sellTotalAmount === "number" &&
+                      item.sellTotalAmount !== null &&
+                      item.sellTotalAmount !== ""
+                        ? item.sellTotalAmount.toFixed(2)
+                        : ""}
+                    </td>
+                    <td
+                      className="text-left border-black border-b border-r py-px"
+                      style={{ maxWidth: "150px", overflowWrap: "break-word" }}
+                    >
+                      {item.remarks &&
+                      item.remarks !== "" &&
+                      item.remarks !== "null"
+                        ? item.remarks
+                        : ""}
+                    </td>
+                  </tr>,
+                ];
+
+                // Check if this is the last item or the next item has a different currency
+                const lastOfCurrency =
+                  index === array.length - 1 ||
+                  array[index + 1].sellCurrencyName !== item.sellCurrencyName;
+                if (lastOfCurrency) {
+                  // Add subtotal row
+                  const subtotal = subtotals[item.sellCurrencyName];
+                  rows.push(
+                    <tr key={`subtotal-${item.sellCurrencyName}`}>
+                      <td className="border-black border-b border-r font-bold py-px px-2">
+                        Total ({item.sellCurrencyName}):
+                      </td>
+                      <td className="text-center border-black border-b border-r"></td>
+                      <td className="text-center border-black border-b border-r"></td>
+                      <td className="text-center border-black border-b border-r"></td>
+                      <td className="text-center border-black border-b border-r"></td>
+                      <td className="text-center border-black border-b border-r"></td>
+                      <td className="text-center border-black border-b border-r font-bold py-px">
+                        {subtotal.amount.toFixed(2)}({item.sellCurrencyName}){" "}
+                        {/* {Amount.toFixed(2)} */}
+                      </td>
+                      <td className="text-center border-black border-b border-r font-bold py-px">
+                        {subtotal.totalAmount.toFixed(2)} (
+                        {item.sellCurrencyName}){/* {totalAmount.toFixed(2)} */}
+                      </td>
+                      <td className="text-center border-black border-b border-r"></td>
+                    </tr>
+                  );
+                }
+                return rows;
+              })}
+            </tbody>
+          </table>
           <div
-            className="text-xs w-full flex"
-            style={{ border: "1px solid black" }}
+            className="mt-2 flex flex-wrap"
+            style={{ width: "100%", marginTop: "5px" }}
           >
-            <div className="mt-1 font-bold px-2">Amount in Words:</div>
-            <div className="mt-1 font-bold">
-              {capitalizeFirstLetters(grandTotalInWords)} ONLY
+            <div
+              className="text-xs w-full flex justify-between"
+              style={{
+                borderTop: "1px solid black",
+                borderRight: "1px solid black",
+                borderLeft: "1px solid black",
+              }}
+            >
+              <div className="mt-1 font-bold py-px px-2">Grand Total:</div>
+              <div className="mt-1 mr-10 font-bold py-px">
+                {grandTotal.toFixed(2)}
+              </div>
+            </div>
+            <div
+              className="text-xs w-full flex"
+              style={{ border: "1px solid black" }}
+            >
+              <div className="mt-1 font-bold px-2">Amount in Words:</div>
+              <div className="mt-1 font-bold">
+                {capitalizeFirstLetters(grandTotalInWords)} ONLY
+              </div>
             </div>
           </div>
         </div>
-      </div>
+        <p className="mt-2" style={{ fontSize: "9px" }}>
+          VAT charges will be added in the invoice.
+        </p>
+      </>
     );
   };
   TariffChargeSizeTypeModule.propTypes = {
@@ -5748,17 +5756,17 @@ Operator/ Airport Authority or any other third party.
                     : ""}
                 </td>
               </tr>
-               <tr>
+              <tr>
                 <th>Validity To: </th>
-                 <td className="pl-5">
-                 {data && data.length > 0 && data[0].validityTo
+                <td className="pl-5">
+                  {data && data.length > 0 && data[0].validityTo
                     ? new Date(data[0].validityTo).toLocaleDateString("en-GB", {
                         day: "numeric",
                         month: "short",
                         year: "numeric",
                       })
                     : ""}
-                    </td>
+                </td>
               </tr>
             </table>
           </div>
@@ -10504,8 +10512,10 @@ Operator/ Airport Authority or any other third party.
           <div className="flex flex-wrap headerTable">
             <div className="text-xs w-full"></div>
             <div className="mt-2">
-               <p>
-                <p><b>Note VAT charges will be added in the invoice.</b></p>
+              <p>
+                <p>
+                  <b>Note VAT charges will be added in the invoice.</b>
+                </p>
               </p>
               <p>
                 <strong>Thanks and Best Regards.</strong>

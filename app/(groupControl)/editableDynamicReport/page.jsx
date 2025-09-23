@@ -2068,7 +2068,6 @@ export default function AddEditFormControll({ reportData }) {
                 spName: saveSpName,
               });
               if (response.success) {
-                console.log("response", response);
                 return toast.success(data?.message);
               }
             }
@@ -3734,7 +3733,8 @@ export default function AddEditFormControll({ reportData }) {
                                                   const allIndexes = new Set(
                                                     dataToGetSelectedRowData.map(
                                                       //finalPaginatedData.map(
-                                                      (_, idx) => idx
+                                                      // (_, idx) => idx
+                                                      (_, idx) => _?.rowIndex
                                                     )
                                                   );
                                                   setselectedRow(allIndexes);
