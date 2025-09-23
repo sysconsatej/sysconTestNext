@@ -3697,7 +3697,7 @@ function rptAirwayBill() {
                   </p>
                   <p
                     className="text-black word-break"
-                    style={{ width: "60%", fontSize: "9px" }}
+                    style={{ width: "70%", fontSize: "9px" }}
                   >
                     {bldata?.shipperAddress}
                   </p>
@@ -3716,7 +3716,7 @@ function rptAirwayBill() {
                   </p>
                   <p
                     className="text-black word-break"
-                    style={{ width: "60%", fontSize: "9px" }}
+                    style={{ width: "70%", fontSize: "9px" }}
                   >
                     {bldata?.consigneeAddress}
                   </p>
@@ -3741,7 +3741,7 @@ function rptAirwayBill() {
                   </p>
                   <p
                     className="text-black word-break"
-                    style={{ width: "60%", fontSize: "9px" }}
+                    style={{ width: "70%", fontSize: "9px" }}
                   >
                     {bldata?.notifyPartyAddress}
                   </p>
@@ -4357,7 +4357,7 @@ function rptAirwayBill() {
     <div className="pr-2 pl-2">
       <div id="156" className="mx-auto text-black mt-1">
         <p className="text-black text-xs font-bold text-right">
-          SEAWAY BILL OF LADING
+          {bldata?.blType}
         </p>
         <div
           className="mx-auto mt-1 border border-black"
@@ -4385,7 +4385,7 @@ function rptAirwayBill() {
                   </p>
                   <p
                     className="text-black word-break"
-                    style={{ width: "60%", fontSize: "9px" }}
+                    style={{ width: "70%", fontSize: "9px" }}
                   >
                     {bldata?.shipperAddress}
                   </p>
@@ -4404,7 +4404,7 @@ function rptAirwayBill() {
                   </p>
                   <p
                     className="text-black word-break"
-                    style={{ width: "60%", fontSize: "9px" }}
+                    style={{ width: "70%", fontSize: "9px" }}
                   >
                     {bldata?.consigneeAddress}
                   </p>
@@ -4429,7 +4429,7 @@ function rptAirwayBill() {
                   </p>
                   <p
                     className="text-black word-break"
-                    style={{ width: "60%", fontSize: "9px" }}
+                    style={{ width: "70%", fontSize: "9px" }}
                   >
                     {bldata?.notifyPartyAddress}
                   </p>

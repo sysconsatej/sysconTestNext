@@ -239,6 +239,20 @@ export default function CustomeInputFields({
     }
   }, [menuId]);
   console.log("MenuId", menuId);
+  useEffect(() => {
+    let defaultValues = {};
+    inputFieldData.forEach((field) => {
+      if (field.controlDefaultValue && !values[field.fieldname]) {
+        defaultValues[field.fieldname] = Number(field.controlDefaultValue) || field.controlDefaultValue;
+      }
+    });
+    console.log("defaultValues", defaultValues);
+
+    if(typeof(setStateVariable)  === 'function') {
+      setStateVariable((prev) => ({ ...prev, ...defaultValues }));
+    }
+
+  }, [])
 
   const handleChange = (value, field, switchToText) => {
     let formattedValue = value;
@@ -1806,7 +1820,7 @@ export default function CustomeInputFields({
                     key={index}
                     control={
                       <Checkbox
-                        checked={values?.[field.fieldname] ? true : false}
+                        checked={values?.[field.fieldname]==true ? true : false}
                         onChange={(e) => {
                           handleChange(e.target.checked, field); // Join array into a string when updating
 

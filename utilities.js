@@ -1,5 +1,4 @@
 const commonUtilities = {
-
   switchlabel2: 'lg:w-[100%] lg:p-[15px] lg:items-center',
   celltypo: 'lg:text-[#fff] lg:flex-no-wrap lg:text-[14px]',
   chip: 'lg:text-[#6545be] lg:rounded-[6px] lg:bg-[#d7d7fe]',

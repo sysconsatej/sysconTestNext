@@ -33,6 +33,7 @@ import { toast } from "react-toastify";
 import Checkbox from "@mui/material/Checkbox";
 import { ActionButton } from "@/components/ActionsButtons";
 import * as onSubmitValidation from "@/helper/onSubmitFunction";
+
 function onSubmitFunctionCall(
   functionData,
   newState,
@@ -78,6 +79,8 @@ function onSubmitFunctionCall(
     }
   }
 }
+
+
 
 EditSubChildComponent.propTypes = {
   subChildObject: PropTypes.any,

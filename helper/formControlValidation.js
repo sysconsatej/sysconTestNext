@@ -25,7 +25,7 @@ import {
   getDetentionDetails,
   getThridDatePurchaseData,
   calculateDetentionRateData,
-  fetchContainerNoData
+  fetchContainerNoData,
 } from "@/services/auth/FormControl.services";
 import { getUserDetails } from "@/helper/userDetails";
 import moment from "moment";
@@ -298,8 +298,9 @@ const SetDecimalsGeneric = (obj) => {
         return {
           isCheck: false,
           type: "success",
-          message: `You can enter Max ${fieldSize - decimalCheck - 1
-            } Characters`,
+          message: `You can enter Max ${
+            fieldSize - decimalCheck - 1
+          } Characters`,
           alertShow: true,
           fieldName: fieldName,
           values: values,
@@ -947,11 +948,11 @@ const setNoOfContainer = (obj) => {
 
       let size = currentItem.length
         ? currentItem[0].sizeIdDropdown ||
-        currentItem[0].sizeIddropdown[0]?.label
+          currentItem[0].sizeIddropdown[0]?.label
         : "";
       let type = currentItem.length
         ? currentItem[0].typeIdDropdown ||
-        currentItem[0].typeIddropdown[0]?.label
+          currentItem[0].typeIddropdown[0]?.label
         : "";
 
       if (fieldName === "sizeId" && childCommonItem.length !== 0) {
@@ -966,9 +967,11 @@ const setNoOfContainer = (obj) => {
             return {
               isCheck: false,
               type: "error",
-              message: `For type ${typeIdDropdown || type
-                } and No Of Containers ${values.qty}, the size should be ${sizeIdDropdown || size
-                }.`,
+              message: `For type ${
+                typeIdDropdown || type
+              } and No Of Containers ${values.qty}, the size should be ${
+                sizeIdDropdown || size
+              }.`,
               alertShow: true,
               values: values,
               newState: newState,
@@ -997,9 +1000,11 @@ const setNoOfContainer = (obj) => {
             return {
               isCheck: false,
               type: "error",
-              message: `For size ${sizeIdDropdown || size
-                } and No Of Container ${values.qty} the type should be ${typeIdDropdown || type
-                } `,
+              message: `For size ${
+                sizeIdDropdown || size
+              } and No Of Container ${values.qty} the type should be ${
+                typeIdDropdown || type
+              } `,
               alertShow: true,
               values: values,
               newState: newState,
@@ -1853,7 +1858,7 @@ const setTaxDetails = async (obj) => {
     totalAmount: values.totalAmount,
     totalAmountFc: values.totalAmountFc,
     sacCodeId: values.sacId,
-    totalAmountHc: values.totalAmountHc,
+    totalAmountHc: values.totalAmount ,
     taxType: taxType || "G",
     companyId: companyId,
     branchId: branchId,
@@ -1992,7 +1997,8 @@ const getJobCharges = async (obj) => {
     totalInvoiceAmountFc,
   } = newState;
 
-  const { companyId, clientId, branchId, financialYear, userId } = getUserDetails();
+  const { companyId, clientId, branchId, financialYear, userId } =
+    getUserDetails();
 
   console.log("values", values);
 
@@ -2027,7 +2033,9 @@ const getJobCharges = async (obj) => {
 
       const requestData = {
         chargeId: chargeValues.chargeId || 0,
-        invoiceDate: invoiceDate ? moment(invoiceDate).format("YYYY-MM-DD") : null,
+        invoiceDate: invoiceDate
+          ? moment(invoiceDate).format("YYYY-MM-DD")
+          : null,
         departmentId: businessSegmentId || 0,
         glId: safeChargeGlId,
         placeOfSupply_state: placeOfSupplyStateId || 0,
@@ -2055,7 +2063,8 @@ const getJobCharges = async (obj) => {
 
       if (fetchGST) {
         const { tblTax } = fetchGST;
-        Chargers[index].tblInvoiceChargeTax = tblTax || chargeValues.tblInvoiceChargeTax || [];
+        Chargers[index].tblInvoiceChargeTax =
+          tblTax || chargeValues.tblInvoiceChargeTax || [];
       }
     }
     // ✅ Fix: Always set array safely
@@ -2159,129 +2168,6 @@ const getBlCharges = async (obj) => {
   //   message: "OnLoad function triggered",
   // };
   // return endResult;
-};
-
-
-const getBlChargesForPaty = async (obj) => {
-  let {
-    args,
-    newState,
-    formControlData,
-    setFormControlData,
-    values,
-    fieldName,
-    tableName,
-    setStateVariable,
-  } = obj;
-
-  let argNames;
-  let splitArgs = [];
-  if (
-    args === undefined ||
-    args === null ||
-    args === "" ||
-    (typeof args === "object" && Object.keys(args).length === 0)
-  ) {
-    argNames = args;
-  } else {
-    argNames = args.split(",").map((arg) => arg.trim());
-    for (const iterator of argNames) {
-      splitArgs.push(iterator.split("."));
-    }
-  }
-
-  const {
-    invoiceDate,
-    businessSegmentId,
-    placeOfSupplyStateId,
-    sez,
-    billingPartyId,
-    ownStateId,
-    blId,
-  } = values;
-
-  const { companyId, clientId, branchId } = getUserDetails();
-
-  console.log("values", values);
-
-  // 🔹 STEP 1: Ensure billingPartyId is set from BL if missing
-  let finalBillingPartyId =
-    newState?.billingPartyId || values?.billingPartyId;
-
-  if (!finalBillingPartyId && newState?.blId) {
-    const fetchInvoice = await getGeneralLegerBillingParty({ id: newState.blId });
-    const invoiceList = Array.isArray(fetchInvoice)
-      ? fetchInvoice
-      : Array.isArray(fetchInvoice?.Chargers)
-        ? fetchInvoice.Chargers
-        : [];
-
-    if (invoiceList.length > 0) {
-      const selectedLedger = invoiceList[0];
-      // ✅ Always cast to number for dropdown binding
-      finalBillingPartyId = selectedLedger?.LedgerId
-        ? Number(selectedLedger.LedgerId)
-        : null;
-
-      // update state immediately with billing party
-      newState = {
-        ...newState,
-        billingPartyId: finalBillingPartyId,
-        billingPartyIddropdown: finalBillingPartyId
-          ? [
-            {
-              value: finalBillingPartyId,
-              label: selectedLedger?.LedgerName || "",
-            },
-          ]
-          : [],
-      };
-
-      setStateVariable(newState);
-    }
-  }
-
-  // 🔹 STEP 2: Build request with correct billingPartyId
-  const requestData = {
-    clientId: clientId,
-    voucherType: newState?.voucherTypeId,
-    DepartmentId: newState?.businessSegmentId,
-    jobIds: newState?.jobId,
-    blIds: newState?.blId || values?.blId,
-    billingPartyId: finalBillingPartyId,
-    companyId: companyId,
-    companyBranchId: branchId,
-  };
-
-  console.log("requestData =>", requestData);
-
-  // 🔹 STEP 3: Fetch Charges
-  const fetchTaxDetails = await getBlChargeDetails(requestData);
-  if (fetchTaxDetails) {
-    const { Chargers } = fetchTaxDetails;
-
-    Chargers?.forEach((ch, idx) => {
-      ch.idx = idx;
-      ch.index = idx;
-      ch.indexValue = idx;
-    });
-
-    // Assign charges
-    values.tblInvoiceCharge = Array.isArray(Chargers) ? Chargers : [];
-
-    // ✅ Preserve billingPartyId as number
-    setStateVariable((prev) => {
-      return {
-        ...prev,
-        ...values,
-        billingPartyId: finalBillingPartyId || prev.billingPartyId,
-        billingPartyIddropdown:
-          newState?.billingPartyIddropdown?.length > 0
-            ? newState.billingPartyIddropdown
-            : prev.billingPartyIddropdown,
-      };
-    });
-  }
 };
 
 
@@ -2807,10 +2693,10 @@ const removeFilterCondition = (obj) => {
         ...prev.formControlData,
         fields: prev.formControlData?.fields
           ? prev.formControlData.fields.map((field) =>
-            field.fieldname === fieldName
-              ? { ...field, dropdownFilter: null }
-              : field
-          )
+              field.fieldname === fieldName
+                ? { ...field, dropdownFilter: null }
+                : field
+            )
           : [],
       },
     }));
@@ -3243,15 +3129,29 @@ const calculateMultipleValues = (obj) => {
     };
   }
 
+  // setStateVariable((prev) => ({
+  //   ...prev,
+  //   [resultField]: result?.toFixed(2), // Format the result to 2 decimal places
+  // }));
+
   setStateVariable((prev) => ({
     ...prev,
-    [resultField]: result.toFixed(2), // Format the result to 2 decimal places
+    [resultField]: !isNaN(parseFloat(result))
+      ? parseFloat(result).toFixed(2) // safely convert and format
+      : "0.00", // fallback if result is invalid
   }));
 
   // Update the values object with the result in the specified field
+  // const updatedValues = {
+  //   ...values,
+  //   [resultField]: result?.toFixed(2), // Format the result to 2 decimal places
+  // };
+
   const updatedValues = {
     ...values,
-    [resultField]: result.toFixed(2), // Format the result to 2 decimal places
+    [resultField]: !isNaN(parseFloat(result))
+      ? parseFloat(result).toFixed(2) // always format as number with 2 decimals
+      : "0.00", // fallback if result is invalid
   };
 
   return {
@@ -3937,8 +3837,9 @@ const checkGridsDuplication = (obj) => {
     const fieldsList =
       labels.slice(0, -1).join(", ") +
       (labels.length > 1 ? `, and ${labels.slice(-1)}` : labels[0]);
-    const message = `Duplicate entry found for ${fieldsList}. Please enter different ${labels[labels.length - 1]
-      }.`;
+    const message = `Duplicate entry found for ${fieldsList}. Please enter different ${
+      labels[labels.length - 1]
+    }.`;
 
     return {
       type: "error",
@@ -5570,7 +5471,6 @@ const setTaxCalculationbk = async (obj) => {
   };
 };
 
-
 const balanceUpdate = async (obj) => {
   const {
     args,
@@ -5652,23 +5552,30 @@ const setGLSacDetails = async (obj) => {
   };
 
   const response = await getGLChargeDetails(requestBody);
+
   if (response.data && response.data.length > 0) {
     const glId = response.data[0]?.glId;
     const sacId = response.data[0]?.sacId;
     const glName = response.data[0]?.glName;
     const sacName = response.data[0]?.sacName;
+
+    // update state with proper dropdown objects
     setStateVariable((prev) => ({
       ...prev,
       chargeGlId: glId,
       sacId: sacId,
-      sacIddropDown: sacName,
-      chargeGlIddropdown: glName,
+      sacIddropDown: sacId ? [{ value: sacId, label: sacName }] : null,
+      chargeGlIddropdown: glId ? [{ value: glId, label: glName }] : null,
     }));
+
     const updatedValues = {
       ...values,
       glId: glId,
       sacId: sacId,
+      sacIddropDown: sacId ? [{ value: sacId, label: sacName }] : null,
+      chargeGlIddropdown: glId ? [{ value: glId, label: glName }] : null,
     };
+
     return {
       values: updatedValues,
       type: "success",
@@ -5678,6 +5585,17 @@ const setGLSacDetails = async (obj) => {
       isCheck: false,
       newState: newState,
       formControlData: formControlData,
+    };
+  } else {
+    return {
+      values,
+      type: "warning",
+      message: "No GL/SAC details found",
+      alertShow: true,
+      fieldName: fieldName,
+      isCheck: false,
+      newState,
+      formControlData,
     };
   }
 };
@@ -6015,6 +5933,7 @@ const ChargeHeadToChargeDesc = async (obj) => {
   let [originCol, tableName, chargeDescription] = argNames;
   let chargeId = values[originCol];
   const Description = argNames[2];
+  const descriptionLL = argNames[3];
   const token = localStorage.getItem("token");
 
   const request = {
@@ -6026,15 +5945,17 @@ const ChargeHeadToChargeDesc = async (obj) => {
   return fetchReportData(request).then((response) => {
     const data = response.data;
     const dueToValue = data[0]?.name;
-
+    const chargeNameLL = data[0]?.chargeNameLL;
     if (dueToValue !== undefined && dueToValue !== null) {
       const updatedValues = {
         ...values,
         [argNames[2]]: dueToValue,
+        [argNames[3]]: chargeNameLL,
       };
       setStateVariable((prev) => ({
         ...prev,
         [argNames[2]]: dueToValue,
+        [argNames[3]]: chargeNameLL,
       }));
 
       return {
@@ -6341,10 +6262,11 @@ const setSameSizeValues = (obj) => {
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
-      const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
-        ? `id in (${sizeIds.join(",")})`
-        : `id = ${sizeIds}`
-        } `;
+      const editedString = `${dropFilterValueWithoutBraces} and ${
+        Array.isArray(sizeIds)
+          ? `id in (${sizeIds.join(",")})`
+          : `id = ${sizeIds}`
+      } `;
 
       console.log("editedString", editedString);
 
@@ -6391,10 +6313,11 @@ const setSameSizeValues = (obj) => {
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
-      const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
-        ? `id in (${sizeIds.join(",")})`
-        : `id = ${sizeIds}`
-        } `;
+      const editedString = `${dropFilterValueWithoutBraces} and ${
+        Array.isArray(sizeIds)
+          ? `id in (${sizeIds.join(",")})`
+          : `id = ${sizeIds}`
+      } `;
 
       if (editedString.trim()) {
         setterField.dropdownFilter = editedString;
@@ -6415,8 +6338,8 @@ const setSameSizeValues = (obj) => {
       let getterSize = newState[argsArray[0]];
       let currentSize =
         values &&
-          Array.isArray(values.sizeIddropdown) &&
-          values.sizeIddropdown.length > 0
+        Array.isArray(values.sizeIddropdown) &&
+        values.sizeIddropdown.length > 0
           ? values.sizeIddropdown[0].label
           : "";
 
@@ -6506,8 +6429,8 @@ const setSameSizeValues = (obj) => {
       let getterSize = newState[argsArray[0]];
       let currentSize =
         values &&
-          Array.isArray(values.sizeIddropdown) &&
-          values.sizeIddropdown.length > 0
+        Array.isArray(values.sizeIddropdown) &&
+        values.sizeIddropdown.length > 0
           ? values.sizeIddropdown[0].label
           : "";
 
@@ -7659,9 +7582,9 @@ const getVoucherInvoiceDetails = async (obj) => {
     const invoiceNumbers =
       Array.isArray(fetchInvoice?.Chargers) && fetchInvoice.Chargers.length > 0
         ? fetchInvoice.Chargers.map((invoice) => ({
-          value: invoice?.value ?? invoice?.invoiceNo, // Use invoiceNo if value is missing
-          label: invoice?.label ?? invoice?.invoiceNo, // Ensure label is never undefined
-        }))
+            value: invoice?.value ?? invoice?.invoiceNo, // Use invoiceNo if value is missing
+            label: invoice?.label ?? invoice?.invoiceNo, // Ensure label is never undefined
+          }))
         : [];
 
     console.log("invoiceNumbers", invoiceNumbers);
@@ -8106,41 +8029,61 @@ const setHomeCurrencyForCharge = async (obj) => {
     setFormControlData,
     setStateVariable,
   } = obj;
-  //const argNames  =args.split(",").map((arg) => arg.trim());
-  //let [originCol] = argNames;
+
   const { companyId, branchId } = getUserDetails();
+
+  // 1. Get company's home currencyId
   const request = {
     columns: "currencyId",
     tableName: "tblCompanyParameter",
     whereCondition: `companyId=${companyId}`,
     clientIdCondition: `status=1 FOR JSON PATH ,INCLUDE_NULL_VALUES`,
   };
-  return fetchReportData(request).then((response) => {
+
+  return fetchReportData(request).then(async (response) => {
     const data = response.data;
     const currency = data[0]?.currencyId;
 
     if (currency !== undefined && currency !== null) {
+      // 2. Fetch label from currency master
+      const currencyReq = {
+        columns: "id as value, code as label",
+        tableName: "tblMasterData",
+        whereCondition: `id=${currency}`,
+        clientIdCondition: `status=1 FOR JSON PATH ,INCLUDE_NULL_VALUES`,
+      };
+
+      const currencyResp = await fetchReportData(currencyReq);
+      const currencyDropdown = currencyResp.data?.[0] || {
+        value: currency,
+        label: "",
+      };
+
+      // 3. Update values with both ID and dropdown
       const updatedValues = {
         ...values,
         buyCurrencyId: currency,
         sellCurrencyId: currency,
-        currencyId: currency,
-        exchangeRate: 1,
-        buyExchangeRate: 1,
-        buyexchangeRate: 1,
-        sellExchangeRate: 1
-      };
-      setStateVariable((prev) => ({
-        ...prev,
-        buyCurrencyId: currency,
-        sellCurrencyId: currency,
-        currencyId: currency,
+        currencyId: String(currency), // string as in your sample
         exchangeRate: 1,
         buyExchangeRate: 1,
         buyexchangeRate: 1,
         sellExchangeRate: 1,
-        sellexchangeRate: 1
+        sellexchangeRate: 1,
+        currencyIddropdown: [currencyDropdown], // << added here
+      };
 
+      setStateVariable((prev) => ({
+        ...prev,
+        buyCurrencyId: currency,
+        sellCurrencyId: currency,
+        currencyId: String(currency),
+        exchangeRate: 1,
+        buyExchangeRate: 1,
+        buyexchangeRate: 1,
+        sellExchangeRate: 1,
+        sellexchangeRate: 1,
+        currencyIddropdown: [currencyDropdown],
       }));
 
       return {
@@ -8238,7 +8181,7 @@ const setTaxCalculation = async (obj) => {
       values: {
         ...values,
         buyTaxAmount: 0,
-        sellTaxAmount: 0
+        sellTaxAmount: 0,
       },
       alertShow: false,
       newState,
@@ -8264,7 +8207,7 @@ const setTaxCalculation = async (obj) => {
         setStateVariable((prev) => ({
           ...prev,
           buyTaxAmount: 0,
-          sellTaxAmount: 0
+          sellTaxAmount: 0,
         }));
 
         return {
@@ -8274,7 +8217,7 @@ const setTaxCalculation = async (obj) => {
           values: {
             ...values,
             buyTaxAmount: 0,
-            sellTaxAmount: 0
+            sellTaxAmount: 0,
           },
           alertShow: false,
           newState,
@@ -8286,7 +8229,7 @@ const setTaxCalculation = async (obj) => {
         quotationDate: rateRequestDate,
         companyId: companyId,
         sellAmount: values.buyRate,
-        clientId: clientId
+        clientId: clientId,
       };
       const fetchTaxDetails = await getTaxDetailsQuotation(requestData);
       const taxRate = fetchTaxDetails?.Chargers[0]?.taxAmount;
@@ -8294,7 +8237,7 @@ const setTaxCalculation = async (obj) => {
         setStateVariable((prev) => ({
           ...prev,
           buyTaxAmount: 0,
-          sellTaxAmount: 0
+          sellTaxAmount: 0,
         }));
 
         return {
@@ -8304,7 +8247,7 @@ const setTaxCalculation = async (obj) => {
           values: {
             ...values,
             buyTaxAmount: 0,
-            sellTaxAmount: 0
+            sellTaxAmount: 0,
           },
           alertShow: false,
           newState,
@@ -8325,7 +8268,7 @@ const setTaxCalculation = async (obj) => {
         values: {
           ...values,
           buyTaxAmount: taxAmount,
-          sellTaxAmount: sellTax
+          sellTaxAmount: sellTax,
         },
         alertShow: false,
         newState,
@@ -8509,7 +8452,6 @@ const setFirstExchangeRate = async (obj) => {
         fieldName: fieldName,
       };
     }
-
   } catch (error) {
     console.error("Error fetching exchange rates:", error);
     return {
@@ -8524,11 +8466,7 @@ const setFirstExchangeRate = async (obj) => {
 };
 
 const validateDateDo = async (obj) => {
-  let {
-    args,
-    newState,
-    setStateVariable,
-  } = obj;
+  let { args, newState, setStateVariable } = obj;
 
   let argNames;
   let splitArgs = [];
@@ -8573,7 +8511,11 @@ const validateDateDo = async (obj) => {
 
   const fetchDoValidateDate = await getValidateForDo(requestData);
 
-  if (fetchDoValidateDate && Array.isArray(fetchDoValidateDate) && fetchDoValidateDate.length > 0) {
+  if (
+    fetchDoValidateDate &&
+    Array.isArray(fetchDoValidateDate) &&
+    fetchDoValidateDate.length > 0
+  ) {
     const doValidDate = fetchDoValidateDate[0]?.doValidDate || null;
 
     setStateVariable((prev) => ({
@@ -8660,7 +8602,7 @@ const setGridExchangeRate = async (obj) => {
   const { args, fieldName, values, newState, setStateVariable } = obj;
   const argNames = args.split(",").map((arg) => arg.trim());
   let [originCol, buyCurrencyId, exchangeRate] = argNames;
-  const currencyId = newState[argNames[0]]
+  const currencyId = newState[argNames[0]];
   const buyCurrency = values[buyCurrencyId];
   let userData;
   let companyResponseData;
@@ -8793,7 +8735,6 @@ const setGridExchangeRate = async (obj) => {
         fieldName: fieldName,
       };
     }
-
   } catch (error) {
     console.error("Error fetching exchange rates:", error);
     return {
@@ -8823,7 +8764,8 @@ const setCargoMovement = async (obj) => {
   const fpdId = newState[argNames[1]];
   const movementTypeField = argNames[2];
 
-  const updatedMovementTypeId = podId && fpdId && podId === fpdId ? "738" : "973";
+  const updatedMovementTypeId =
+    podId && fpdId && podId === fpdId ? "738" : "973";
 
   setStateVariable((prevState) => ({
     ...prevState,
@@ -8893,9 +8835,7 @@ const setRadioValue = async (obj) => {
 
   // Normalize to number if possible
   const blTypeValue =
-    typeof blType === "object" && blType !== null
-      ? blType.value
-      : blType;
+    typeof blType === "object" && blType !== null ? blType.value : blType;
 
   if (blTypeValue === 177) {
     updatedValues[radioKey] = "1";
@@ -8920,14 +8860,8 @@ const setRadioValue = async (obj) => {
   };
 };
 
-
 const setFreightIssue = async (obj) => {
-  const {
-    args,
-    values,
-    newState,
-    setStateVariable,
-  } = obj;
+  const { args, values, newState, setStateVariable } = obj;
   const argNames = args.split(",").map((arg) => arg.trim());
   const plrValue = newState[argNames[0]];
   const issuePlaceKey = argNames[1];
@@ -8979,7 +8913,7 @@ const copyConsigneeToNotifyPartyText = (obj) => {
     setStateVariable((prev) => ({
       ...prev,
       [argNames[2]]: consigneeText,
-      [argNames[4]]: consigneeText
+      [argNames[4]]: consigneeText,
     }));
 
     return {
@@ -9026,7 +8960,6 @@ const copyConsigneeToNotifyPartyTextAddres = (obj) => {
       ...prev,
       [argNames[1]]: consigneeAddress,
       [argNames[2]]: consigneeAddress,
-
     }));
 
     return {
@@ -9092,7 +9025,7 @@ const setBranchForContainerMovement = async (obj) => {
 
   const argNames = args.split(",").map((arg) => arg.trim());
   const agentId = argNames[0];
-  const agent = values[argNames[0]]
+  const agent = values[argNames[0]];
 
   const request = {
     columns: "id,name",
@@ -9133,7 +9066,6 @@ const setBranchForContainerMovement = async (obj) => {
       message: "Error fetching address. Please try again.",
     };
   }
-
 };
 const setBankByDefault = async (obj) => {
   const {
@@ -9192,65 +9124,13 @@ const setBankByDefault = async (obj) => {
     };
   }
 };
-const copyContainerData = async (obj) => {
-  const {
-    args,
-    values,
-    fieldName,
-    newState,
-    setStateVariable,
-  } = obj;
-
-  try {
-    const argNames = args.split(",").map((arg) => arg.trim());
-    const nextActivity = values[argNames[0]];
-    const firstRow = newState.tblContainerMovement?.[0];
-    if (!firstRow) return;
-
-    const updatedRows = newState.tblContainerMovement.map((row, index) => {
-      if (index === 0) return row;
-
-      return {
-        ...row,
-        activityId: firstRow.activityId,
-        activityIddropdown: firstRow.activityIddropdown,
-        toLocationId: firstRow.toLocationId,
-        toLocationIddropdown: firstRow.toLocationIddropdown,
-        activityDate: firstRow.activityDate,
-      };
-    });
-
-    setStateVariable((prev) => ({
-      ...prev,
-      tblContainerMovement: updatedRows,
-    }));
-
-    return {
-      type: "success",
-      result: true,
-      message: "Copied first row values to all rows successfully",
-      newState: { ...newState, tblContainerMovement: updatedRows },
-    };
-  } catch (error) {
-    console.error("Error in copyContainerData:", error);
-    return {
-      type: "error",
-      result: false,
-      message: "Error copying container data. Please try again.",
-    };
-  }
-};
 
 const calculateVoucherAmt = async (obj) => {
-  const {
-    args,
-    newState,
-    setStateVariable,
-  } = obj;
+  const { args, newState, setStateVariable } = obj;
   ///currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt
   try {
     const argNames = args.split(",").map((arg) => arg.trim());
-    const currency = newState?.[argNames[0]]
+    const currency = newState?.[argNames[0]];
     const exchangeRate = parseFloat(newState?.[argNames[1]]) || 0; // e.g. "exchangeRate"
     const amtRec = parseFloat(newState?.[argNames[2]]) || 0;
     const amtRecFcValue = parseFloat(newState?.[argNames[3]]) || 0;
@@ -9285,8 +9165,7 @@ const calculateVoucherAmt = async (obj) => {
         tdsAmtFc,
         tdsAmt,
       };
-    }
-    else if (currencyId != currency) {
+    } else if (currencyId != currency) {
       const amtRec = amtRecFcValue * exchangeRate;
       const tdsAmtFc = amtRecFcValue * tdsPercent;
       const tdsAmt = amtRec * tdsPercent;
@@ -9308,7 +9187,6 @@ const calculateVoucherAmt = async (obj) => {
         tdsAmt,
       };
     }
-
   } catch (error) {
     console.error("Error in calculateVoucherAmt:", error);
     return {
@@ -9319,61 +9197,7 @@ const calculateVoucherAmt = async (obj) => {
   }
 };
 
-const getBillingPartyFromJob = async (obj) => {
-  let {
-    newState,
-    setStateVariable,
-    values,
-  } = obj;
 
-  const { blId } = newState;
-  const { companyId, clientId } = getUserDetails();
-
-  const requestData = { id: blId };
-  const fetchInvoice = await getGeneralLegerBillingParty(requestData);
-
-  // normalize response
-  const invoiceList = Array.isArray(fetchInvoice)
-    ? fetchInvoice
-    : Array.isArray(fetchInvoice?.Chargers)
-      ? fetchInvoice.Chargers
-      : [];
-
-  if (invoiceList.length > 0) {
-    const selectedLedger = invoiceList[0];
-    const ledgerId = selectedLedger?.LedgerId
-      ? String(selectedLedger.LedgerId) // force string for consistency
-      : null;
-    const ledgerName = selectedLedger?.LedgerName || "";
-
-    const updatedState = {
-      ...newState,
-      billingPartyId: ledgerId, // ✅ set the value
-      billingPartyIddropdown: ledgerId
-        ? [{ value: ledgerId, label: ledgerName }]
-        : [],
-    };
-
-    // update global state
-    setStateVariable(updatedState);
-
-    return {
-      type: "success",
-      result: true,
-      newState: updatedState,
-      values,
-      message: "Billing Party updated from Ledger successfully!",
-    };
-  } else {
-    return {
-      type: "warning",
-      result: false,
-      newState,
-      values,
-      message: "No ledger found for this BL!",
-    };
-  }
-};
 const getContainerRepairChargeDetails = async (obj) => {
   let {
     args,
@@ -9403,11 +9227,7 @@ const getContainerRepairChargeDetails = async (obj) => {
       splitArgs.push(iterator.split("."));
     }
   }
-  const {
-    businessSegmentId,
-    billingPartyId,
-    containerRepairId,
-  } = values;
+  const { businessSegmentId, billingPartyId, containerRepairId } = values;
   const { companyId, clientId, branchId } = getUserDetails();
   const requestData = {
     clientId: clientId,
@@ -9487,7 +9307,6 @@ const setInvoiceChargeDetails = async (obj) => {
       businessSegmentId: businessSegmentId,
     };
 
-
     const fetchChargeDetails = await getDetentionDetails(requestData);
 
     if (fetchChargeDetails) {
@@ -9528,9 +9347,10 @@ const getThirdLevelDetails = async (obj) => {
     onChangeHandler,
   } = obj;
 
-  const { companyId, clientId, branchId, userId, financialYear } = getUserDetails();
+  const { companyId, clientId, branchId, userId, financialYear } =
+    getUserDetails();
 
-  // Parse args (kept as in your original; remove if unused)
+  // Parse args
   let argNames;
   let splitArgs = [];
   if (
@@ -9547,12 +9367,30 @@ const getThirdLevelDetails = async (obj) => {
     }
   }
 
-  // const { jobId, chargeId } = values;
+  const {
+    businessSegmentId,
+    voucherTypeId,
+    blId,
+    plrId,
+    podId,
+    fpdId,
+    polId,
+    billingPartyId,
+    containerStatusId,
+    fromDate,
+    toDate,
+    exchangeRate,
+  } = newState;
 
-  // const requestData = { clientId, jobId, chargeId };
-  const { businessSegmentId, voucherTypeId, blId, plrId, podId, fpdId, polId, billingPartyId, containerStatusId, fromDate, toDate } = newState;
-  const { jobId, chargeId, cargoTypeId, sizeId, typeId, containerRepairId, containerTransactionId } = values;
-
+  const {
+    jobId,
+    chargeId,
+    cargoTypeId,
+    sizeId,
+    typeId,
+    containerRepairId,
+    containerTransactionId,
+  } = values;
 
   const requestData = {
     billingPartyId: billingPartyId,
@@ -9576,7 +9414,8 @@ const getThirdLevelDetails = async (obj) => {
     sizeId: sizeId,
     typeId: typeId,
     containerRepairId: containerRepairId,
-    containerTransactionId: containerTransactionId
+    containerTransactionId: containerTransactionId,
+    invoiceExchageRate: exchangeRate,
   };
 
   const fetchChargeDetails = await fetchThirdLevelDetailsFromApi(requestData);
@@ -9584,9 +9423,10 @@ const getThirdLevelDetails = async (obj) => {
   if (fetchChargeDetails) {
     const { Chargers = [] } = fetchChargeDetails;
 
-    const toNum = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
+    const toNum = (v) =>
+      v === null || v === undefined || v === "" ? null : Number(v);
 
-    const updatedChargers = Chargers.map((item) => {
+    const updatedChargers = Chargers.map((item, i) => {
       const _containerId = toNum(item.containerId);
       const _sizeId = toNum(item.sizeId);
       const _typeId = toNum(item.typeId);
@@ -9596,26 +9436,24 @@ const getThirdLevelDetails = async (obj) => {
       const _blId = toNum(item.blId);
       return {
         ...item,
-
-        // you already had this one:
+        indexValue: i,
         containerIddropdown:
           _containerId !== null
-            ? [{ value: _containerId, label: item.containerNo ?? String(_containerId) }]
+            ? [
+                {
+                  value: _containerId,
+                  label: item.containerNo ?? String(_containerId),
+                },
+              ]
             : [],
-
-        // new — size
         sizeIddropdown:
           _sizeId !== null
             ? [{ value: _sizeId, label: item.sizeName ?? String(_sizeId) }]
             : [],
-
-        // new — type
         typeIddropdown:
           _typeId !== null
             ? [{ value: _typeId, label: item.typeName ?? String(_typeId) }]
             : [],
-
-        // new — job
         jobIddropdown:
           _jobId !== null
             ? [{ value: _jobId, label: item.jobNo ?? String(_jobId) }]
@@ -9623,48 +9461,81 @@ const getThirdLevelDetails = async (obj) => {
         containerTransactionIddropdown:
           _containerTransactionId !== null
             ? [
-              {
-                value: _containerTransactionId,
-                label: item.containerTransactionName ?? String(_containerTransactionId),
-              },
-            ]
+                {
+                  value: _containerTransactionId,
+                  label:
+                    item.containerTransactionName ??
+                    String(_containerTransactionId),
+                },
+              ]
             : [],
         containerRepairIddropdown:
           _containerRepairId !== null
             ? [
-              {
-                value: _containerRepairId,
-                label: item.containerRepairName ?? String(_containerRepairId),
-              },
-            ]
+                {
+                  value: _containerRepairId,
+                  label: item.containerRepairName ?? String(_containerRepairId),
+                },
+              ]
             : [],
         blIddropdown:
           _blId !== null
             ? [{ value: _blId, label: item.blNo ?? String(_blId) }]
             : [],
+        // optional: keep per-row calculated amount for clarity
+        calculatedAmount:
+          (Number(item.noOfDays) || 0) * (Number(item.rate) || 0),
       };
     });
+
+    // ✅ total qty
+    const qty = updatedChargers.reduce(
+      (acc, item) => acc + (Number(item["qty"]) || 0),
+      0
+    );
+
+    // ✅ total of (noOfDays * rate)
+    const totalWeighted = updatedChargers.reduce(
+      (acc, item) =>
+        acc + (Number(item["noOfDays"]) || 0) * (Number(item["rate"]) || 0),
+      0
+    );
+
+    // ✅ average rate
+    const avgRate = qty > 0 ? totalWeighted / qty : 0;
+
     values.tblInvoiceChargeDetails = updatedChargers;
+    values["qty"] = qty;
+    values["rate"] = avgRate.toFixed(2);
+    values["totalAmountHc"] = (qty * avgRate * 1).toFixed(2);
+    values["totalAmountFc"] = (
+      qty *
+      avgRate *
+      Number(newState.exchangeRate || 1)
+    ).toFixed(2);
+
     setStateVariable((prev) => ({
       ...prev,
       tblInvoiceChargeDetails: updatedChargers,
+      qty: qty,
+      rate: avgRate.toFixed(2),
+      totalAmountHc: (qty * avgRate).toFixed(2),
+      totalAmountFc: (
+        qty *
+        avgRate *
+        Number(newState.exchangeRate || 1)
+      ).toFixed(2),
     }));
   }
 };
 
 const calculateVoucherGridBalanceData = async (obj) => {
-
-  const {
-    args,
-    newState,
-    setStateVariable,
-  } = obj;
+  const { args, newState, setStateVariable } = obj;
   ///currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt
   try {
     const argNames = args.split(",").map((arg) => arg.trim());
-    const osAmount = newState?.[argNames[0]]
+    const osAmount = newState?.[argNames[0]];
     const allocatedFc = parseFloat(newState?.[argNames[1]]) || 0; // e.g. "exchangeRate"
-
   } catch (error) {
     console.error("Error in calculateVoucherAmt:", error);
     return {
@@ -9707,9 +9578,18 @@ const getThridDatePurchase = async (obj) => {
     }
   }
 
-  const { businessSegmentId, voucherTypeId, blId, plrId, podId, fpdId, polId, billingPartyId, containerStatusId } = newState;
+  const {
+    businessSegmentId,
+    voucherTypeId,
+    blId,
+    plrId,
+    podId,
+    fpdId,
+    polId,
+    billingPartyId,
+    containerStatusId,
+  } = newState;
   const { chargeId, fromDate, toDate, cargoTypeId, sizeId, typeId } = values;
-
 
   const requestData = {
     billingParty: billingPartyId,
@@ -9723,8 +9603,7 @@ const getThridDatePurchase = async (obj) => {
     plrId: plrId,
     podId: podId,
     fpdId: fpdId,
-    polId: polId
-
+    polId: polId,
   };
   const fetchChargeDetails = await getThridDatePurchaseData(requestData);
 
@@ -9747,9 +9626,7 @@ const getThridDatePurchase = async (obj) => {
       return tempData;
     });
   }
-}
-
-
+};
 
 const setNumberDays = async (obj = {}) => {
   let {
@@ -9932,6 +9809,7 @@ const calculateDetentionRate = async (obj, noDays) => {
     blId: blId,
     noOfDays: noDays,
     clientId: clientId,
+    businessSegmentId: businessSegmentId,
   };
 
   const fetchChargeDetails = await calculateDetentionRateData(requestData);
@@ -9948,7 +9826,7 @@ const calculateDetentionRate = async (obj, noDays) => {
 
     setStateVariable((prev) => ({
       ...prev,
-      rate: Chargers[0]?.rate || 0, // ensure safe access
+      amountHc: Chargers[0]?.amountHc || 0, // ensure safe access
       Chargers, // store full array if you want to use it later
     }));
   }
@@ -10015,32 +9893,242 @@ const setVesslelVoyage = async (obj = {}) => {
     };
   }
 };
+const getBlChargesForPaty = async (obj) => {
+  let {
+    args,
+    newState,
+    formControlData,
+    setFormControlData,
+    values,
+    fieldName,
+    tableName,
+    setStateVariable,
+  } = obj;
 
-const setBlDetails = async (obj) => {
-  try {
-    // 1. Run billing party function
-    const billingPartyResult = await getBillingPartyFromJob(obj);
+  let argNames;
+  let splitArgs = [];
+  if (
+    args === undefined ||
+    args === null ||
+    args === "" ||
+    (typeof args === "object" && Object.keys(args).length === 0)
+  ) {
+    argNames = args;
+  } else {
+    argNames = args.split(",").map((arg) => arg.trim());
+    for (const iterator of argNames) {
+      splitArgs.push(iterator.split("."));
+    }
+  }
 
-    // 2. Run vessel/voyage function
-    const vesselVoyageResult = await setVesslelVoyage({
-      ...obj,
-      newState: billingPartyResult.newState, // pass updated state
-      values: billingPartyResult.values,
+  const {
+    invoiceDate,
+    businessSegmentId,
+    placeOfSupplyStateId,
+    sez,
+    billingPartyId,
+    ownStateId,
+    blId,
+  } = values;
+
+  const { companyId, clientId, branchId } = getUserDetails();
+
+  console.log("values", values);
+
+  // 🔹 STEP 1: Ensure billingPartyId is set from BL if missing
+  let finalBillingPartyId = newState?.billingPartyId || values?.billingPartyId;
+
+  if (!finalBillingPartyId && newState?.blId) {
+    const fetchInvoice = await getGeneralLegerBillingParty({
+      id: newState.blId,
+    });
+    const invoiceList = Array.isArray(fetchInvoice)
+      ? fetchInvoice
+      : Array.isArray(fetchInvoice?.Chargers)
+      ? fetchInvoice.Chargers
+      : [];
+
+    if (invoiceList.length > 0) {
+      const selectedLedger = invoiceList[0];
+      // ✅ Always cast to number for dropdown binding
+      finalBillingPartyId = selectedLedger?.LedgerId
+        ? Number(selectedLedger.LedgerId)
+        : null;
+
+      // update state immediately with billing party
+      newState = {
+        ...newState,
+        billingPartyId: finalBillingPartyId,
+        billingPartyIddropdown: finalBillingPartyId
+          ? [
+              {
+                value: finalBillingPartyId,
+                label: selectedLedger?.LedgerName || "",
+              },
+            ]
+          : [],
+      };
+
+      setStateVariable(newState);
+    }
+  }
+
+  // 🔹 STEP 2: Build request with correct billingPartyId
+  const requestData = {
+    clientId: clientId,
+    voucherType: newState?.voucherTypeId,
+    DepartmentId: newState?.businessSegmentId,
+    jobIds: newState?.jobId,
+    blIds: newState?.blId || values?.blId,
+    billingPartyId: finalBillingPartyId,
+    companyId: companyId,
+    companyBranchId: branchId,
+  };
+
+  console.log("requestData =>", requestData);
+
+  // 🔹 STEP 3: Fetch Charges
+  const fetchTaxDetails = await getBlChargeDetails(requestData);
+  if (fetchTaxDetails) {
+    const { Chargers } = fetchTaxDetails;
+
+    Chargers?.forEach((ch, idx) => {
+      ch.idx = idx;
+      ch.index = idx;
+      ch.indexValue = idx;
     });
 
-    // 3. Merge both results
+    // Assign charges
+    values.tblInvoiceCharge = Array.isArray(Chargers) ? Chargers : [];
+
+    // ✅ Preserve billingPartyId as number
+    setStateVariable((prev) => {
+      return {
+        ...prev,
+        ...values,
+        billingPartyId: finalBillingPartyId || prev.billingPartyId,
+        billingPartyIddropdown:
+          newState?.billingPartyIddropdown?.length > 0
+            ? newState.billingPartyIddropdown
+            : prev.billingPartyIddropdown,
+      };
+    });
+  }
+};
+const getBillingPartyFromJob = async (obj) => {
+  let { newState, setStateVariable, values } = obj;
+
+  const { blId } = newState;
+  const { companyId, clientId } = getUserDetails();
+
+  const requestData = { id: blId };
+  const fetchInvoice = await getGeneralLegerBillingParty(requestData);
+
+  // normalize response
+  const invoiceList = Array.isArray(fetchInvoice)
+    ? fetchInvoice
+    : Array.isArray(fetchInvoice?.Chargers)
+    ? fetchInvoice.Chargers
+    : [];
+
+  if (invoiceList.length > 0) {
+    const selectedLedger = invoiceList[0];
+    const ledgerId = selectedLedger?.LedgerId
+      ? String(selectedLedger.LedgerId) // force string for consistency
+      : null;
+    const ledgerName = selectedLedger?.LedgerName || "";
+
+    const updatedState = {
+      ...newState,
+      billingPartyId: ledgerId, // ✅ set the value
+      billingPartyIddropdown: ledgerId
+        ? [{ value: ledgerId, label: ledgerName }]
+        : [],
+    };
+
+    // update global state
+    setStateVariable(updatedState);
+
     return {
       type: "success",
       result: true,
-      newState: {
-        ...billingPartyResult.newState,
-        ...vesselVoyageResult.newState,
-      },
-      values: {
-        ...billingPartyResult.values,
-        ...vesselVoyageResult.values,
-      },
-      message: "Billing Party + Vessel/Voyage updated successfully!",
+      newState: updatedState,
+      values,
+      message: "Billing Party updated from Ledger successfully!",
+    };
+  } else {
+    return {
+      type: "warning",
+      result: false,
+      newState,
+      values,
+      message: "No ledger found for this BL!",
+    };
+  }
+};
+
+const setBlDetails = async (obj) => {
+  try {
+    // 1. Run billing party
+    const billingPartyResult = await getBillingPartyFromJob(obj);
+
+    // 2. Run BL charges
+    const blChargesResult = await getBlChargesForPaty({
+      ...obj,
+      newState: billingPartyResult?.newState || obj.newState,
+      values: billingPartyResult?.values || obj.values,
+    });
+
+    // 3. Run vessel/voyage
+    const vesselVoyageResult = await setVesslelVoyage({
+      ...obj,
+      newState: blChargesResult?.newState || billingPartyResult?.newState,
+      values: blChargesResult?.values || billingPartyResult?.values,
+    });
+
+    // 4. Merge results safely
+    const finalNewState = {
+      ...obj.newState,
+      ...billingPartyResult?.newState,
+      ...blChargesResult?.newState,
+      ...vesselVoyageResult?.newState,
+    };
+
+    const finalValues = {
+      ...obj.values,
+      ...billingPartyResult?.values,
+      ...blChargesResult?.values,
+      ...vesselVoyageResult?.values,
+    };
+
+    // 🔹 Ensure billing party always survives
+    finalNewState.billingPartyId =
+      billingPartyResult?.newState?.billingPartyId ??
+      blChargesResult?.newState?.billingPartyId ??
+      obj.newState?.billingPartyId;
+
+    finalNewState.billingPartyIddropdown =
+      billingPartyResult?.newState?.billingPartyIddropdown ??
+      blChargesResult?.newState?.billingPartyIddropdown ??
+      obj.newState?.billingPartyIddropdown;
+
+    finalValues.billingPartyId = finalNewState.billingPartyId;
+    finalValues.billingPartyIddropdown = finalNewState.billingPartyIddropdown;
+
+    // ✅ Commit to state
+    obj.setStateVariable((prev) => ({
+      ...prev,
+      ...finalNewState,
+      ...finalValues,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      newState: finalNewState,
+      values: finalValues,
+      message:
+        "Billing Party, BL Charges, Vessel/Voyage updated successfully!",
     };
   } catch (error) {
     console.error("Error setting BL details:", error);
@@ -10064,28 +10152,28 @@ const filterContainerNo = async (obj) => {
     setFormControlData,
     setStateVariable,
   } = obj;
- 
+
   const { plrAgentId, plrAgentBranchId } = newState;
   const { depotId } = values;
- 
+
   const requestData = {
     plrAgentId,
     plrAgentBranchId,
     depotId,
     clientId,
   };
- 
+
   const argNames = args.split(",").map((arg) => arg.trim());
   const containerId = argNames[0];
   console.log("containerId", containerId);
   const fetchContainerDetails = await fetchContainerNoData(requestData);
- 
+
   const idsPattern = `(${fetchContainerDetails.Chargers.map(
     (c) => `'${c.containerId}'`
   ).join(",")})`;
   const query = `and id in ${idsPattern}`;
   console.log("idsPattern", query);
- 
+
   // assumes: formControlData.child[0].fields[1] exists
   const updatedFormControlData = {
     ...formControlData,
@@ -10098,12 +10186,12 @@ const filterContainerNo = async (obj) => {
       ),
     })),
   };
- 
+
   setFormControlData((prevState) => ({
     ...prevState,
     ...updatedFormControlData, // replaces with the new object
   }));
- 
+
   if (fetchContainerDetails) {
     return {
       isCheck: false,
@@ -10130,7 +10218,6 @@ const filterContainerNo = async (obj) => {
     };
   }
 };
- 
 
 const calculateSec = (obj) => {
   const {
@@ -10152,8 +10239,7 @@ const calculateSec = (obj) => {
   const amountHc = [argNames[4]];
   const amountfc = [argNames[5]];
   // ✅ Handle noOfDays (ignore if null/0)
-  const effectiveNoOfDays =
-    isNaN(noDays) || noDays <= 0 ? 1 : noDays;
+  const effectiveNoOfDays = isNaN(noDays) || noDays <= 0 ? 1 : noDays;
 
   // ✅ Calculation
   const totalAmountFc = qty * rate * effectiveNoOfDays;
@@ -10178,8 +10264,82 @@ const calculateSec = (obj) => {
   };
 };
 
+const setPickUpDate = (obj) => {
+  const { args, newState, setStateVariable } = obj;
 
+  const argNames = args.split(",").map((arg) => arg.trim());
 
+  const jobDate = newState[argNames[0]];
+  const croValidDays = newState[argNames[1]];
+  const pickUpdateKey = argNames[2]; // field name (e.g. "pickupDate")
+  const pickUpdate = newState[pickUpdateKey]; // field value
+
+  if (!jobDate || !croValidDays || !pickUpdate) return false;
+
+  const baseDate = new Date(jobDate);
+  baseDate.setDate(baseDate.getDate() + Number(croValidDays));
+
+  const pickupDateObj = new Date(pickUpdate);
+
+  if (pickupDateObj.getTime() > baseDate.getTime()) {
+    toast.error(
+      `Pickup Date (${pickupDateObj.toLocaleDateString()}) must be on or before ${baseDate.toLocaleDateString()}`
+    );
+
+    // ❌ Clear the field value
+    setStateVariable((prev) => ({
+      ...prev,
+      [pickUpdateKey]: null, // or "" depending on how you want to reset
+    }));
+
+    return false;
+  }
+
+  return true;
+};
+
+const copyContainerData = async (obj) => {
+  const { args, values, fieldName, newState, setStateVariable } = obj;
+
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+    const nextActivity = values[argNames[0]];
+    const firstRow = newState.tblContainerMovement?.[0];
+    if (!firstRow) return;
+
+    const updatedRows = newState.tblContainerMovement.map((row, index) => {
+      if (index === 0) return row;
+
+      return {
+        ...row,
+        activityId: firstRow.activityId,
+        activityIddropdown: firstRow.activityIddropdown,
+        toLocationId: firstRow.toLocationId,
+        toLocationIddropdown: firstRow.toLocationIddropdown,
+        activityDate: firstRow.activityDate,
+      };
+    });
+
+    setStateVariable((prev) => ({
+      ...prev,
+      tblContainerMovement: updatedRows,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "Copied first row values to all rows successfully",
+      newState: { ...newState, tblContainerMovement: updatedRows },
+    };
+  } catch (error) {
+    console.error("Error in copyContainerData:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Error copying container data. Please try again.",
+    };
+  }
+};
 
 export {
   demoFunctionOnChange,
@@ -10290,5 +10450,6 @@ export {
   setVesslelVoyage,
   setBlDetails,
   filterContainerNo,
-  calculateSec
+  calculateSec,
+  setPickUpDate,
 };

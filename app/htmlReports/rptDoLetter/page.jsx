@@ -25,11 +25,13 @@ function rptDoLetter() {
   enquiryModuleRefs.current = []; // do not remove this line
   const { clientId } = getUserDetails();
   const chunkSize = 6;
-  const EmptyOffLoadingLetterSize = 18;
+  const EmptyOffLoadingLetterSize = 6;
   const SealCuttingLetterSize = 14;
   const BondLetterSize = 12;
   const CMCLetterSize = 7;
   const EmptyContainerOffLoadingLetterSize = 22;
+  const EmptyContainerReturnNotification = 21;
+  const SaudiDeliveryOrderSize = 6;
 
   console.log("data", data);
 
@@ -57,6 +59,7 @@ function rptDoLetter() {
           // };
           const requestBody = {
             id: id,
+            clientId: clientId,
           };
           const response = await fetch(
             `${baseUrl}/Sql/api/Reports/blDataForDO`,
@@ -103,6 +106,36 @@ function rptDoLetter() {
     return `${day}/${month}/${year}`; // Returns "dd/mm/yyyy"
   }
 
+  function formatDateToYMDMonths(dateStr) {
+    if (!dateStr) return ""; // Handles null, undefined, empty string
+
+    const date = new Date(dateStr);
+    if (isNaN(date)) return ""; // Handles invalid date strings
+
+    const day = String(date.getDate()).padStart(2, "0");
+
+    // Month names
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const month = months[date.getMonth()]; // 0-indexed
+
+    const year = date.getFullYear();
+
+    return `${day}-${month}-${year}`; // e.g. "12/Sep/2025"
+  }
+
   const getValidTillDate = (jobDate, croValidDays) => {
     if (!jobDate || croValidDays == null) {
       console.warn("Missing jobDate or croValidDays");
@@ -146,7 +179,7 @@ function rptDoLetter() {
       <img
         src={imageFooter ? baseUrlNext + imageFooter : ""}
         style={{ width: "100%" }}
-        alt="LOGO"
+        alt="Footer"
       />
     );
   };
@@ -160,39 +193,37 @@ function rptDoLetter() {
   };
   const chunks =
     chunkSize > 0 ? chunkArray(containers, chunkSize) : [containers];
-  console.log("chunks", chunks);
 
   const EmptyOffLoadingLetterSizeChunks =
     EmptyOffLoadingLetterSize > 0
       ? chunkArray(containers, EmptyOffLoadingLetterSize)
       : [containers];
-  console.log(
-    "EmptyOffLoadingLetterSizeChunks",
-    EmptyOffLoadingLetterSizeChunks
-  );
 
   const SealCuttingLetterSizeChunks =
     SealCuttingLetterSize > 0
       ? chunkArray(containers, SealCuttingLetterSize)
       : [containers];
-  console.log("SealCuttingLetterSizeChunks", SealCuttingLetterSizeChunks);
 
   const BondLetterSizeChunks =
     BondLetterSize > 0 ? chunkArray(containers, BondLetterSize) : [containers];
-  console.log("BondLetterSizeChunks", BondLetterSizeChunks);
 
   const CMCLetterSizeChunks =
     CMCLetterSize > 0 ? chunkArray(containers, CMCLetterSize) : [containers];
-  console.log("CMCLetterSizeChunks", CMCLetterSizeChunks);
 
   const EmptyContainerOffLoadingLetterChunks =
     EmptyContainerOffLoadingLetterSize > 0
       ? chunkArray(containers, EmptyContainerOffLoadingLetterSize)
       : [containers];
-  console.log(
-    "EmptyContainerOffLoadingLetterChunks",
-    EmptyContainerOffLoadingLetterChunks
-  );
+
+  const EmptyContainerReturnNotificationChunks =
+    EmptyContainerReturnNotification > 0
+      ? chunkArray(containers, EmptyContainerReturnNotification)
+      : [containers];
+
+  const SaudiDeliveryOrderSizeChunks =
+    SaudiDeliveryOrderSize > 0
+      ? chunkArray(containers, SaudiDeliveryOrderSize)
+      : [containers];
 
   // Calculate totals
   const totalGrossWt = containers.reduce(
@@ -1141,7 +1172,175 @@ function rptDoLetter() {
           </p>
         </div>
       </div>
-      <div className="flex mt-2" style={{ width: "100%" }}>
+      {/* main Grid */}
+      <table className="w-full table-fixed border border-black border-collapse mt-4">
+        <tbody>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                VESSEL/VOY :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.podVessel || ""} {data[0]?.podVoyage || ""}
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                PORT/ICD ARR DATE :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {formatDateToYMD(data[0]?.arrivalDate)}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                PLACE OF ORIGIN :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.plr || ""}
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                LOAD PORT :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.pol || ""}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                DISCH PORT :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.pod || ""}
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                FINAL DEST :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.fpd || ""}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                B/L NO. :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.blNo || ""}
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                B/L DATE :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {formatDateToYMD(data[0]?.blDate)}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                IGM NO. :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.igmNo || ""}
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                IGM DATE :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {formatDateToYMD(data[0]?.igmDate)}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                ITEM NO. :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.lineNo || ""}
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                DESTUFFING TYPE :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.destuffName || ""}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1 align-top">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                CONSIGNEE :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                <span>{data[0]?.consigneeText || ""}</span>
+                <br />
+                <span style={{ wordBreak: "break-word" }}>
+                  {data[0]?.consigneeAddress || ""}
+                </span>
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1 align-top">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                NOTIFY PARTY :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                <span>{data[0]?.notifyPartyText || ""}</span>
+                <br />
+                <span style={{ wordBreak: "break-word" }}>
+                  {data[0]?.notifyPartyAddress || ""}
+                </span>
+              </p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      {/* main Grid */}
+      <div className="flex mt-1" style={{ width: "100%" }}>
         <div style={{ width: "12%" }}>
           <p className="text-black font-bold" style={{ fontSize: "10px" }}>
             CHA Name :
@@ -1153,7 +1352,7 @@ function rptDoLetter() {
           </p>
         </div>
       </div>
-      <div className="flex mt-2" style={{ width: "100%" }}>
+      <div className="flex mt-1" style={{ width: "100%" }}>
         <div style={{ width: "12%" }}>
           <p className="text-black font-bold" style={{ fontSize: "10px" }}>
             PRINCIPAL :
@@ -1166,7 +1365,7 @@ function rptDoLetter() {
         </div>
       </div>
       {/* Container Details Grid */}
-      <table className="w-full mt-4 table-fixed border border-black border-collapse">
+      <table className="w-full mt-2 table-fixed border border-black border-collapse">
         <thead>
           <tr>
             <th className="w-1/8 border border-black p-1">
@@ -1273,10 +1472,7 @@ function rptDoLetter() {
         }}
       >
         <div>
-          <p
-            className="text-black font-bold mt-14"
-            style={{ fontSize: "10px" }}
-          >
+          <p className="text-black font-bold mt-2" style={{ fontSize: "10px" }}>
             Thanking You, <br />
             For {data[0]?.company} <br />
           </p>
@@ -3823,12 +4019,348 @@ function rptDoLetter() {
               demurrage, or incidental costs.
             </p>
           </div>
-        </div> */}
+        </div>tejass */}
       </div>
     );
   };
 
   console.log("enquiryModuleRefs", enquiryModuleRefs);
+
+  const EmptyContainerReturnNotificationRpt = (container) => {
+    const containers = Array.isArray(container)
+      ? container
+      : Array.isArray(container)
+      ? container
+      : [];
+    return (
+      <div>
+        <div className="mx-auto">
+          <CompanyImgModule />
+        </div>
+        <div className=" w-full mx-auto text-black border-b border-dashed border-gray-800 pb-1">
+          <h1 className="font-normal text-sm text-left">
+            EMPTY CONTAINER RETURN NOTIFICATION
+          </h1>
+        </div>
+        <table className="w-full mt-2 border-collapse text-xs">
+          <tbody>
+            <tr>
+              <td className="p-1.5 font-light w-1/3 text-gray-800">B/L #</td>
+              <td className="p-1.5 font-medium">: {data[0]?.blNo || ""}</td>
+            </tr>
+            <tr>
+              <td className="p-1.5 font-light text-gray-800">CONSIGNEE NAME</td>
+              <td className="p-1.5 font-normal">
+                : {data[0]?.consigneeText || ""}
+              </td>
+            </tr>
+            <tr>
+              <td className="p-1.5 font-light text-gray-800">
+                DISCHARGE VESSEL
+              </td>
+              <td className="p-1.5  font-normal">
+                : {data[0]?.podVessel || ""}
+                {" / "}
+                {data[0]?.podVoyage || ""}
+              </td>
+            </tr>
+            <tr>
+              <td className="p-1.5 font-light text-gray-800">DISCHARGE DATE</td>
+              <td className="p-1.5 font-normal">
+                : {formatDateToYMDMonths(data[0]?.arrivalDate)}
+              </td>
+            </tr>
+            <tr>
+              <td className="p-1.5 font-light text-gray-800">
+                MTY CONT. RETURN DEPO
+              </td>
+              <td className="p-1.5 font-normal">
+                : TO BE CONFIRMED AS PER PORT GATE-OUT
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        {/* Container Details Grid tejasss*/}
+        <div className="mt-2 w-full">
+          <h1 className="font-normal text-sm text-left underline">
+            CONTAINER DETAILS:
+          </h1>
+        </div>
+        <div style={{ width: "100%" }} className="mt-1 text-xs">
+          {/* Header Row */}
+          <div
+            style={{ width: "100%" }}
+            className="flex py-2 border-t border-b border-dashed border-gray-800 font-normal"
+          >
+            <div style={{ width: "7%" }} className="border-r pr-1">
+              SR. NO
+            </div>
+            <div style={{ width: "13%" }} className="border-r pr-1">
+              CONTAINER #
+            </div>
+            <div
+              style={{ width: "15%" }}
+              className="border-r pr-1 text-center "
+            >
+              FREE TIME DAYS
+            </div>
+            <div style={{ width: "15%" }} className="border-r pr-1 text-center">
+              F/T END DATE
+            </div>
+            <div style={{ width: "10%" }} className="border-r pr-1 text-center">
+              TYPE
+            </div>
+            <div style={{ width: "5%" }} className="border-r pr-1 text-center">
+              SIZE
+            </div>
+            <div style={{ width: "35%" }} className="pr-1 text-center">
+              EXTENDED DATE / REMARKS
+            </div>
+          </div>
+
+          {/* Data Rows */}
+          {containers.length > 0 &&
+            containers.map((item, index) => (
+              <div
+                key={index}
+                style={{ width: "100%" }}
+                className="flex border-b border-gray-200 py-1 font-medium"
+              >
+                <div
+                  style={{ width: "7%" }}
+                  className="border-r pr-1 text-center"
+                >
+                  {index + 1}
+                </div>
+                <div style={{ width: "13%" }} className="border-r pr-1">
+                  {item.containerNo || ""}
+                </div>
+                <div
+                  style={{ width: "15%" }}
+                  className="border-r pr-1 text-right"
+                >
+                  {item.destinationFreeDays || ""}
+                </div>
+                <div
+                  style={{ width: "15%" }}
+                  className="border-r pr-1 text-center"
+                >
+                  {formatDateToYMD(data[0]?.doValidDate)}
+                </div>
+                <div
+                  style={{ width: "10%" }}
+                  className="border-r pr-1 text-center"
+                >
+                  {item.type || ""}
+                </div>
+                <div
+                  style={{ width: "5%" }}
+                  className="border-r pr-1 text-center"
+                >
+                  {item.size || ""}
+                </div>
+                <div style={{ width: "35%" }} className="pr-1">
+                  {item.remarks || ""}
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+    );
+  };
+
+  const saudiDeliveryOrderRpt = () => {
+    return (
+      <div>
+        <div className="mx-auto">
+          <CompanyImgModule />
+        </div>
+        <div className="mx-auto text-black w-full">
+          {/* Title */}
+          <h1
+            className="font-bold text-center pb-2"
+            style={{ fontSize: "15px" }}
+          >
+            DELIVERY ORDER
+          </h1>
+
+          {/* DO Details Box */}
+          <div
+            className="border-2 border-blue-900 rounded-lg mt-1 flex justify-between text-sm"
+            style={{ fontSize: "9px", width: "100%" }}
+          >
+            {/* Left Section */}
+            <div className="text-left " style={{ width: "75%" }}>
+              <p className="font-normal pb-1 pt-1 pl-2">
+                DO Number:{" "}
+                <span className="font-bold">{data[0]?.doNo || ""}</span>
+              </p>
+              <p className="font-normal  pb-1 pt-1 pl-2">
+                Customs no:{" "}
+                <span className="font-bold">{data[0]?.igmNo || ""}</span>
+              </p>
+            </div>
+
+            {/* Right Section */}
+            <div className="text-left " style={{ width: "25%" }}>
+              <p className="font-normal pr-2 pt-1">
+                Date:{" "}
+                <span className="font-bold">
+                  {formatDateToYMD(data[0]?.doDate)}
+                </span>
+              </p>
+            </div>
+          </div>
+          {/* Below Section */}
+          <div
+            className="border-2 border-blue-900 rounded-lg mt-2 flex text-sm"
+            style={{ fontSize: "9px" }}
+          >
+            {/* Left Section */}
+            <div className="w-1/2 border-r-2 border-blue-900 p-2 space-y-1">
+              <div className="flex border-b border-gray-200 py-1">
+                <span className="w-20">Shipper:</span>
+                <span className="font-bold">{data[0]?.shipperText || ""}</span>
+              </div>
+              <div className="flex border-b border-gray-200 py-1">
+                <span className="w-20">Consignee:</span>
+                <span className="font-bold">
+                  {data[0]?.consigneeText || ""}
+                </span>
+              </div>
+              <div className="flex border-b border-gray-200 py-1">
+                <span className="w-20">Notify:</span>
+                <span className="font-normal">
+                  {data[0]?.notifyPartyText || ""}
+                </span>
+              </div>
+              <div className="w-full flex border-b border-gray-200 py-1">
+                <div style={{ width: "60%" }}>
+                  <span>Vessel Name:</span>
+                  <span className="font-normal ml-5">
+                    {data[0]?.podVessel || ""}
+                  </span>
+                </div>
+                <div style={{ width: "40%" }}>
+                  <span>Voyage:</span>
+                  <span className="font-normal ml-2">
+                    {data[0]?.podVoyage || ""}
+                  </span>
+                </div>
+              </div>
+              {/* <div className="flex py-1">
+                
+              </div> */}
+            </div>
+
+            {/* Right Section */}
+            <div className="w-1/2 p-2 space-y-1">
+              <div className="flex border-b border-gray-200 py-1">
+                <span className="w-28">Arrival Date:</span>
+                <span className="font-normal">
+                  {formatDateToYMDMonths(data[0]?.arrivalDate) || ""}
+                </span>
+              </div>
+              <div className="flex border-b border-gray-200 py-1">
+                <span className="w-28">Port of Loading:</span>
+                <span className="font-bold">{data[0]?.pol || ""}</span>
+              </div>
+              <div className="flex border-b border-gray-200 py-1">
+                <span className="w-28">Port of Discharge:</span>
+                <span className="font-bold">{data[0]?.pod || ""}</span>
+              </div>
+              <div className="flex py-1">
+                <span className="w-28">Port of Delivery:</span>
+                <span className="font-bold">{data[0]?.pod || ""}</span>
+              </div>
+            </div>
+          </div>
+          {/* Table Part */}
+          <div
+            className="border-2 border-blue-900 rounded-lg mt-4 text-sm"
+            style={{ fontSize: "9px" }}
+          >
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b-2 border-blue-900 text-center font-bold">
+                  <th className="border-r border-gray-200 py-1">
+                    Bill of Lading
+                  </th>
+                  <th className="border-r border-gray-200 py-1">
+                    Package Type
+                  </th>
+                  <th className="border-r border-gray-200 py-1">Quantity</th>
+                  <th className="border-r border-gray-200 py-1">Weight</th>
+                  <th className="py-1">Volume</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="text-center">
+                  <td className="border-r border-gray-200 font-bold py-1">
+                    {data[0]?.blNo || ""}
+                  </td>
+                  <td className="border-r border-gray-200 py-1">
+                    {data[0]?.package || ""}
+                  </td>
+                  <td className="border-r border-gray-200 py-1">
+                    {data[0]?.noOfPackages || ""}
+                  </td>
+                  <td className="border-r border-gray-200 py-1">
+                    {data[0]?.grossWt || ""}
+                  </td>
+                  <td className="py-1">{data[0]?.volume || ""}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Marks Section */}
+          <div
+            className="border-2 border-blue-900 rounded-lg mt-4 p-2 text-sm"
+            style={{ fontSize: "9px" }}
+          >
+            <p>
+              <span className="font-bold">Marks and Numbers: </span>{" "}
+              {data[0]?.marksNos || ""}
+            </p>
+          </div>
+
+          {/* Containers Section */}
+          <div
+            className="border-2 border-blue-900 rounded-lg mt-4 p-2 text-sm break-words"
+            style={{ fontSize: "9px" }}
+          >
+            <p className="whitespace-normal">
+              <span className="font-bold">Containers:</span>{" "}
+              {data[0]?.containerNos || ""}
+            </p>
+          </div>
+
+          {/* Goods Description Section */}
+          <div
+            className="border-2 border-blue-900 rounded-lg mt-4 p-2 text-sm"
+            style={{ fontSize: "9px" }}
+          >
+            <p>
+              <span className="font-bold">Goods Description:</span>{" "}
+              {data[0]?.goodsDesc || ""}
+            </p>
+          </div>
+
+          {/* Remarks Section */}
+          <div
+            className="border-2 border-blue-900 rounded-lg mt-4 p-2 text-sm"
+            style={{ fontSize: "9px" }}
+          >
+            <p>
+              <span className="font-bold">Remarks:</span>{" "}
+              {data[0]?.remarks || ""}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <main>
@@ -3872,7 +4404,10 @@ function rptDoLetter() {
                           }}
                         >
                           {/* Printable Content */}
-                          <div className="flex-grow p-4" style={{maxHeight: "275mm",minHeight: "275mm"}}>
+                          <div
+                            className="flex-grow p-4"
+                            style={{ maxHeight: "275mm", minHeight: "275mm" }}
+                          >
                             {DoLetter(container, i)}{" "}
                             {/* container may be undefined here */}
                           </div>
@@ -3932,7 +4467,10 @@ function rptDoLetter() {
                           }}
                         >
                           {/* Printable Content */}
-                          <div className="flex-grow p-4" style={{maxHeight: "275mm",minHeight: "275mm"}}>
+                          <div
+                            className="flex-grow p-4"
+                            style={{ maxHeight: "275mm", minHeight: "275mm" }}
+                          >
                             {SurveyLetter(container, i)}
                           </div>
                           <div className="pl-4">
@@ -3997,14 +4535,17 @@ function rptDoLetter() {
                         }}
                       >
                         {/* Printable Content */}
-                        <div className="flex-grow p-4" style={{maxHeight: "275mm",minHeight: "275mm"}}>
+                        <div
+                          className="flex-grow p-4"
+                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
+                        >
                           {EmptyOffLoadingLetter(container)}
                         </div>
                         <div className="pl-4">
-                            <div>
-                              <CompanyImgFooterModule />
-                            </div>
+                          <div>
+                            <CompanyImgFooterModule />
                           </div>
+                        </div>
 
                         {/* Print fix style */}
                         <style jsx>{`
@@ -4102,7 +4643,10 @@ function rptDoLetter() {
                           }}
                         >
                           {/* Printable Content */}
-                          <div className="flex-grow p-4" style={{maxHeight: "275mm",minHeight: "275mm"}}>
+                          <div
+                            className="flex-grow p-4"
+                            style={{ maxHeight: "275mm", minHeight: "275mm" }}
+                          >
                             {CMCLetter(container)}
                           </div>
                           <div className="pl-4">
@@ -4210,14 +4754,17 @@ function rptDoLetter() {
                         }}
                       >
                         {/* Printable Content */}
-                        <div className="flex-grow p-4" style={{maxHeight: "275mm",minHeight: "275mm"}}>
+                        <div
+                          className="flex-grow p-4"
+                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
+                        >
                           {BondLetter(container)}
                         </div>
                         <div className="pl-4">
-                            <div>
-                              <CompanyImgFooterModule />
-                            </div>
+                          <div>
+                            <CompanyImgFooterModule />
                           </div>
+                        </div>
 
                         {/* Print fix style */}
                         <style jsx>{`
@@ -4271,14 +4818,17 @@ function rptDoLetter() {
                         }}
                       >
                         {/* Printable Content */}
-                        <div className="flex-grow p-4" style={{maxHeight: "275mm",minHeight: "275mm"}}>
+                        <div
+                          className="flex-grow p-4"
+                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
+                        >
                           {SealCuttingLetter(container)}
                         </div>
                         <div className="pl-4">
-                            <div>
-                              <CompanyImgFooterModule />
-                            </div>
+                          <div>
+                            <CompanyImgFooterModule />
                           </div>
+                        </div>
 
                         {/* Print fix style */}
                         <style jsx>{`
@@ -4368,7 +4918,10 @@ function rptDoLetter() {
                         }}
                       >
                         {/* Printable Content */}
-                        <div className="flex-grow p-4" style={{maxHeight: "275mm",minHeight: "275mm"}}>
+                        <div
+                          className="flex-grow p-4"
+                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
+                        >
                           {DoLetterKenya(container)}{" "}
                           {/* container can be undefined; DoLetterKenya should normalize */}
                         </div>
@@ -4467,12 +5020,15 @@ function rptDoLetter() {
                         }}
                       >
                         {/* Printable Content */}
-                        <div className="flex-grow p-4" style={{maxHeight: "275mm",minHeight: "275mm"}}>
+                        <div
+                          className="flex-grow p-4"
+                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
+                        >
                           {EmptyContainerOffLoadingLetter(container)}
                         </div>
-                        
+
                         <div className="pl-4">
-                          <div >
+                          <div>
                             <p
                               className="text-black w-full text-left"
                               style={{ fontSize: "10px" }}
@@ -4511,6 +5067,192 @@ function rptDoLetter() {
                   ))}
                 </>
               );
+            case "Empty Container Return Notification":
+              const emptyContainerReturnNotificationData = Array.isArray(
+                EmptyContainerReturnNotificationChunks
+              )
+                ? EmptyContainerReturnNotificationChunks.filter(Boolean)
+                : [];
+              return (
+                <>
+                  {(emptyContainerReturnNotificationData.length > 0
+                    ? emptyContainerReturnNotificationData
+                    : [undefined]
+                  ).map((container, i) => (
+                    <>
+                      <div
+                        key={reportId}
+                        ref={(el) => enquiryModuleRefs.current.push(el)}
+                        id="Empty Container Return Notification"
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
+                        style={{
+                          width: "210mm",
+                          minHeight: "297mm",
+                          maxHeight: "297mm",
+                          margin: "auto",
+                          padding: "24px",
+                          boxSizing: "border-box",
+                          display: "flex",
+                          flexDirection: "column",
+                          position: "relative",
+                          pageBreakAfter:
+                            index < reportIds.length - 1 ? "always" : "auto",
+                        }}
+                      >
+                        {/* Printable Content */}
+                        <div
+                          className="flex-grow p-4"
+                          style={{ maxHeight: "242mm", minHeight: "242mm" }}
+                        >
+                          {EmptyContainerReturnNotificationRpt(container)}
+                        </div>
+                        <div className="w-full pl-4 pr-4">
+                          <div>
+                            <p
+                              className=" underline font-normal border-t border-dashed border-gray-800"
+                              style={{ color: "#ff3317", fontSize: "10px" }}
+                            >
+                              Note:
+                            </p>
+                            <p
+                              className="text-justify font-normal mt-1"
+                              style={{ color: "#ff3317", fontSize: "9px" }}
+                            >
+                              WITHIN THE FREE PERIOD, THE EMPTY CONTAINER MUST
+                              BE RETURNED TO THE ADVISED DEPOT AS PER ABOVE
+                              INSTRUCTION, CLEAN UNDAMAGED AND COMPLETELY FREE
+                              OF CARGO RESIDUES, CHEMICALS, DANGEROUS GOODS
+                              PLACARDS (IN ACCORDANCE WITH APPLICABLE
+                              REGULATIONS), FUMIGATION LABELS, STOWAGE AIDS AND
+                              LASHING ETC. FAILURE TO COMPLY WITH THIS
+                              REQUIREMENT MAY RESULT IN ADDITIONAL COSTS FOR
+                              ACCOUNT OF THE CARGO. CONTAINERS WILL NOT BE
+                              ALLOWED TO GATE OUT AND GATE IN WITHOUT THIS
+                              DOCUMENT. SO PLEASE KEEP IT ALONG WITH THE EIR.
+                              CONTAINERS WILL NOT BE ACCEPTED INTO THE DEPOT /
+                              TERMINAL AFTER THE ABOVE MENTIONED FREE TIME
+                              EXPIRY DATE. PLEASE APPROACH OUR OFFICE FOR
+                              EXTENSIONS BEFORE THE GATE IN OF THE ABOVE SAID
+                              CONTAINERS. THIS DOCUMENT TO BE SHOWED AT
+                              TERMINAL/DEPOT ALONG WITH EIR TO ALLOW CONTAINER
+                              TO BE GATE IN / OUT.
+                            </p>
+                            <p
+                              className=" font-normal underline mt-2"
+                              style={{ color: "#0d23b3", fontSize: "10px" }}
+                            >
+                              Contact Details:
+                            </p>
+                            <div
+                              className="w-full flex justify-between items-start"
+                              style={{ color: "#0d23b3", fontSize: "9px" }}
+                            >
+                              {/* Left Side: Contact Table */}
+                              <div className="w-1/2">
+                                <table
+                                  className="w-full text-left"
+                                  style={{ fontSize: "10px" }}
+                                >
+                                  <tbody>
+                                    <tr>
+                                      <td className=" py-1 pr-2">
+                                        Import Doc. Team
+                                      </td>
+                                      <td className="py-1 pr-2">
+                                        <a href="mailto:csdimpjed@sea-lead.com">
+                                          email: csdimpjed@sea-lead.com
+                                        </a>
+                                      </td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                              {/* Right Side: Logo Placeholder
+                              <div className="w-1/4 flex items-center justify-center">
+                                <div className="border border-dashed border-blue-600 h-24 w-full flex items-center justify-center text-center p-2">
+                                  [Logo / Company Info Placeholder]
+                                </div>
+                              </div> */}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Print fix style */}
+                        <style jsx>{`
+                          .black-text {
+                            color: black !important;
+                          }
+
+                          @media print {
+                            .report-spacing {
+                              page-break-after: always;
+                            }
+                          }
+                        `}</style>
+                      </div>
+                      <div className="bg-gray-300 h-2 no-print" />
+                    </>
+                  ))}
+                </>
+              );
+            case "SAUDI DELIVERY ORDER":
+              return (
+                <>
+                  <>
+                    <div
+                      key={reportId}
+                      ref={(el) => enquiryModuleRefs.current.push(el)}
+                      id="SAUDI DELIVERY ORDER"
+                      className={`relative bg-white shadow-lg black-text ${
+                        index < reportIds.length - 1 ? "report-spacing" : ""
+                      }`}
+                      style={{
+                        width: "210mm",
+                        minHeight: "297mm",
+                        maxHeight: "297mm",
+                        margin: "auto",
+                        padding: "24px",
+                        boxSizing: "border-box",
+                        display: "flex",
+                        flexDirection: "column",
+                        position: "relative",
+                        pageBreakAfter:
+                          index < reportIds.length - 1 ? "always" : "auto",
+                      }}
+                    >
+                      {/* Printable Content */}
+                      <div
+                        className="flex-grow p-4"
+                        style={{ maxHeight: "255mm", minHeight: "255mm" }}
+                      >
+                        {saudiDeliveryOrderRpt()}
+                      </div>
+                      <div className="flex-grow p-4">
+                        <div>
+                          <CompanyImgFooterModule />
+                        </div>
+                      </div>
+
+                      {/* Print fix style */}
+                      <style jsx>{`
+                        .black-text {
+                          color: black !important;
+                        }
+
+                        @media print {
+                          .report-spacing {
+                            page-break-after: always;
+                          }
+                        }
+                      `}</style>
+                    </div>
+                    <div className="bg-gray-300 h-2 no-print" />
+                  </>
+                </>
+              );
+
             default:
               return null;
           }

@@ -12,6 +12,7 @@ import { decrypt } from "@/helper/security";
 import {
   fetchReportData,
   insertReportData,
+  disablePrint,
 } from "@/services/auth/FormControl.services";
 import { toast } from "react-toastify";
 import { getUserDetails } from "@/helper/userDetails";
@@ -24,8 +25,10 @@ export default function PrintModal({
   submittedRecordId,
   submittedMenuId,
   pageType,
+  tableName,
 }) {
   const dispatch = useDispatch();
+  const { clientId } = getUserDetails();
   const [formTableName, setFormTableName] = useState(null);
   const [reportType, setReportType] = useState("combined");
   const [reportNames, setReportNames] = useState([]);
@@ -254,6 +257,33 @@ export default function PrintModal({
     }
   };
 
+  const validateEditPrint = async () => {
+    if (selectedReportNames?.length === 0) {
+      //toast.error("Please select a report to print");
+      return;
+    }
+    const reportName = selectedReportNames
+      ?.filter((x) => x?.redirectionPath == null)
+      .map((x) => x?.ReportName)
+      .join(",");
+    console.log("reportName =>>", reportName);
+    const requestBody = {
+      tableName: formTableName,
+      recordId: submittedRecordId,
+      clientId: clientId,
+      reportsName: reportName,
+      formOrReport: "R",
+    };
+    const data = await disablePrint(requestBody);
+    if (data.success === true) {
+      // setParaText(data.message);
+      // //setIsError(true);
+      // setOpenModal((prev) => !prev);
+    } else {
+      //addEditController(recordId);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       const storedUserData = localStorage.getItem("userData");
@@ -450,7 +480,9 @@ export default function PrintModal({
 
               <div className="flex justify-end space-x-4 ">
                 <button
-                  onClick={() => handlePrint(selectedReportNames)}
+                  onClick={() => {
+                    handlePrint(selectedReportNames), validateEditPrint();
+                  }}
                   className={`px-4 text-[12px] py-2 ${styles.bgPrimaryColorBtn} flex items-center justify-center  rounded-[5px] shadow-custom  w-24 h-[27px]`}
                 >
                   Print
@@ -476,4 +508,5 @@ PrintModal.propTypes = {
   submittedRecordId: PropTypes.number,
   submittedMenuId: PropTypes.number,
   pageType: PropTypes.string,
+  tableName: PropTypes.string,
 };

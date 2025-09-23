@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import Accordion from "@mui/material/Accordion";
 import Typography from "@mui/material/Typography";
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+import { getUserDetails } from "@/helper/userDetails";
 import PropTypes from "prop-types";
 import {
   parentAccordionSection,
@@ -89,7 +89,23 @@ export default function VoucherBankReceiptAdd() {
     tdsAmtFC: 0,
     tdsAmtHC: 0,
   });
+  const [voucherLedgerTotals, setVoucherLedgerTotals] = useState({
+    debitAmount: 0,
+    creditAmount: 0,
+    debitAmountFc: 0,
+    creditAmountFc: 0,
+  });
   const isView = false;
+  const { clientId } = getUserDetails();
+  const { companyId } = getUserDetails();
+  const { branchId } = getUserDetails();
+  const { financialYear } = getUserDetails();
+  const { emailId } = getUserDetails();
+  const { userId } = getUserDetails();
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+  console.log("newState=>", newState);
 
   // helper to safely parse numbers
   // ----------------- helpers -----------------
@@ -402,6 +418,10 @@ export default function VoucherBankReceiptAdd() {
    * TOTALS (HC + FC)
    * ========================= */
   useEffect(() => {
+    console.log(
+      "newState?.tblVoucherLedgerDetails",
+      newState?.tblVoucherLedgerDetails
+    );
     const list = newState?.tblVoucherLedgerDetails ?? [];
     if (!list.length) return;
 
@@ -419,8 +439,46 @@ export default function VoucherBankReceiptAdd() {
       tdsAmtHC: sumField("tdsAmtHC").toFixed(2),
     });
   }, [newState?.tblVoucherLedgerDetails]);
+  //omkar
+  const lastCreditTotalRef = useRef(0);
+  const lastDebitTotalRef = useRef(0);
 
   useEffect(() => {
+    const list = newState?.tblVoucherLedger ?? [];
+
+    // When list is empty, reset refs and exit
+    if (!list.length) {
+      lastCreditTotalRef.current = 0;
+      lastDebitTotalRef.current = 0;
+      return;
+    }
+
+    const toNum = (v) =>
+      v === null || v === undefined ? 0 : parseFloat(v) || 0;
+
+    const totalCredit = list.reduce((sum, r) => sum + toNum(r.creditAmount), 0);
+    const totalDebit = list.reduce((sum, r) => sum + toNum(r.debitAmount), 0);
+
+    const deltaCredit = totalCredit - lastCreditTotalRef.current; // add
+    const deltaDebit = totalDebit - lastDebitTotalRef.current; // subtract
+    const netDelta = deltaCredit - deltaDebit;
+
+    if (netDelta !== 0) {
+      setNewState((prev) => {
+        const prevBal = toNum(prev.balanceAmtHc);
+        const newBal = prevBal + netDelta; // credit adds, debit subtracts
+        return { ...prev, balanceAmtHc: newBal.toString() };
+      });
+    }
+
+    // update refs after applying
+    lastCreditTotalRef.current = totalCredit;
+    lastDebitTotalRef.current = totalDebit;
+  }, [JSON.stringify(newState?.tblVoucherLedger)]);
+
+  //omkar
+  useEffect(() => {
+    console.log("newState?.tblVoucherLedger", newState?.tblVoucherLedger);
     if (newState?.tblVoucherLedger?.length) {
       const details = newState.tblVoucherLedger;
 
@@ -428,7 +486,7 @@ export default function VoucherBankReceiptAdd() {
       const sumField = (field) =>
         details.reduce((sum, row) => sum + (parseFloat(row[field]) || 0), 0);
 
-      setTotals({
+      setVoucherLedgerTotals({
         debitAmount: sumField("debitAmount").toFixed(2),
         creditAmount: sumField("creditAmount").toFixed(2),
         debitAmountFc: sumField("debitAmountFc").toFixed(2),
@@ -447,7 +505,7 @@ export default function VoucherBankReceiptAdd() {
     const fetchVoucher = async () => {
       try {
         const requestBody = {
-          clientId: 12,
+          clientId: clientId,
           glId: newState.paymentByParty,
         };
         const result = await getVoucher(requestBody);
@@ -636,14 +694,24 @@ export default function VoucherBankReceiptAdd() {
   };
   const handleSubmit = async () => {
     try {
-      const { clientId, userId } = getUserDetails();
-      const payload = {
-        tblVoucherLedger: submitNewState.tblVoucherLedger,
-        clientId: clientId,
-        userId: userId,
-      };
+      const { clientId, userId, companyId, branchId, financialYear, emailId } =
+        getUserDetails();
+      // const payload = {
+      //   tblVoucherLedger: submitNewState.tblVoucherLedger,
+      //   clientId: clientId,
+      //   userId: userId,
+      // };
 
-      const result = await getContainerData(payload);
+      const insertData = {
+        ...newState,
+        clientId,
+        userId,
+        companyId,
+        branchId,
+        financialYear,
+        emailId,
+      };
+      console.log("insertData ==>", insertData);
 
       if (result.success) {
         toast.success("Saved successfully.");
@@ -801,20 +869,20 @@ export default function VoucherBankReceiptAdd() {
                     style={{ marginTop: "-15px" }}
                   >
                     <div className="flex">
-                      <div className={"w-[32%]"}>
+                      <div className={"w-[28%]"}>
                         <p>Total</p>
                       </div>
                       <div className="w-[16.5%] text-center">
-                        <p>{totals.debitAmount}</p>
+                        <p>{voucherLedgerTotals.debitAmount}</p>
                       </div>
                       <div className="w-[15%] text-center">
-                        <p>{totals.creditAmount}</p>
+                        <p>{voucherLedgerTotals.creditAmount}</p>
                       </div>
                       <div className="w-[15%] text-center">
-                        <p>{totals.debitAmountFc}</p>
+                        <p>{voucherLedgerTotals.debitAmountFc}</p>
                       </div>
-                      <div className="w-[15%] text-center">
-                        <p>{totals.creditAmountFc}</p>
+                      <div className="w-[19%] text-center">
+                        <p>{voucherLedgerTotals.creditAmountFc}</p>
                       </div>
                     </div>
                   </div>
@@ -2278,12 +2346,12 @@ function ChildAccordianComponent({
                               setCalculateData={setCalculateData}
                               dummyFieldArray={dummyFieldArray}
                               setDummyFieldArray={setDummyFieldArray}
-                              // isGridEdit={
-                              //   section?.tableName === "tblVoucherLedger"
-                              //     ? true
-                              //     : isGridEdit
-                              // }
-                              isGridEdit={isGridEdit}
+                              isGridEdit={
+                                section?.tableName === "tblVoucherLedger"
+                                  ? false
+                                  : isGridEdit
+                              }
+                              //isGridEdit={false}
                               isView={isView}
                               setIsGridEdit={setIsGridEdit}
                               copyChildValueObj={copyChildValueObj}
@@ -2985,6 +3053,55 @@ const isTdsApplicable = [
         isColumnDisabled: null,
         columnsToDisabled: null,
         columnsToHide: null,
+      },
+      {
+        id: 29116,
+        fieldname: "glVoucherLedgerId",
+        yourlabel: "GL Voucher Ledger",
+        controlname: "dropdown",
+        isControlShow: true,
+        isGridView: false,
+        isDataFlow: true,
+        copyMappingName: null,
+        hyperlinkValue: null,
+        isCommaSeparatedOrCount: null,
+        isAuditLog: true,
+        keyToShowOnGrid: null,
+        isDummy: false,
+        dropDownValues: null,
+        referenceTable: "tblGeneralLedger",
+        referenceColumn: "name",
+        type: 6653,
+        typeValue: "number",
+        size: "100",
+        ordering: 2,
+        gridTotal: false,
+        gridTypeTotal: null,
+        toolTipMessage: null,
+        isRequired: false,
+        isEditable: true,
+        isSwitchToText: false,
+        isBreak: false,
+        dropdownFilter: null,
+        controlDefaultValue: null,
+        functionOnChange: null,
+        functionOnBlur: null,
+        functionOnKeyPress: null,
+        sectionHeader: "Bank Receipt",
+        sectionOrder: 2,
+        isCopy: true,
+        isCopyEditable: false,
+        isEditableMode: "b",
+        position: "bottom",
+        isHideGrid: false,
+        isHideGridHeader: false,
+        isGridExpandOnLoad: false,
+        clientId: 1,
+        isColumnVisible: null,
+        isColumnDisabled: null,
+        columnsToDisabled: null,
+        columnsToHide: null,
+        columnsToBeVisible: false,
       },
       {
         id: 29118,
@@ -3707,6 +3824,55 @@ const isTdsNotApplicable = [
         isColumnDisabled: null,
         columnsToDisabled: null,
         columnsToHide: null,
+      },
+      {
+        id: 29116,
+        fieldname: "glVoucherLedgerId",
+        yourlabel: "GL Voucher Ledger",
+        controlname: "dropdown",
+        isControlShow: false,
+        isGridView: false,
+        isDataFlow: true,
+        copyMappingName: null,
+        hyperlinkValue: null,
+        isCommaSeparatedOrCount: null,
+        isAuditLog: true,
+        keyToShowOnGrid: null,
+        isDummy: false,
+        dropDownValues: null,
+        referenceTable: "tblGeneralLedger",
+        referenceColumn: "name",
+        type: 6653,
+        typeValue: "number",
+        size: "100",
+        ordering: 2,
+        gridTotal: false,
+        gridTypeTotal: null,
+        toolTipMessage: null,
+        isRequired: false,
+        isEditable: true,
+        isSwitchToText: false,
+        isBreak: false,
+        dropdownFilter: null,
+        controlDefaultValue: null,
+        functionOnChange: null,
+        functionOnBlur: null,
+        functionOnKeyPress: null,
+        sectionHeader: "Bank Receipt",
+        sectionOrder: 2,
+        isCopy: true,
+        isCopyEditable: false,
+        isEditableMode: "b",
+        position: "bottom",
+        isHideGrid: false,
+        isHideGridHeader: false,
+        isGridExpandOnLoad: false,
+        clientId: 1,
+        isColumnVisible: null,
+        isColumnDisabled: null,
+        columnsToDisabled: null,
+        columnsToHide: null,
+        columnsToBeVisible: false,
       },
       {
         id: 29118,
@@ -4705,7 +4871,7 @@ const parentFieldIsTdsApplied = {
     },
     {
       id: 29121,
-      fieldname: "onAccountFc",
+      fieldname: "balanceAmtFc",
       yourlabel: "On Account FC",
       controlname: "number",
       isControlShow: true,
@@ -4753,104 +4919,8 @@ const parentFieldIsTdsApplied = {
     },
     {
       id: 29121,
-      fieldname: "onAccountHc",
-      yourlabel: "On Account HC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "number",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29121,
-      fieldname: "balanceAmtFc",
-      yourlabel: "Balance Amount FC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "number",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29121,
       fieldname: "balanceAmtHc",
-      yourlabel: "Balance Amount HC",
+      yourlabel: "On Account HC",
       controlname: "number",
       isControlShow: true,
       isGridView: true,
@@ -5794,7 +5864,7 @@ const parentFieldIsTdsNotApplied = {
     },
     {
       id: 29121,
-      fieldname: "onAccountFc",
+      fieldname: "balanceAmtFc",
       yourlabel: "On Account FC",
       controlname: "number",
       isControlShow: true,
@@ -5842,104 +5912,8 @@ const parentFieldIsTdsNotApplied = {
     },
     {
       id: 29121,
-      fieldname: "onAccountHc",
-      yourlabel: "On Account HC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "number",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29121,
-      fieldname: "balanceAmtFc",
-      yourlabel: "Balance Amount FC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "number",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29121,
       fieldname: "balanceAmtHc",
-      yourlabel: "Balance Amount HC",
+      yourlabel: "On Account HC",
       controlname: "number",
       isControlShow: true,
       isGridView: true,
@@ -6091,7 +6065,20 @@ const formState = {
       label: "DESTINATION CHARGES INCOME",
     },
   ],
+  voucherTypeId: 9,
+  voucherTypeIddropdown: [
+    {
+      value: 9,
+      label: "BANK RECEIPT",
+    },
+  ],
   paymentBank: 1554,
+  bankVoucherLedgerId: null,
+  partyVoucherLedgerId: null,
+  tdsVoucherLedgerId: null,
+  bankChangesVoucherLedgerId: null,
+  exGainLossVoucherLedgerId: null,
+  onAccountVoucherLedgerId: null,
   tdsApplicable: null,
   voucherNo: null,
   voucherDate: null,
@@ -6108,12 +6095,9 @@ const formState = {
   tdsAmt: null,
   bankCharges: null,
   exGainLoss: null,
-  onAccountFc: null,
-  onAccountHc: null,
   balanceAmtFc: null,
   balanceAmtHc: null,
   narration: null,
-  voucherTypeId: null,
   tblVoucherLedger: [],
   tblVoucherLedgerDetails: [
     {
@@ -6128,6 +6112,7 @@ const formState = {
       balanceAmtHC: null,
       tdsAmtFC: null,
       tdsAmtHC: null,
+      invoiceVoucherLedgerId: null,
     },
   ],
 };
