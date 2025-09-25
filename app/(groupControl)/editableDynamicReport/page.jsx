@@ -2068,7 +2068,7 @@ export default function AddEditFormControll({ reportData }) {
                 spName: saveSpName,
               });
               if (response.success) {
-                return toast.success(data?.message);
+                return toast.success(response?.message);
               }
             }
           } catch (error) {
