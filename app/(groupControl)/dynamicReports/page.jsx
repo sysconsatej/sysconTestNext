@@ -182,6 +182,12 @@ export default function AddEditFormControll({ reportData }) {
   const [isDisplayGrandTotal, setIsDisplayGrandTotal] = useState(true);
 
   useEffect(() => {
+    if (menuType == "C") {
+      setToggle(false);
+    }
+  }, [menuType]);
+  
+  useEffect(() => {
     // Setup code here
     return () => {
       // Cleanup code here

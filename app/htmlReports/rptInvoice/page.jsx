@@ -1002,7 +1002,7 @@ function rptInvoice() {
                   Job No. :{" "}
                 </p>
                 <p style={{ width: "70%" }}>
-                  {data[0]?.containerTransaction || ""}
+                  {data[0]?.containerTransactionNo || ""}
                 </p>
               </div>
               <div className="flex w-full" style={{ width: "35%" }}>
@@ -1017,7 +1017,7 @@ function rptInvoice() {
                 <p className="font-bold" style={{ width: "30%" }}>
                   From Location :{" "}
                 </p>
-                <p style={{ width: "70%" }}>{data[0]?.pol || ""}</p>
+                <p style={{ width: "70%" }}>{data[0]?.containerTransactionPort || ""}</p>
               </div>
               <div className="flex w-full" style={{ width: "35%" }}>
                 <p className="font-bold" style={{ width: "45%" }}>
@@ -2319,8 +2319,9 @@ function rptInvoice() {
                   className="pb-1 border-black text-center ps-1"
                   style={{ width: "17%" }}
                 >
-                  {chargeData?.totalAmountFc || ""}
+                  {chargeData?.totalAmountFc ? Math.round(chargeData.totalAmountFc) : ""}
                 </p>
+
               </div>
             ))}
             {/* Final row - Amount in Words */}
@@ -3388,25 +3389,31 @@ function rptInvoice() {
             className="flex w-full border-black border-t border-r border-l border-b text-center font-bold"
             style={{ fontSize: "10px", width: "100%" }}
           >
-            <p className="p-1 border-r border-black" style={{ width: "10%" }}>
+            <p className="p-1 border-r border-black" style={{ width: "5%" }}>
               Sr No.
             </p>
-            <p className="p-1 border-r border-black" style={{ width: "25%" }}>
+            <p className="p-1 border-r border-black" style={{ width: "20%" }}>
               Container No.
             </p>
-            <p className="p-1 border-r border-black" style={{ width: "10%" }}>
+            <p className="p-1 border-r border-black" style={{ width: "9%" }}>
+              From Date
+            </p>
+            <p className="p-1 border-r border-black" style={{ width: "9%" }}>
+              To Date
+            </p>
+            <p className="p-1 border-r border-black" style={{ width: "8%" }}>
               NO Of Days
             </p>
             <p className="p-1 border-r border-black" style={{ width: "10%" }}>
               Size/Type
             </p>
-            <p className="p-1 border-r border-black" style={{ width: "10%" }}>
+            <p className="p-1 border-r border-black" style={{ width: "8%" }}>
               Rate
             </p>
-            <p className="p-1 border-r border-black" style={{ width: "10%" }}>
+            <p className="p-1 border-r border-black" style={{ width: "8%" }}>
               Currency
             </p>
-            <p className="p-1 border-r border-black" style={{ width: "10%" }}>
+            <p className="p-1 border-r border-black" style={{ width: "8%" }}>
               Ex. Rate
             </p>
             <p className="p-1 border-black" style={{ width: "15%" }}>
@@ -3426,19 +3433,31 @@ function rptInvoice() {
               >
                 <p
                   className="pb-1 border-r border-black text-center ps-1"
-                  style={{ width: "10%" }}
+                  style={{ width: "5%" }}
                 >
-                  {chargeAttData?.srNo || ""}
+                  {chargeAttData?.invoiceChargeDetailsSrNo || ""}
                 </p>
                 <p
                   className="pb-1 border-r border-black text-center ps-1"
-                  style={{ width: "25%" }}
+                  style={{ width: "20%" }}
                 >
                   {chargeAttData?.containerNo || ""}
                 </p>
                 <p
                   className="pb-1 border-r border-black text-center ps-1"
-                  style={{ width: "10%" }}
+                  style={{ width: "9%" }}
+                >
+                  {chargeAttData?.fromDate || ""}
+                </p>
+                <p
+                  className="pb-1 border-r border-black text-center ps-1"
+                  style={{ width: "9%" }}
+                >
+                  {chargeAttData?.toDate || ""}
+                </p>
+                <p
+                  className="pb-1 border-r border-black text-center ps-1"
+                  style={{ width: "8%" }}
                 >
                   {chargeAttData?.noOfDays || ""}
                 </p>
@@ -3450,19 +3469,19 @@ function rptInvoice() {
                 </p>
                 <p
                   className="pb-1 border-r border-black text-center ps-1"
-                  style={{ width: "10%" }}
+                  style={{ width: "8%" }}
                 >
                   {chargeAttData?.rate || ""}
                 </p>
                 <p
                   className="pb-1 border-r border-black text-center ps-1"
-                  style={{ width: "10%" }}
+                  style={{ width: "8%" }}
                 >
                   {chargeAttData?.currency || ""}
                 </p>
                 <p
                   className="pb-1 border-r border-black text-center ps-1"
-                  style={{ width: "10%" }}
+                  style={{ width: "8%" }}
                 >
                   {chargeAttData?.exchangeRate || ""}
                 </p>

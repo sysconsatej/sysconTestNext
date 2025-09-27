@@ -353,7 +353,7 @@ export default function AddEditFormControll() {
 
         setChildsFields(
           tableViewApiResponse.data[0].child ||
-            tableViewApiResponse.data[0].children
+          tableViewApiResponse.data[0].children
         );
         setButtonsData(tableViewApiResponse.data[0].buttons);
       }
@@ -505,7 +505,7 @@ export default function AddEditFormControll() {
     }
   }, [isDataLoaded]);
 
- useEffect(() => {
+  useEffect(() => {
     console.log("changes in charges", newState?.tblInvoiceCharge);
     let totalAmount = newState?.tblInvoiceCharge?.reduce((acc, item) => {
       return acc + Number(item?.totalAmountHc) || 0;
@@ -550,49 +550,49 @@ export default function AddEditFormControll() {
     });
   }, [newState?.tblInvoiceCharge, newState?.tblInvoiceCharge?.length]);
 
-useEffect(() => {
-  // Prevent calculation if tblInvoiceCharge is empty or not available
-  if (!Array.isArray(newState?.tblInvoiceCharge)) return;
+  useEffect(() => {
+    // Prevent calculation if tblInvoiceCharge is empty or not available
+    if (!Array.isArray(newState?.tblInvoiceCharge)) return;
 
-  // Calculate updated charges
-  const updatedCharges = newState.tblInvoiceCharge.map((item) => {
-    const qty = parseFloat(item.qty) || 0;
-    const rate = parseFloat(item.rate) || 0;
-    const exchangeRate = parseFloat(item.exchangeRate) || 0;
-    const noOfDays = parseFloat(item.noOfDays);
+    // Calculate updated charges
+    const updatedCharges = newState.tblInvoiceCharge.map((item) => {
+      const qty = parseFloat(item.qty) || 0;
+      const rate = parseFloat(item.rate) || 0;
+      const exchangeRate = parseFloat(item.exchangeRate) || 0;
+      const noOfDays = parseFloat(item.noOfDays);
 
-    // If noOfDays is null/undefined/0, ignore it in calculation
-    const effectiveNoOfDays =
-      isNaN(noOfDays) || noOfDays <= 0 ? 1 : noOfDays;
+      // If noOfDays is null/undefined/0, ignore it in calculation
+      const effectiveNoOfDays =
+        isNaN(noOfDays) || noOfDays <= 0 ? 1 : noOfDays;
 
-    const totalAmountFc = qty * rate * effectiveNoOfDays;
-    const totalAmount = totalAmountFc * exchangeRate;
+      const totalAmountFc = qty * rate * effectiveNoOfDays;
+      const totalAmount = totalAmountFc * exchangeRate;
 
-    // Avoid unnecessary updates if values are already correct
+      // Avoid unnecessary updates if values are already correct
+      if (
+        Number(item.totalAmountFc) === Number(totalAmountFc.toFixed(2)) &&
+        Number(item.totalAmountHc) === Number(totalAmount.toFixed(2))
+      ) {
+        return item; // no change
+      }
+
+      return {
+        ...item,
+        totalAmountFc: totalAmountFc.toFixed(2),
+        totalAmountHc: totalAmount.toFixed(2),
+      };
+    });
+
     if (
-      Number(item.totalAmountFc) === Number(totalAmountFc.toFixed(2)) &&
-      Number(item.totalAmountHc) === Number(totalAmount.toFixed(2))
+      JSON.stringify(updatedCharges) !==
+      JSON.stringify(newState.tblInvoiceCharge)
     ) {
-      return item; // no change
+      setNewState((prev) => ({
+        ...prev,
+        tblInvoiceCharge: updatedCharges,
+      }));
     }
-
-    return {
-      ...item,
-      totalAmountFc: totalAmountFc.toFixed(2),
-      totalAmountHc: totalAmount.toFixed(2),
-    };
-  });
-
-  if (
-    JSON.stringify(updatedCharges) !==
-    JSON.stringify(newState.tblInvoiceCharge)
-  ) {
-    setNewState((prev) => ({
-      ...prev,
-      tblInvoiceCharge: updatedCharges,
-    }));
-  }
-}, [newState?.tblInvoiceCharge]);
+  }, [newState?.tblInvoiceCharge]);
 
   // Define your button click handlers
   const handleButtonClick = {
@@ -642,6 +642,7 @@ useEffect(() => {
         try {
           // let data = await handleSubmitApi(submitNewState);
           const cleanData = replaceNullStrings(newState, ChildTableName);
+          setIsFormSaved(true);
           let data = await handleSubmitApi(cleanData);
           if (data.success == true) {
             setIsFormSaved(true);
@@ -657,6 +658,7 @@ useEffect(() => {
             }
           } else {
             toast.error(data.message);
+            setIsFormSaved(false);
           }
           if (data.success == true) {
             toast.success(data.message);
@@ -672,9 +674,11 @@ useEffect(() => {
             }
           } else {
             toast.error(data.message);
+            setIsFormSaved(false);
           }
         } catch (error) {
           toast.error(error.message);
+          setIsFormSaved(false);
         }
       } else {
         toast.error("No changes made");
@@ -716,6 +720,7 @@ useEffect(() => {
           }
         }
         const cleanData = replaceNullStrings(newState, ChildTableName);
+        setIsFormSaved(true);
         let data = await handleSubmitApi(cleanData);
         if (data.success == true) {
           toast.success(data.message);
@@ -738,6 +743,7 @@ useEffect(() => {
           // }, 500);
         } else {
           toast.error(data.message);
+          setIsFormSaved(false);
         }
       } else {
         toast.error("No changes made");
@@ -1390,12 +1396,12 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-                const parsedValue =
-                  typeof row[item.fieldname] === "number"
-                    ? row[item.fieldname]
-                    : parseFloat(row[item.fieldname] || 0);
-                return isNaN(parsedValue) ? sum : sum + parsedValue;
-              }, 0) // Calculate sum for 's' type
+              const parsedValue =
+                typeof row[item.fieldname] === "number"
+                  ? row[item.fieldname]
+                  : parseFloat(row[item.fieldname] || 0);
+              return isNaN(parsedValue) ? sum : sum + parsedValue;
+            }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -2061,7 +2067,7 @@ function ChildAccordianComponent({
                                       hoverIcon={plusIconHover}
                                       disabled={
                                         typeof section.isAddFunctionality !==
-                                        "undefined"
+                                          "undefined"
                                           ? !section.isAddFunctionality
                                           : false
                                       }
@@ -2183,10 +2189,10 @@ function ChildAccordianComponent({
                                             {(field.type === "number" ||
                                               field.type === "decimal" ||
                                               field.type === "string") &&
-                                            field.gridTotal
+                                              field.gridTotal
                                               ? columnTotals[
-                                                  field.fieldname
-                                                ].toString()
+                                                field.fieldname
+                                              ].toString()
                                               : ""}
                                           </div>
                                         </div>

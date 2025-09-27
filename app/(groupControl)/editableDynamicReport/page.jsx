@@ -177,6 +177,12 @@ export default function AddEditFormControll({ reportData }) {
 
   console.log("selectedIds", selectedIds);
   console.log("fullRowJson", fullRowJson);
+  
+  useEffect(() => {
+    if(menuType == 'C'){
+      setToggle(false);
+    }
+  }, [menuType]);
 
   useEffect(() => {
     if (!selectedRow) {
@@ -2067,7 +2073,7 @@ export default function AddEditFormControll({ reportData }) {
                 json,
                 spName: saveSpName,
               });
-              if (response.success) {
+              if (response?.success) {
                 return toast.success(response?.message);
               }
             }

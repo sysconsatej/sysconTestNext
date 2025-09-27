@@ -55,6 +55,7 @@ import RowComponent from "@/app/(groupControl)/voucher/bankReceipt/addEdit/RowCo
 import { fontFamilyStyles } from "@/app/globalCss";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import { getVoucher } from "@/services/auth/FormControl.services";
+import { insertVoucherData } from "@/services/auth/FormControl.services";
 export default function VoucherBankReceiptAdd() {
   const [openModal, setOpenModal] = useState(false);
   const [voucher, setVoucher] = useState({});
@@ -702,19 +703,74 @@ export default function VoucherBankReceiptAdd() {
       //   userId: userId,
       // };
 
-      const insertData = {
+      const now = new Date(); // optional, if you want to add createdDate
+
+      let insertData = {
         ...newState,
         clientId,
-        userId,
+        createdBy: userId,
         companyId,
-        branchId,
-        financialYear,
+        companyBranchId: branchId,
+        financialYearId: financialYear,
         emailId,
       };
-      console.log("insertData ==>", insertData);
+
+      console.log("insertData 1 ==>", insertData);
+
+      if (
+        insertData &&
+        insertData.tblVoucherLedger &&
+        insertData.tblVoucherLedger.length > 0
+      ) {
+        insertData.tblVoucherLedger = insertData.tblVoucherLedger.map(
+          (item) => ({
+            ...item,
+            clientId,
+            createdBy: userId,
+            companyId,
+            companyBranchId: branchId,
+            financialYearId: financialYear,
+            // createdDate: now, // optional
+          })
+        );
+      }
+
+      if (
+        insertData &&
+        insertData.tblVoucherLedgerDetails &&
+        insertData.tblVoucherLedgerDetails.length > 0
+      ) {
+        insertData.tblVoucherLedgerDetails =
+          insertData.tblVoucherLedgerDetails.map((item) => ({
+            ...item,
+            clientId,
+            createdBy: userId,
+            companyId,
+            companyBranchId: branchId,
+            financialYearId: financialYear,
+            tdsApp:true,
+            // createdDate: now, // optional
+          }));
+      }
+
+      console.log("insertData 2 ==>", insertData);
+
+      const requestBody={
+        recordId:null,
+        clientId,
+        companyId,
+        companyBranchId:branchId,
+        financialYearId:financialYear,
+        userId,
+        json:insertData
+      }
+
+      const result = await insertVoucherData(requestBody);
 
       if (result.success) {
-        toast.success("Saved successfully.");
+        setNewState(formState);
+        //setSubmitNewState({});
+        toast.success(result.message || "Save successfully.");
       } else {
         toast.error(result.message || "Save failed.");
       }

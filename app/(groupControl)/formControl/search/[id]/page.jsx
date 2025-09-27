@@ -756,6 +756,7 @@ export default function AddEditFormControll() {
             ? formControlData?._onSubmitResults?.result?.values
             : newState;
           const cleanData = replaceNullStrings(submitData, ChildTableName);
+          setIsFormSaved(true);
           let data = await handleSubmitApi(cleanData);
           if (data.success == true) {
             dispatch(
@@ -777,6 +778,7 @@ export default function AddEditFormControll() {
             // }, 500);
           } else {
             toast.error(data.message);
+            setIsFormSaved(false);
           }
           if (data.success == true) {
             // toast.success(data.message);
@@ -788,9 +790,11 @@ export default function AddEditFormControll() {
             }
           } else {
             toast.error(data.message);
+            setIsFormSaved(false);
           }
         } catch (error) {
           toast.error(error.message);
+          setIsFormSaved(false);
         }
       } else {
         toast.error("No changes made");
@@ -951,7 +955,7 @@ export default function AddEditFormControll() {
           ...prev,
           tblRateRequestCharge:
             newState?.scopeOfWork === null ||
-            newState?.scopeOfWork?.length === 0
+              newState?.scopeOfWork?.length === 0
               ? []
               : chargesWithExchangeRates.filter((r) => r !== undefined),
         };
@@ -979,7 +983,7 @@ export default function AddEditFormControll() {
           ...prev,
           tblRateRequestCharge:
             newState?.scopeOfWork === null ||
-            newState?.scopeOfWork?.length === 0
+              newState?.scopeOfWork?.length === 0
               ? []
               : submitData.filter((r) => r !== undefined),
         };
@@ -1171,12 +1175,12 @@ export default function AddEditFormControll() {
                 ],
                 buyExchangeRate:
                   item.buyExchangeRate !== null &&
-                  item.buyExchangeRate !== undefined
+                    item.buyExchangeRate !== undefined
                     ? String(item.buyExchangeRate)
                     : null,
                 sellExchangeRate:
                   item.sellExchangeRate !== null &&
-                  item.sellExchangeRate !== undefined
+                    item.sellExchangeRate !== undefined
                     ? String(item.sellExchangeRate)
                     : null,
               };
@@ -1275,6 +1279,10 @@ export default function AddEditFormControll() {
     },
     handleSaveClose: async () => {
       // formControlData._onSubmitResults = {};
+      if (isFormSaved)
+        return toast.error(
+          "This form has already been saved. Please refresh the screen to save one more record"
+        );
       const isEqual = areObjectsEqual(newState, initialState);
       if (!isEqual) {
         // eslint-disable-next-line no-unused-vars
@@ -1323,6 +1331,7 @@ export default function AddEditFormControll() {
             ? formControlData?._onSubmitResults?.result?.values
             : newState;
           const cleanData = replaceNullStrings(submitData, ChildTableName);
+          setIsFormSaved(true);
           let data = await handleSubmitApi(cleanData);
           if (data.success == true) {
             dispatch(
@@ -1331,6 +1340,7 @@ export default function AddEditFormControll() {
                 value: true,
               })
             );
+            setIsFormSaved(false);
             toast.success(data.message);
             const requestBody = {
               tableName: tableName,
@@ -1353,9 +1363,11 @@ export default function AddEditFormControll() {
             }, 500);
           } else {
             toast.error(data.Message);
+            setIsFormSaved(false);
           }
         } catch (error) {
           toast.error(error.message);
+          setIsFormSaved(false);
         }
       } else {
         toast.error("No changes made");
@@ -1741,7 +1753,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: true }
                 : field
           );
@@ -1781,7 +1793,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, isEditable: true }
                 : field
           );
@@ -1887,7 +1899,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: false }
                 : field
           );
@@ -1927,7 +1939,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, isEditable: false }
                 : field
           );
@@ -2273,9 +2285,9 @@ export default function AddEditFormControll() {
       const hasChanges = updatedRows.some((updatedRow, index) => {
         return (
           updatedRow.buyExchangeRate !==
-            newState.tblRateRequestCharge[index].buyExchangeRate ||
+          newState.tblRateRequestCharge[index].buyExchangeRate ||
           updatedRow.sellExchangeRate !==
-            newState.tblRateRequestCharge[index].sellExchangeRate
+          newState.tblRateRequestCharge[index].sellExchangeRate
         );
       });
 
@@ -3121,12 +3133,12 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-                const parsedValue =
-                  typeof row[item.fieldname] === "number"
-                    ? row[item.fieldname]
-                    : parseFloat(row[item.fieldname] || 0);
-                return isNaN(parsedValue) ? sum : sum + parsedValue;
-              }, 0) // Calculate sum for 's' type
+              const parsedValue =
+                typeof row[item.fieldname] === "number"
+                  ? row[item.fieldname]
+                  : parseFloat(row[item.fieldname] || 0);
+              return isNaN(parsedValue) ? sum : sum + parsedValue;
+            }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -3750,7 +3762,7 @@ function ChildAccordianComponent({
       const right = Math.round(
         Math.floor(
           tableRef.current?.getBoundingClientRect()?.width +
-            tableRef.current?.scrollLeft
+          tableRef.current?.scrollLeft
         )
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
@@ -4146,7 +4158,7 @@ function ChildAccordianComponent({
                               formControlData={formControlData}
                               setFormControlData={setFormControlData}
                               tableBodyWidhth={tableBodyWidhth}
-                              // expandAll={expandAll}
+                            // expandAll={expandAll}
                             />
                           ))}
                           <>
@@ -4181,7 +4193,7 @@ function ChildAccordianComponent({
                                             {(field.type === "number" ||
                                               field.type === "decimal" ||
                                               field.type === "string") &&
-                                            field.gridTotal
+                                              field.gridTotal
                                               ? columnTotals[field.fieldname]
                                               : ""}
                                           </div>

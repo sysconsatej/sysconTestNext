@@ -582,18 +582,20 @@ export default function AddEditFormControll() {
         }
         try {
           const cleanData = replaceNullStrings(newState, ChildTableName);
+          setIsFormSaved(true);
           let data = await handleSubmitApi(cleanData);
           if (data.success == true) {
             toast.success(data.message);
-            setIsFormSaved(true);
+
             if (isReportPresent) {
-             const id = data?.data?.recordset[0]?.id ?? data?.data?.recordset[0]?.ParentId;
+              const id = data?.data?.recordset[0]?.id ?? data?.data?.recordset[0]?.ParentId;
               setOpenPrintModal((prev) => !prev);
               setSubmittedMenuId(uriDecodedMenu?.id);
               setSubmittedRecordId(id);
             }
           } else {
             toast.error(data.message);
+            setIsFormSaved(false);
           }
           if (data.success == true) {
             dispatch(
@@ -637,9 +639,11 @@ export default function AddEditFormControll() {
             }
           } else {
             toast.error(data.Message);
+            setIsFormSaved(false);
           }
         } catch (error) {
           toast.error(error.message);
+          setIsFormSaved(false);
         }
       } else {
         toast.error("No changes made");
@@ -664,6 +668,10 @@ export default function AddEditFormControll() {
     },
     handleSaveClose: async () => {
       // console.log("Save and Close clicked");
+      if (isFormSaved)
+        return toast.error(
+          "This form has already been saved. Please refresh the screen to save one more record"
+        )
       const isEqual = areObjectsEqual(newState, initialState);
       // event.preventDefault();
       if (!isEqual) {
@@ -684,7 +692,9 @@ export default function AddEditFormControll() {
 
         // return; // Exit the function if a value is missing
         try {
+
           const cleanData = replaceNullStrings(newState, ChildTableName);
+          setIsFormSaved(true);
           let data = await handleSubmitApi(cleanData);
           if (data.success == true) {
             dispatch(
@@ -714,9 +724,11 @@ export default function AddEditFormControll() {
               );
             }, 500);
           } else {
+            setIsFormSaved(false);
             toast.error(data.Message);
           }
         } catch (error) {
+          setIsFormSaved(false);
           toast.error(error.message);
         }
       } else {
@@ -983,49 +995,49 @@ export default function AddEditFormControll() {
     });
   }, [newState?.tblInvoiceCharge, newState?.tblInvoiceCharge?.length]);
 
-useEffect(() => {
-  // Prevent calculation if tblInvoiceCharge is empty or not available
-  if (!Array.isArray(newState?.tblInvoiceCharge)) return;
+  useEffect(() => {
+    // Prevent calculation if tblInvoiceCharge is empty or not available
+    if (!Array.isArray(newState?.tblInvoiceCharge)) return;
 
-  // Calculate updated charges
-  const updatedCharges = newState.tblInvoiceCharge.map((item) => {
-    const qty = parseFloat(item.qty) || 0;
-    const rate = parseFloat(item.rate) || 0;
-    const exchangeRate = parseFloat(item.exchangeRate) || 0;
-    const noOfDays = parseFloat(item.noOfDays);
+    // Calculate updated charges
+    const updatedCharges = newState.tblInvoiceCharge.map((item) => {
+      const qty = parseFloat(item.qty) || 0;
+      const rate = parseFloat(item.rate) || 0;
+      const exchangeRate = parseFloat(item.exchangeRate) || 0;
+      const noOfDays = parseFloat(item.noOfDays);
 
-    // If noOfDays is null/undefined/0, ignore it in calculation
-    const effectiveNoOfDays =
-      isNaN(noOfDays) || noOfDays <= 0 ? 1 : noOfDays;
+      // If noOfDays is null/undefined/0, ignore it in calculation
+      const effectiveNoOfDays =
+        isNaN(noOfDays) || noOfDays <= 0 ? 1 : noOfDays;
 
-    const totalAmountFc = qty * rate * effectiveNoOfDays;
-    const totalAmount = totalAmountFc * exchangeRate;
+      const totalAmountFc = qty * rate * effectiveNoOfDays;
+      const totalAmount = totalAmountFc * exchangeRate;
 
-    // Avoid unnecessary updates if values are already correct
+      // Avoid unnecessary updates if values are already correct
+      if (
+        Number(item.totalAmountFc) === Number(totalAmountFc.toFixed(2)) &&
+        Number(item.totalAmountHc) === Number(totalAmount.toFixed(2))
+      ) {
+        return item; // no change
+      }
+
+      return {
+        ...item,
+        totalAmountFc: totalAmountFc.toFixed(2),
+        totalAmountHc: totalAmount.toFixed(2),
+      };
+    });
+
     if (
-      Number(item.totalAmountFc) === Number(totalAmountFc.toFixed(2)) &&
-      Number(item.totalAmountHc) === Number(totalAmount.toFixed(2))
+      JSON.stringify(updatedCharges) !==
+      JSON.stringify(newState.tblInvoiceCharge)
     ) {
-      return item; // no change
+      setNewState((prev) => ({
+        ...prev,
+        tblInvoiceCharge: updatedCharges,
+      }));
     }
-
-    return {
-      ...item,
-      totalAmountFc: totalAmountFc.toFixed(2),
-      totalAmountHc: totalAmount.toFixed(2),
-    };
-  });
-
-  if (
-    JSON.stringify(updatedCharges) !==
-    JSON.stringify(newState.tblInvoiceCharge)
-  ) {
-    setNewState((prev) => ({
-      ...prev,
-      tblInvoiceCharge: updatedCharges,
-    }));
-  }
-}, [newState?.tblInvoiceCharge]);
+  }, [newState?.tblInvoiceCharge]);
 
   function onLoadFunctionCall(
     functionData,
@@ -1760,13 +1772,13 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-                // const parsedValue = parseFloat(row[item.fieldname] || 0);
-                const parsedValue =
-                  typeof row[item.fieldname] === "number"
-                    ? row[item.fieldname]
-                    : parseFloat(row[item.fieldname] || 0);
-                return isNaN(parsedValue) ? sum : sum + parsedValue;
-              }, 0) // Calculate sum for 's' type
+              // const parsedValue = parseFloat(row[item.fieldname] || 0);
+              const parsedValue =
+                typeof row[item.fieldname] === "number"
+                  ? row[item.fieldname]
+                  : parseFloat(row[item.fieldname] || 0);
+              return isNaN(parsedValue) ? sum : sum + parsedValue;
+            }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -2591,7 +2603,7 @@ function ChildAccordianComponent({
                                             {(field.type === "number" ||
                                               field.type === "decimal" ||
                                               field.type === "string") &&
-                                            field.gridTotal
+                                              field.gridTotal
                                               ? columnTotals[field.fieldname]
                                               : ""}
                                           </div>

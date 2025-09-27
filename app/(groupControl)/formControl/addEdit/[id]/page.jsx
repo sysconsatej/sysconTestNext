@@ -782,7 +782,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: true }
                 : field
           );
@@ -822,7 +822,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, isEditable: true }
                 : field
           );
@@ -927,7 +927,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: false }
                 : field
           );
@@ -967,7 +967,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, isEditable: false }
                 : field
           );
@@ -1555,6 +1555,7 @@ export default function AddEditFormControll() {
             ? formControlData?._onSubmitResults?.result?.values
             : submitNewState;
           const cleanData = replaceNullStrings(submitData, ChildTableName);
+          setIsFormSaved(true);
           let data = await handleSubmitApi(cleanData);
 
           if (data.success == true) {
@@ -1572,6 +1573,7 @@ export default function AddEditFormControll() {
             }
           } else {
             toast.error(data.message);
+            setIsFormSaved(false);
           }
           if (data.success == true) {
             // toast.success(data.message);
@@ -1583,9 +1585,11 @@ export default function AddEditFormControll() {
             }
           } else {
             toast.error(data.message);
+            setIsFormSaved(false);
           }
         } catch (error) {
           toast.error(error.message);
+          setIsFormSaved(false);
         }
       } else {
         toast.error("No changes made");
@@ -1964,7 +1968,7 @@ export default function AddEditFormControll() {
                 ],
                 buyCurrencyId:
                   item.buyCurrencyId !== null &&
-                  item.buyCurrencyId !== undefined
+                    item.buyCurrencyId !== undefined
                     ? String(item.buyCurrencyId)
                     : null,
                 buyCurrencyIddropdown: [
@@ -1975,7 +1979,7 @@ export default function AddEditFormControll() {
                 ],
                 sellCurrencyId:
                   item.sellCurrencyId !== null &&
-                  item.sellCurrencyId !== undefined
+                    item.sellCurrencyId !== undefined
                     ? String(item.sellCurrencyId)
                     : null,
                 sellCurrencyIddropdown: [
@@ -1986,12 +1990,12 @@ export default function AddEditFormControll() {
                 ],
                 buyExchangeRate:
                   item.buyExchangeRate !== null &&
-                  item.buyExchangeRate !== undefined
+                    item.buyExchangeRate !== undefined
                     ? String(item.buyExchangeRate)
                     : null,
                 sellExchangeRate:
                   item.sellExchangeRate !== null &&
-                  item.sellExchangeRate !== undefined
+                    item.sellExchangeRate !== undefined
                     ? String(item.sellExchangeRate)
                     : null,
               };
@@ -2086,6 +2090,10 @@ export default function AddEditFormControll() {
     },
     handleSaveClose: async () => {
       formControlData._onSubmitResults = {};
+      if (isFormSaved)
+        return toast.error(
+          "This form has already been saved. Please refresh the screen to save one more record"
+        );
       const isEqual = areObjectsEqual(newState, initialState);
       if (!isEqual) {
         // eslint-disable-next-line no-unused-vars
@@ -2136,6 +2144,7 @@ export default function AddEditFormControll() {
             ? formControlData._onSubmitResults?.result?.values
             : submitNewState;
           const cleanData = replaceNullStrings(submitData, ChildTableName);
+          setIsFormSaved(true);
           let data = await handleSubmitApi(cleanData);
           if (data.success == true) {
             dispatch(
@@ -2156,9 +2165,11 @@ export default function AddEditFormControll() {
             }, 500);
           } else {
             toast.error(data.message);
+            setIsFormSaved(false);
           }
         } catch (error) {
           toast.error(error.message);
+          setIsFormSaved(false);
         }
       } else {
         toast.error("No changes made");
@@ -2999,12 +3010,12 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-                const parsedValue =
-                  typeof row[item.fieldname] === "number"
-                    ? row[item.fieldname]
-                    : parseFloat(row[item.fieldname] || 0);
-                return isNaN(parsedValue) ? sum : sum + parsedValue;
-              }, 0) // Calculate sum for 's' type
+              const parsedValue =
+                typeof row[item.fieldname] === "number"
+                  ? row[item.fieldname]
+                  : parseFloat(row[item.fieldname] || 0);
+              return isNaN(parsedValue) ? sum : sum + parsedValue;
+            }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -3043,50 +3054,50 @@ function ChildAccordianComponent({
     calculateTotalVolumeAndWeight();
   }, [newState.tblRateRequestQty]);
 
-    const calculateTotalGrossWeight = () => {
-  
-      if (!newState || !Array.isArray(newState.tblJobContainer)) {
-        return newState; 
-      }
-  
-      let totalGrossWt = 0;
-  
-      newState.tblJobContainer.forEach((row) => {
-        const cargoWt = parseFloat(row.grossWt) || 0;
-        totalGrossWt += cargoWt;
-      });
-  
-      setNewState((prevState) => ({
-        ...prevState,
-        cargoWt: totalGrossWt,
-      }));
-    };
-  
-    useEffect(() => {
+  const calculateTotalGrossWeight = () => {
+
+    if (!newState || !Array.isArray(newState.tblJobContainer)) {
+      return newState;
+    }
+
+    let totalGrossWt = 0;
+
+    newState.tblJobContainer.forEach((row) => {
+      const cargoWt = parseFloat(row.grossWt) || 0;
+      totalGrossWt += cargoWt;
+    });
+
+    setNewState((prevState) => ({
+      ...prevState,
+      cargoWt: totalGrossWt,
+    }));
+  };
+
+  useEffect(() => {
     calculateTotalGrossWeight();
   }, [newState.tblJobContainer]);
-  
-  
-    const calculateTotalGrossWeightBl = () => {
-  
-      if (!newState || !Array.isArray(newState.tblBlContainer)) {
-        return newState; 
-      }
-  
-      let totalGrossWt = 0;
-  
-      newState.tblBlContainer.forEach((row) => {
-        const grossWts = parseFloat(row.grossWt) || 0;
-        totalGrossWt += grossWts;
-      });
-  
-      setNewState((prevState) => ({
-        ...prevState,
-        grossWt: totalGrossWt,
-      }));
-    };
-  
-    useEffect(() => {
+
+
+  const calculateTotalGrossWeightBl = () => {
+
+    if (!newState || !Array.isArray(newState.tblBlContainer)) {
+      return newState;
+    }
+
+    let totalGrossWt = 0;
+
+    newState.tblBlContainer.forEach((row) => {
+      const grossWts = parseFloat(row.grossWt) || 0;
+      totalGrossWt += grossWts;
+    });
+
+    setNewState((prevState) => ({
+      ...prevState,
+      grossWt: totalGrossWt,
+    }));
+  };
+
+  useEffect(() => {
     calculateTotalGrossWeightBl();
   }, [newState.tblBlContainer]);
 
@@ -3716,7 +3727,7 @@ function ChildAccordianComponent({
       const right = Math.round(
         Math.floor(
           tableRef.current?.getBoundingClientRect()?.width +
-            tableRef.current?.scrollLeft
+          tableRef.current?.scrollLeft
         )
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
@@ -3933,7 +3944,7 @@ function ChildAccordianComponent({
                     childButtonHandler(section, indexValue, true);
                     calculateTotalVolumeAndWeight();
                     calculateTotalGrossWeight();
-                       calculateTotalGrossWeightBl();
+                    calculateTotalGrossWeightBl();
                   }}
                   wrap
                 />
@@ -3958,8 +3969,8 @@ function ChildAccordianComponent({
                     onClick={() => {
                       childButtonHandler(section, indexValue);
                       calculateTotalVolumeAndWeight();
-                       calculateTotalGrossWeight();
-                       calculateTotalGrossWeightBl();
+                      calculateTotalGrossWeight();
+                      calculateTotalGrossWeightBl();
                     }}
                   />
                 </div>
@@ -4105,7 +4116,7 @@ function ChildAccordianComponent({
                               isGridEdit={
                                 checker
                                   ? section?.gridEditableOnLoad?.toLowerCase() ===
-                                    "true"
+                                  "true"
                                   : isGridEdit
                               }
                               setIsGridEdit={setIsGridEdit}
@@ -4164,10 +4175,10 @@ function ChildAccordianComponent({
                                             {(field.type === "number" ||
                                               field.type === "decimal" ||
                                               field.type === "string") &&
-                                            field.gridTotal
+                                              field.gridTotal
                                               ? columnTotals[
-                                                  field.fieldname
-                                                ].toString()
+                                                field.fieldname
+                                              ].toString()
                                               : ""}
                                           </div>
                                         </div>
