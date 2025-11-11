@@ -783,7 +783,8 @@ export default function AddEditFormControll() {
           if (data.success == true) {
             // toast.success(data.message);
             if (isReportPresent) {
-              const id = data?.data?.recordset[0]?.ParentId;
+              //const id = data?.data?.recordset[0]?.ParentId;
+              const id = data?.data?.recordset?.at(-1)?.ParentId;
               setOpenPrintModal((prev) => !prev);
               setSubmittedMenuId(uriDecodedMenu?.id);
               setSubmittedRecordId(id);
@@ -955,7 +956,7 @@ export default function AddEditFormControll() {
           ...prev,
           tblRateRequestCharge:
             newState?.scopeOfWork === null ||
-              newState?.scopeOfWork?.length === 0
+            newState?.scopeOfWork?.length === 0
               ? []
               : chargesWithExchangeRates.filter((r) => r !== undefined),
         };
@@ -983,7 +984,7 @@ export default function AddEditFormControll() {
           ...prev,
           tblRateRequestCharge:
             newState?.scopeOfWork === null ||
-              newState?.scopeOfWork?.length === 0
+            newState?.scopeOfWork?.length === 0
               ? []
               : submitData.filter((r) => r !== undefined),
         };
@@ -1175,12 +1176,12 @@ export default function AddEditFormControll() {
                 ],
                 buyExchangeRate:
                   item.buyExchangeRate !== null &&
-                    item.buyExchangeRate !== undefined
+                  item.buyExchangeRate !== undefined
                     ? String(item.buyExchangeRate)
                     : null,
                 sellExchangeRate:
                   item.sellExchangeRate !== null &&
-                    item.sellExchangeRate !== undefined
+                  item.sellExchangeRate !== undefined
                     ? String(item.sellExchangeRate)
                     : null,
               };
@@ -1415,7 +1416,8 @@ export default function AddEditFormControll() {
           let data = await handleSubmitApi(cleanData);
           if (data.success == true) {
             toast.success(data.message);
-            const id = data?.data?.recordset[0]?.ParentId;
+            //const id = data?.data?.recordset[0]?.ParentId;
+            const id = data?.data?.recordset?.at(-1)?.ParentId;
             setOpenPrintModal((prev) => !prev);
             //setSubmittedMenuId(paramsValue.id);
             setSubmittedMenuId(uriDecodedMenu?.id);
@@ -1753,7 +1755,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: true }
                 : field
           );
@@ -1793,7 +1795,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, isEditable: true }
                 : field
           );
@@ -1899,7 +1901,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: false }
                 : field
           );
@@ -1939,7 +1941,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, isEditable: false }
                 : field
           );
@@ -2285,9 +2287,9 @@ export default function AddEditFormControll() {
       const hasChanges = updatedRows.some((updatedRow, index) => {
         return (
           updatedRow.buyExchangeRate !==
-          newState.tblRateRequestCharge[index].buyExchangeRate ||
+            newState.tblRateRequestCharge[index].buyExchangeRate ||
           updatedRow.sellExchangeRate !==
-          newState.tblRateRequestCharge[index].sellExchangeRate
+            newState.tblRateRequestCharge[index].sellExchangeRate
         );
       });
 
@@ -3133,12 +3135,12 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-              const parsedValue =
-                typeof row[item.fieldname] === "number"
-                  ? row[item.fieldname]
-                  : parseFloat(row[item.fieldname] || 0);
-              return isNaN(parsedValue) ? sum : sum + parsedValue;
-            }, 0) // Calculate sum for 's' type
+                const parsedValue =
+                  typeof row[item.fieldname] === "number"
+                    ? row[item.fieldname]
+                    : parseFloat(row[item.fieldname] || 0);
+                return isNaN(parsedValue) ? sum : sum + parsedValue;
+              }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -3179,6 +3181,40 @@ function ChildAccordianComponent({
     calculateTotalVolumeAndWeight();
   }, [newState.tblRateRequestQty]);
 
+  const calculateTotalNoOfPackages = () => {
+    if (!newState || !Array.isArray(newState.tblJobContainer)) {
+      return newState; // Return unchanged state if invalid
+    }
+  
+    const toNum = (v) =>
+      v == null || v === "" ? 0 : Number(String(v).replace(/,/g, "")) || 0;
+  
+    let totalNoPackages = 0;
+  
+    newState.tblJobContainer.forEach((row) => {
+      totalNoPackages += toNum(row?.noOfPackages);
+    });
+  
+    setNewState((prevState) => {
+      // If your state ever had a legacy key, prefer it
+      const targetKey = Object.prototype.hasOwnProperty.call(prevState, "noOfpackages")
+        ? "noOfpackages"
+        : "noOfPackages";
+  
+      // Prevent unnecessary re-renders
+      if (toNum(prevState?.[targetKey]) === totalNoPackages) return prevState;
+  
+      return {
+        ...prevState,
+        [targetKey]: totalNoPackages,
+      };
+    });
+  };
+  
+  
+    useEffect(() => {
+      calculateTotalNoOfPackages();
+    }, [newState.tblJobContainer]);
   const calculateTotalGrossWeight = () => {
     if (!newState || !Array.isArray(newState.tblJobContainer)) {
       return newState;
@@ -3762,7 +3798,7 @@ function ChildAccordianComponent({
       const right = Math.round(
         Math.floor(
           tableRef.current?.getBoundingClientRect()?.width +
-          tableRef.current?.scrollLeft
+            tableRef.current?.scrollLeft
         )
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
@@ -3991,6 +4027,7 @@ function ChildAccordianComponent({
                       calculateTotalGrossWeight();
                       calculateTotalVolumeAndWeight();
                       calculateTotalGrossWeightBl();
+                      calculateTotalNoOfPackages();
                     }}
                   />
                 </div>
@@ -4158,7 +4195,7 @@ function ChildAccordianComponent({
                               formControlData={formControlData}
                               setFormControlData={setFormControlData}
                               tableBodyWidhth={tableBodyWidhth}
-                            // expandAll={expandAll}
+                              // expandAll={expandAll}
                             />
                           ))}
                           <>
@@ -4193,7 +4230,7 @@ function ChildAccordianComponent({
                                             {(field.type === "number" ||
                                               field.type === "decimal" ||
                                               field.type === "string") &&
-                                              field.gridTotal
+                                            field.gridTotal
                                               ? columnTotals[field.fieldname]
                                               : ""}
                                           </div>

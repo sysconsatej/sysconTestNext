@@ -90,6 +90,7 @@ import { data } from "autoprefixer";
 export default function AddEditFormControll({ reportData }) {
   const searchParams = useSearchParams();
   const search = reportData ? reportData : searchParams.get("menuName");
+  const glId = searchParams.get("glId") ?? null;
   const [parentsFields, setParentsFields] = useState([]);
   const [newState, setNewState] = useState({});
   const [formDataChange, SetFormDataChange] = useState({});
@@ -123,6 +124,7 @@ export default function AddEditFormControll({ reportData }) {
   const [DateFormat, setDateFormat] = useState([]);
   const [editableFields, setEditableFields] = useState([]);
   const [saveSpName, setSaveSpName] = useState(null);
+  const [generatedFileName, setGeneratedFileName] = useState(null);
   const [clearFlag, setClearFlag] = useState({
     isClear: false,
     fieldName: "",
@@ -175,11 +177,8 @@ export default function AddEditFormControll({ reportData }) {
   const [selectedIds, setSelectedIds] = useState([]); // use this state to get all selected row ids
   const [fullRowJson, setFullRowJson] = useState([]); // use this state to get all selected row ids
 
-  console.log("selectedIds", selectedIds);
-  console.log("fullRowJson", fullRowJson);
-  
   useEffect(() => {
-    if(menuType == 'C'){
+    if (menuType == "C") {
       setToggle(false);
     }
   }, [menuType]);
@@ -469,6 +468,31 @@ export default function AddEditFormControll({ reportData }) {
   // Remove a trailing "UNT<GS>digits<GS>" line (GS = \x1D) at the very end
   function stripTrailingUNT(s) {
     return s.replace(/(?:\r?\n)?UNT\x1D\d+(?:\x1D[^\r\n]*)?\s*$/u, "");
+  }
+
+  async function fetchGeneratedFileName() {
+    if (search !== null) {
+      const generatedFileNameRequestBody = {
+        columns: "generatedFileName",
+        tableName: "tblMenuReportMapping",
+        whereCondition: `menuId = ${search}`,
+        clientIdCondition: `status = 1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+      };
+
+      const generatedFileNameData = await fetchReportData(
+        generatedFileNameRequestBody
+      );
+      if (
+        Array.isArray(generatedFileNameData?.data) &&
+        generatedFileNameData?.data.length > 0
+      ) {
+        const generatedFileName =
+          generatedFileNameData?.data[0]?.generatedFileName;
+        return generatedFileName;
+      } else {
+        return null;
+      }
+    }
   }
 
   const handleButtonClick = {
@@ -1695,6 +1719,7 @@ export default function AddEditFormControll({ reportData }) {
         });
         return newObj;
       };
+      console.log("generatedFileName", generatedFileName);
       try {
         const filterConditionWithoutDropdowns =
           removeDropdownFields(filterCondition);
@@ -1705,11 +1730,29 @@ export default function AddEditFormControll({ reportData }) {
           financialYear,
           userId,
           clientId,
+          menuId: search,
         };
         // const json = {
         //   ...updatedCondition,
         //   data: selectedRows,
         // };
+        if (menuName === "Update Nominated Area" && selectedIds?.length > 0) {
+          const selectedIdsSet = new Set(selectedIds.map((obj) => obj.id));
+          const selectedRows = finalPaginatedData.filter((row) =>
+            selectedIdsSet.has(row.id)
+          );
+          console.log("Selected Rows:", selectedRows);
+          let response = await saveEditedReport({
+            json: selectedRows,
+            spName: saveSpName,
+          });
+          if (response?.success) {
+            console.log("response", response);
+            return toast.success(response?.message);
+          } else {
+            return toast.error(response?.message);
+          }
+        }
         const json = {
           ...updatedCondition,
           data: selectedIds,
@@ -1761,7 +1804,8 @@ export default function AddEditFormControll({ reportData }) {
               });
               const link = document.createElement("a");
               link.href = URL.createObjectURL(blob);
-              link.download = `${saveSpName}.xlsx`;
+              const generatedFileName = await fetchGeneratedFileName();
+              link.download = `${generatedFileName || saveSpName}.xlsx`;
               link.click();
 
               toast.success(response.message);
@@ -1782,6 +1826,8 @@ export default function AddEditFormControll({ reportData }) {
               return;
             }
 
+            const generatedFileName = await fetchGeneratedFileName();
+
             // 1. Stringify your data (or the entire response, as you prefer)
             const payload = response.data; // or: { ...response }
             const jsonString = JSON.stringify(payload, null, 2);
@@ -1793,7 +1839,7 @@ export default function AddEditFormControll({ reportData }) {
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `${saveSpName}.json`;
+            link.download = `${generatedFileName || saveSpName}.json`;
             document.body.appendChild(link);
             link.click();
 
@@ -1833,7 +1879,8 @@ export default function AddEditFormControll({ reportData }) {
 
             const link = document.createElement("a");
             link.href = url;
-            link.download = `${saveSpName}.xml`;
+            const generatedFileName = await fetchGeneratedFileName();
+            link.download = `${generatedFileName || saveSpName}.xml`;
             document.body.appendChild(link);
             link.click();
 
@@ -1886,7 +1933,8 @@ export default function AddEditFormControll({ reportData }) {
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `${saveSpName}.csv`;
+            const generatedFileName = await fetchGeneratedFileName();
+            link.download = `${generatedFileName || saveSpName}.csv`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -2020,7 +2068,12 @@ export default function AddEditFormControll({ reportData }) {
             // Real file (binary-safe, no BOM)
             const cleanedData = stripTrailingUNT(textContent);
             const bytes = new TextEncoder().encode(cleanedData); // keeps 0x1D intact
-            download(bytes, `${saveSpName}.txt`, "application/octet-stream");
+            const generatedFileName = await fetchGeneratedFileName();
+            download(
+              bytes,
+              `${generatedFileName || saveSpName}.txt`,
+              "application/octet-stream"
+            );
 
             // Optional: human-readable preview (US -> |) for copy/paste/QA
             const preview = textContent.replace(/\x1D/g, " ");
@@ -2168,10 +2221,27 @@ export default function AddEditFormControll({ reportData }) {
         selectedReportIds = selectedIds.map((row) => row?.id).join(",");
       } else {
         toast.error("Please select at least one row.");
+        return;
       }
-      setOpenPrintModal((prev) => !prev);
-      setSubmittedMenuId(search);
-      setSubmittedRecordId(selectedReportIds);
+      // setOpenPrintModal((prev) => !prev);
+      // setSubmittedMenuId(search);
+      // setSubmittedRecordId(selectedReportIds);
+
+      sessionStorage.setItem(
+        "selectedReportIds",
+        JSON.stringify("Import General Manifest")
+      );
+
+      const url = `/htmlReports/rptIGM?recordId=${selectedReportIds}&reportId=1396`;
+      if (url) {
+        window.open(url, "_blank");
+      } else {
+        console.error(
+          "Unable to open the report: URL or ID is not defined.",
+          report
+        );
+      }
+
       const filterConditionWithoutDropdowns =
         removeDropdownFields(filterCondition);
       const updatedCondition = {
@@ -2415,6 +2485,7 @@ export default function AddEditFormControll({ reportData }) {
         setGroupingDepth(fetchedData.groupingDepth);
         setEditableFields(fetchedData.editableFields);
         setSaveSpName(fetchedData.saveSpName);
+        setGeneratedFileName(fetchedData.generatedFileName);
         setReportEditableType(fetchedData.reportEditableType);
         const updatedFields = await Promise.all(
           fetchedDataFields.map(async (field) => {
@@ -2710,9 +2781,25 @@ export default function AddEditFormControll({ reportData }) {
           }
         }
         setIsSortingEnabled(fetchedData.sorting === "y");
-        setNewState((prev) => {
-          return { ...prev, ...tempNewState };
-        });
+
+        if (glId != null && glId !== "") {
+          setNewState((prev) => {
+            const next = { ...prev, ...tempNewState };
+            // only set if the key exists (optional) and value actually changes
+            if (
+              Object.prototype.hasOwnProperty.call(next, "ledgerName") &&
+              next.ledgerName !== glId
+            ) {
+              next.ledgerName = glId;
+            }
+            return next;
+          });
+        } else {
+          setNewState((prev) => {
+            return { ...prev, ...tempNewState };
+          });
+        }
+
         setFilterCondition(newState);
       } else {
         setParaText(apiResponse.message);

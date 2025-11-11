@@ -1,291 +1,558 @@
 "use client";
 /* eslint-disable */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from "react";
 import { parentAccordionSection, accordianDetailsStyle } from "@/app/globalCss";
 import {
-    Box, FormControl, InputLabel, OutlinedInput, Radio, RadioGroup, FormControlLabel, FormLabel, MenuItem, Select, TextField, Button,
-    Typography, Accordion, AccordionSummary, AccordionDetails,
-} from '@mui/material';
+  Box,
+  FormControl,
+  InputLabel,
+  OutlinedInput,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormLabel,
+  MenuItem,
+  Select,
+  TextField,
+  Button,
+  Typography,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+} from "@mui/material";
 import styles from "@/app/app.module.css";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LightTooltip from "@/components/Tooltip/customToolTip";
-import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
-import { BalanceSheetReport } from "@/services/auth/FormControl.services.js";
-import TrialBalanceComponent from '@/components/TrialBalanceComponent/page';
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
+import { trialBalanceReportData } from "@/services/auth/FormControl.services.js";
+import TrialBalanceComponent from "@/components/TrialBalanceComponent/page";
 import { toast } from "react-toastify";
 import { exportLocalPDFReports } from "@/services/auth/FormControl.services";
+import CustomeInputFields from "@/components/Inputs/customeInputFields";
+import { getUserDetails } from "@/helper/userDetails";
+import { fontFamilyStyles } from "@/app/globalCss";
+import { fetchReportData } from "@/services/auth/FormControl.services";
+import { useSearchParams } from "next/navigation";
 
 const TrialBalance = () => {
-    const [toggle, setToggle] = useState(false);
-    const [year, setYear] = useState('');
-    const [fromDate, setFromDate] = useState("");
-    const [toDate, setToDate] = useState("");
-    const [selectedRadio, setSelectedRadio] = useState('S');
-    const [selectedRadioType, setSelectedRadioType] = useState('O');
-    const [balanceSheetData, setBalanceSheetData] = useState(null);
+  const searchParams = useSearchParams();
+  const searchParamsReportType = searchParams.get("reportType") ?? null;
+  const searchParamsBalanceType = searchParams.get("balanceType") ?? null;
+  const searchParamsTbGroupId = searchParams.get("tbGroupId") ?? null;
+  const [toggle, setToggle] = useState(false);
+  const [typeofModal, setTypeofModal] = useState("onClose");
+  const [selectedRadio, setSelectedRadio] = useState("S");
+  const [selectedRadioType, setSelectedRadioType] = useState("O");
+  const { clientId } = getUserDetails();
+  const { companyId } = getUserDetails();
+  const { branchId } = getUserDetails();
+  const [selectedBranchId, setSelectedBranchId] = useState(null);
+  const { financialYear } = getUserDetails();
+  const { emailId } = getUserDetails();
+  const { userId } = getUserDetails();
+  const { defaultFinYearId } = getUserDetails();
+  const { defaultCompanyId } = getUserDetails();
+  const { defaultBranchId } = getUserDetails();
+  const [parentsFields, setParentsFields] = useState([
+    {
+      id: 1,
+      fieldname: "fromDate",
+      controlname: "date",
+      controlDefaultValue: null,
+      dropdownFilter: null,
+      dropDownValues: null,
+      functionOnBlur: null,
+      functionOnChange: null,
+      functionOnKeyPress: null,
+      isControlShow: true,
+      isEditable: true,
+      isRequired: true,
+      referenceColumn: null,
+      referenceTable: null,
+      toolTipMessage: "From Date",
+      type: "date",
+      yourlabel: "From Date",
+      ordering: 1,
+    },
+    {
+      id: 2,
+      fieldname: "toDate",
+      controlname: "date",
+      controlDefaultValue: null,
+      dropdownFilter: null,
+      dropDownValues: null,
+      functionOnBlur: null,
+      functionOnChange: null,
+      functionOnKeyPress: null,
+      isControlShow: true,
+      isEditable: true,
+      isRequired: true,
+      referenceColumn: null,
+      referenceTable: null,
+      toolTipMessage: "To Date",
+      type: "date",
+      yourlabel: "To Date",
+      ordering: 2,
+    },
+    {
+      id: 152,
+      fieldname: "companybranchId",
+      controlname: "dropdown",
+      controlDefaultValue: null,
+      dropdownFilter: `and companyId=${defaultCompanyId}`,
+      dropDownValues: null,
+      functionOnBlur: null,
+      functionOnChange: null,
+      functionOnKeyPress: null,
+      isControlShow: true,
+      isEditable: true,
+      isRequired: false,
+      referenceColumn: "name",
+      referenceTable: "tblCompanyBranch",
+      toolTipMessage: "Company Branch",
+      type: "number",
+      yourlabel: "Company Branch",
+      ordering: 3,
+    },
+    {
+      id: 133,
+      fieldname: "reportType",
+      controlname: "radio",
+      controlDefaultValue: null,
+      dropdownFilter: null,
+      dropDownValues: "S.Summary,D.Detailed",
+      functionOnBlur: null,
+      functionOnChange: null,
+      functionOnKeyPress: null,
+      isControlShow: true,
+      isEditable: true,
+      isRequired: false,
+      referenceColumn: null,
+      referenceTable: null,
+      toolTipMessage: null,
+      type: "string",
+      yourlabel: "Report Type",
+      ordering: 4,
+    },
+    {
+      id: 133,
+      fieldname: "balanceType",
+      controlname: "radio",
+      controlDefaultValue: null,
+      dropdownFilter: null,
+      dropDownValues: "O.Opening,E.Extended,C.Closing",
+      functionOnBlur: null,
+      functionOnChange: null,
+      functionOnKeyPress: null,
+      isControlShow: true,
+      isEditable: true,
+      isRequired: false,
+      referenceColumn: null,
+      referenceTable: null,
+      toolTipMessage: null,
+      type: "string",
+      yourlabel: "Balance Type",
+      ordering: 5,
+    },
+  ]);
+  const [balanceSheetData, setBalanceSheetData] = useState(null);
+  const [newState, setNewState] = useState({
+    companybranchIddropdown: [],
+    companybranchId: null,
+    reportType: "S",
+    balanceType: "E",
+    fromDate: null,
+    toDate: null,
+  });
+  const [clearFlag, setClearFlag] = useState({
+    isClear: false,
+    fieldName: "",
+  });
+  const [formControlData, setFormControlData] = useState([]);
+  const [formDataChange, SetFormDataChange] = useState({});
+  const [filterCondition, setFilterCondition] = useState({});
+  const [loader, setLoader] = useState(null);
+  const [isFirstTime, setIsFirstTime] = useState(true);
+  const [menuId, setMenuId] = useState(null);
+  const didRun = useRef(false); // guards dev double-invoke
 
-    const handleExportToPDF = async () => {
-        const htmlContentElement = document.getElementById('htmlContent');
-        let htmlContent = htmlContentElement.innerHTML;
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = htmlContent;
+  console.log("newState", newState);
 
-        const replaceDiv = tempDiv.querySelector('#replaceDiv');
-        if (replaceDiv) {
-            const newDiv = document.createElement('div');
-            newDiv.setAttribute('id', 'replaceDiv');
-            newDiv.innerHTML = replaceDiv.innerHTML;
-            replaceDiv.replaceWith(newDiv);
+  useEffect(() => {
+    if (didRun.current) return; // avoid dev double-run
+    didRun.current = true;
+
+    let active = true; // avoid setState after unmount
+
+    const run = async () => {
+      // 1) Set today's midnight as "YYYY-MM-DD 00:00:00"
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+      const toDateStr = `${yyyy}-${mm}-${dd} 00:00:00`;
+
+      setNewState((prev) => ({ ...prev, toDate: toDateStr }));
+
+      // 2) Fetch startDate and set fromDate
+      const requestBody = {
+        columns: "id,startDate",
+        tableName: "tblFinancialYear",
+        whereCondition: `clientId = ${clientId} and id = ${defaultFinYearId} and companyId = ${defaultCompanyId}`,
+        clientIdCondition: `status = 1 FOR JSON PATH,INCLUDE_NULL_VALUES`,
+      };
+
+      try {
+        const reportData = await fetchReportData(requestBody);
+        if (!active) return;
+        if (reportData?.success === true && Array.isArray(reportData.data)) {
+          const startDate = reportData.data[0]?.startDate; // e.g. "2025-10-16 00:00:00"
+          if (startDate) {
+            setNewState((prev) => ({ ...prev, fromDate: startDate }));
+          }
         }
-        htmlContent = tempDiv.innerHTML;
-        const initialHtml = `
-       <!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8">
-			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<style>
-         .scroll-container {
-  max-height: 80vh;
-  overflow-y: auto;
-  overflow-x: auto; /* Enable horizontal scrolling */
-  display: flex;
-  border: 1px solid #ddd;
-  width: 100%;
-}
+      } catch (e) {
+        console.error("fetchReportData failed:", e);
+      }
+    };
 
-.flex {
-  display: flex;
-}
+    run();
 
-.flex-row {
-  flex-direction: row;
-  flex-wrap: wrap; /* Allow wrapping on smaller screens */
-}
+    return () => {
+      active = false;
+    };
+  }, []); // keep empty to run once on mount
 
-.flex-1 {
-  flex: 1;
-  width: 100%;
-  max-width: 50%; /* Ensure tables don't stretch too wide */
-}
+  useEffect(() => {
+    const rt = searchParamsReportType ?? "";
+    const bt = searchParamsBalanceType ?? "";
 
-/* Sticky header styling */
-.sticky-header {
-  position: sticky;
-  top: 0;
-  background-color: #f9f9f9;
-  z-index: 1;
-  padding: 8px;
-  border-bottom: 2px solid #ddd;
-}
+    // only update if both exist (non-empty) and actually changed
+    if (rt && bt) {
+      setNewState((prev) => {
+        const next = {
+          ...prev,
+          reportType: String(rt),
+          balanceType: String(bt),
+        };
+        return prev.reportType === next.reportType &&
+          prev.balanceType === next.balanceType
+          ? prev
+          : next;
+      });
+      fetchTrialBalanceData();
+    }
+  }, [searchParamsReportType, searchParamsBalanceType]);
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  position: relative; /* Ensure sticky headers work */
-}
+  const getLabelValue = (labelValue) => {
+    setLabelName(labelValue);
+  };
 
-.table thead {
-  border: none;
-}
+  useEffect(() => {
+    let cancelled = false;
 
-.table th {
-  text-align: left;
-  border-bottom: 1px solid grey;
-  background-color: #0766ad;
-  color: white;
-  padding: 5px;
-  font-size: 11px;
-}
-
-.table td {
-  border: 1px solid grey;
-  padding: 5px;
-  font-size: 10px;
-}
-
-.table tbody tr:hover {
-  background-color: #d9dff1;
-}
-
-/* Optional: Remove margin on the last table */
-.flex-1:last-child {
-  margin-right: 0;
-}
-
-.hideScrollbar::-webkit-scrollbar {
-  width: 0.5em;
-}
-
-.hideScrollbar::-webkit-scrollbar-track {
-  background-color: transparent;
-}
-
-.hideScrollbar::-webkit-scrollbar-thumb {
-  background-color: transparent;
-}
-
-.thinScrollBar::-webkit-scrollbar {
-  width: 0.5em;
-  height: 0.5rem;
-}
-
-.thinScrollBar::-webkit-scrollbar-track {
-  background-color: var(--accordionBodyBg);
-}
-
-.thinScrollBar::-webkit-scrollbar-thumb {
-  background-color: var(--tableHeaderBg);
-  border-radius: 10px;
-}
-
-.sticky-header {
-  text-align: center;
-  font-weight: bold;
-  background-color: #005b96; /* Customize as needed */
-  color: white;
-  padding: 8px;
-  border: 1px solid gray;
-}
-
-.text-right {
-  text-align: right !important;
-}
-
-.text-center {
-  text-align: center !important;
-}
-
-.subtotal-row {
-  font-weight: bold;
-  background-color: #f0f0f0;
-}
-      </style>
-			</head>
-			<body>
-				<img 
-         src="http://94.136.187.170:3016/api/images/NCLP/nclpLogo20241111075655020.jpg" 
-         alt="NCLP Logo" 
-         class="logo">
-      `;
-        const finalHtml = "</body></html>";
-        const html = initialHtml + htmlContent + finalHtml;
-        const pdfName = "TrialBalance";
-
+    (async () => {
+      try {
         const requestBody = {
-            orientation: "portrait",
-            pdfFilename: pdfName,
-            htmlContent: html
+          columns: "id",
+          tableName: "tblMenu",
+          whereCondition: "menuName='Ledger' AND menuType='D'",
+          clientIdCondition: "status=1 FOR JSON PATH, INCLUDE_NULL_VALUES",
         };
 
-        try {
-            const blob = await exportLocalPDFReports(requestBody);
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', pdfName);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            toast.success("PDF generated successfully.");
-        } catch (error) {
-            console.error("Error while generating PDF:", error);
+        const res = await fetchReportData(requestBody);
+        const id = res?.data?.[0]?.id;
+        if (!cancelled && id) setMenuId(id);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // useEffect(() => {
+  //   if (newState?.reportType && newState?.reportType !== selectedRadio) {
+  //     setSelectedRadio(newState?.reportType);
+  //   }
+
+  //   if (newState?.balanceType && newState?.balanceType !== selectedRadioType) {
+  //     setSelectedRadioType(newState?.balanceType);
+  //   }
+  // }, [
+  //   newState?.reportType,
+  //   newState?.balanceType,
+  //   selectedRadio,
+  //   selectedRadioType,
+  // ]);
+
+  const handleFieldValuesChange = (updatedValues) => {
+    const entries = Object.entries(updatedValues);
+    const hasFile = entries.some(([, value]) => value instanceof File);
+
+    if (hasFile) {
+      entries.forEach(([key, value]) => {
+        if (value instanceof File) {
+          handleFileAndUpdateState(value, (jsonData) => {
+            setNewState((prevState) => {
+              const newState = { ...prevState, [key]: jsonData };
+              return newState;
+            });
+            setFilterCondition((prevState) => {
+              const newFilterCondition = { ...prevState, [key]: jsonData };
+              return newFilterCondition;
+            });
+          });
+        } else {
+          setNewState((prevState) => {
+            const newState = { ...prevState, [key]: value };
+            return newState;
+          });
+          setFilterCondition((prevState) => {
+            const newFilterCondition = { ...prevState, [key]: value };
+            return newFilterCondition;
+          });
+          SetFormDataChange((prevState) => {
+            const newState = { ...prevState, ...updatedValues };
+            return newState;
+          });
         }
+      });
+    } else {
+      setNewState((prevState) => {
+        const newState = { ...prevState, ...updatedValues };
+        return newState;
+      });
+      SetFormDataChange((prevState) => {
+        const newState = { ...prevState, ...updatedValues };
+        return newState;
+      });
+      setFilterCondition((prevState) => {
+        const newFilterCondition = { ...prevState, ...updatedValues };
+        return newFilterCondition;
+      });
+    }
+  };
+
+  const formatDate = (date) => {
+    // no selection / empty -> null
+    if (date == null || date === "") return null;
+
+    // accept Date, string, or timestamp
+    const d = date instanceof Date ? date : new Date(date);
+
+    // invalid date -> null
+    if (Number.isNaN(d.getTime())) return null;
+
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const toIntOrNull = (v) => {
+    if (v === null || v === undefined) return null; // null/undefined → null
+    const s = typeof v === "string" ? v.trim() : v; // trim strings
+    if (s === "") return null; // empty string → null
+    const n = parseInt(s, 10);
+    return Number.isFinite(n) ? n : null; // NaN → null
+  };
+
+  // const requestBody = {
+  //     fromDate: "01/04/2024",
+  //     toDate: "08/11/2024",
+  //     branchId: "5818",
+  //     clientId: "13",
+  //     finYearId: "16",
+  //   };
+
+  const fetchTrialBalanceData = async () => {
+    const { clientId } = getUserDetails();
+    const { defaultFinYearId } = getUserDetails();
+    const { defaultBranchId } = getUserDetails();
+    setLoader(true);
+    if (!newState?.fromDate || !newState?.toDate) {
+      toast.error("Please select From Date and To Date.");
+      return;
+    }
+    const requestBody = {
+      fromDate: formatDate(newState?.fromDate),
+      toDate: formatDate(newState?.toDate),
+      branchId: toIntOrNull(defaultBranchId),
+      clientId: toIntOrNull(clientId),
+      finYearId: toIntOrNull(defaultFinYearId),
+      tbGroupId: toIntOrNull(searchParamsTbGroupId),
     };
 
-    const handleChange = (event) => {
-        setYear(event.target.value);
-        fetchBalanceSheetData();
-    };
+    const data = await trialBalanceReportData(requestBody);
+    if (data?.success == true && data?.data.length > 0) {
+      toast.success(data?.message);
+      setBalanceSheetData(data?.data?.length > 0 ? data?.data : null);
+      if (newState?.reportType && newState?.reportType !== selectedRadio) {
+        setSelectedRadio(newState?.reportType);
+      }
+      if (
+        newState?.balanceType &&
+        newState?.balanceType !== selectedRadioType
+      ) {
+        setSelectedRadioType(newState?.balanceType);
+      }
+    } else {
+      toast.error(data?.message || data?.error);
+      setBalanceSheetData([]);
+      return;
+    }
+  };
 
-    const fetchBalanceSheetData = async () => {
-        const requestBody = {
-            fromDate: "01/04/2024",
-            toDate: "08/11/2024",
-            branchId: 27183
-        };
+  return (
+    <>
+      <React.Fragment>
+        <Accordion
+          expanded={toggle}
+          sx={{ ...parentAccordionSection }}
+          key={1}
+          setTypeofModal={setTypeofModal}
+          getLabelValue={getLabelValue}
+        >
+          {/* Accordion Summary */}
+          <AccordionSummary
+            className="relative left-[11px]"
+            expandIcon={
+              <LightTooltip title={toggle ? "Collapse" : "Expand"}>
+                <ExpandMoreIcon sx={{ color: "black" }} />
+              </LightTooltip>
+            }
+            aria-controls={`panel${1 + 1}-content`}
+            id={`panel${1 + 1}-header`}
+            onClick={() => setToggle((prev) => !prev)}
+          >
+            <Typography className="relative right-[11px]">
+              {"Trial Balance"}
+            </Typography>
+          </AccordionSummary>
+          {/* Accordion Details */}
+          <AccordionDetails
+            className={`!pb-0 overflow-hidden ${styles.thinScrollBar}`}
+            sx={{ ...accordianDetailsStyle }}
+          >
+            {/* Custom Input Fields */}
 
-        const data = await BalanceSheetReport(requestBody);
-        if (data) {
-            toast.success("Data fetch successfully.");
-            setBalanceSheetData(data?.length > 0 ? data : null);
-        }
-    };
-
-    return (
-        <>
-            <Accordion expanded={toggle} sx={{ ...parentAccordionSection }} key={1}>
-                <AccordionSummary
-                    className="relative left-[11px]"
-                    expandIcon={
-                        <LightTooltip title={toggle ? "Collapse" : "Expand"}>
-                            <ExpandMoreIcon sx={{ color: "black" }} />
-                        </LightTooltip>
-                    }
-                    aria-controls="panel-content"
-                    id="panel-header"
-                    onClick={() => setToggle((prev) => !prev)}
-                >
-                    <Typography className="relative right-[11px]">Trial Balance</Typography>
-                </AccordionSummary>
-                <AccordionDetails
-                    className={`!pb-0 overflow-hidden ${styles.thinScrollBar} mb-2`}
-                    sx={{ ...accordianDetailsStyle }}
-                >
-                    <Box display="flex" gap={2} alignItems="center" flexWrap="wrap" className="text-xs">
-                        <FormControl variant="outlined" size="small" sx={{ minWidth: 150, "& .MuiOutlinedInput-root": { height: "30px", display: "flex", alignItems: "center" }, "& .MuiInputBase-input": { fontSize: "0.7rem" } }}>
-                            <InputLabel className='bg-white p-1' sx={{ fontSize: "0.8rem" }} shrink>From Date</InputLabel>
-                            <TextField type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} sx={{ fontSize: "0.7rem" }} InputLabelProps={{ shrink: true }} variant="outlined" />
-                        </FormControl>
-
-                        <FormControl variant="outlined" size="small" sx={{ minWidth: 150, "& .MuiOutlinedInput-root": { height: "30px", display: "flex", alignItems: "center" }, "& .MuiInputBase-input": { fontSize: "0.7rem" } }}>
-                            <InputLabel className='bg-white p-1' sx={{ fontSize: "0.8rem" }} shrink>To Date</InputLabel>
-                            <TextField type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} sx={{ fontSize: "0.7rem" }} InputLabelProps={{ shrink: true }} variant="outlined" />
-                        </FormControl>
-
-                        <FormControl variant="outlined" size="small" sx={{ minWidth: 150, "& .MuiOutlinedInput-root": { height: "30px", display: "flex", alignItems: "center", paddingRight: "32px" }, "& .MuiSelect-select": { fontSize: "0.7rem", paddingTop: "8px", paddingBottom: "8px" }, "& .MuiSvgIcon-root": { right: "8px", top: "50%", transform: "translateY(-50%)" } }}>
-                            <InputLabel sx={{ fontSize: "0.8rem" }} shrink>Branch</InputLabel>
-                            <Select value={year || ""} onChange={handleChange} label="Branch" sx={{ fontSize: "0.7rem" }} displayEmpty renderValue={(selected) => selected || <em>Select Branch</em>}>
-                                <MenuItem value={38333} sx={{ fontSize: "0.7rem" }}>COIMBATORE</MenuItem>
-                                <MenuItem value={38385} sx={{ fontSize: "0.7rem" }}>DELHI</MenuItem>
-                                <MenuItem value={8331} sx={{ fontSize: "0.7rem" }}>PUNE</MenuItem>
-                            </Select>
-                        </FormControl>
-
-                        <FormControl component="fieldset" variant="outlined" size="small" sx={{ minWidth: 150 }}>
-                            <FormLabel sx={{ fontSize: "0.6rem" }} component="legend">Balance Type</FormLabel>
-                            <RadioGroup row value={selectedRadioType} onChange={(e) => setSelectedRadioType(e.target.value)} sx={{ gap: 2 }}>
-                                <FormControlLabel value="O" control={<Radio size="small" />} label="Opening" />
-                                <FormControlLabel value="E" control={<Radio size="small" />} label="Extended" />
-                                <FormControlLabel value="C" control={<Radio size="small" />} label="Closing" />
-                            </RadioGroup>
-                        </FormControl>
-
-                        <FormControl component="fieldset" variant="outlined" size="small" sx={{ minWidth: 150 }}>
-                            <FormLabel sx={{ fontSize: "0.6rem" }} component="legend">Report Type</FormLabel>
-                            <RadioGroup row value={selectedRadio} onChange={(e) => setSelectedRadio(e.target.value)} sx={{ gap: 2 }}>
-                                <FormControlLabel value="S" control={<Radio size="small" />} label="S" />
-                                <FormControlLabel value="D" control={<Radio size="small" />} label="D" />
-                            </RadioGroup>
-                        </FormControl>
-                    </Box>
-
-                    <div className='flex mt-2'>
-                        <button onClick={fetchBalanceSheetData} className="bg-blue-700 hover:bg-blue-800 text-white font-bold pt-1 pb-1 px-4 rounded text-xs">Go</button>
-                        <button className="bg-blue-700 hover:bg-blue-800 text-white font-bold pt-1 pb-1 px-4 rounded text-xs ms-2">Export to Excel</button>
-                        <button onClick={async () => { await handleExportToPDF(); }} className="bg-blue-700 hover:bg-blue-800 text-white font-bold pt-1 pb-1 px-4 rounded text-xs ms-2">Export to Pdf</button>
-                    </div>
-                    <br />
-                </AccordionDetails>
-            </Accordion>
-            <TrialBalanceComponent
-                balanceSheetData={balanceSheetData}
-                reportTypeData={selectedRadio}
-                reportBalanceType={selectedRadioType}
+            <CustomeInputFields
+              inputFieldData={parentsFields}
+              values={newState}
+              onValuesChange={handleFieldValuesChange}
+              onChangeHandler={(result) => {
+                handleChangeFunction(result);
+              }}
+              onBlurHandler={(result) => {
+                handleBlurFunction(result);
+              }}
+              clearFlag={clearFlag}
+              formControlData={formControlData}
+              formDataChange={formDataChange}
+              setFormControlData={setFormControlData}
+              setStateVariable={setNewState}
+              getLabelValue={() => {
+                console.log("sample");
+              }}
             />
-        </>
-    );
+
+            <div className="flex mt-2">
+              <button
+                onClick={async () => {
+                  await fetchTrialBalanceData();
+                }}
+                className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
+              >
+                Go
+              </button>
+              {/* <button
+                // onClick={async () => {
+                //   await handleExportToExcel();
+                // }}
+                style={{ marginLeft: "8px" }}
+                className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
+              >
+                Export to Excel
+              </button>
+              <button
+                // onClick={async () => {
+                //   await handleExportToPDF(selectedBalanceAndProfitAndLossRadio);
+                // }}
+                style={{ marginLeft: "8px" }}
+                className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
+              >
+                Export to Pdf
+              </button> */}
+            </div>
+          </AccordionDetails>
+        </Accordion>
+      </React.Fragment>
+      <TrialBalanceComponent
+        balanceSheetData={balanceSheetData}
+        reportTypeData={selectedRadio}
+        reportBalanceType={selectedRadioType}
+        menuId={menuId}
+        tableToggle={toggle}
+      />
+    </>
+  );
 };
 
 export default TrialBalance;
+
+
+
+    // {
+    //   id: 79325,
+    //   fieldname: "scopeOfWork",
+    //   yourlabel: "Scope Of Work",
+    //   controlname: "multiselect",
+    //   isControlShow: true,
+    //   isGridView: false,
+    //   isDataFlow: false,
+    //   copyMappingName: null,
+    //   hyperlinkValue: null,
+    //   isCommaSeparatedOrCount: null,
+    //   isAuditLog: null,
+    //   keyToShowOnGrid: null,
+    //   isDummy: false,
+    //   dropDownValues: null,
+    //   referenceTable: "tblMasterData",
+    //   referenceColumn: "name",
+    //   type: 6653,
+    //   typeValue: "number",
+    //   size: "100",
+    //   ordering: 13.1,
+    //   gridTotal: false,
+    //   gridTypeTotal: null,
+    //   toolTipMessage: null,
+    //   isRequired: false,
+    //   isEditable: true,
+    //   isSwitchToText: false,
+    //   isBreak: false,
+    //   dropdownFilter:
+    //     "and masterListId in (Select id from tblMasterList where name = 'tblChargeGroup') and groupId in (Select id from tblMasterData where name = 'Sea')",
+    //   controlDefaultValue: null,
+    //   functionOnChange: "",
+    //   functionOnBlur: null,
+    //   functionOnKeyPress: null,
+    //   sectionHeader: "Quotation Details",
+    //   sectionOrder: 1,
+    //   isCopy: false,
+    //   isCopyEditable: false,
+    //   isEditableMode: "e",
+    //   position: "top",
+    //   isHideGrid: false,
+    //   isHideGridHeader: false,
+    //   isGridExpandOnLoad: false,
+    //   clientId: 1,
+    //   isColumnVisible: false,
+    //   isColumnDisabled: null,
+    //   columnsToDisabled: null,
+    //   columnsToHide: null,
+    //   columnsToBeVisible: true,
+    // },

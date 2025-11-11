@@ -14,6 +14,9 @@ export const getUserDetails = () => {
     const userId = userData[0].id;
     const roleId = userData[0].roleId;
     const themeId = userData[0].themeId;
+    const defaultBranchId = userData[0].defaultBranchId;
+    const defaultCompanyId = userData[0].defaultCompanyId;
+    const defaultFinYearId = userData[0].defaultFinYearId;
 
     const companyId = sessionStorage.getItem("companyId");
     const branchId = sessionStorage.getItem("branchId");
@@ -30,6 +33,9 @@ export const getUserDetails = () => {
       financialYear,
       roleId,
       themeId,
+      defaultBranchId,
+      defaultCompanyId,
+      defaultFinYearId,
     };
   } else {
     return {};

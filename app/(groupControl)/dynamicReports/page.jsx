@@ -79,7 +79,7 @@ import paginationStyles from "@/components/common.module.css";
 import { paginationStyle } from "@/app/globalCss";
 import { getUserDetails } from "@/helper/userDetails";
 import { XMLParser } from "fast-xml-parser";
-import { soaData } from "@/constant/data";
+import { useRouter } from "next/navigation";
 
 AddEditFormControll.propTypes = {
   reportData: PropTypes.string, // Adjust the type as needed
@@ -91,6 +91,7 @@ import {
 } from "@/app/globalCss";
 
 export default function AddEditFormControll({ reportData }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const search = reportData ? reportData : searchParams.get("menuName");
   const [parentsFields, setParentsFields] = useState([]);
@@ -119,6 +120,8 @@ export default function AddEditFormControll({ reportData }) {
   const [prevSearchInput, setPrevSearchInput] = useState("");
   const [reportCalled, setReportCalled] = useState(false);
   const [apiGridData, setApiGridData] = useState([]);
+  const [apiGRidDataNew, setApiGRidDataNew] = useState([]);
+  const [fetchGridNew, setFetchGridNew] = useState([]);
   const [formControlData, setFormControlData] = useState([]);
   const [dateCriteria, setDateCriteria] = useState("");
   const [parentGroupingDepth, setParentGroupingDepth] = useState(0);
@@ -186,7 +189,7 @@ export default function AddEditFormControll({ reportData }) {
       setToggle(false);
     }
   }, [menuType]);
-  
+
   useEffect(() => {
     // Setup code here
     return () => {
@@ -278,7 +281,7 @@ export default function AddEditFormControll({ reportData }) {
         setPaginatedData(groupedData);
       }
     }
-  }, [isSortingEnabled, paginatedData, grid, groupingDepth]);
+  }, [isSortingEnabled, grid, groupingDepth]);
 
   const handleRightClick = (event, columnId) => {
     console.log("Right-clicked column ID:", columnId);
@@ -437,7 +440,7 @@ export default function AddEditFormControll({ reportData }) {
     }
   };
 
-  useEffect(() => {}, [newState, filterCondition]);
+  useEffect(() => { }, [newState, filterCondition]);
 
   function removeSingleQuotes(obj) {
     if (Array.isArray(obj)) {
@@ -769,17 +772,49 @@ export default function AddEditFormControll({ reportData }) {
             filterConditionWithoutDropdowns
           );
 
+          const requestBodyForMenuReportDetails = {
+            columns:
+              "spName,reportCriteriaId,isDefaultDataShow,outputFileType,isSp",
+            tableName: "tblMenuReportMapping",
+            whereCondition: `menuId = ${search}`,
+            clientIdCondition: `status = 1 FOR JSON PATH,INCLUDE_NULL_VALUES`,
+          };
+          reportData = await fetchReportData(requestBodyForMenuReportDetails);
+          const getSpName = reportData.data[0].spName;
+
           let responseData = await dynamicReportFilter(
             updatedConditionWithFieldNames,
             clientId,
-            spName
+            getSpName
           );
           if (responseData && responseData.success) {
+            // buildPivotData(responseData.data, "Party Name",         // row field
+            //   "Voucher No",         // column field
+            //   "Invoice Amount");
+            // if (responseData.data.length > 0) {
+            const keys = Object.keys(responseData.data[0]);
+
+            const fieldNamesFormattedArray = keys
+              .filter(
+                (key) =>
+                  key !== "groupSpans" && key !== "startIndexForGroup"
+              )
+              .map((key) => ({
+                fieldname: key,
+                label: key,
+                minWidth: 100,
+                width: 150,
+              }));
+
+            // setGrid(fieldNamesFormattedArray);
+            // setGridHeader(fieldNamesFormattedArray);
+            // }
             const processedData = preprocessDataForGrouping(
               responseData.data,
-              grid,
+              grid.length > 0 ? grid : fieldNamesFormattedArray,
               groupingDepth
             );
+
             if (isDataFromStoredProcedure) {
               if (processedData.length > 0) {
                 const keys = Object.keys(processedData[0]);
@@ -802,16 +837,16 @@ export default function AddEditFormControll({ reportData }) {
                 console.log("Filtered data is empty");
               }
             } else {
-              for (var key = 0; key < apiGrid.length; key++) {
-                var apiFieldsId = fetchGrid[key].fieldname;
+              for (var key = 0; key < apiGRidDataNew.length; key++) {
+                var apiFieldsId = fetchGridNew[key].fieldname;
                 if (
                   apiFieldsId === undefined ||
                   apiFieldsId === null ||
                   apiFieldsId === ""
                 ) {
                   grid.push({
-                    fieldName: fetchGrid[key].label,
-                    label: fetchGrid[key].label,
+                    fieldName: fetchGridNew[key].label,
+                    label: fetchGridNew[key].label,
                     _id: null,
                   });
                 } else {
@@ -839,7 +874,7 @@ export default function AddEditFormControll({ reportData }) {
                 }
               }
               setGrid(grid);
-              const header = fetchGrid.map((gridItem) => ({
+              const header = fetchGridNew.map((gridItem) => ({
                 fieldname: gridItem.fieldname,
                 label: gridItem.label,
                 minWidth: gridItem.minWidth || 100,
@@ -847,6 +882,7 @@ export default function AddEditFormControll({ reportData }) {
               }));
               setGridHeader(header);
             }
+
 
             // Filter out rows with all null or empty fields
             const filteredTableData = processedData.filter((data) => {
@@ -905,12 +941,13 @@ export default function AddEditFormControll({ reportData }) {
             // const data = await fetchExcelData(spName, formatJson);
             const response = await fetchExcelDataInsert(spName, formatJson);
             //const response = await insertExcelDataInDatabase(insertData);
-
-            if (response.rowsAffected.success) {
-              return toast.success(`${response.rowsAffected.message}`);
+            console.log("errors", response.rowsAffected[0].errors);
+            console.log("errors", response.rowsAffected[0].success);
+            if (response.rowsAffected[0].success) {
+              return toast.success(`${response.rowsAffected[0].message}`);
             } else {
-              setAllErrors(response.rowsAffected.errors);
-              return toast.error(`${response.rowsAffected.message}`);
+              setAllErrors(response.rowsAffected[0].errors);
+              return toast.error(`${response.rowsAffected[0].message}`);
             }
           } else {
             toast.error("Upload Failed ! File contains Error");
@@ -1017,8 +1054,6 @@ export default function AddEditFormControll({ reportData }) {
           spName,
           filterCondition
         );
-        console.log("fetchData =>>", fetchData);
-        console.log("fetchData =>>", fetchData.data.length);
 
         const workbook = new ExcelJS.Workbook();
 
@@ -1285,55 +1320,82 @@ export default function AddEditFormControll({ reportData }) {
               });
             });
 
-            const grandTotalRow = worksheet.addRow(
-              gridHeader.map((header, colIndex) => {
-                if (colIndex === 0) return "Grand Total";
+            // Helpers
+            const ID_HEADER_BLOCKLIST =
+              /(?:\b|_)(id|no|number|code|ref|invoice|container|sb|hbl|mbl|bl|phone|mobile|gst|pan)(?:\b|_)/i;
 
-                // Check if the current column should be totaled (e.g., is numeric)
-                const isNumericColumn = !isNaN(
-                  dataToExport
-                    .map((row) => parseFloat(row[colIndex]))
-                    .find((val) => !isNaN(val))
-                );
+            const isPureNumber = (v) => {
+              if (v === null || v === undefined) return false;
+              const s = String(v).trim().replace(/,/g, ""); // allow 12,345.67
+              return /^-?\d+(\.\d+)?$/.test(s);
+            };
 
-                if (isNumericColumn) {
-                  const columnData = dataToExport.map((row) => {
-                    const value = parseFloat(row[colIndex]);
-                    return isNaN(value) ? 0 : value; // Replace invalid numbers with 0
-                  });
+            const isLongIntegerIdLike = (v) => {
+              const s = String(v).trim().replace(/,/g, "");
+              // integer only and 7+ digits (treat as ID-like)
+              return /^\d+$/.test(s) && s.length >= 7;
+            };
 
-                  const columnTotal = columnData.reduce(
-                    (acc, num) => acc + num,
-                    0
-                  );
-                  return columnTotal.toFixed(2); // Return total formatted to two decimal places
-                }
+            const shouldTotalColumn = (header, columnData) => {
+              // 1) Header looks like an ID/code? -> don't total
+              if (ID_HEADER_BLOCKLIST.test(String(header || ""))) return false;
 
-                // If not numeric, leave the cell blank
-                return "";
-              })
-            );
+              // 2) If MOST non-empty cells are long-integer-only -> don't total
+              const nonEmpty = columnData.filter(
+                (v) => v !== null && v !== undefined && String(v).trim() !== ""
+              );
+              if (!nonEmpty.length) return false;
 
-            // Style the grand total row
-            grandTotalRow.eachCell((cell, colIndex) => {
-              cell.fill = {
-                type: "pattern",
-                pattern: "solid",
-                fgColor: { argb: "DDDDDD" },
-              };
-              cell.font = { bold: true };
-              cell.alignment = {
-                vertical: "middle",
-                horizontal: colIndex === 0 ? "left" : "center",
-              };
-              cell.border = {
-                top: { style: "thin" },
-                left: { style: "thin" },
-                bottom: { style: "thin" },
-                right: { style: "thin" },
-              };
-            });
+              const longIntCount = nonEmpty.filter(isLongIntegerIdLike).length;
+              if (longIntCount / nonEmpty.length >= 0.6) return false; // 60%+ look like IDs
 
+              // 3) Column should have at least some *pure* numbers
+              const hasSomeNumeric = nonEmpty.some(isPureNumber);
+              if (!hasSomeNumeric) return false;
+
+              return true;
+            };
+
+            if (isDisplayGrandTotal) {
+              // Add grand total row if enabled
+              const grandTotalRow = worksheet.addRow(
+                gridHeader.map((header, colIndex) => {
+                  if (colIndex === 0) return "Grand Total";
+
+                  const columnData = dataToExport.map((row) => row[colIndex]);
+
+                  if (!shouldTotalColumn(header, columnData)) return "";
+
+                  const total = columnData.reduce((acc, v) => {
+                    if (!isPureNumber(v) || isLongIntegerIdLike(v)) return acc; // skip ID-like long ints even if some slip through
+                    const n = parseFloat(String(v).replace(/,/g, ""));
+                    return isNaN(n) ? acc : acc + n;
+                  }, 0);
+
+                  return total.toFixed(2);
+                })
+              );
+
+              // Style the grand total row
+              grandTotalRow.eachCell((cell, colIndex) => {
+                cell.fill = {
+                  type: "pattern",
+                  pattern: "solid",
+                  fgColor: { argb: "DDDDDD" },
+                };
+                cell.font = { bold: true };
+                cell.alignment = {
+                  vertical: "middle",
+                  horizontal: colIndex === 0 ? "left" : "center",
+                };
+                cell.border = {
+                  top: { style: "thin" },
+                  left: { style: "thin" },
+                  bottom: { style: "thin" },
+                  right: { style: "thin" },
+                };
+              });
+            }
             // Save the file
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], {
@@ -1355,6 +1417,8 @@ export default function AddEditFormControll({ reportData }) {
       }
     },
     handleExportToExcelDataOnly: async () => {
+      let dataToExport = [];
+      let totalsRow = [];
       if (!reportCalled) {
         toast.error("Please generate report first");
         return;
@@ -1364,7 +1428,8 @@ export default function AddEditFormControll({ reportData }) {
       const headerLabels = grid.map((g) => g.label);
 
       // Convert tableData to a format suitable for Excel
-      const dataToExport = tableData.map((row) => {
+
+      dataToExport = tableData.map((row) => {
         return headerLabels.map((label) => {
           const gridItem = grid.find((g) => g.label === label);
           let value = row[gridItem.fieldname];
@@ -1378,20 +1443,22 @@ export default function AddEditFormControll({ reportData }) {
         });
       });
 
-      // Calculate totals row
-      const totalsRow = headerLabels.map((label, index) => {
-        if (index === 0) return "Grand Total";
+      if (isDisplayGrandTotal) {
+        // Calculate totals row
+        totalsRow = headerLabels.map((label, index) => {
+          if (index === 0) return "Grand Total";
 
-        let total = 0;
-        dataToExport.forEach((row) => {
-          const value = row[index];
-          if (typeof value === "number") {
-            total += value;
-          }
+          let total = 0;
+          dataToExport.forEach((row) => {
+            const value = row[index];
+            if (typeof value === "number") {
+              total += value;
+            }
+          });
+
+          return total || "";
         });
-
-        return total || "";
-      });
+      }
 
       // Add totals row to the data
       dataToExport.push(totalsRow);
@@ -1400,25 +1467,25 @@ export default function AddEditFormControll({ reportData }) {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
 
-      // Fetch and add the image
-      const response = await fetch(imageUrl);
-      const arrayBuffer = await response.arrayBuffer();
-      const imageId = workbook.addImage({
-        buffer: Buffer.from(arrayBuffer),
-        extension: "jpg",
-      });
+      // // Fetch and add the image
+      // const response = await fetch(imageUrl);
+      // const arrayBuffer = await response.arrayBuffer();
+      // const imageId = workbook.addImage({
+      //   buffer: Buffer.from(arrayBuffer),
+      //   extension: "jpg",
+      // });
 
-      worksheet.addImage(imageId, {
-        tl: { col: 0, row: 0 },
-        ext: { width: 500, height: 100 },
-      });
+      // worksheet.addImage(imageId, {
+      //   tl: { col: 0, row: 0 },
+      //   ext: { width: 500, height: 100 },
+      // });
 
-      // Add some empty rows after the image to position the header
-      worksheet.addRow([]);
-      worksheet.addRow([]);
-      worksheet.addRow([]);
-      worksheet.addRow([]);
-      worksheet.addRow([]);
+      // // Add some empty rows after the image to position the header
+      // worksheet.addRow([]);
+      // worksheet.addRow([]);
+      // worksheet.addRow([]);
+      // worksheet.addRow([]);
+      // worksheet.addRow([]);
 
       // Add headers with styles
       const headerRow = worksheet.addRow(headerLabels);
@@ -1451,23 +1518,25 @@ export default function AddEditFormControll({ reportData }) {
           };
         });
 
-        // Apply specific styling to the totals row
-        if (rowIndex === dataToExport.length - 1) {
-          // Check if it's the last row (totals row)
-          row.eachCell((cell) => {
-            cell.fill = {
-              type: "pattern",
-              pattern: "solid",
-              fgColor: { argb: "EEEEEE" }, // Set background color to #EEEEEE
-            };
-            cell.font = { bold: true }; // Optionally make the font bold for the totals row
-            cell.border = {
-              top: { style: "thick", color: { argb: "000000" } }, // Darker top border
-              left: { style: "thick", color: { argb: "000000" } }, // Darker left border
-              bottom: { style: "thick", color: { argb: "000000" } }, // Darker bottom border
-              right: { style: "thick", color: { argb: "000000" } }, // Darker right border
-            };
-          });
+        if (isDisplayGrandTotal) {
+          // Apply specific styling to the totals row
+          if (rowIndex === dataToExport.length - 1) {
+            // Check if it's the last row (totals row)
+            row.eachCell((cell) => {
+              cell.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: "EEEEEE" }, // Set background color to #EEEEEE
+              };
+              cell.font = { bold: true }; // Optionally make the font bold for the totals row
+              cell.border = {
+                top: { style: "thick", color: { argb: "000000" } }, // Darker top border
+                left: { style: "thick", color: { argb: "000000" } }, // Darker left border
+                bottom: { style: "thick", color: { argb: "000000" } }, // Darker bottom border
+                right: { style: "thick", color: { argb: "000000" } }, // Darker right border
+              };
+            });
+          }
         }
       });
 
@@ -1781,9 +1850,7 @@ export default function AddEditFormControll({ reportData }) {
       saveAs(blob, "export.csv");
     },
     handleClose: () => {
-      setParaText("Do you want to close this form, all changes will be lost?");
-      setIsError(true);
-      setOpenModal((prev) => !prev);
+      router.push("/dashboard");
     },
     handleChart: () => {
       const formValueFormat = (obj) => {
@@ -2003,15 +2070,16 @@ export default function AddEditFormControll({ reportData }) {
   };
 
   useEffect(() => {
+    console.log("pagination useEffect called");
     const startIndex = (currentPageNumber - 1) * itemsPerPaginatedPage;
     const endIndex = startIndex + itemsPerPaginatedPage;
     const currentItemsPagination = fullPivotValues?.slice(startIndex, endIndex);
     const lastPagePagination = Math.ceil(
-      fullPivotValues.length / itemsPerPaginatedPage
+      (fullPivotValues?.length || paginatedData?.length) / (tableData?.length > 0 ? itemsPerPage : itemsPerPaginatedPage)
     );
     setPivotGrid(currentItemsPagination);
     setLastPagePagination(lastPagePagination);
-  }, [itemsPerPaginatedPage, currentPageNumber]);
+  }, [itemsPerPaginatedPage, currentPageNumber, paginatedData]);
 
   const onConfirm = async (conformData) => {
     if (conformData.isError) {
@@ -2204,9 +2272,11 @@ export default function AddEditFormControll({ reportData }) {
         setOriginalData(fetchedData.grid);
         setFetchedDataFromAPI(fetchedData.grid);
         const apiGrid = fetchedData.grid;
+        setApiGRidDataNew(apiGrid)
         setApiGridData(apiGrid);
         const apiId = fetchedData.apiUrl;
         const fetchGrid = fetchedData.grid;
+        setFetchGridNew(fetchGrid)
         var grid = [];
 
         console.log("grid", grid);
@@ -2324,6 +2394,24 @@ export default function AddEditFormControll({ reportData }) {
           );
 
           if (responseData && responseData.success) {
+            if (responseData.data.length > 0) {
+              const keys = Object.keys(responseData.data[0]);
+
+              const fieldNamesFormattedArray = keys
+                .filter(
+                  (key) =>
+                    key !== "groupSpans" && key !== "startIndexForGroup"
+                )
+                .map((key) => ({
+                  fieldname: key,
+                  label: key,
+                  minWidth: 100,
+                  width: 150,
+                }));
+
+              setGrid(fieldNamesFormattedArray);
+              setGridHeader(fieldNamesFormattedArray);
+            }
             const processedData = preprocessDataForGrouping(
               responseData.data,
               grid,
@@ -2387,14 +2475,14 @@ export default function AddEditFormControll({ reportData }) {
                   }
                 }
               }
-              setGrid(grid);
+              //setGrid(grid);
               const header = fetchGrid.map((gridItem) => ({
                 fieldname: gridItem.fieldname,
                 label: gridItem.label,
                 minWidth: gridItem.minWidth || 100,
                 width: gridItem.width || 150,
               }));
-              setGridHeader(header);
+              //setGridHeader(header);
             }
             setPaginatedData(processedData);
             setFilteredSortData(processedData);
@@ -2483,10 +2571,10 @@ export default function AddEditFormControll({ reportData }) {
     const endIndex = page * itemsPerPage;
     const startIndex = endIndex - itemsPerPage;
     if (isSortingEnabled === false) {
-      setFinalPaginatedData(paginatedData.slice(startIndex, endIndex));
+      setFinalPaginatedData(paginatedData?.slice(startIndex, endIndex));
       setDataForExcel(paginatedData);
     } else {
-      setFinalPaginatedData(filteredSortData.slice(startIndex, endIndex));
+      setFinalPaginatedData(filteredSortData?.slice(startIndex, endIndex));
       setDataForExcel(filteredSortData);
     }
   };
@@ -2499,6 +2587,7 @@ export default function AddEditFormControll({ reportData }) {
 
   // useEffect to handle initial load and react to page changes
   useEffect(() => {
+    console.log("useEffect for pagination called");
     updatePaginatedData(currentPage);
   }, [currentPage, itemsPerPage, paginatedData]);
 
@@ -2511,6 +2600,7 @@ export default function AddEditFormControll({ reportData }) {
       return;
     }
 
+    // --- Step 1: Basic grouping structure ---
     const groupedData = data.map((item) => ({
       ...item,
       groupSpans: Array(groupingDepth).fill(1),
@@ -2521,9 +2611,6 @@ export default function AddEditFormControll({ reportData }) {
 
     for (let i = 0; i < groupingDepth; i++) {
       let spanCount = 1;
-
-      // Using both fieldname and the column index to ensure uniqueness
-      let uniqueFieldname = `${grid[i].fieldname}_${i}`; // Column index ensures uniqueness
 
       for (let j = 0; j < data.length; j++) {
         const currentValue = data[j][grid[i].fieldname];
@@ -2543,8 +2630,77 @@ export default function AddEditFormControll({ reportData }) {
       }
     }
 
-    return groupedData;
+    // --- Step 2: Inject totals without breaking spans ---
+    const finalData = [];
+    const groupField = grid[0].fieldname;
+
+    let currentGroup = [];
+    let prevGroupValue = data[0]?.[groupField];
+
+    for (let i = 0; i < groupedData.length; i++) {
+      const item = groupedData[i];
+      const currentValue = item[groupField];
+
+      if (currentValue === prevGroupValue) {
+        currentGroup.push(item);
+      } else {
+        // push previous group's rows
+        finalData.push(...currentGroup);
+
+        // add total row for that group
+        if (groupedData > totalGroupingDepth) {
+          const totalInvoice = currentGroup.reduce(
+            (sum, d) => sum + Number(d["Invoice Amount"] || 0),
+            0
+          );
+          const totalOutstanding = currentGroup.reduce(
+            (sum, d) => sum + Number(d["Outstanding Amount"] || 0),
+            0
+          );
+
+          finalData.push({
+            [groupField]: `Total for ${prevGroupValue}`,
+            "Invoice Amount": totalInvoice,
+            "Outstanding Amount": totalOutstanding,
+            isTotalRow: true,
+            groupSpans: Array(groupingDepth).fill(0),
+            startIndexForGroup: Array(groupingDepth).fill(null),
+          });
+        }
+
+        // reset
+        prevGroupValue = currentValue;
+        currentGroup = [item];
+      }
+    }
+
+    // push last group
+    if (currentGroup.length > 0) {
+      finalData.push(...currentGroup);
+      if (groupedData > totalGroupingDepth) {
+        const totalInvoice = currentGroup.reduce(
+          (sum, d) => sum + Number(d["Invoice Amount"] || 0),
+          0
+        );
+        const totalOutstanding = currentGroup.reduce(
+          (sum, d) => sum + Number(d["Outstanding Amount"] || 0),
+          0
+        );
+
+        finalData.push({
+          [groupField]: `Total for ${prevGroupValue}`,
+          "Invoice Amount": totalInvoice,
+          "Outstanding Amount": totalOutstanding,
+          isTotalRow: true,
+          groupSpans: Array(groupingDepth).fill(0),
+          startIndexForGroup: Array(groupingDepth).fill(null),
+        });
+      }
+    }
+
+    return finalData;
   };
+
 
   function isSameGroupContext(data, currentIndex, depth, grid) {
     if (currentIndex === 0) return false;
@@ -2573,7 +2729,7 @@ export default function AddEditFormControll({ reportData }) {
       });
       setRowColorsForExcel(newRowColors);
     }
-    if (dataForExcel.length > 0) {
+    if (dataForExcel?.length > 0) {
       updateTableRowsColor();
     }
   }, [dataForExcel]);
@@ -2592,8 +2748,8 @@ export default function AddEditFormControll({ reportData }) {
     return grid.map((item, colIndex) => {
       let content = data[item.fieldname];
 
-      if (data.groupSpans[colIndex] === 0) {
-        return null; // Skip rendering cells that are part of a group
+      if (!data.isTotalRow && data.groupSpans[colIndex] === 0) {
+        return null; // skip rendering only for grouped cells, not totals
       }
 
       if (!DateFormat && typeof content === "string" && isValidDate(content)) {
@@ -2618,6 +2774,7 @@ export default function AddEditFormControll({ reportData }) {
           style={{
             backgroundColor: rowColors[rowIndex], // Use stored color
             border: "1px solid grey",
+            // fontWeight:'bold'
           }}
           className="whitespace-nowrap text-xs text-gray-900 dark:text-white"
         >
@@ -2874,6 +3031,61 @@ export default function AddEditFormControll({ reportData }) {
     });
   }
 
+  const buildPivotData = (data, rowField, colField, valueField) => {
+    const pivot = {};
+    const rowKeys = new Set();
+    const colKeys = new Set();
+
+    data.forEach((item) => {
+      const rowKey = item[rowField];
+      const colKey = item[colField];
+      const value = Number(item[valueField]) || 0;
+
+      rowKeys.add(rowKey);
+      colKeys.add(colKey);
+
+      if (!pivot[rowKey]) pivot[rowKey] = {};
+      pivot[rowKey][colKey] = (pivot[rowKey][colKey] || 0) + value;
+    });
+
+    // Build header
+    const pivotHeader = Array.from(colKeys).map((key) => ({
+      level1: key,
+      key: key,
+    }));
+
+    // Build grid rows
+    const pivotGrid = Array.from(rowKeys).map((rowKey) => {
+      const row = [rowKey];
+      Array.from(colKeys).forEach((colKey) => {
+        row.push(pivot[rowKey][colKey] || 0);
+      });
+      // Add Row Total
+      const total = Object.values(pivot[rowKey]).reduce((a, b) => a + b, 0);
+      row.push(total);
+      return row;
+    });
+
+    // Add Grand Total row
+    const grandTotalRow = [
+      "Grand Total",
+      ...Array.from(colKeys).map((colKey) =>
+        Array.from(rowKeys).reduce(
+          (sum, rowKey) => sum + (pivot[rowKey][colKey] || 0),
+          0
+        )
+      ),
+    ];
+    grandTotalRow.push(
+      grandTotalRow.slice(1).reduce((a, b) => a + b, 0)
+    );
+    pivotGrid.push(grandTotalRow);
+    console.log("Pivot Header:", pivotHeader);
+    console.log("Pivot Grid:", pivotGrid);
+    return { pivotHeader, pivotGrid };
+  };
+
+
   return (
     <React.Fragment>
       <div className={`h-auto relative`}>
@@ -3047,6 +3259,9 @@ export default function AddEditFormControll({ reportData }) {
                                             originalData={paginatedData}
                                             gridData={finalPaginatedData}
                                             setCurrentPage={setCurrentPage}
+                                            setOriginalData={setPaginatedData}
+                                            tableData={tableData}
+                                            setSortedData={setFilteredSortData}
                                           />
                                         )}
                                     </span>
@@ -3088,12 +3303,11 @@ export default function AddEditFormControll({ reportData }) {
                                 </TableRow>
                               ))}
                               {isDisplayGrandTotal == true &&
-                                currentPage === lastPage && (
+                                currentPage === lastPagePagination && (
                                   <TableRow
                                     style={{
-                                      border: `2px solid ${
-                                        toggledThemeValue ? "white" : "black"
-                                      }`,
+                                      border: `2px solid ${toggledThemeValue ? "white" : "black"
+                                        }`,
                                     }}
                                     className={` ${styles.tableCellHoverEffect} ${styles.hh} rounded-lg p-0 opacity-1 z-0`}
                                     sx={{
@@ -3119,17 +3333,15 @@ export default function AddEditFormControll({ reportData }) {
                                         <TableCell
                                           key={`total-${item.fieldname}`}
                                           style={{
-                                            border: `1px solid ${
-                                              toggledThemeValue
-                                                ? "white"
-                                                : "black"
-                                            }`,
+                                            border: `1px solid ${toggledThemeValue
+                                              ? "white"
+                                              : "black"
+                                              }`,
                                             fontWeight: "bold",
-                                            color: `${
-                                              toggledThemeValue
-                                                ? "white"
-                                                : "black"
-                                            }`,
+                                            color: `${toggledThemeValue
+                                              ? "white"
+                                              : "black"
+                                              }`,
                                           }}
                                           className={`${styles.striped} ${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
                                         >
@@ -3137,8 +3349,8 @@ export default function AddEditFormControll({ reportData }) {
                                             ? index === 0
                                               ? "Grand Total"
                                               : grandTotalValue !== undefined
-                                              ? grandTotalValue
-                                              : ""
+                                                ? grandTotalValue
+                                                : ""
                                             : ""}
                                         </TableCell>
                                       );
@@ -3193,13 +3405,13 @@ export default function AddEditFormControll({ reportData }) {
                             }}
                           >
                             <TableRow>
-                              <TableCell>Sr No</TableCell>
-                              <TableCell>Row No</TableCell>
+                              <TableCell className="w-[10%] !text-center">Sr No</TableCell>
+                              {/* <TableCell>Row No</TableCell> */}
                               <TableCell>Errors</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {sortedErrors.map((error, index) => (
+                            {sortedErrors?.map((error, index) => (
                               <TableRow
                                 key={index}
                                 sx={{
@@ -3211,16 +3423,17 @@ export default function AddEditFormControll({ reportData }) {
                                     padding: "2px 4px",
                                     fontSize: "9px",
                                   }}
-                                  align="left"
+                                  align="center"
+                                  className="w-[10%]"
                                 >
                                   {index + 1}
                                 </TableCell>
-                                <TableCell
+                                {/* <TableCell
                                   style={{ padding: "0px 4px" }}
                                   align="left"
                                 >
                                   {error.row}
-                                </TableCell>
+                                </TableCell> */}
                                 <TableCell
                                   style={{ padding: "0px 4px" }}
                                   align="left"
@@ -3412,15 +3625,12 @@ export default function AddEditFormControll({ reportData }) {
                                       rowRefs.current &&
                                       (rowRefs.current[rowIndex] = el)
                                     }
-                                    className={`${
-                                      styles.tableCellHoverEffect
-                                    } ${
-                                      styles.hh
-                                    } border border-gray-600 rounded-lg p-0 opacity-1 z-0 ${
-                                      isSubtotalRow
+                                    className={`${styles.tableCellHoverEffect
+                                      } ${styles.hh
+                                      } border border-gray-600 rounded-lg p-0 opacity-1 z-0 ${isSubtotalRow
                                         ? "font-bold bg-gray-100"
                                         : ""
-                                    }`}
+                                      }`}
                                     sx={
                                       toggledThemeValue
                                         ? displayTableRowStylesNoHover
@@ -3445,8 +3655,8 @@ export default function AddEditFormControll({ reportData }) {
                                             backgroundColor: isSubtotalColumn
                                               ? "#F5F5F5"
                                               : isSubtotalRow
-                                              ? "#DDDDDD"
-                                              : "",
+                                                ? "#DDDDDD"
+                                                : "",
                                             color:
                                               rowData[0] === "Grand Total"
                                                 ? toggledThemeValue
@@ -3548,7 +3758,7 @@ export default function AddEditFormControll({ reportData }) {
                 <div className="mr-5">
                   <Stack>
                     <Pagination
-                      count={lastPage}
+                      count={lastPagePagination}
                       showFirstButton
                       showLastButton
                       sx={{
@@ -3565,7 +3775,7 @@ export default function AddEditFormControll({ reportData }) {
                           ((type === "first" || type === "previous") &&
                             currentItems === 1) ||
                           ((type === "last" || type === "next") &&
-                            currentItems === lastPage);
+                            currentItems === lastPagePagination);
                         return (
                           <PaginationItem
                             {...item}
@@ -3591,14 +3801,15 @@ export default function AddEditFormControll({ reportData }) {
                   onChange={(e) => {
                     const newItemsPerPage = parseInt(e.target.value, 10);
                     if (newItemsPerPage > 0) {
-                      setItemsPaginationPerPage(newItemsPerPage);
+                      //setItemsPaginationPerPage(newItemsPerPage);
+                      setItemsPerPage(newItemsPerPage);
                       setCurrentPage(1);
                     }
                   }}
                   className={`border ${styles.txtColorDark} ${styles.pageBackground} border-gray-300 rounded-md p-2 h-[17px] w-14 text-[10px] mr-[15px] outline-gray-300 outline-0`}
                 />
                 <p className={`text-[10px] ${styles.txtColorDark}`}>
-                  {currentPage} of {lastPage} Pages
+                  {currentPage} of {lastPagePagination} Pages
                 </p>
               </div>
             </div>
@@ -3630,6 +3841,9 @@ CustomizedInputBase.propTypes = {
   originalData: PropTypes.array,
   gridData: PropTypes.array,
   setCurrentPage: PropTypes.func,
+  setOriginalData: PropTypes.func,
+  tableData: PropTypes.array,
+  setSortedData: PropTypes.func,
 };
 function CustomizedInputBase({
   columnData,
@@ -3640,6 +3854,9 @@ function CustomizedInputBase({
   originalData,
   gridData,
   setCurrentPage, // Reset to first page after filtering
+  setOriginalData,
+  tableData,
+  setSortedData,
 }) {
   const [searchInputGridData, setSearchInputGridData] = useState(
     prevSearchInput || ""
@@ -3647,13 +3864,19 @@ function CustomizedInputBase({
 
   // Custom filter logic
   const filterFunction = (searchValue, columnKey) => {
-    debugger;
     if (!searchValue.trim()) {
       setInputVisible(false);
+      setOriginalData(tableData);
+      setSortedData(tableData);
+      setCurrentPage(1); // Reset to first page after filtering
       return setGridData(originalData);
     }
+    // console.log("originalData", originalData);
+    // console.log("gridData", gridData);
+    // console.log("paginatedData", paginatedData);
+
     const lowercasedInput = searchValue.toLowerCase();
-    const filtered = gridData.filter((item) => {
+    const filtered = tableData.filter((item) => {
       // Access the item's property based on columnKey and convert to string for comparison
       let columnValue = String(item[columnKey]).toLowerCase();
 
@@ -3663,16 +3886,19 @@ function CustomizedInputBase({
         columnValue = moment(columnValue).format("YYYY-MM-DD HH:mm:ss");
       }
 
-      return columnValue.includes(lowercasedInput);
+      return columnValue.toLowerCase().startsWith(lowercasedInput);
     });
     if (filtered.length === 0) {
       toast.error("No matching records found.");
       return;
     }
-    setGridData(filtered);
+
+    setGridData((prevGridData) => [...filtered]);
     setInputVisible(false);
     setCurrentPage(1); // Reset to first page after filtering
     setPrevSearchInput(searchValue);
+    setOriginalData([...filtered]);
+    setSortedData([...filtered]);
   };
 
   function handleClose() {

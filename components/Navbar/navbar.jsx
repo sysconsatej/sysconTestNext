@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Navbar, Typography } from "@material-tailwind/react";
 import { fetchDataAPI } from "@/services/auth/FormControl.services";
 import { logoutBtn } from "@/assets/index.jsx";
+import { homeLogo } from "@/assets/index.jsx";
+import { homeHoverLogo } from "@/assets/index.jsx";
 import {
   sysconLogo,
   calendarIcon,
@@ -48,6 +50,8 @@ import Modal from "@mui/material/Modal";
 import Fade from "@mui/material/Fade";
 const backendUrl = process.env.NEXT_PUBLIC_BASE_URL;
 import { loginIcon } from "@/assets";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
+import Tooltip from "@mui/material/Tooltip";
 
 // let sysconImg =
 //   "https://expresswayshipping.com/sql-api/Sql/api/images/CML/syscon_logo20241022091527030.png";
@@ -141,7 +145,7 @@ const customStyles = {
   // Other custom styles can go here
   valueContainer: (provided) => ({
     ...provided,
-    padding:'2px 2px',
+    padding: "2px 2px",
   }),
   input: (base) => ({
     ...base,
@@ -423,6 +427,10 @@ export default function NavbarPage() {
       }
       push("/login");
     }
+  }
+
+  async function handleDashboard() {
+    push("/dashboard");
   }
 
   // Debounced fetch call
@@ -774,7 +782,18 @@ export default function NavbarPage() {
               </div>
             </div>
 
-            <div className="flex items-center -ml-4">
+            <div className="flex items-center ml-4">
+              <div
+                className={`flex items-center gap-1 relative cursor-pointer text-[12px] ${styles.txtColorDark}`}
+                onClick={() => handleDashboard()}
+              >
+                <HoverIcon style={{ margin: "0px", padding: "0px",  }}
+                  defaultIcon={homeLogo}
+                  hoverIcon={homeHoverLogo}
+                  altText={"Home"}
+                  title={"Home"}
+                />
+              </div>
               <div
                 className={`flex items-center  gap-1 relative  gridIcons2 cursor-pointer text-[12px] ${styles.txtColorDark}`}
                 onClick={() => handleLogout()}

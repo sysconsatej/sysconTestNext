@@ -33,6 +33,7 @@ import {
   customRadioCheckBoxStyle,
   customTextFieldStyles,
   customWidthCheckBoxGridStyle,
+  customWidthCheckBoxGridStyleVoucher,
   customWidthTextGridStyle,
   menuListStyles,
   menuStyles,
@@ -1227,7 +1228,8 @@ export default function GridInputFields({
           <LightTooltip title={inputLabel}>
             <div
               className={`${customRadioCheckBoxStyle}   ${styles.inputField}`}
-              style={customWidthCheckBoxGridStyle}
+              //style={customWidthCheckBoxGridStyle}
+              style={customWidthCheckBoxGridStyleVoucher}
             >
               {/* <div className="absolute px-2 inline top-[-8px] left-[8px]  bg-white text-[10px] ">
                 <span>

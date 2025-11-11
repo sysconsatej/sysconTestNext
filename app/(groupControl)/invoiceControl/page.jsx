@@ -279,6 +279,7 @@ export default function StickyHeadTable() {
       tableName: tableName,
       recordId: recordId.id,
       clientId: clientId,
+      menuId:search
     };
     const data = await disableEdit(requestBody);
     if (data.success === false) {

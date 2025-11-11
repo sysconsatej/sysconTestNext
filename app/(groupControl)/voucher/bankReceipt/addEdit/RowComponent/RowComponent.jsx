@@ -5,8 +5,8 @@ import TableCell from "@mui/material/TableCell";
 import LightTooltip from "@/components/Tooltip/customToolTip";
 import Image from "next/image";
 import Box from "@mui/material/Box";
-import CustomeInputFields from "@/components/Inputs/customeInputFields";
-import GridInputFields from "@/components/Inputs/gridInputFields";
+import CustomeInputFields from "@/components/StaticInputs/customeInputFields";
+import GridInputFields from "@/components/StaticInputs/gridInputFields";
 import TableRow from "@mui/material/TableRow";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
@@ -38,7 +38,7 @@ import {
 import { toast } from "react-toastify";
 import Checkbox from "@mui/material/Checkbox";
 import * as onSubmitValidation from "@/helper/onSubmitFunction";
-import { ActionButton } from "@/components/ActionsButtons";
+import { ActionButton } from "@/components/ActionsButtons/VoucherActionButton.jsx";
 ("");
 import { useDispatch } from "react-redux";
 import { updateFlag } from "@/app/counterSlice";
@@ -695,7 +695,7 @@ export default function RowComponent({
                   }}
                 >
                   <Box className="flex gap-4">
-                    {childName != "tblVoucherLedgerDetails" && index === 0 ? (
+                    {index === 0 ? (
                       <ActionButton
                         onDelete={() => deleteChildRecord(childIndex)}
                         key={index}

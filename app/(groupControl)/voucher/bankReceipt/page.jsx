@@ -103,7 +103,7 @@ import { encryptUrlFun, operatorFunc, useTableNavigation } from "@/utils";
 import { menuAccessByEmailId } from "@/services/auth/Auth.services";
 import { fetchReportData } from "@/services/auth/FormControl.services";
 import { getUserDetails } from "@/helper/userDetails";
-import PrintModal from "@/components/Modal/printModal.jsx";
+import PrintModalVoucher from "@/components/Modal/printVoucherModal.jsx";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 
@@ -148,12 +148,28 @@ function onEditAndDeleteFunctionCall(
   }
 }
 
+const htmlReportData = [
+  {
+    ReportId: null,
+    ReportName: "Voucher Report",
+    ReportMenuLink: "/htmlReports/rptVoucher",
+    menuType: "O",
+    reportMenuId: 1383,
+    reportTemplateId: null,
+    redirectionPath: null,
+    displayName: null,
+  },
+];
+
 export default function StickyHeadTable() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = JSON.parse(searchParams.get("menuName"))?.id;
   const inputRef = useRef(null);
   const { clientId } = getUserDetails();
+  const { defaultCompanyId } = getUserDetails();
+  const { defaultBranchId } = getUserDetails();
+  const { defaultFinYearId } = getUserDetails();
   const [menuSearch, setMenuSearch] = useState("");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(17);
@@ -202,7 +218,7 @@ export default function StickyHeadTable() {
   const [openPrintModal, setOpenPrintModal] = useState(false);
   const [submittedMenuId, setSubmittedMenuId] = useState(null);
   const [submittedRecordId, setSubmittedRecordId] = useState(null);
-  const [isReportPresent, setisReportPresent] = useState(false);
+  const [isReportPresent, setisReportPresent] = useState(true);
   //const [defaultCompanyBranch, setDefaultCompanyBranch] = useState([]);
   const [operatorsBg, setOperatorsBg] = useState("blue");
 
@@ -458,7 +474,22 @@ export default function StickyHeadTable() {
         };
         const apiResponse = await fetchSearchPageData(requestData);
         if (apiResponse.success === true && apiResponse.data?.length > 0) {
-          const { data, Count } = apiResponse;
+          const getVoucherDataCount = {
+            columns: "id",
+            tableName: "tblVoucher",
+            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} and voucherTypeId= (select id from tblVoucherType where name='BANK RECEIPT')`,
+            clientIdCondition: `status = 1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+          };
+          let Count = null;
+          const VoucherDataCount = await fetchReportData(getVoucherDataCount);
+          if (
+            VoucherDataCount &&
+            VoucherDataCount?.data &&
+            VoucherDataCount?.data.length > 0
+          ) {
+            Count = VoucherDataCount?.data?.length;
+          }
+          const { data } = apiResponse;
           setTableName(tableHeadingsData[0].data[0]?.tableName);
           setGridData(data);
           // setOriginalData(data);
@@ -534,7 +565,22 @@ export default function StickyHeadTable() {
         };
         const apiResponse = await fetchSearchPageData(requestData);
         if (apiResponse.data?.length > 0) {
-          const { data, Count } = apiResponse;
+          const getVoucherDataCount = {
+            columns: "id",
+            tableName: "tblVoucher",
+            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} and voucherTypeId= (select id from tblVoucherType where name='BANK RECEIPT')`,
+            clientIdCondition: `status = 1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+          };
+          let Count = null;
+          const VoucherDataCount = await fetchReportData(getVoucherDataCount);
+          if (
+            VoucherDataCount &&
+            VoucherDataCount?.data &&
+            VoucherDataCount?.data.length > 0
+          ) {
+            Count = VoucherDataCount?.data?.length;
+          }
+          const { data } = apiResponse;
           setTableName(tableHeadingsData.data[0]?.tableName);
           setGridData(data);
           // setOriginalData(data);
@@ -564,23 +610,46 @@ export default function StickyHeadTable() {
         //   menuID: search,
         //   search: advanceSearch,
         //   searchQuery: searchInput,
-        //   keyName: columnSearchKeyName,
-        //   keyValue: columnSearchKeyValue,
+        //
         // };
-
         // apiResponse = await masterTableList(requestData);
+
+        console.log("keyName", columnSearchKeyName);
+        console.log("keyValue", columnSearchKeyValue);
+
         let requestData = {
           tableName: "tblVoucher",
           fieldName: searchFieldData,
           clientId: clientId,
           filterCondition:
             "voucherTypeId= (select id from tblVoucherType where name='BANK RECEIPT')",
-          pageNo: 1,
+          pageNo: columnSearchKeyName === "" ? selectedPage : 1,
           pageSize: rowsPerPage,
+          keyName: columnSearchKeyName,
+          keyValue: columnSearchKeyValue,
         };
         apiResponse = await fetchSearchPageData(requestData);
         if (apiResponse.data?.length > 0) {
-          const { data, Count } = apiResponse;
+          const getVoucherDataCount = {
+            columns: "id",
+            tableName: "tblVoucher",
+            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} and voucherTypeId= (select id from tblVoucherType where name='BANK RECEIPT')`,
+            clientIdCondition: `status = 1 ${
+              columnSearchKeyName === ""
+                ? ""
+                : `and ${columnSearchKeyName} like '%${columnSearchKeyValue}%'`
+            } FOR JSON PATH, INCLUDE_NULL_VALUES`,
+          };
+          let Count = null;
+          const VoucherDataCount = await fetchReportData(getVoucherDataCount);
+          if (
+            VoucherDataCount &&
+            VoucherDataCount?.data &&
+            VoucherDataCount?.data.length > 0
+          ) {
+            Count = VoucherDataCount?.data?.length;
+          }
+          const { data } = apiResponse;
           setTableName(tableName);
           setGridData(data);
           // setOriginalData(data);
@@ -606,17 +675,41 @@ export default function StickyHeadTable() {
           //   keyValue: columnSearchKeyValue,
           // };
           // apiResponse = await masterTableList(requestData);
+          console.log("keyName", columnSearchKeyName);
+          console.log("keyValue", columnSearchKeyValue);
+
           let requestData = {
             tableName: "tblVoucher",
             fieldName: searchFieldData,
             clientId: clientId,
             filterCondition:
               "voucherTypeId= (select id from tblVoucherType where name='BANK RECEIPT')",
-            pageNo: 1,
+            pageNo: columnSearchKeyName === "" ? selectedPage : 1,
             pageSize: rowsPerPage,
+            keyName: columnSearchKeyName,
+            keyValue: columnSearchKeyValue,
           };
           const apiResponse = await fetchSearchPageData(requestData);
-          const { data, Count } = apiResponse;
+          const getVoucherDataCount = {
+            columns: "id",
+            tableName: "tblVoucher",
+            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} and voucherTypeId= (select id from tblVoucherType where name='BANK RECEIPT')`,
+            clientIdCondition: `status = 1 ${
+              columnSearchKeyName === ""
+                ? ""
+                : `and ${columnSearchKeyName} like '%${columnSearchKeyValue}%'`
+            } FOR JSON PATH, INCLUDE_NULL_VALUES`,
+          };
+          let Count = null;
+          const VoucherDataCount = await fetchReportData(getVoucherDataCount);
+          if (
+            VoucherDataCount &&
+            VoucherDataCount?.data &&
+            VoucherDataCount?.data.length > 0
+          ) {
+            Count = VoucherDataCount?.data?.length;
+          }
+          const { data } = apiResponse;
           setTableName(tableName);
           setGridData(data);
           // setOriginalData(data);
@@ -653,7 +746,7 @@ export default function StickyHeadTable() {
         status: 1,
       },
     };
-    console.log("Akash", fetchParentMenuId);
+    console.log("", fetchParentMenuId);
     try {
       const data = await fetchDataAPI(requestBodyMenu);
       if (data && data.data && data.data.length > 0) {
@@ -994,6 +1087,7 @@ export default function StickyHeadTable() {
     const storedRowsPerPage = sessionStorage.getItem("rowsPerPage");
     setRowsPerPage(storedRowsPerPage ? parseInt(storedRowsPerPage) : 17);
   }, [sessionStorage.getItem("rowsPerPage"), search]);
+
   function pageSelected(selectedValue) {
     setSelectedPage(selectedValue);
     setPage(selectedValue);
@@ -2597,15 +2691,16 @@ export default function StickyHeadTable() {
           </div>
         </div>
       )}
-      {/* new model Akash */}
+      {/* new model  */}
       <div>
         {openPrintModal && (
-          <PrintModal
+          <PrintModalVoucher
             setOpenPrintModal={setOpenPrintModal}
             submittedRecordId={submittedRecordId}
             submittedMenuId={submittedMenuId}
             openPrintModal={openPrintModal}
             pageType={"searchPage"}
+            htmlReportData={htmlReportData}
           />
         )}
       </div>

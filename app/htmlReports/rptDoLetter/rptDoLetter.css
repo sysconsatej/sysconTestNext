@@ -53,3 +53,7 @@ body {
     margin: 0;
   }
 }
+
+.font-verdana-force {
+  font-family: Verdana, Geneva, Tahoma, sans-serif !important;
+}

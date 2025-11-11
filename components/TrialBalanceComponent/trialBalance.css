@@ -45,7 +45,8 @@
 .table th {
   text-align: left;
   border-bottom: 1px solid grey;
-  background-color: #0766ad;
+  /* background-color: #0766ad; */
+  background-color: #7e9bcf;
   color: white;
   padding: 5px;
   font-size: 11px;
@@ -95,7 +96,9 @@
 .sticky-header {
   text-align: center;
   font-weight: bold;
-  background-color: #005b96; /* Customize as needed */
+  background-color: #7e9bcf;
+  /* background-color: #005b96; */
+   /* Customize as needed */
   color: white;
   padding: 8px;
   border: 1px solid gray;

@@ -36,9 +36,9 @@ const ChartReports = ({ newState, chartExpand, formControlData, chartData, clien
         formControlData.spName
       );
       if (data?.length === 0) {
-        alert(
-          "It looks like there might be a mistake in the date or year you entered. Could you please double-check and provide the accurate date?"
-        );
+        // alert(
+        //   "It looks like there might be a mistake in the date or year you entered. Could you please double-check and provide the accurate date?"
+        // );
         setJobData(jobData);
       } else {
         setJobData(data);

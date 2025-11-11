@@ -68,6 +68,7 @@ import { getUserDetails } from "@/helper/userDetails";
 import PrintModal from "@/components/Modal/printModal.jsx";
 import { encryptUrlFun } from "@/utils";
 import { fetchReportData } from "@/services/auth/FormControl.services";
+import { useDispatch, useSelector } from "react-redux";
 
 function sortJSON(jsonArray, field, sortOrder) {
   return jsonArray.sort((a, b) => {
@@ -179,6 +180,7 @@ function onSubmitFunctionCall(
 }
 
 export default function AddEditFormControll() {
+  const selectedMenuId = useSelector((state) => state?.counter?.selectedMenuId);
   const { push } = useRouter();
   const params = useParams();
   const search = JSON.parse(decodeURIComponent(params.id));
@@ -353,7 +355,7 @@ export default function AddEditFormControll() {
 
         setChildsFields(
           tableViewApiResponse.data[0].child ||
-          tableViewApiResponse.data[0].children
+            tableViewApiResponse.data[0].children
         );
         setButtonsData(tableViewApiResponse.data[0].buttons);
       }
@@ -562,8 +564,7 @@ export default function AddEditFormControll() {
       const noOfDays = parseFloat(item.noOfDays);
 
       // If noOfDays is null/undefined/0, ignore it in calculation
-      const effectiveNoOfDays =
-        isNaN(noOfDays) || noOfDays <= 0 ? 1 : noOfDays;
+      const effectiveNoOfDays = isNaN(noOfDays) || noOfDays <= 0 ? 1 : noOfDays;
 
       const totalAmountFc = qty * rate * effectiveNoOfDays;
       const totalAmount = totalAmountFc * exchangeRate;
@@ -641,7 +642,10 @@ export default function AddEditFormControll() {
         }
         try {
           // let data = await handleSubmitApi(submitNewState);
-          const cleanData = replaceNullStrings(newState, ChildTableName);
+          const cleanData = replaceNullStrings(
+            { ...newState, menuId: selectedMenuId },
+            ChildTableName
+          );
           setIsFormSaved(true);
           let data = await handleSubmitApi(cleanData);
           if (data.success == true) {
@@ -651,7 +655,8 @@ export default function AddEditFormControll() {
               // const id =
               //   data?.data?.recordsets[1][0]?.ParentId ||
               //   data?.data?.recordsets[0]?.ParentId;
-              const id = data?.data?.recordsets[0]?.[0]?.ParentId;
+              //const id = data?.data?.recordsets[0]?.[0]?.ParentId;
+              const id = data?.data?.recordsets.at(-1)?.at(-1)?.ParentId;
               setOpenPrintModal((prev) => !prev);
               setSubmittedMenuId(search?.menuName);
               setSubmittedRecordId(id);
@@ -719,7 +724,10 @@ export default function AddEditFormControll() {
             return;
           }
         }
-        const cleanData = replaceNullStrings(newState, ChildTableName);
+        const cleanData = replaceNullStrings(
+          { ...newState, menuId: selectedMenuId },
+          ChildTableName
+        );
         setIsFormSaved(true);
         let data = await handleSubmitApi(cleanData);
         if (data.success == true) {
@@ -793,7 +801,10 @@ export default function AddEditFormControll() {
         }
         try {
           // let data = await handleSubmitApi(submitNewState);
-          const cleanData = replaceNullStrings(newState, ChildTableName);
+          const cleanData = replaceNullStrings(
+            { ...newState, menuId: selectedMenuId },
+            ChildTableName
+          );
           let data = await handleSubmitApi(cleanData);
           if (data.success == true) {
             toast.success(data.message);
@@ -1352,6 +1363,59 @@ function ChildAccordianComponent({
     }
   };
 
+  const lockExchangeRateFirstWins = () => {
+    if (!newState || !Array.isArray(newState.tblInvoiceCharge)) {
+      return newState;
+    }
+
+    const toNum = (v) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const getCurrencyId = (row) =>
+      row?.currencyId ?? row?.currencyIddropdown?.[0]?.value ?? null;
+
+    // Pass 1: capture the FIRST non-zero rate and its FIRST index per currency
+    const firstRateByCurrency = {};
+    const firstIndexByCurrency = {};
+
+    newState.tblInvoiceCharge.forEach((row, idx) => {
+      const cId = getCurrencyId(row);
+      const rate = toNum(row?.exchangeRate);
+      if (cId != null && rate > 0 && firstRateByCurrency[cId] == null) {
+        firstRateByCurrency[cId] = rate; // lock the first non-zero rate
+        firstIndexByCurrency[cId] = idx; // remember first row index for that currency
+      }
+    });
+
+    // Nothing to do if we didn't find any non-zero rates
+    if (Object.keys(firstRateByCurrency).length === 0) {
+      return newState;
+    }
+
+    // Pass 2: enforce the locked rate on ALL subsequent rows of the same currency
+    setNewState((prev) => {
+      const rows = Array.isArray(prev.tblInvoiceCharge)
+        ? prev.tblInvoiceCharge
+        : [];
+
+      const updated = rows.map((row, idx) => {
+        const cId = getCurrencyId(row);
+        if (cId == null) return row;
+
+        const locked = firstRateByCurrency[cId];
+        const firstIdx = firstIndexByCurrency[cId];
+
+        if (locked > 0 && idx !== firstIdx) {
+          return { ...row, exchangeRate: locked };
+        }
+        return row;
+      });
+
+      return { ...prev, tblInvoiceCharge: updated };
+    });
+  };
   const childExpandedAccordion = () => {
     setIschildAccordionOpen((prev) => !prev);
   };
@@ -1373,20 +1437,15 @@ function ChildAccordianComponent({
     const container = tableRef.current;
     if (container) {
       const { scrollTop, scrollHeight, clientHeight } = container;
-      // const isAtBottom = scrollTop + clientHeight === scrollHeight;
       const isAtBottom = scrollTop + clientHeight >= scrollHeight - 2;
       if (isAtBottom) {
-        // console.log("You have reached the bottom of the scroll.");
         renderMoreData();
       }
     }
   };
 
-  // Function to calculate totals for a single row
   const calculateTotalForRow = (rowData) => {
-    // Iterate over each field in the fields array
     section.fields.forEach((item) => {
-      // Check if the field requires grid total and is of type 'number' or 'text'
       if (
         item.gridTotal &&
         (item.type === "number" ||
@@ -1396,12 +1455,12 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-              const parsedValue =
-                typeof row[item.fieldname] === "number"
-                  ? row[item.fieldname]
-                  : parseFloat(row[item.fieldname] || 0);
-              return isNaN(parsedValue) ? sum : sum + parsedValue;
-            }, 0) // Calculate sum for 's' type
+                const parsedValue =
+                  typeof row[item.fieldname] === "number"
+                    ? row[item.fieldname]
+                    : parseFloat(row[item.fieldname] || 0);
+                return isNaN(parsedValue) ? sum : sum + parsedValue;
+              }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -1980,9 +2039,10 @@ function ChildAccordianComponent({
                     defaultIcon={saveIcon}
                     hoverIcon={saveIconHover}
                     altText={"Save"}
-                    title={"Save"}
+                    title={"Save 22"}
                     onClick={() => {
                       childButtonHandler(section, indexValue);
+                      lockExchangeRateFirstWins();
                     }}
                   />
                 </div>
@@ -2067,7 +2127,7 @@ function ChildAccordianComponent({
                                       hoverIcon={plusIconHover}
                                       disabled={
                                         typeof section.isAddFunctionality !==
-                                          "undefined"
+                                        "undefined"
                                           ? !section.isAddFunctionality
                                           : false
                                       }
@@ -2189,10 +2249,10 @@ function ChildAccordianComponent({
                                             {(field.type === "number" ||
                                               field.type === "decimal" ||
                                               field.type === "string") &&
-                                              field.gridTotal
+                                            field.gridTotal
                                               ? columnTotals[
-                                                field.fieldname
-                                              ].toString()
+                                                  field.fieldname
+                                                ].toString()
                                               : ""}
                                           </div>
                                         </div>

@@ -205,21 +205,40 @@ export default function StickyHeadTable() {
 
   console.log("=>", search);
 
-  const validateEdit = async (tableName, recordId) => {
-    const requestBody = {
-      tableName: tableName,
-      recordId: recordId.id,
-    };
-    const data = await disableEdit(requestBody);
-    if (data.success === true) {
-      setParaText(data.message);
-      setIsError(false);
-      setOpenModal((prev) => !prev);
-    } else {
-      addEditController(recordId);
-    }
-  };
+  // const validateEdit = async (tableName, recordId) => {
+  //   const requestBody = {
+  //     tableName: tableName,
+  //     recordId: recordId.id,
+  //   };
+  //   const data = await disableEdit(requestBody);
+  //   if (data.success === true) {
+  //     setParaText(data.message);
+  //     setIsError(false);
+  //     setOpenModal((prev) => !prev);
+  //   } else {
+  //     addEditController(recordId);
+  //   }
+  // };
 
+
+   const validateEdit = async (tableName, recordId) => {
+      //alert("working")
+      const requestBody = {
+        tableName: tableName,
+        recordId: recordId.id,
+        clientId: clientId,
+        menuId:search
+      };
+      const data = await disableEdit(requestBody);
+      if (data.success === false) {
+        setParaText(data.message);
+        //setIsError(true);
+        setOpenModal((prev) => !prev);
+        return;
+      } else {
+        addEditController(recordId);
+      }
+    };
   const validateAdd = async (tableName) => {
     const requestBody = {
       tableName: tableName,

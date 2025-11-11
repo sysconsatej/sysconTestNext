@@ -13,6 +13,10 @@ export const customWidthCheckBoxGridStyle = {
   width: "6rem",
   whiteSpace: "nowrap",
 };
+export const customWidthCheckBoxGridStyleVoucher = {
+  width: "3rem",
+  whiteSpace: "nowrap",
+};
 export const customWidthTextGridStyle = {
   width: "9rem",
   whiteSpace: "nowrap",

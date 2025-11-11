@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import "./BalanceSheet.css";
 import { BorderRight } from "@mui/icons-material";
-import Link from "next/link";
 import { useThemeProvider } from "@/context/themeProviderDataContext";
 import {
   createAddEditPaperStyles,
@@ -33,6 +32,7 @@ import {
   displayTableRowStylesNoHover,
 } from "@/app/globalCss";
 import styles from "@/app/app.module.css";
+import Link from "next/link";
 
 function BalanceSheetComponent({ data1, data2, reportTypeData, excelTest }) {
   const [totalAssets, setTotalAssets] = useState(0);
@@ -217,15 +217,21 @@ function BalanceSheetComponent({ data1, data2, reportTypeData, excelTest }) {
             {/* Merge cells for tbGroupName */}
             {isNewGroup ? (
               <TableCell
-                style={{
-                  border: "1px solid grey",
-                }}
+                style={{ border: "1px solid grey" }}
                 className="whitespace-nowrap text-xs text-gray-900 dark:text-white"
                 rowSpan={
                   data.filter((d) => d.tbGroupName === item.tbGroupName).length
                 }
               >
-                {item.tbGroupName}
+                <Link
+                  href={`/accountingReports/trialBalance?reportType=D&balanceType=E`}
+                  className="text-[#0766ad] hover:underline cursor-pointer"
+                  title={`Open Trial Balance: ${item.tbGroupName ?? ""}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {item.tbGroupName}
+                </Link>
               </TableCell>
             ) : null}
             {/* Merge cells for Sub_Group_1 based on Sub_Group_2 */}
@@ -517,12 +523,18 @@ function BalanceSheetComponent({ data1, data2, reportTypeData, excelTest }) {
                 key={item?.id ?? `${item?.tbGroupName ?? "row"}-${index}`}
               >
                 <TableCell
-                  style={{
-                    border: "1px solid grey",
-                  }}
+                  style={{ border: "1px solid grey" }}
                   className="whitespace-nowrap text-xs text-gray-900 dark:text-white"
                 >
-                  {item?.tbGroupName || ""}
+                  <Link
+                    href={`/accountingReports/trialBalance?reportType=D&balanceType=E&tbGroupId=${item?.balance_sheet_group_id}`}
+                    className="text-[#0766ad] hover:underline cursor-pointer"
+                    title={`Open group: ${item?.tbGroupName ?? ""}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {item?.tbGroupName || ""}
+                  </Link>
                 </TableCell>
                 <TableCell
                   style={{

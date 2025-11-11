@@ -67,6 +67,8 @@ import leftArrow from "@/assets/images/leftArrow.png";
 import meoLogo from "@/assets/images/MEO_LOGO.jpg";
 import mxgLogo from "@/assets/images/MXG_LOGO.jpg";
 import ndlLogo from "@/assets/images/NDL_LOGO2.png";
+import homeLogo from "@/assets/images/home.png";
+import homeHoverLogo from "@/assets/images/homeHover.png";
 import sclLogo from "@/assets/images/SCL_LOGO.jpg";
 import scloldLogo from "@/assets/images/SCLOLD_LOGO.jpg";
 import solLogo from "@/assets/images/SOL_LOGO1.png";
@@ -157,4 +159,6 @@ export {
   viewIconHover,
   wordType,
   searchImage,
+  homeLogo,
+  homeHoverLogo
 };

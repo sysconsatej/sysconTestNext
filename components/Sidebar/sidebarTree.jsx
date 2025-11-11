@@ -261,8 +261,7 @@ export default function SideBarMenu() {
     return null;
   }
 
-  console.log("jdbvdn --- sample test99")
-
+  console.log("jdbvdn --- sample test99");
 
   const handleClose = () => setOpenAlertModal((prev) => !prev);
 
@@ -289,6 +288,12 @@ export default function SideBarMenu() {
           item,
           byIcon,
         },
+      })
+    );
+    dispatch(
+      updateFlag({
+        flag: "selectedMenuId",
+        value: item?.id || null,
       })
     );
     if (!redirected) {
@@ -855,7 +860,7 @@ function ChildMenuSection(props) {
               )}
             </ListItem>
             {openOption === optionIndex && (
-              <List className="p-0 ml-4 min-w-fit w-auto " >
+              <List className="p-0 ml-4 min-w-fit w-auto ">
                 {option?.child?.map((childOption, childOptionIndex) => (
                   <React.Fragment key={childOptionIndex}>
                     <SubChildMenuSection

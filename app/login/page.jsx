@@ -100,7 +100,7 @@ export default function LoginPage() {
       Thank you,
       Syscon Infotech Pvt Ltd Support Team</pre>`;
     const emailData = {
-      from: "aakashvishwakarmarm4001@gmail.com",
+      from: "rohitanabhavane26@gmail.com",
       to: val,
       subject: "Activation Mail",
       body: emailBody,

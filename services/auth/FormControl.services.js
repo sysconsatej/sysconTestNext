@@ -1609,6 +1609,42 @@ export async function AccountingReport(data) {
   }
 }
 
+export async function trialBalanceReportData(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${baseUrl}/Sql/api/trialBalanceReportData`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    }).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+
+export async function ledgerData(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${baseUrl}/Sql/api/ledgerReportData`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    }).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+
 export async function reportTheme(data) {
   try {
     const token = localStorage.getItem("token");
@@ -2033,17 +2069,14 @@ export async function fetchContainerNoData(data) {
 export async function insertVoucherData(data) {
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(
-      `${baseUrl}/Sql/api/sp/insertVoucherData`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-access-token": JSON.parse(token),
-        },
-        body: JSON.stringify(data),
-      }
-    ).then((response) => response.json());
+    const response = await fetch(`${baseUrl}/Sql/api/sp/insertVoucherData`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": JSON.parse(token),
+      },
+      body: JSON.stringify(data),
+    }).then((response) => response.json());
     return response;
   } catch (error) {
     console.log(error);

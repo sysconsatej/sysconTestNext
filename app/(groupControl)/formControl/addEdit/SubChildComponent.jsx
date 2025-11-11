@@ -307,12 +307,11 @@ export default function SubChildComponent({
         //   return { ...pre, ...tmpData };
         // });
         setSubChildObject({});
-        setInputFieldsVisible((prev) => !prev);
         if (islastTab == true) {
-          setTimeout(() => {
-            setInputFieldsVisible((prev) => !prev);
-          }, 3);
+          setInputFieldsVisible((prev) => !prev);
+          return;
         }
+        setInputFieldsVisible((prev) => !prev);
       } else {
         console.log("Please fill all the required fields");
       }
@@ -1035,9 +1034,7 @@ export default function SubChildComponent({
                         title={"Revert"}
                         onClick={() => {
                           setSubChildObject({});
-                          if (newState[subChild.tableName]?.length === 0) {
                             setInputFieldsVisible((prev) => !prev);
-                          }
                         }}
                       />
 

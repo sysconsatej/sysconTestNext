@@ -72,8 +72,6 @@ const rptJobs = () => {
   }
 
   const getValidTillDate = (jobDate, croValidDays) => {
-    console.log("📅 jobDate input:", jobDate);
-    console.log("🔢 croValidDays input:", croValidDays);
     if (!jobDate || croValidDays == null) {
       console.warn("❌ Missing jobDate or croValidDays");
       return "";
@@ -87,9 +85,24 @@ const rptJobs = () => {
     return finalDate;
   };
 
+  const getValidTillDatePlane = (jobDate, croValidDays) => {
+    if (!jobDate || croValidDays == null) {
+      console.warn("❌ Missing jobDate or croValidDays");
+      return "";
+    }
+    const days = parseInt(croValidDays);
+    if (isNaN(days) || days === 0) {
+      return moment(jobDate).format("DD/MM/YYYY"); // format for consistency
+    }
+    const momentDate = moment(jobDate); // no format string needed
+    const finalDate = momentDate.add(days, "days").format("DD/MM/YYYY");
+    return finalDate;
+  };
+
   useEffect(() => {
     const fetchdata = async () => {
       const id = searchParams.get("recordId");
+      const reportId = searchParams.get("reportId");
       if (id != null) {
         try {
           const token = localStorage.getItem("token");
@@ -99,6 +112,7 @@ const rptJobs = () => {
           // };
           const requestBody = {
             id: id,
+            reportId: reportId,
           };
           const response = await fetch(`${baseUrl}/Sql/api/Reports/job`, {
             method: "POST",
@@ -356,8 +370,9 @@ const rptJobs = () => {
                 key={index}
                 ref={enquiryModuleRef}
                 id={`report-${reportId}`}
-                className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                  } shadow-2xl`}
+                className={`black-text ${
+                  index < reportIds.length - 1 ? "report-spacing" : ""
+                } shadow-2xl`}
                 style={{
                   width: "210mm",
                   height: "297mm",
@@ -382,8 +397,9 @@ const rptJobs = () => {
                 key={index}
                 ref={enquiryModuleRef}
                 id={`report-${reportId}`}
-                className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                  } shadow-2xl`}
+                className={`black-text ${
+                  index < reportIds.length - 1 ? "report-spacing" : ""
+                } shadow-2xl`}
                 style={{
                   width: "210mm",
                   height: "297mm",
@@ -407,8 +423,9 @@ const rptJobs = () => {
               key={index}
               ref={enquiryModuleRef}
               id={`report-${reportId}`}
-              className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                } shadow-2xl`}
+              className={`black-text ${
+                index < reportIds.length - 1 ? "report-spacing" : ""
+              } shadow-2xl`}
               style={{
                 width: "210mm",
                 height: "297mm",
@@ -428,8 +445,9 @@ const rptJobs = () => {
               key={index}
               ref={enquiryModuleRef}
               id={`report-${reportId}`}
-              className={`black-text  ${index < reportIds.length - 1 ? "report-spacing" : ""
-                } shadow-2xl`}
+              className={`black-text  ${
+                index < reportIds.length - 1 ? "report-spacing" : ""
+              } shadow-2xl`}
               style={{
                 width: "210mm",
                 height: "297mm",
@@ -449,8 +467,9 @@ const rptJobs = () => {
               key={index}
               ref={enquiryModuleRef}
               id={`report-${reportId}`}
-              className={`mt-5 black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                } shadow-2xl`}
+              className={`mt-5 black-text ${
+                index < reportIds.length - 1 ? "report-spacing" : ""
+              } shadow-2xl`}
               style={{
                 width: "210mm",
                 height: "297mm",
@@ -470,8 +489,9 @@ const rptJobs = () => {
               key={index}
               ref={enquiryModuleRef}
               id={`report-${reportId}`}
-              className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                } shadow-2xl`}
+              className={`black-text ${
+                index < reportIds.length - 1 ? "report-spacing" : ""
+              } shadow-2xl`}
               style={{
                 width: "210mm",
                 height: "297mm",
@@ -491,8 +511,9 @@ const rptJobs = () => {
               key={index}
               ref={enquiryModuleRef}
               id={`report-${reportId}`}
-              className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                } shadow-2xl`}
+              className={`black-text ${
+                index < reportIds.length - 1 ? "report-spacing" : ""
+              } shadow-2xl`}
               style={{
                 width: "210mm",
                 height: "297mm",
@@ -1399,8 +1420,9 @@ const rptJobs = () => {
                   <tr key={`job-${index}-container-${containerIndex}`}>
                     <td style={thTdStyle}>{container.containerNo || ""}</td>
                     <td style={thTdStyle}>
-                      {`${container.sizeName || ""}/${container.typeName || ""
-                        }`}
+                      {`${container.sizeName || ""}/${
+                        container.typeName || ""
+                      }`}
                     </td>
                     <td style={thTdStyle}>
                       {container.containerStatusName || ""}
@@ -1423,29 +1445,33 @@ const rptJobs = () => {
     const mblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].mblDate) : null;
     const MblDatesFormat = mblDate
-      ? `${mblDate.getDate()}/${mblDate.getMonth() + 1
-      }/${mblDate.getFullYear()}`
+      ? `${mblDate.getDate()}/${
+          mblDate.getMonth() + 1
+        }/${mblDate.getFullYear()}`
       : "";
 
     const hblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].hblDate) : null;
     const hblDatesFormat = hblDate
-      ? `${hblDate.getDate()}/${hblDate.getMonth() + 1
-      }/${hblDate.getFullYear()}`
+      ? `${hblDate.getDate()}/${
+          hblDate.getMonth() + 1
+        }/${hblDate.getFullYear()}`
       : "";
 
     const sailData =
       jobData && jobData.length > 0 ? new Date(jobData[0].salingDate) : null;
     const sailDataFormat = sailData
-      ? `${sailData.getDate()}/${sailData.getMonth() + 1
-      }/${sailData.getFullYear()}`
+      ? `${sailData.getDate()}/${
+          sailData.getMonth() + 1
+        }/${sailData.getFullYear()}`
       : "";
 
     const arrivalData =
       jobData && jobData.length > 0 ? new Date(jobData[0].arrivalDate) : null;
     const arrivalDataFormat = arrivalData
-      ? `${arrivalData.getDate()}/${arrivalData.getMonth() + 1
-      }/${arrivalData.getFullYear()}`
+      ? `${arrivalData.getDate()}/${
+          arrivalData.getMonth() + 1
+        }/${arrivalData.getFullYear()}`
       : "";
 
     const thStyle = {
@@ -1601,29 +1627,33 @@ const rptJobs = () => {
     const sailData =
       jobData && jobData.length > 0 ? new Date(jobData[0].salingDate) : null;
     const sailDataFormat = sailData
-      ? `${sailData.getDate()}/${sailData.getMonth() + 1
-      }/${sailData.getFullYear()}`
+      ? `${sailData.getDate()}/${
+          sailData.getMonth() + 1
+        }/${sailData.getFullYear()}`
       : "";
 
     const arrivalData =
       jobData && jobData.length > 0 ? new Date(jobData[0].arrivalDate) : null;
     const arrivalDataFormat = arrivalData
-      ? `${arrivalData.getDate()}/${arrivalData.getMonth() + 1
-      }/${arrivalData.getFullYear()}`
+      ? `${arrivalData.getDate()}/${
+          arrivalData.getMonth() + 1
+        }/${arrivalData.getFullYear()}`
       : "";
 
     const mblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].mblDate) : null;
     const MblDatesFormat = mblDate
-      ? `${mblDate.getDate()}/${mblDate.getMonth() + 1
-      }/${mblDate.getFullYear()}`
+      ? `${mblDate.getDate()}/${
+          mblDate.getMonth() + 1
+        }/${mblDate.getFullYear()}`
       : "";
 
     const hblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].hblDate) : null;
     const hblDatesFormat = hblDate
-      ? `${hblDate.getDate()}/${hblDate.getMonth() + 1
-      }/${hblDate.getFullYear()}`
+      ? `${hblDate.getDate()}/${
+          hblDate.getMonth() + 1
+        }/${hblDate.getFullYear()}`
       : "";
 
     const thStyle = {
@@ -1797,8 +1827,9 @@ const rptJobs = () => {
 
     const sailDateFormat =
       sailDate instanceof Date && !isNaN(sailDate)
-        ? `${sailDate.getDate()}/${sailDate.getMonth() + 1
-        }/${sailDate.getFullYear()}`
+        ? `${sailDate.getDate()}/${
+            sailDate.getMonth() + 1
+          }/${sailDate.getFullYear()}`
         : "";
 
     const thStyle = {
@@ -1920,15 +1951,17 @@ const rptJobs = () => {
     const mblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].mblDate) : null;
     const MblDatesFormat = mblDate
-      ? `${mblDate.getDate()}/${mblDate.getMonth() + 1
-      }/${mblDate.getFullYear()}`
+      ? `${mblDate.getDate()}/${
+          mblDate.getMonth() + 1
+        }/${mblDate.getFullYear()}`
       : "";
 
     const hblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].hblDate) : null;
     const hblDatesFormat = hblDate
-      ? `${hblDate.getDate()}/${hblDate.getMonth() + 1
-      }/${hblDate.getFullYear()}`
+      ? `${hblDate.getDate()}/${
+          hblDate.getMonth() + 1
+        }/${hblDate.getFullYear()}`
       : "";
 
     const thStyle = {
@@ -2465,29 +2498,33 @@ const rptJobs = () => {
     const DepatureData =
       jobData && jobData.length > 0 ? new Date(jobData[0].salingDate) : null;
     const DepatureDataFormat = DepatureData
-      ? `${DepatureData.getDate()}/${DepatureData.getMonth() + 1
-      }/${DepatureData.getFullYear()}`
+      ? `${DepatureData.getDate()}/${
+          DepatureData.getMonth() + 1
+        }/${DepatureData.getFullYear()}`
       : "";
 
     const arrivalData =
       jobData && jobData.length > 0 ? new Date(jobData[0].arrivalDate) : null;
     const arrivalDataFormat = arrivalData
-      ? `${arrivalData.getDate()}/${arrivalData.getMonth() + 1
-      }/${arrivalData.getFullYear()}`
+      ? `${arrivalData.getDate()}/${
+          arrivalData.getMonth() + 1
+        }/${arrivalData.getFullYear()}`
       : "";
 
     const mblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].mblDate) : null;
     const MblDatesFormat = mblDate
-      ? `${mblDate.getDate()}/${mblDate.getMonth() + 1
-      }/${mblDate.getFullYear()}`
+      ? `${mblDate.getDate()}/${
+          mblDate.getMonth() + 1
+        }/${mblDate.getFullYear()}`
       : "";
 
     const hblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].hblDate) : null;
     const hblDatesFormat = hblDate
-      ? `${hblDate.getDate()}/${hblDate.getMonth() + 1
-      }/${hblDate.getFullYear()}`
+      ? `${hblDate.getDate()}/${
+          hblDate.getMonth() + 1
+        }/${hblDate.getFullYear()}`
       : "";
 
     return (
@@ -4104,30 +4141,30 @@ const rptJobs = () => {
             <tbody>
               {Array.isArray(jobData)
                 ? jobData.map((job, jobIndex) =>
-                  Array.isArray(job.tblJobContainer)
-                    ? job.tblJobContainer.map((container, containerIndex) => (
-                      <tr
-                        key={`${jobIndex}-${containerIndex}`}
-                        style={hoverHighlightStyle}
-                      >
-                        <td style={tdStyle}>
-                          {container.containerNo || ""}
-                        </td>
-                        <td style={tdStyle}>{container.sizeName || ""}</td>
-                        <td style={tdStyle}>{container.typeName || ""}</td>
-                        <td style={tdStyle}>
-                          {container.grossWt ? container.grossWt : ""}
-                        </td>
-                        <td style={tdStyle}>
-                          {container.netWt ? container.netWt : ""}
-                        </td>
-                        <td style={tdStyle}>
-                          {container.noOfPackages || ""}
-                        </td>
-                      </tr>
-                    ))
-                    : null
-                )
+                    Array.isArray(job.tblJobContainer)
+                      ? job.tblJobContainer.map((container, containerIndex) => (
+                          <tr
+                            key={`${jobIndex}-${containerIndex}`}
+                            style={hoverHighlightStyle}
+                          >
+                            <td style={tdStyle}>
+                              {container.containerNo || ""}
+                            </td>
+                            <td style={tdStyle}>{container.sizeName || ""}</td>
+                            <td style={tdStyle}>{container.typeName || ""}</td>
+                            <td style={tdStyle}>
+                              {container.grossWt ? container.grossWt : ""}
+                            </td>
+                            <td style={tdStyle}>
+                              {container.netWt ? container.netWt : ""}
+                            </td>
+                            <td style={tdStyle}>
+                              {container.noOfPackages || ""}
+                            </td>
+                          </tr>
+                        ))
+                      : null
+                  )
                 : null}
             </tbody>
           </table>
@@ -6795,8 +6832,8 @@ const rptJobs = () => {
                 const targetDepot = Array.isArray(depotData)
                   ? depotData[0]?.depot
                   : typeof depotData === "string"
-                    ? depotData
-                    : depotData?.depot;
+                  ? depotData
+                  : depotData?.depot;
 
                 // build filtered rows
                 const rows = (Array.isArray(jobData) ? jobData : []).flatMap(
@@ -7020,8 +7057,8 @@ const rptJobs = () => {
     const targetDepot = Array.isArray(depotData)
       ? depotData[0]?.depot
       : typeof depotData === "string"
-        ? depotData
-        : depotData?.depot;
+      ? depotData
+      : depotData?.depot;
 
     // Build filtered rows from jobData
     const rows = (Array.isArray(jobData) ? jobData : []).flatMap(
@@ -7157,8 +7194,8 @@ const rptJobs = () => {
                       {job?.pickupDate
                         ? formatDateToYMD(job.pickupDate)
                         : jobData?.[0]?.pickupDate
-                          ? formatDateToYMD(jobData[0].pickupDate)
-                          : ""}
+                        ? formatDateToYMD(jobData[0].pickupDate)
+                        : ""}
                     </td>
                   </tr>
                 ))
@@ -7327,8 +7364,9 @@ const rptJobs = () => {
                   {job.cargoWt || ""}
                 </td>
                 <th style={thStyle}>Volume:</th>
-                <td style={tdStyle} colSpan="3">{`${job.volume || ""} ${job.volumeUnitName || ""
-                  }`}</td>
+                <td style={tdStyle} colSpan="3">{`${job.volume || ""} ${
+                  job.volumeUnitName || ""
+                }`}</td>
               </tr>
 
               <tr>
@@ -7386,27 +7424,27 @@ const rptJobs = () => {
               jobData.map((job, jobIndex) =>
                 Array.isArray(job.tblJobContainer)
                   ? job.tblJobContainer.map((container, containerIndex) => (
-                    <tr key={`${jobIndex}-${containerIndex}`}>
-                      <td style={tdStyle}>{container.containerNo || ""}</td>
-                      <td style={tdStyle}>{container.sizeName || ""}</td>
-                      <td style={tdStyle}>{container.typeName || ""}</td>
-                      <td style={tdStyle}>
-                        {container.grossWt
-                          ? `${parseFloat(
-                            container.grossWt
-                          ).toLocaleString()} KGS`
-                          : ""}
-                      </td>
-                      <td style={tdStyle}>
-                        {container.netWt ? `${container.netWt} KGS` : ""}
-                      </td>
-                      <td style={tdStyle}>
-                        {container.noOfPackages
-                          ? parseFloat(container.noOfPackages).toFixed(2)
-                          : ""}
-                      </td>
-                    </tr>
-                  ))
+                      <tr key={`${jobIndex}-${containerIndex}`}>
+                        <td style={tdStyle}>{container.containerNo || ""}</td>
+                        <td style={tdStyle}>{container.sizeName || ""}</td>
+                        <td style={tdStyle}>{container.typeName || ""}</td>
+                        <td style={tdStyle}>
+                          {container.grossWt
+                            ? `${parseFloat(
+                                container.grossWt
+                              ).toLocaleString()} KGS`
+                            : ""}
+                        </td>
+                        <td style={tdStyle}>
+                          {container.netWt ? `${container.netWt} KGS` : ""}
+                        </td>
+                        <td style={tdStyle}>
+                          {container.noOfPackages
+                            ? parseFloat(container.noOfPackages).toFixed(2)
+                            : ""}
+                        </td>
+                      </tr>
+                    ))
                   : null
               )}
           </tbody>
@@ -7569,6 +7607,870 @@ const rptJobs = () => {
     );
   };
 
+  const mergeQtyDepotFlatWithContainers = (
+    tblJobQty = [],
+    tblJobContainer = []
+  ) => {
+    const normDepot = (s) => (s == null ? "Unknown" : String(s).trim());
+
+    // 1) Aggregate qty (and first non-null meta) by depot
+    const byDepot = new Map();
+    for (const r of tblJobQty) {
+      if (!r) continue;
+      const depot = normDepot(r.depot);
+      const qty = Number(r.qty) || 0;
+
+      if (!byDepot.has(depot)) {
+        byDepot.set(depot, {
+          depot,
+          qty: 0,
+          size: r.size ?? null,
+          type: r.type ?? null,
+          grossWt: r.grossWt != null ? Number(r.grossWt) : null, // per-unit weight if that's what your field means
+          weightUnit: r.weightUnit ?? null,
+          containers: [], // we'll fill this in step 2
+        });
+      }
+
+      const agg = byDepot.get(depot);
+      agg.qty += qty;
+      if (agg.size == null && r.size != null) agg.size = r.size;
+      if (agg.type == null && r.type != null) agg.type = r.type;
+      if (agg.grossWt == null && r.grossWt != null)
+        agg.grossWt = Number(r.grossWt);
+      if (agg.weightUnit == null && r.weightUnit != null)
+        agg.weightUnit = r.weightUnit;
+    }
+
+    // 2) Attach containers by depot (exact match; trims whitespace)
+    for (const c of tblJobContainer || []) {
+      if (!c) continue;
+      const depot = normDepot(c.depot);
+      if (byDepot.has(depot)) {
+        // optional cleanup (containerNo sometimes has a leading space)
+        if (typeof c.containerNo === "string") {
+          c.containerNo = c.containerNo.trim();
+        }
+        byDepot.get(depot).containers.push(c); // keep full original object
+      }
+    }
+
+    // 3) Finalize + fallbacks
+    return Array.from(byDepot.values()).map((x) => ({
+      depot: x.depot,
+      qty: x.qty,
+      size: x.size ?? "—",
+      type: x.type ?? "—",
+      grossWt: x.grossWt ?? 0,
+      weightUnit: x.weightUnit ?? "—",
+      containers: x.containers, // already an array (possibly empty)
+    }));
+  };
+
+  const J = Array.isArray(jobData) ? jobData[0] : jobData;
+  const rows = mergeQtyDepotFlatWithContainers(
+    J?.tblJobQty || [],
+    J?.tblJobContainer || []
+  );
+
+  console.log("data =>", jobData && jobData.length > 0 ? jobData[0].jobNo : "");
+  const ContainerReleaseOrder = (rows) => {
+    console.log("rows", rows);
+    const depot = rows?.rows?.depot || null;
+    return (
+      <div
+        className="p-6 text-black"
+        style={{ width: "210mm", minHeight: "297mm" }}
+      >
+        <CompanyImgModule />
+
+        {/* Heading */}
+        <div className="mt-2">
+          <h1
+            className="uppercase text-center font-bold underline"
+            style={{ fontSize: "14px" }}
+          >
+            Container Release Order
+          </h1>
+        </div>
+
+        {/* Heading Grid */}
+        <div className="flex mt-2 w-full gap-4" style={{ width: "100%" }}>
+          {/* Left */}
+          <div className="flex w-[60%] " style={{ width: "60%" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                <tr>
+                  <td
+                    style={{
+                      width: "30%",
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Booking No :
+                  </td>
+                  <td style={{ width: "70%", fontSize: "10px" }}>
+                    {jobData && jobData.length > 0 ? jobData[0].jobNo : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    style={{
+                      width: "30%",
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Release Reference No. :
+                  </td>
+                  <td style={{ width: "70%", fontSize: "10px" }}>
+                    {/* {releaseRefNo} */}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Right */}
+          <div className="flex w-[40%]" style={{ width: "40%" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                <tr>
+                  <td
+                    style={{
+                      width: "30%",
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Date :
+                  </td>
+                  <td style={{ width: "70%", fontSize: "10px" }}>
+                    {jobData && jobData.length > 0
+                      ? formatDateToYMD(jobData[0].jobDate)
+                      : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    style={{
+                      width: "30%",
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    DO Validity Date :
+                  </td>
+                  <td style={{ width: "70%", fontSize: "10px" }}>
+                    {getValidTillDatePlane(
+                      jobData?.[0]?.jobDate,
+                      jobData?.[0]?.croValidDays
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* To block */}
+        <div className="mt-2">
+          <p className="text-[10px]">To,</p>
+          <p className="text-[11px] font-bold">THE MANAGER</p>
+          <p className="text-[11px] font-bold">{depot ?? ""}</p>
+          <p className="mt-1 text-[9px]">
+            Kindly release container(s) as per below details to{" "}
+            {jobData && jobData.length > 0 ? jobData[0].shipperName : ""} or to
+            the transporter.
+          </p>
+        </div>
+
+        {/* Depot-wise Quantity Grid */}
+        <ContainerReleaseOrderQuantityGrid rows={rows} />
+
+        {/* Common Grid */}
+        <ContainerReleaseOrderCommonGrid />
+
+        {/* Common Grid */}
+        <ContainerReleaseOrderContainerGrid rows={rows.rows.containers} />
+
+        {/* Remarks */}
+        <ContainerReleaseOrderContainerRemarks />
+
+        {/* Notes */}
+        <ContainerReleaseOrderNotes />
+      </div>
+    );
+  };
+
+  const ContainerReleaseOrderQuantityGrid = ({ rows = [] }) => {
+    console.log("rows 2", rows);
+
+    const tableStyle = {
+      width: "100%",
+      borderCollapse: "collapse",
+      border: "1px solid #000",
+      marginTop: "6px",
+    };
+
+    const thStyle = {
+      width: "20%",
+      textAlign: "center",
+      fontSize: "8px",
+      color: "black",
+      fontWeight: "bold",
+      border: "1px solid #000",
+      padding: "2px",
+    };
+
+    const tdStyle = {
+      width: "20%",
+      textAlign: "center",
+      fontSize: "8px",
+      color: "black",
+      border: "1px solid #000",
+      padding: "2px",
+    };
+    return (
+      <div>
+        <table style={tableStyle}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Equipment Type</th>
+              <th style={thStyle}>Type</th>
+              <th style={thStyle}>Weight</th>
+              <th style={thStyle}>Depot</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={tdStyle}>
+                {rows.rows?.qty} {" X "} {rows.rows?.size}{" "}
+              </td>
+              <td style={tdStyle}>{rows.rows?.type}</td>
+              <td style={tdStyle}>
+                {rows.rows?.grossWt} {rows.rows?.weightUnit}
+              </td>
+              <td style={tdStyle}>{rows.rows?.depot}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const ContainerReleaseOrderCommonGrid = () => {
+    console.log("jobData 1", jobData);
+    const thStyle = {
+      width: "45%",
+      textAlign: "left",
+      fontSize: "9px",
+      fontWeight: "bold",
+      padding: "2px",
+    };
+    const tdStyle = {
+      width: "55%",
+      textAlign: "left",
+      fontSize: "9px",
+      padding: "2px",
+    };
+    return (
+      <div className="flex mt-2" style={{ width: "100%" }}>
+        <table style={{ width: "50%", borderCollapse: "collapse" }}>
+          <tr>
+            <th style={thStyle}>Shipper Name</th>
+            <td style={tdStyle}>{jobData[0].shipperName}</td>
+          </tr>
+          <tr>
+            <th style={thStyle}>Port Of Receipt</th>
+            <td style={tdStyle}>{jobData[0].plrName}</td>
+          </tr>
+          <tr>
+            <th style={thStyle}>Port Of Discharge</th>
+            <td style={tdStyle}>{jobData[0].podName}</td>
+          </tr>
+          <tr>
+            <th style={thStyle}>Issued Vessel / Voyage</th>
+            <td style={tdStyle}>
+              {jobData[0].podVessel} {" / "} {jobData[0].podVoyage}
+            </td>
+          </tr>
+          <tr>
+            <th style={thStyle}>Vessel ETA</th>
+            <td style={tdStyle}>{formatDateToYMD(jobData[0]?.etaAtPod)}</td>
+          </tr>
+          <tr>
+            <th style={thStyle}>Cargo</th>
+            <td style={tdStyle}>{jobData[0].natureOfCargo}</td>
+          </tr>
+          <tr>
+            <th style={thStyle}>CRO Validity</th>
+            <td style={tdStyle}>
+              {getValidTillDatePlane(
+                jobData?.[0]?.jobDate,
+                jobData?.[0]?.croValidDays
+              )}
+            </td>
+          </tr>
+        </table>
+        <table style={{ width: "50%", borderCollapse: "collapse" }}>
+          <tr>
+            <th style={thStyle}>Port Of Loading</th>
+            <td style={tdStyle}>{jobData[0].polName}</td>
+          </tr>
+          <tr>
+            <th style={thStyle}>Final Port Of Delivery</th>
+            <td style={tdStyle}>{jobData[0].fpdName}</td>
+          </tr>
+          <tr>
+            <th style={thStyle}>Gate Cut Off</th>
+            <td style={tdStyle}>{jobData[0].gateCutOff}</td>
+          </tr>
+          <tr>
+            <th style={thStyle}>Vessel ETD</th>
+            <td style={tdStyle}>{jobData[0].etd}</td>
+          </tr>
+          <tr>
+            <th style={thStyle}>HAZ Details</th>
+            <td style={tdStyle}>{jobData[0].imo}</td>
+          </tr>
+          <tr>
+            <th style={thStyle}>Terminal</th>
+            <td style={tdStyle}>{jobData[0].podTerminal}</td>
+          </tr>
+          <tr>
+            <th style={thStyle}>Surveyor Name</th>
+            <td style={tdStyle}>{jobData[0].surveyorName}</td>
+          </tr>
+        </table>
+      </div>
+    );
+  };
+
+  const ContainerReleaseOrderContainerGrid = ({ rows = [] }) => {
+    console.log("rows 3", rows);
+
+    const tableStyle = {
+      width: "100%",
+      borderCollapse: "collapse",
+      border: "1px solid #000",
+      marginTop: "6px",
+    };
+
+    const thStyle = {
+      width: "15%",
+      textAlign: "center",
+      fontSize: "8px",
+      color: "black",
+      fontWeight: "bold",
+      border: "1px solid #000",
+      padding: "2px",
+    };
+
+    const tdStyle = {
+      width: "15%",
+      textAlign: "center",
+      fontSize: "8px",
+      color: "black",
+      border: "1px solid #000",
+      padding: "2px",
+    };
+    return (
+      <div>
+        <table style={tableStyle}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Container No</th>
+              <th style={thStyle}>Size/Type</th>
+              <th style={thStyle}>Status</th>
+              <th style={thStyle}>Gross Wt.</th>
+              <th style={thStyle}>No. of Packages</th>
+              <th style={thStyle}>Seal No</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows &&
+              rows.length > 0 &&
+              rows.map((row) => (
+                <tr>
+                  <td style={tdStyle}>{row.containerNo}</td>
+                  <td style={tdStyle}>
+                    {row.sizeName}
+                    {""}
+                    {row.typeCode}
+                  </td>
+                  <td style={tdStyle}>{row?.containerStatusName}</td>
+                  <td style={tdStyle}>
+                    {row.grossWt} {row.weightUnit}
+                  </td>
+                  <td style={tdStyle}>{row.qty}</td>
+                  <td style={tdStyle}>{row.agentSealNo}</td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const ContainerReleaseOrderContainerRemarks = () => {
+    return (
+      <>
+        <div className="mt-2">
+          <p style={{ fontSize: "8px", fontWeight: "bold", color: "black" }}>
+            Remarks
+          </p>
+          <p style={{ fontSize: "8px", color: "black" }}>
+            {jobData[0].remarks}
+          </p>
+        </div>
+        <div className="mt-1">
+          <p style={{ fontSize: "8px", fontWeight: "bold", color: "black" }}>
+            Note
+          </p>
+          <p style={{ fontSize: "8px", color: "black" }}>
+            1. Kindly gate in the container/s 72 hours before vessel sailing to
+            avoid port ground rent charges
+          </p>
+          <p style={{ fontSize: "8px", color: "black" }}>
+            2. CRO is valid for 3 calendar days from the date of Issue. Unit to
+            be gate in port within 7 days upon lifting, failing which Line
+            detention charges will be levied as per tariff. If the container is
+            unutilised NO FREE days will be given, detention will be charged
+            from day one.
+          </p>
+        </div>
+        <div
+          style={{
+            width: "100%",
+            textAlign: "center",
+            fontSize: "11px",
+            color: "black",
+            marginTop: "6px",
+            border: "1px solid #000",
+          }}
+        >
+          <p style={{ width: "100%", textAlign: "center", fontWeight: "bold" }}>
+            EXPORT DETENTION SLAB
+          </p>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: "8px",
+            }}
+          >
+            <tr
+              style={{
+                borderBottom: "1px solid #000",
+                borderTop: "1px solid #000",
+                fontSize: "8px",
+                fontWeight: "bold",
+              }}
+            >
+              <th
+                style={{
+                  width: "40%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  fontWeight: "bold",
+                }}
+              >
+                LINE DETENTION TARIFF
+              </th>
+              <th
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  fontWeight: "bold",
+                }}
+                colspan={2}
+              >
+                DRY CONTAINER
+              </th>
+              <th
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  fontWeight: "bold",
+                }}
+                colspan={2}
+              >
+                REEFER/SPECIAL EQUIP
+              </th>
+            </tr>
+            <tr>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  fontWeight: "bold",
+                  width: "40%",
+                }}
+              ></td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  fontWeight: "bold",
+                  width: "15%",
+                }}
+              >
+                20'
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  fontWeight: "bold",
+                  width: "15%",
+                }}
+              >
+                40'
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  fontWeight: "bold",
+                  width: "15%",
+                }}
+              >
+                20'
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  fontWeight: "bold",
+                  width: "15%",
+                }}
+              >
+                40'
+              </td>
+            </tr>
+            <tr>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "left",
+                  fontSize: "8px",
+                  width: "40%",
+                  paddingLeft: "5px",
+                }}
+              >
+                Free Days
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                7 DAYS
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                7 DAYS
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                3 DAYS
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                3 DAYS
+              </td>
+            </tr>
+            <tr>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "left",
+                  fontSize: "8px",
+                  width: "40%",
+                  paddingLeft: "5px",
+                }}
+              >
+                First 5 Days
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 20.00
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 40.00
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 100.00
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 200.00
+              </td>
+            </tr>
+            <tr>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "left",
+                  fontSize: "8px",
+                  width: "40%",
+                  paddingLeft: "5px",
+                }}
+              >
+                Next 5 Days
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 40.00
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 80.00
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 175.00
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 350.00
+              </td>
+            </tr>
+            <tr>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "left",
+                  fontSize: "8px",
+                  width: "40%",
+                  paddingLeft: "5px",
+                }}
+              >
+                Next 5 Days
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 55.00
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 110.00
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 200.00
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 400.00
+              </td>
+            </tr>
+            <tr>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "left",
+                  fontSize: "8px",
+                  width: "40%",
+                  paddingLeft: "5px",
+                }}
+              >
+                Next DAY ONWARDS
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 70.00
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 150.00
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 250.00
+              </td>
+              <td
+                style={{
+                  width: "30%",
+                  textAlign: "center",
+                  fontSize: "8px",
+                  width: "15%",
+                }}
+              >
+                $ 500.00
+              </td>
+            </tr>
+          </table>
+        </div>
+      </>
+    );
+  };
+
+  const normalizeTerms = (text = "") => {
+    // 1) Turn literal backslash-n into real newlines (handles DB-stored "\n")
+    let s = String(text).replace(/\\n/g, "\n").replace(/\r\n?/g, "\n");
+
+    // 2) Ensure each "n." starts a new line if it doesn't already
+    s = s.replace(/(^|[^\n])\s*(\d+\.\s)/g, (m, prev, numdot) =>
+      prev === "" ? `${numdot}` : `${prev}\n${numdot}`
+    );
+
+    // 3) Compress multiple blank lines
+    s = s.replace(/\n{2,}/g, "\n").trim();
+
+    return s;
+  };
+
+  const ContainerReleaseOrderNotes = () => {
+    const raw = jobData?.[0]?.termsConditionMst ?? "";
+    const text = normalizeTerms(raw);
+
+    return (
+      <>
+        <div className="mt-2">
+          <h2 className="uppercase font-bold" style={{ fontSize: "10px" }}>
+            Notes
+          </h2>
+        </div>
+
+        <div className="mt-1">
+          <p
+            className="text-black text-xs"
+            style={{
+              fontSize: "8px",
+              textAlign: "justify",
+              whiteSpace: "pre-line",
+            }}
+          >
+            {text}
+          </p>
+        </div>
+      </>
+    );
+  };
+
   return (
     <main className="bg-gray-300">
       <div className="pt-5">{generateReportBodies(rpIds)}</div>
@@ -7589,8 +8491,9 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -7619,8 +8522,9 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
-                      }`}
+                    className={`black-text shadow-2xl ${
+                      index < reportIds.length - 1 ? "page-break" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -7641,7 +8545,6 @@ const rptJobs = () => {
                   <div className="bg-gray-300 h-2 no-print" />
                 </>
               );
-
             case "Landing Confirmation":
               return (
                 <>
@@ -7649,8 +8552,9 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
-                      }`}
+                    className={`black-text shadow-2xl ${
+                      index < reportIds.length - 1 ? "page-break" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -7671,7 +8575,6 @@ const rptJobs = () => {
                   <div className="bg-gray-300 h-2 no-print" />
                 </>
               );
-
             case "Pre Advice":
               // Pre Advice
               return (
@@ -7680,8 +8583,9 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
-                      }`}
+                    className={`black-text shadow-2xl ${
+                      index < reportIds.length - 1 ? "page-break" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -7708,8 +8612,9 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
-                      }`}
+                    className={`black-text shadow-2xl ${
+                      index < reportIds.length - 1 ? "page-break" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -7737,8 +8642,9 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
-                      }`}
+                    className={`black-text shadow-2xl ${
+                      index < reportIds.length - 1 ? "page-break" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -7759,7 +8665,6 @@ const rptJobs = () => {
                   <div className="bg-gray-300 h-2 no-print" />
                 </>
               );
-
             case "Delivery Confirmation":
               return (
                 <>
@@ -7767,8 +8672,9 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
-                      }`}
+                    className={`black-text shadow-2xl ${
+                      index < reportIds.length - 1 ? "page-break" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -7791,7 +8697,6 @@ const rptJobs = () => {
                   <div className="bg-gray-300 h-2 no-print" />
                 </>
               );
-
             case "Request for Payment":
               // Request for Payment
               return (
@@ -7801,8 +8706,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
-                      }`}
+                    className={`black-text shadow-2xl ${
+                      index < reportIds.length - 1 ? "page-break" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -7832,8 +8738,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
-                      }`}
+                    className={`black-text shadow-2xl ${
+                      index < reportIds.length - 1 ? "page-break" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -7861,8 +8768,9 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
-                      }`}
+                    className={`black-text shadow-2xl ${
+                      index < reportIds.length - 1 ? "page-break" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -7885,7 +8793,6 @@ const rptJobs = () => {
                   <div className="bg-gray-300 h-2 no-print" />
                 </>
               );
-
             case "Freight Certificate Air":
               // Freight Certificate Air
               return (
@@ -7895,8 +8802,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -7927,8 +8835,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -7959,8 +8868,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text  ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text  ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -7991,8 +8901,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8023,8 +8934,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8055,8 +8967,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
-                      }`}
+                    className={`black-text shadow-2xl ${
+                      index < reportIds.length - 1 ? "page-break" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -8086,8 +8999,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
-                      }`}
+                    className={`black-text shadow-2xl ${
+                      index < reportIds.length - 1 ? "page-break" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8118,8 +9032,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8150,8 +9065,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8182,8 +9098,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8214,8 +9131,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8246,8 +9164,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8278,8 +9197,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8310,8 +9230,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8342,8 +9263,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8374,8 +9296,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8404,8 +9327,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8436,8 +9360,9 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      } shadow-2xl`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8466,8 +9391,9 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
-                      }`}
+                    className={`black-text shadow-2xl ${
+                      index < reportIds.length - 1 ? "page-break" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -8488,7 +9414,6 @@ const rptJobs = () => {
                   <div className="bg-gray-300 h-2 no-print" />
                 </>
               );
-
             case "Job sheet provisional Actual":
               // Job Sheet provisional Actual
               return (
@@ -8497,8 +9422,9 @@ const rptJobs = () => {
                   //ref={enquiryModuleRef}
                   ref={(el) => (enquiryModuleRefs.current[index] = el)}
                   id={`report-${reportId}`}
-                  className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                  className={`black-text ${
+                    index < reportIds.length - 1 ? "report-spacing" : ""
+                  } shadow-2xl`}
                   style={{
                     width: "210mm",
                     height: "297mm",
@@ -8516,7 +9442,6 @@ const rptJobs = () => {
                   `}</style>
                 </div>
               );
-
             case "BL Draft": {
               if (reportIds.indexOf("BL Draft") !== index) return null; // Only run once
 
@@ -8817,39 +9742,6 @@ const rptJobs = () => {
                 </>
               );
             }
-            // case "CRODEPOT":
-            //   // Booking Confirmation
-            //   return (
-            //     <>
-            //       <div
-            //         key={index}
-            //         ref={(el) => (enquiryModuleRefs.current[index] = el)}
-            //         id={`report-${reportId}`}
-            //         className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-            //           } shadow-2xl`}
-            //         style={{
-            //           width: "210mm",
-            //           height: "297mm",
-            //           margin: "auto",
-            //           boxSizing: "border-box", // space between page edge and inner border
-            //           display: "flex",
-            //           flexDirection: "column",
-            //           backgroundColor: "#fff",
-            //           // pageBreakAfter:
-            //           //   index < reportIds.length - 1 ? "always" : "auto",
-            //         }}
-            //       >
-            //         <div className="p-4 bgTheme">{CRODEPOT()}</div>
-            //         <style jsx>{`
-            //           .black-text {
-            //             color: black !important;
-            //           }
-            //         `}</style>
-            //       </div>
-            //       <div className="bg-gray-300 h-2 no-print" />
-            //     </>
-            //   );
-
             case "CRODEPOT":
               // Booking Confirmation
               return (
@@ -8874,10 +9766,11 @@ const rptJobs = () => {
                                 (enquiryModuleRefs.current[depotIndex] = el)
                               }
                               id={`report-${reportId}`}
-                              className={`black-text ${depotIndex < jobData[0].tblJobQty.length - 1
+                              className={`black-text ${
+                                depotIndex < jobData[0].tblJobQty.length - 1
                                   ? "report-spacing"
                                   : ""
-                                } shadow-2xl`}
+                              } shadow-2xl`}
                               style={{
                                 width: "210mm",
                                 height: "297mm",
@@ -8910,37 +9803,6 @@ const rptJobs = () => {
                 </>
               );
             case "CROSHIPPER":
-              // return (
-              //   <>
-              //     <div
-              //       key={index}
-              //       ref={(el) => (enquiryModuleRefs.current[index] = el)}
-              //       id={`report-${reportId}`}
-              //       className={`black-text ${
-              //         index < reportIds.length - 1 ? "report-spacing" : ""
-              //       } shadow-2xl`}
-              //       style={{
-              //         width: "210mm",
-              //         height: "297mm",
-              //         margin: "auto",
-              //         boxSizing: "border-box", // space between page edge and inner border
-              //         display: "flex",
-              //         flexDirection: "column",
-              //         backgroundColor: "#fff",
-              //         pageBreakAfter:
-              //           index < reportIds.length - 1 ? "always" : "auto",
-              //       }}
-              //     >
-              //       <div className="p-4 bgTheme">{CROShipper()}</div>
-              //       <style jsx>{`
-              //         .black-text {
-              //           color: black !important;
-              //         }
-              //       `}</style>
-              //     </div>
-              //     <div className="bg-gray-300 h-2 no-print" />
-              //   </>
-              // );
               return (
                 <>
                   {Array.isArray(jobData) &&
@@ -8963,10 +9825,11 @@ const rptJobs = () => {
                                 (enquiryModuleRefs.current[depotIndex] = el)
                               }
                               id={`report-${reportId}`}
-                              className={`black-text ${depotIndex < jobData[0].tblJobQty.length - 1
+                              className={`black-text ${
+                                depotIndex < jobData[0].tblJobQty.length - 1
                                   ? "report-spacing"
                                   : ""
-                                } shadow-2xl`}
+                              } shadow-2xl`}
                               style={{
                                 width: "210mm",
                                 height: "297mm",
@@ -8996,6 +9859,51 @@ const rptJobs = () => {
                         );
                       })}
                   <div className="bg-gray-300 h-2 no-print" />
+                </>
+              );
+            case "CONTAINER RELEASE ORDER":
+              return (
+                <>
+                  {rows.map((row, index) => (
+                    <React.Fragment key={index}>
+                      <div
+                        ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                        id={`report-${index}`}
+                        className={`black-text ${
+                          index < rows.length - 1 ? "report-spacing" : ""
+                        } shadow-2xl`}
+                        style={{
+                          width: "210mm",
+                          minHeight: "297mm", // use minHeight for safer flow
+                          margin: "auto",
+                          boxSizing: "border-box",
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                      >
+                        <div className="bgTheme">
+                          <ContainerReleaseOrder rows={row} />
+                        </div>
+                      </div>
+
+                      {/* spacer between pages (hidden in print) */}
+                      <div className="bg-gray-300 h-2 no-print" />
+                    </React.Fragment>
+                  ))}
+
+                  <style jsx>{`
+                    .black-text {
+                      color: #000;
+                    }
+                    @media print {
+                      .no-print {
+                        display: none;
+                      }
+                      .report-spacing {
+                        page-break-after: always;
+                      }
+                    }
+                  `}</style>
                 </>
               );
             default:

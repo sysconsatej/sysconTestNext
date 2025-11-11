@@ -7192,8 +7192,19 @@ Operator/ Airport Authority or any other third party.
     const recordsWithVendor = chargeData.filter(
       (item) => item.vendorName && item.vendorName.trim() !== ""
     );
+    // const recordsWithoutVendor = chargeData.filter(
+    //   (item) => !item.vendorName || item.vendorName.trim() === ""
+    // );
+
     const recordsWithoutVendor = chargeData.filter(
-      (item) => !item.vendorName || item.vendorName.trim() === ""
+      (item) =>
+        (!item.vendorName || item.vendorName.trim() === "") &&
+        !(
+          item.sellRate == null ||
+          item.sellRate === 0 ||
+          item.sellRate === "0.00" ||
+          item.sellRate === 0.0
+        )
     );
 
     // If no valid records exist for either category, show a message
@@ -9445,6 +9456,30 @@ Operator/ Airport Authority or any other third party.
     </div>
   );
 
+  const ExportQuotationSeaModuleSAR = () => (
+    <div>
+      <div className="container mx-auto p-14 bodyColour text-black h-auto bgTheme">
+        <CompanyImgModule />
+        <h1
+          style={{ textAlign: "center", fontWeight: "bold" }}
+          className="mt-2"
+        >
+          Quotation
+        </h1>
+        <QuotationSeaCustomerModule data={data} />
+        <QuotationExportShipperModule data={data} />
+        <QuotationExportShipperDetailsModule data={data} />
+        <QuotationExportSizeTypeModule data={data} />
+        {/* <QuotationExportChargeVendorWiseModule data={data} />
+        <QuotationExportChargeVendorWiseModuleWithTax data={data} /> */}
+        <QuotationExportWithTaxAndWithoutTax data={data} />
+        {clientId === 3 && <ExportParagrafModule data={data} />}
+        {/* {clientId != 3 && <TermsAndCondition terms={termsAndConditions} />} */}
+        {clientId === 13 && <SarQuotationTermsAndCondition />}
+      </div>
+    </div>
+  );
+
   const ExportQuotationAirModule = () => (
     <div>
       <div className="container mx-auto p-14 bodyColour text-black h-auto bgTheme">
@@ -10642,7 +10677,9 @@ Operator/ Airport Authority or any other third party.
                       index < reportIds.length - 1 ? "report-spacing" : ""
                     }
                   >
-                    {ExportQuotationSeaModule()}
+                    {clientId === 13
+                      ? ExportQuotationSeaModuleSAR()
+                      : ExportQuotationSeaModule()}
                   </div>
                 </>
               );

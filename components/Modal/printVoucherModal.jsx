@@ -19,13 +19,14 @@ import { getUserDetails } from "@/helper/userDetails";
 import { useDispatch, useSelector } from "react-redux";
 import { updateFlag } from "@/app/counterSlice";
 
-export default function PrintModal({
+export default function PrintModalVoucher({
   setOpenPrintModal,
   openPrintModal,
   submittedRecordId,
   submittedMenuId,
   pageType,
   tableName,
+  htmlReportData,
 }) {
   const dispatch = useDispatch();
   const { clientId } = getUserDetails();
@@ -76,11 +77,11 @@ export default function PrintModal({
         );
       }
 
-      const printFlag = await validateEditPrint();
-      if (printFlag?.success === false) {
-        toast.success(printFlag?.message);
-        return;
-      }
+      //   const printFlag = await validateEditPrint();
+      //   if (printFlag?.success === false) {
+      //     toast.success(printFlag?.message);
+      //     return;
+      //   }
 
       // const selectedHtmlReportData = reportData.filter(
       //   (report) => report.menuType === "O" || report.menuType === "o"
@@ -298,34 +299,10 @@ export default function PrintModal({
         const decryptedData = decrypt(storedUserData);
         const userData = JSON.parse(decryptedData);
         const clientId = userData[0]?.clientId;
-        const menuName = id;
-        if (menuName !== null) {
-          const requestBody = {
-            columns:
-              "mrm.reportMenuId,mrm.reportTemplateId,tm.menuName,tm.menuLink,tm.menuType,tm.clientId,mrm.redirectionPath,tm.displayName",
-            tableName:
-              "tblMenuReportMapping mrm Inner Join tblMenu tm on mrm.reportMenuId = tm.id",
-            whereCondition: `mrm.menuId = ${submittedMenuId} and tm.status = 1 and mrm.clientId in (${clientId} ,(select id from tblClient where clientCode = 'SYSCON'))`,
-            clientIdCondition: `mrm.status = 1 and tm.menuType in ('O','T') FOR JSON PATH, INCLUDE_NULL_VALUES`,
-          };
-
+        if (Array.isArray(htmlReportData) && htmlReportData?.length > 0) {
           try {
-            const response = await fetchReportData(requestBody);
-            console.log("Response Test:", response);
-            const data = response.data || response;
-            if (Array.isArray(data) && data.length > 0) {
-              const fetchedMenuNames = data.map((item) => ({
-                ReportId: item.reportTemplateId,
-                ReportName: item.menuName,
-                ReportMenuLink: item.menuLink,
-                menuType: item.menuType,
-                reportMenuId: item.reportMenuId,
-                reportTemplateId: item?.reportTemplateId,
-                redirectionPath: item?.redirectionPath,
-                displayName: item?.displayName,
-                //reportType: "T", // Assuming "T" as a static value for `reportType`
-              }));
-              setReportNames(fetchedMenuNames);
+            if (Array.isArray(htmlReportData) && htmlReportData?.length > 0) {
+              setReportNames(htmlReportData);
             } else {
               setReportNames([]);
             }
@@ -337,7 +314,7 @@ export default function PrintModal({
     };
 
     fetchData();
-  }, [id]);
+  }, [id, htmlReportData]);
 
   useEffect(() => {
     const fetchMenuTableNames = async () => {
@@ -509,11 +486,12 @@ export default function PrintModal({
   );
 }
 
-PrintModal.propTypes = {
+PrintModalVoucher.propTypes = {
   openPrintModal: PropTypes.bool,
   setOpenPrintModal: PropTypes.func,
   submittedRecordId: PropTypes.number,
   submittedMenuId: PropTypes.number,
   pageType: PropTypes.string,
   tableName: PropTypes.string,
+  htmlReportData: PropTypes.array,
 };

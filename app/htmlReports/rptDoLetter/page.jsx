@@ -1,30 +1,47 @@
 "use client";
 /* eslint-disable */
 import React, { useEffect, useState, useMemo, useRef } from "react";
-import { toWords } from "number-to-words";
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-import { useSearchParams } from "next/navigation";
-import PropTypes from "prop-types";
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL; // kept as-is per your original code
+import { useSearchParams, usePathname } from "next/navigation";
+import QRCode from "qrcode";
 import { decrypt } from "@/helper/security";
-import "jspdf-autotable"; // Import AutoTable plugin
+import "jspdf-autotable";
 import Print from "@/components/PrintDo/page";
 import "@/public/style/reportTheme.css";
 import { getUserDetails } from "@/helper/userDetails";
 import "./rptDoLetter.css";
-import { ImageSearchRounded } from "@mui/icons-material";
 import moment from "moment";
-import { setUserName } from "@/helper/formControlValidation";
+import { encryptText, decryptText } from "@/helper/cryptoUrl";
 
-function rptDoLetter() {
+export default function rptDoLetter() {
+  // You had this variable; not used in your fetches, leaving fetch baseUrl unchanged intentionally
   const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
+
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  // ----- RAW PARAMS (as provided in URL)
+  const recordIdParam = searchParams.get("recordId"); // plain id (fallback)
+  const ridParam = searchParams.get("rid"); // encrypted id (preferred)
+  const reportId = searchParams.get("reportId");
+  const reportName = searchParams.get("reportName");
+  const displayButton = searchParams.get("hb");
+  const isPublic = (pathname || "").includes("/htmlReports/rptDoLetter");
+
+  // ----- STATE
+  const [resolvedRecordId, setResolvedRecordId] = useState(null); // <- use this everywhere
+  const [encRid, setEncRid] = useState(""); // for QR/link
   const [reportIds, setReportIds] = useState([]);
+  const [doReportName, setDoReportName] = useState([]);
   const [data, setData] = useState([]);
+  const [getDisplayButton, setDisplayButton] = useState(true);
   const [userName, setUserName] = useState(null);
   const enquiryModuleRefs = useRef([]);
   enquiryModuleRefs.current = []; // do not remove this line
   const { clientId } = getUserDetails();
+
   const chunkSize = 6;
+  const deliveryOrderKenya = 12;
   const EmptyOffLoadingLetterSize = 6;
   const SealCuttingLetterSize = 14;
   const BondLetterSize = 12;
@@ -32,65 +49,242 @@ function rptDoLetter() {
   const EmptyContainerOffLoadingLetterSize = 22;
   const EmptyContainerReturnNotification = 21;
   const SaudiDeliveryOrderSize = 6;
+  const [qrUrl, setQrUrl] = useState("");
 
-  console.log("data", data);
+  // DEMO token (kept from your code)
+  const token =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjM5LCJ1c2VyTmFtZSI6InJvaGl0U0xTS0BzeXNjb25pbmZvdGVjaC5jb20iLCJpYXQiOjE3NjA0NDExMzgxNzUsIm51bWJlckZvcm1hdCI6ImMiLCJjbGllbnRDb2RlIjoiTkNMUCIsImNsaWVudElkIjoxNSwiZXhwIjoxNzYwNDQ4MzM4MTc1fQ.yrDgdnPff0MMVWU1tavzJeG1_Dx9pkBWkU12H0Jk47c";
+  const fetchToken = localStorage.getItem("token");
+  // IMPORTANT: use NEXT_PUBLIC_* so it exists on client
+  const SECRET = process.env.NEXT_PUBLIC_AES_TOKEN || "fallback-secret";
 
+  // ------------------------------------------------------------------
+  // Seed localStorage token (your original behavior)
   useEffect(() => {
-    const storedReportIds = sessionStorage.getItem("selectedReportIds");
-    if (storedReportIds) {
-      let reportIds = JSON.parse(storedReportIds);
-      reportIds = Array.isArray(reportIds) ? reportIds : [reportIds];
-      console.log("Retrieved Report IDs:", reportIds);
-      setReportIds(reportIds);
-    } else {
-      console.log("No Report IDs found in sessionStorage");
-    }
+    if (fetchToken) return;
+    try {
+      {
+        clientId === 15 && localStorage.setItem("token", JSON.stringify(token));
+      }
+    } catch {}
   }, []);
 
+  // Hide print if hb=cfm (kept your original rule)
+  useEffect(() => {
+    if (displayButton === "cfm") {
+      setDisplayButton(false);
+    }
+  }, [displayButton]);
+
+  // ------------------------------------------------------------------
+  // 1) Resolve record id from ?rid (decrypt) OR fallback to ?recordId
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (ridParam) {
+          const id = await decryptText(ridParam, SECRET);
+          if (!cancelled) setResolvedRecordId(id);
+        } else if (recordIdParam) {
+          if (!cancelled) setResolvedRecordId(recordIdParam);
+        } else {
+          if (!cancelled) setResolvedRecordId(null);
+        }
+      } catch (e) {
+        console.error("Failed to decrypt rid:", e);
+        if (!cancelled) setResolvedRecordId(recordIdParam ?? null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ridParam, recordIdParam, SECRET]);
+
+  // 2) Compute encrypted rid whenever we have a resolved id (for QR/link)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!resolvedRecordId) {
+        setEncRid("");
+        return;
+      }
+      try {
+        const e = await encryptText(String(resolvedRecordId), SECRET);
+        if (!cancelled) setEncRid(e);
+      } catch {
+        if (!cancelled) setEncRid("");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [resolvedRecordId, SECRET]);
+
+  // ------------------------------------------------------------------
+  // 3) Fetch DO data using resolvedRecordId (replaces your old recordId dependency)
+  useEffect(() => {
+    if (!resolvedRecordId) return;
+
+    (async () => {
+      try {
+        const headers = { "Content-Type": "application/json" };
+
+        // Only try token if NOT public
+        if (!isPublic) {
+          try {
+            const tk = localStorage.getItem("token");
+            if (tk) headers["x-access-token"] = JSON.parse(tk);
+          } catch {}
+        }
+
+        const body = { id: resolvedRecordId }; // minimal for public route
+
+        const res = await fetch(`${baseUrl}/Sql/api/Reports/blDataForDO`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error(`Fetch DO failed: ${res.status}`);
+        const json = await res.json();
+        setData(Array.isArray(json?.data) ? json.data : []);
+        if (Array.isArray(json?.data) && json.data.length > 0) {
+          const row = json.data[0] ?? {};
+          const flag = (row.mblHblFlag ?? "").toUpperCase();
+
+          const toArray = (v) => (Array.isArray(v) ? v : [v].filter(Boolean));
+
+          const nameArr =
+            flag === "HBL"
+              ? [`${(row.hblNo ?? "").toString().trim() || ""}-Letters`]
+              : flag === "MBL"
+              ? [`${(row.mblNo ?? "").toString().trim() || ""}-Letters`]
+              : toArray(reportIds);
+
+          setDoReportName(nameArr);
+        }
+      } catch (e) {
+        console.error("Error fetching DO data:", e);
+        setData([]);
+      }
+    })();
+  }, [resolvedRecordId, isPublic]);
+
+  // ------------------------------------------------------------------
+  // 4) QR/link: now send encrypted rid (not plain recordId). Keep hb=cfm as you had.
+  const redirectUrl = useMemo(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const u = new URL(
+      "/htmlReports/rptDoLetter",
+      origin || "http://localhost:3001"
+    );
+    if (encRid) u.searchParams.set("rid", encRid); // 🔐 encrypted id
+    if (reportId)
+      u.searchParams.set("reportName", "Delivery_Order_verification");
+    if (reportId) u.searchParams.set("hb", "cfm"); // keep your original flag
+    return u.toString();
+  }, [encRid, reportId, reportName]);
+
+  // 5) Generate QR
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const url = await QRCode.toDataURL(redirectUrl, {
+          errorCorrectionLevel: "M",
+          margin: 2,
+          width: 192,
+        });
+        if (active) setQrUrl(url);
+      } catch (e) {
+        console.error("QR generation failed:", e);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [redirectUrl]);
+
+  // ------------------------------------------------------------------
+  // 6) Normalize reportIds (kept as-is, with +/underscore fixing)
+  useEffect(() => {
+    const normalize = (val) => {
+      const str = String(val ?? "");
+      const plusFixed = str.replace(/\+/g, " ");
+      let decoded = plusFixed;
+      try {
+        decoded = decodeURIComponent(plusFixed);
+      } catch {
+        /* ignore */
+      }
+      return decoded.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+    };
+
+    const stored = sessionStorage.getItem("selectedReportIds");
+    const fallback = normalize(reportName);
+    const raw =
+      stored && stored !== "null" && stored !== "undefined" ? stored : fallback;
+
+    if (!raw) {
+      console.log("No Report IDs found in sessionStorage or reportName");
+      return;
+    }
+
+    let list;
+    try {
+      const parsed = JSON.parse(raw);
+      list = Array.isArray(parsed)
+        ? parsed.map(normalize)
+        : [normalize(parsed)];
+    } catch {
+      list = [normalize(raw)];
+    }
+
+    const finalIds = [...new Set(list.filter(Boolean))];
+    setReportIds(finalIds);
+  }, [reportName]);
+
+  // ------------------------------------------------------------------
+  // 7) Your secondary fetch (token + clientId) after reportIds known.
+  //    Uses resolvedRecordId instead of reading recordId again.
   useEffect(() => {
     const fetchdata = async () => {
-      const id = searchParams.get("recordId");
-      if (id != null) {
-        try {
-          const token = localStorage.getItem("token");
-          if (!token) throw new Error("No token found");
-          // const requestBody = {
-          //   filterCondition: `job.id=${id}`,
-          // };
-          const requestBody = {
-            id: id,
-            clientId: clientId,
-          };
-          const response = await fetch(
-            `${baseUrl}/Sql/api/Reports/blDataForDO`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "x-access-token": JSON.parse(token),
-              },
-              body: JSON.stringify(requestBody),
-            }
-          );
-          if (!response.ok) throw new Error("Failed to fetch DO data");
-          const data = await response.json();
-          setData(data.data);
-          const storedUserData = localStorage.getItem("userData");
-          if (storedUserData) {
-            const decryptedData = decrypt(storedUserData);
-            const userData = JSON.parse(decryptedData);
-            const userName = userData[0]?.name;
-            setUserName(userName);
-          }
-        } catch (error) {
-          console.error("Error fetching job data:", error);
+      if (!resolvedRecordId) return;
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("No token found");
+        const requestBody = {
+          id: resolvedRecordId,
+          clientId: clientId,
+        };
+        const response = await fetch(`${baseUrl}/Sql/api/Reports/blDataForDO`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-access-token": JSON.parse(token),
+          },
+          body: JSON.stringify(requestBody),
+        });
+        if (!response.ok) throw new Error("Failed to fetch DO data");
+        const data = await response.json();
+        setData(Array.isArray(data?.data) ? data.data : []);
+
+        const storedUserData = localStorage.getItem("userData");
+        if (storedUserData) {
+          const decryptedData = decrypt(storedUserData);
+          const userData = JSON.parse(decryptedData);
+          setUserName(userData?.[0]?.name ?? null);
         }
+      } catch (error) {
+        console.error("Error fetching job data:", error);
       }
     };
+
     if (reportIds.length > 0) {
       fetchdata();
     }
-  }, [reportIds]);
+  }, [reportIds, resolvedRecordId, clientId]);
+
+  console.log("Do_Data", data);
 
   function formatDateToYMD(dateStr) {
     if (!dateStr) return ""; // Handles null, undefined, empty string
@@ -193,6 +387,11 @@ function rptDoLetter() {
   };
   const chunks =
     chunkSize > 0 ? chunkArray(containers, chunkSize) : [containers];
+
+  const deliveryOrderKenyaChunks =
+    deliveryOrderKenya > 0
+      ? chunkArray(containers, deliveryOrderKenya)
+      : [containers];
 
   const EmptyOffLoadingLetterSizeChunks =
     EmptyOffLoadingLetterSize > 0
@@ -3370,61 +3569,87 @@ function rptDoLetter() {
           <CompanyImgModule />
         </div>
 
-        {/* Header */}
-        <div className="mx-auto text-black">
-          <div
-            style={{ width: "100%" }}
-            className="flex justify-between w-full"
-          >
-            <div
-              style={{ width: "40%" }}
-              className="flex items-end justify-start w-[40%]"
-            >
-              <p
-                className="text-black font-bold mr-2"
-                style={{ fontSize: "10px" }}
+        <div className="flex" style={{ width: "100%" }}>
+          <div style={{ width: "60%" }}>
+            {/* Header */}
+            <div className="mx-auto text-black">
+              <div
+                style={{ width: "100%" }}
+                className="flex justify-between w-full"
               >
-                To, <br />
-                KENYA PORTS AUTHORITY, KILINDINI
-                <br />
-                {/* {data[0]?.nominatedArea || ""}
-                <br />
-                {data[0]?.nominatedAreaAddress || ""}
-                <br /> */}
-                Mombasa Kenya
+                <div
+                  style={{ width: "40%" }}
+                  className="flex items-end justify-start w-[40%]"
+                >
+                  <p
+                    className="text-black font-bold mr-2"
+                    style={{ fontSize: "10px" }}
+                  >
+                    To, <br />
+                    KENYA PORTS AUTHORITY, KILINDINI
+                    <br />
+                    Mombasa Kenya
+                  </p>
+                </div>
+              </div>
+              <div>
+                {/* ,fontFamily: "Verdana, Geneva, Tahoma, sans-serif " 
+                font-verdana-force */}
+                {/* style={{fontFamily: "Verdana, Geneva, Tahoma, sans-serif" }} */}
+                <h1
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: 700,
+                    color: "#000",
+                    textDecoration: "underline",
+                    textAlign: "right",
+                    // optional:
+                    // fontFamily: "Verdana, Geneva, Tahoma, sans-serif",
+                  }}
+                >
+                  {data[0]?.destuffName
+                    ? `Delivery Order / ${data[0].destuffName}`
+                    : "Delivery Order"}
+                </h1>
+              </div>
+            </div>
+            <div className="w-full">
+              <p className="text-black mt-2" style={{ fontSize: "10px" }}>
+                The Delivery Order is issued to <b>{data[0]?.chaName}</b> as
+                authorized by the consignee
               </p>
             </div>
           </div>
-          <h1 className="text-black font-bold text-sm text-center underline">
-            {data[0]?.destuffName
-              ? `Delivery Order / ${data[0].destuffName}`
-              : "Delivery Order"}
-          </h1>
-        </div>
-        <div className="w-full">
-          <p className="text-black" style={{ fontSize: "10px" }}>
-            Issued to: {data[0]?.consigneeText}
-          </p>
-          <div className="flex items-center">
-            <p className="text-black font-bold" style={{ fontSize: "10px" }}>
-              Clearing Agent: {data[0]?.chaName}
-            </p>
-            <p
-              className="text-black"
-              style={{ fontSize: "10px", marginLeft: "5px" }}
-            >
-              {data[0]?.customBrokerName || ""}
-            </p>
+          <div
+            style={{
+              width: "20%",
+              marginLeft: "auto", // pushes to the end if parent is flex
+              display: "flex",
+              justifyContent: "flex-end", // aligns content to the right inside
+            }}
+          >
+            {qrUrl ? (
+              <img
+                src={qrUrl}
+                alt="DO QR"
+                style={{ width: 100, height: 100 }}
+              />
+            ) : (
+              <div
+                className="bg-gray-200 animate-pulse"
+                style={{ width: 100, height: 100 }}
+              />
+            )}
           </div>
         </div>
 
         {/* Main Grid */}
-        <table className="w-full table-fixed border border-black border-collapse mt-4">
+        <table className="w-full table-fixed border border-black border-collapse mt-2">
           <tbody>
             <tr>
               <td className="w-1/6 border-t border-b border-l border-black p-1">
                 <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  VESSEL :
+                  Vessel :
                 </p>
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3434,7 +3659,7 @@ function rptDoLetter() {
               </td>
               <td className="w-1/6 border-t border-b border-l border-black p-1">
                 <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  B/L NO. :
+                  B/L No. :
                 </p>
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3446,7 +3671,7 @@ function rptDoLetter() {
             <tr>
               <td className="w-1/6 border-t border-b border-l border-black p-1">
                 <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  VOYAGE :
+                  Voyage :
                 </p>
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3505,7 +3730,8 @@ function rptDoLetter() {
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
                 <p className="text-black" style={{ fontSize: "9px" }}>
-                  {formatDateToYMD(data[0]?.doValidDate)}
+                  {/* {formatDateToYMD(data[0]?.doValidDate)} */}
+                  {getValidTillDate(data[0]?.doValidDate, 90)}
                 </p>
               </td>
             </tr>
@@ -3522,7 +3748,7 @@ function rptDoLetter() {
               </td>
               <td className="w-1/6 border-t border-b border-l border-black p-1">
                 <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  MANIFEST NUMBER :
+                  Manifest Number :
                 </p>
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3534,7 +3760,7 @@ function rptDoLetter() {
             <tr>
               <td className="w-1/6 border-t border-b border-l border-black p-1">
                 <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  DESTINATION :
+                  Destination :
                 </p>
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3544,7 +3770,7 @@ function rptDoLetter() {
               </td>
               <td className="w-1/6 border-t border-b border-l border-black p-1">
                 <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  USER :
+                  User :
                 </p>
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3555,6 +3781,52 @@ function rptDoLetter() {
             </tr>
           </tbody>
         </table>
+
+        {/* <div style={{ width: "100%" }} className="flex justify-between">
+            <div
+              style={{ width: "40%" }}
+              className="flex items-end justify-start w-[40%]"
+            >
+              <p
+                className="text-black font-bold mr-2"
+                style={{ fontSize: "10px" }}
+              >
+                CONSIGNEE NAME & ADDRESS:
+                {data[0]?.consigneeText || ""}
+                <br />
+                {data[0]?.consigneeAddress || ""}
+              </p>
+            </div>
+           
+          </div> */}
+
+        {/* <div className="flex mt-2" style={{ width: "100%" }}>
+          <div style={{ width: "15%" }}>
+            <p className="text-black font-bold" style={{ fontSize: "10px" }}>
+              DO SecurityKey :
+            </p>
+          </div>
+          <div style={{ width: "85%" }}>
+            <p className="text-black" style={{ fontSize: "10px" }}>
+              {data[0]?.doSecurityKey || ""}
+            </p>
+          </div>
+        </div> */}
+
+        <div className="flex mt-2" style={{ width: "100%" }}>
+          <div style={{ width: "15%" }}>
+            <p className="text-black font-bold" style={{ fontSize: "10px" }}>
+              Consignee :
+            </p>
+          </div>
+          <div style={{ width: "85%" }}>
+            <p className="text-black" style={{ fontSize: "10px" }}>
+              {data[0]?.consigneeText || ""}
+              <br />
+              {data[0]?.consigneeAddress || ""}
+            </p>
+          </div>
+        </div>
 
         <table className="w-full mt-4 table-fixed border border-black border-collapse">
           <thead>
@@ -3601,7 +3873,7 @@ function rptDoLetter() {
                   </td>
                   <td className="w-1/8 border border-black p-1">
                     <p
-                      className="text-black font-normal text-left"
+                      className="text-black font-normal text-center"
                       style={{ fontSize: "9px" }}
                     >
                       {(item.size || "") + "/" + (item.type || "")}
@@ -3609,7 +3881,7 @@ function rptDoLetter() {
                   </td>
                   <td className="w-1/8 border border-black p-1">
                     <p
-                      className="text-black font-normal text-center "
+                      className="text-black font-normal text-center"
                       style={{ fontSize: "9px" }}
                     >
                       {item.customSealNo || ""}
@@ -3617,13 +3889,13 @@ function rptDoLetter() {
                   </td>
                   <td className="w-1/8 border border-black p-1">
                     <p
-                      className="text-black font-normal text-left"
+                      className="text-black font-normal text-center"
                       style={{ fontSize: "9px" }}
                     >
                       {(item.grossWt || "") + " " + (item.weightUnitCode || "")}
                     </p>
                   </td>
-                  <td className="w-1/8 border border-black p-1 text-left">
+                  <td className="w-1/8 border border-black p-1 text-center">
                     <p
                       className="text-black font-normal"
                       style={{ fontSize: "9px" }}
@@ -3716,20 +3988,42 @@ function rptDoLetter() {
           </div>
         </div>
         <div className="mt-2" style={{ width: "100%" }}>
-          <div className="w-full">
-            <p className="text-black" style={{ fontSize: "10px" }}>
-              Issued to: {data[0]?.consigneeText}
-            </p>
-            <div className="flex items-center">
-              <p className="text-black font-bold" style={{ fontSize: "10px" }}>
-                Clearing Agent: {data[0]?.chaName}
-              </p>
-              <p
-                className="text-black"
-                style={{ fontSize: "10px", marginLeft: "5px" }}
-              >
-                {data[0]?.customBrokerName || ""}
-              </p>
+          <div style={{ width: "100%" }} className="flex ">
+            <div style={{ width: "50%" }} className="w-full">
+              {/* <p className="text-black" style={{ fontSize: "10px" }}>
+                Issued to: {data[0]?.consigneeText}
+              </p> */}
+              <div className="flex items-center">
+                <p
+                  className="text-black font-bold"
+                  style={{ fontSize: "10px" }}
+                >
+                  Clearing Agent: {data[0]?.chaName}
+                </p>
+                <p
+                  className="text-black"
+                  style={{ fontSize: "10px", marginLeft: "5px" }}
+                >
+                  {/* {data[0]?.customBrokerName || ""} */}
+                </p>
+              </div>
+            </div>
+            <div style={{ width: "50%" }} className="w-full flex">
+              <div style={{ width: "20%" }}>
+                <p
+                  className="text-black font-bold"
+                  style={{ fontSize: "10px" }}
+                >
+                  Consignee :
+                </p>
+              </div>
+              <div style={{ width: "80%" }}>
+                <p className="text-black" style={{ fontSize: "10px" }}>
+                  {data[0]?.consigneeText || ""}
+                  <br />
+                  {data[0]?.consigneeAddress || ""}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -3741,7 +4035,7 @@ function rptDoLetter() {
                     className="text-black font-bold"
                     style={{ fontSize: "9px" }}
                   >
-                    VESSEL :
+                    Vessel :
                   </p>
                 </td>
                 <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3754,7 +4048,7 @@ function rptDoLetter() {
                     className="text-black font-bold"
                     style={{ fontSize: "9px" }}
                   >
-                    DATE :
+                    Date :
                   </p>
                 </td>
                 <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3770,7 +4064,7 @@ function rptDoLetter() {
                     className="text-black font-bold"
                     style={{ fontSize: "9px" }}
                   >
-                    VOYAGE NO :
+                    Voyage No :
                   </p>
                 </td>
                 <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3783,7 +4077,7 @@ function rptDoLetter() {
                     className="text-black font-bold"
                     style={{ fontSize: "9px" }}
                   >
-                    B/L NO :
+                    B/L No :
                   </p>
                 </td>
                 <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3799,7 +4093,7 @@ function rptDoLetter() {
                     className="text-black font-bold"
                     style={{ fontSize: "9px" }}
                   >
-                    ARRIVAL (ATB) :
+                    Arrival (ATB) :
                   </p>
                 </td>
                 <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3812,7 +4106,7 @@ function rptDoLetter() {
                     className="text-black font-bold"
                     style={{ fontSize: "9px" }}
                   >
-                    REFERENCE NO :
+                    Reference No :
                   </p>
                 </td>
                 <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3828,7 +4122,7 @@ function rptDoLetter() {
                     className="text-black font-bold"
                     style={{ fontSize: "9px" }}
                   >
-                    PORT OF LOADING :
+                    Port Of Loading :
                   </p>
                 </td>
                 <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3841,36 +4135,7 @@ function rptDoLetter() {
                     className="text-black font-bold"
                     style={{ fontSize: "9px" }}
                   >
-                    BOOKING REF :
-                  </p>
-                </td>
-                <td className="w-2/6 border-t border-b border-r border-black p-1">
-                  <p className="text-black" style={{ fontSize: "9px" }}>
-                    {data[0]?.bookingRef || ""}
-                  </p>
-                </td>
-              </tr>
-
-              <tr>
-                <td className="w-1/6 border-t border-b border-l border-black p-1">
-                  <p
-                    className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
-                    PORT OF DISCHARGE :
-                  </p>
-                </td>
-                <td className="w-2/6 border-t border-b border-r border-black p-1">
-                  <p className="text-black" style={{ fontSize: "9px" }}>
-                    {data[0]?.pod || ""}
-                  </p>
-                </td>
-                <td className="w-1/6 border-t border-b border-l border-black p-1">
-                  <p
-                    className="text-black font-bold"
-                    style={{ fontSize: "9px" }}
-                  >
-                    DELIVERY ORDER NO :
+                    Delivery Order No :
                   </p>
                 </td>
                 <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3886,7 +4151,36 @@ function rptDoLetter() {
                     className="text-black font-bold"
                     style={{ fontSize: "9px" }}
                   >
-                    DESTINATION :
+                    Port Of Discharge :
+                  </p>
+                </td>
+                <td className="w-2/6 border-t border-b border-r border-black p-1">
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {data[0]?.pod || ""}
+                  </p>
+                </td>
+                <td className="w-1/6 border-t border-b border-l border-black p-1">
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    User :
+                  </p>
+                </td>
+                <td className="w-2/6 border-t border-b border-r border-black p-1">
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {userName}
+                  </p>
+                </td>
+              </tr>
+
+              <tr>
+                <td className="w-1/6 border-t border-b border-l border-black p-1">
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Destination :
                   </p>
                 </td>
                 <td className="w-2/6 border-t border-b border-r border-black p-1">
@@ -3899,12 +4193,12 @@ function rptDoLetter() {
                     className="text-black font-bold"
                     style={{ fontSize: "9px" }}
                   >
-                    USER :
+                    {/* User : */}
                   </p>
                 </td>
                 <td className="w-2/6 border-t border-b border-r border-black p-1">
                   <p className="text-black" style={{ fontSize: "9px" }}>
-                    {userName}
+                    {/* {userName} */}
                   </p>
                 </td>
               </tr>
@@ -3937,6 +4231,14 @@ function rptDoLetter() {
                     style={{ fontSize: "9px" }}
                   >
                     Size/Type
+                  </p>
+                </th>
+                <th className="w-1/8 border border-black p-1">
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Free Days
                   </p>
                 </th>
                 <th className="w-1/8 border border-black p-1">
@@ -3979,10 +4281,19 @@ function rptDoLetter() {
                     </th>
                     <th className="w-1/8 border border-black p-1">
                       <p
+                        className="text-black font-normal "
+                        style={{ fontSize: "9px" }}
+                      >
+                        {item.destinationFreeDays || ""}
+                      </p>
+                    </th>
+                    <th className="w-1/8 border border-black p-1">
+                      <p
                         className="text-black font-normal"
                         style={{ fontSize: "9px" }}
                       >
-                        {/* {formatDateToYMD(data?.[0]?.doDate)tejasdo} */}
+                        {/* //{formatDateToYMD(data[0]?.arrivalDate)} */}
+                        {formatDateToYMD(item.dischargeDate)}
                       </p>
                     </th>
 
@@ -3991,7 +4302,13 @@ function rptDoLetter() {
                         className="text-black font-normal"
                         style={{ fontSize: "9px" }}
                       >
-                        {formatDateToYMD(data?.[0]?.doValidDate)}
+                        {item?.doValidityDate != null &&
+                        String(item.doValidityDate).trim() !== ""
+                          ? formatDateToYMD(item.doValidityDate)
+                          : getValidTillDate(
+                              item?.dischargeDate,
+                              item?.destinationFreeDays
+                            )}
                       </p>
                     </th>
                   </tr>
@@ -3999,27 +4316,6 @@ function rptDoLetter() {
             </tbody>
           </table>
         </div>
-        {/* Footer */}
-        {/* <div className="text-center w-full">
-          <div className="mt-5 w-full">
-            <p
-              className="text-black w-full text-left"
-              style={{ fontSize: "10px" }}
-            >
-              This document is non-negotiable and for{" "}
-              <span className="font-bold">
-                KPA and Empty Depot reference only
-              </span>{" "}
-              – not valid for cargo release. <br />
-              Do not accept this Offloading Letter if manually altered. <br />
-              Carriage to ICD Embakasi, Nairobi (whether TBL, Merchant Haulage,
-              or Client nomination) is subject to Kenya Ports Authority terms.{" "}
-              <br />
-              The carrier is not responsible for delays, truck detention,
-              demurrage, or incidental costs.
-            </p>
-          </div>
-        </div>tejass */}
       </div>
     );
   };
@@ -4362,14 +4658,211 @@ function rptDoLetter() {
     );
   };
 
+  // CASE stays the same (your width 60–70% is fine). Only replace AuthorityLetter:
+
+  const AuthorityLetter = () => {
+    const row = (Array.isArray(data) ? data[0] : {}) || {};
+    const v = (x, dash = " ") =>
+      x === undefined || x === null || x === "" ? dash : String(x);
+
+    const vesselVoy =
+      row.vesselVoy ||
+      `${row.vesselName || ""}${
+        row.voyageNo ? ` / ${row.voyageNo}` : ""
+      }`.trim();
+
+    // shared classes
+    const tblBase = "w-full table-auto text-[11px] text-black border-collapse";
+    const tbodyBase =
+      "[&>tr]:transition-colors [&>tr]:duration-150 [&>tr:hover]:bg-gray-100";
+    const sectionBox = "border border-[#787878] rounded-md overflow-hidden";
+
+    return (
+      <main className="w-full">
+        <div className="mx-auto">
+          <CompanyImgModule />
+        </div>
+        {/* ===== Row 1: Status (L) + Vessel/ATB/Remarks (R) ===== */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {/* Status box */}
+          <section className={sectionBox}>
+            <table className={tblBase}>
+              <tbody className={tbodyBase}>
+                <tr className="border-b border-[#787878] odd:bg-white even:bg-gray-50">
+                  <td className="w-1/2 px-1 py-1 align-top font-semibold">
+                    D/O Security Key:
+                  </td>
+                  <td className="px-1 py-1 font-semibold align-top">
+                    {v(row.doSecurityKey || "")}
+                  </td>
+                </tr>
+                <tr className="border-b border-[#787878] odd:bg-white even:bg-gray-50">
+                  <td className="px-1 py-1 align-top font-semibold">D/O No:</td>
+                  <td className="px-1 py-1 font-semibold tracking-wide align-top">
+                    {v(row.doNo || "")}
+                  </td>
+                </tr>
+                <tr className="odd:bg-white even:bg-gray-50">
+                  <td className="px-1 py-1 align-top font-semibold">
+                    D/O Validity:
+                  </td>
+                  <td className="px-1 py-1 font-semibold align-top">
+                    {v(row.doDate || "")}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          {/* Vessel / ATB / Remarks */}
+          <section className={sectionBox}>
+            <table className={tblBase}>
+              <tbody className={tbodyBase}>
+                <tr className="border-b border-[#787878] odd:bg-white even:bg-gray-50">
+                  <td className="w-[45%] px-1 py-1 border-r border-[#787878] align-top font-semibold">
+                    Vessel name/ Voy:
+                  </td>
+                  <td className="px-1 py-1 font-medium align-top">
+                    {data[0]?.podVessel || ""}
+                    {" / "}
+                    {data[0]?.podVoyage || ""}
+                  </td>
+                </tr>
+                <tr className="border-b border-[#787878] odd:bg-white even:bg-gray-50">
+                  <td className="px-1 py-1 border-r border-[#787878] align-top font-semibold">
+                    ATA:
+                  </td>
+                  <td className="px-1 py-1 align-top">
+                    {formatDateToYMD(data[0]?.arrivalDate)}
+                  </td>
+                </tr>
+                {/* <tr className="odd:bg-white even:bg-gray-50">
+                  <td className="px-3 py-2 border-r border-[#787878] align-top font-semibold">
+                    Remarks:
+                  </td>
+                  <td className="px-3 py-2 align-top">
+                    {v(row.remarks || "")}
+                  </td>
+                </tr> */}
+              </tbody>
+            </table>
+          </section>
+        </div>
+
+        {/* ===== Row 2: Issued To (full width) ===== */}
+        <section className={`mt-4 ${sectionBox}`}>
+          <div className="border-b border-[#787878] px-1 py-1 text-[11px] font-semibold">
+            D/O issued to:
+          </div>
+          <table className={tblBase}>
+            <tbody className={tbodyBase}>
+              <tr className=" border-[#787878] odd:bg-white even:bg-gray-50">
+                <div className="w-[30%]">
+                  <td className="px-1 py-1 align-top  break-words break-all ">
+                    {v(row?.chaName || "")}
+                    <br />
+                    {v(row.chaAddress || "")}
+                  </td>
+                </div>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        {/* ===== Row 3: B/L details ===== */}
+        <section className={`mt-4 ${sectionBox}`}>
+          <table className={tblBase}>
+            <tbody className={tbodyBase}>
+              <tr className="border-[#787878] odd:bg-white even:bg-gray-50">
+                <td className="w-[30%] px-1 py-1 align-top font-semibold">
+                  B/L Number:
+                </td>
+                <td className="px-1 py-1 font-semibold tracking-wide align-top">
+                  {v(row.blNo || " ")}
+                </td>
+              </tr>
+              {/* <tr className="border-b border-[#787878] odd:bg-white even:bg-gray-50">
+                <td className="px-3 py-2 align-top font-semibold">
+                  Port of Loading:
+                </td>
+                <td className="px-3 py-2 align-top">{v(row.pol || " ")}</td>
+              </tr>
+              <tr className="border-b border-[#787878] odd:bg-white even:bg-gray-50">
+                <td className="px-3 py-2 align-top font-semibold">
+                  Port of Discharge:
+                </td>
+                <td className="px-3 py-2 align-top">{v(row.pod || " ")}</td>
+              </tr>
+              <tr className="odd:bg-white even:bg-gray-50">
+                <td className="px-3 py-2 align-top font-semibold">
+                  Booking Ref:
+                </td>
+                <td className="px-3 py-2 align-top">{v(row.bookingRef)}</td>
+              </tr> */}
+            </tbody>
+          </table>
+        </section>
+
+        {/* ===== Row 4: Container line ===== */}
+        <section className={`mt-4 ${sectionBox}`}>
+          <table className="w-full table-fixed text-[11px] text-black border-collapse">
+            {/* Force exact column widths */}
+            <colgroup>
+              <col style={{ width: "25%" }} />
+              <col style={{ width: "75%" }} />
+            </colgroup>
+
+            <tbody className="[&>tr]:transition-colors [&>tr]:duration-150 [&>tr:hover]:bg-gray-100">
+              <tr className="odd:bg-white even:bg-gray-50">
+                <td
+                  className="
+            px-1 py-1 align-top font-semibold
+            border-r border-[#787878]
+            whitespace-normal
+            break-words break-all
+            [overflow-wrap:anywhere] [word-break:anywhere] [hyphens:auto]
+            leading-[1.25] min-w-0
+          "
+                >
+                  Containers:
+                </td>
+
+                <td
+                  className="
+            px-1 py-1 align-top
+            whitespace-normal
+            break-words break-all
+            [overflow-wrap:anywhere] [word-break:anywhere] [hyphens:auto]
+            leading-[1.25] min-w-0
+          "
+                  /* extra inline safety for older engines */
+                  style={{
+                    wordBreak: "break-word", // legacy fallback
+                    overflowWrap: "anywhere", // modern wrap
+                    hyphens: "auto",
+                  }}
+                >
+                  {v(row?.containerNos)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </main>
+    );
+  };
+
   return (
     <main>
       <div className="mt-5">
-        <Print
-          enquiryModuleRefs={enquiryModuleRefs}
-          printOrientation="portrait"
-          reportIds={reportIds}
-        />
+        {getDisplayButton && (
+          <Print
+            enquiryModuleRefs={enquiryModuleRefs}
+            printOrientation="portrait"
+            //reportIds={reportIds}
+            reportIds={doReportName}
+          />
+        )}
 
         {reportIds.map((reportId, index) => {
           switch (reportId) {
@@ -4891,10 +5384,17 @@ function rptDoLetter() {
                 </>
               );
             case "Delivery Order Kenya":
+              const area = (data?.[0]?.nominatedArea ?? "")
+                .toString()
+                .trim()
+                .toLowerCase();
+              const suppressNote =
+                area === "port clearance" || area.includes("icd");
               return (
                 <>
-                  {(Array.isArray(chunks) && chunks.length
-                    ? chunks
+                  {(Array.isArray(deliveryOrderKenyaChunks) &&
+                  deliveryOrderKenyaChunks.length
+                    ? deliveryOrderKenyaChunks
                     : [undefined]
                   ).map((container, index) => (
                     <React.Fragment key={`${reportId}-${index}`}>
@@ -4920,7 +5420,10 @@ function rptDoLetter() {
                         {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
-                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
+                          style={{
+                            maxHeight: suppressNote ? "273mm" : "256mm",
+                            minHeight: suppressNote ? "273mm" : "256mm",
+                          }}
                         >
                           {DoLetterKenya(container)}{" "}
                           {/* container can be undefined; DoLetterKenya should normalize */}
@@ -4935,7 +5438,7 @@ function rptDoLetter() {
                               safe arrival and the Bill of Lading terms.{" "}
                               <span style={{ textTransform: "uppercase" }}>
                                 {data[0]?.company || ""}
-                              </span>
+                              </span>{" "}
                               , as carrier’s agent, bears no liability for short
                               landing, delay, damage, or other carrier matters,
                               and no claims shall be made against it. Once
@@ -4945,28 +5448,25 @@ function rptDoLetter() {
                               settlement; paid charges remain non-refundable.
                             </p>
                           </div>
+                          {!suppressNote && (
+                            <div>
+                              <p
+                                className="text-black  w-full text-left pt-1"
+                                style={{ fontSize: "10px" }}
+                              >
+                                <b>Note:</b> The carrier’s responsibility shall
+                                terminate upon delivery of laden containers at
+                                the port container yard (CY). Thereafter, all
+                                activities including the movement of laden
+                                containers from the port CY to the consignee’s
+                                nominated Container Freight Station (CFS), cargo
+                                delivery, and the return of empty containers to
+                                the carrier’s nominated depot, shall be the sole
+                                responsibility of the consignee.
+                              </p>
+                            </div>
+                          )}
                         </div>
-                        {/* <div className=" text-center w-full">
-          <div className="mt-5 w-full ">
-            <p
-              className="text-black  w-full text-left"
-              style={{ fontSize: "10px" }}
-            >
-              This Delivery Order is issued subject to vessel’s safe arrival and
-              the Bill of Lading terms.{" "}
-              <span style={{ textTransform: "uppercase" }}>
-                {data[0]?.company || ""}
-              </span>
-              , as carrier’s agent, bears no liability for short landing, delay,
-              damage, or other carrier matters, and no claims shall be made
-              against it. Once issued for cleared cargo, charges are
-              non-refundable. For uncleared cargo, withdrawal may be allowed
-              subject to detention/demurrage settlement; paid charges remain
-              non-refundable.
-            </p>
-          </div>
-        </div> */}
-
                         {/* Print fix style */}
                         <style jsx>{`
                           .black-text {
@@ -5022,7 +5522,7 @@ function rptDoLetter() {
                         {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
-                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
+                          style={{ maxHeight: "270mm", minHeight: "270mm" }}
                         >
                           {EmptyContainerOffLoadingLetter(container)}
                         </div>
@@ -5252,6 +5752,59 @@ function rptDoLetter() {
                   </>
                 </>
               );
+            case "Delivery Order verification":
+              return (
+                <>
+                  <React.Fragment key={`${reportId}-${index}`}>
+                    <div
+                      key={reportId}
+                      ref={(el) => enquiryModuleRefs.current.push(el)}
+                      id="Delivery Order verification"
+                      className={`relative rounded-lg bg-[rgb(255,255,255)] text-black
+    ring-1 ring-[#787878]/40
+    shadow-[0_10px_30px_rgba(0,0,0,0.12)]
+    hover:shadow-[0_16px_45px_rgba(0,0,0,0.18)]
+    transition-shadow duration-200
+    ${index < reportIds.length - 1 ? "report-spacing" : ""}`}
+                      style={{
+                        width: "70%",
+                        margin: "32px auto",
+                        padding: "18px",
+                        boxSizing: "border-box",
+                        display: "flex",
+                        flexDirection: "column",
+                        position: "relative",
+                      }}
+                    >
+                      <AuthorityLetter />
+                      <style jsx>{`
+                        /* Remove visual chrome in print */
+                        @media print {
+                          #Delivery\\ Order\\ verification {
+                            width: 210mm;
+                            min-height: 297mm;
+                            max-height: 297mm;
+                            padding: 16mm 14mm;
+                            box-shadow: none !important;
+                            -webkit-box-shadow: none !important;
+                            filter: none !important;
+                            border: 1px solid #000 !important; /* optional: keep crisp border in print */
+                            ring: 0 !important;
+                          }
+                          .report-spacing {
+                            page-break-after: always;
+                          }
+                        }
+                        @media (max-width: 1024px) {
+                          #Delivery\\ Order\\ verification {
+                            width: 92%;
+                          }
+                        }
+                      `}</style>
+                    </div>
+                  </React.Fragment>
+                </>
+              );
 
             default:
               return null;
@@ -5261,5 +5814,3 @@ function rptDoLetter() {
     </main>
   );
 }
-//AKASH
-export default rptDoLetter;

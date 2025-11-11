@@ -49,6 +49,7 @@
     "pdfjs-dist": "^4.0.379",
     "prop-types": "^15.8.1",
     "qrcode": "^1.5.4",
+    "qrcode.react": "^4.2.0",
     "react": "^18",
     "react-beautiful-dnd": "^13.1.1",
     "react-dnd": "^16.0.1",

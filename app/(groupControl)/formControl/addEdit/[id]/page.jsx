@@ -782,7 +782,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: true }
                 : field
           );
@@ -822,7 +822,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, isEditable: true }
                 : field
           );
@@ -927,7 +927,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: false }
                 : field
           );
@@ -967,7 +967,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, isEditable: false }
                 : field
           );
@@ -1353,7 +1353,8 @@ export default function AddEditFormControll() {
   async function onLoadFunctionCall(
     functionData,
     formControlData,
-    setFormControlData
+    setFormControlData,
+    setStateVariable
   ) {
     const funcNameMatch = functionData?.match(/^(\w+)/);
     // Check for the presence of parentheses to confirm the argument list, even if it's empty
@@ -1379,6 +1380,7 @@ export default function AddEditFormControll() {
           newState,
           formControlData,
           setFormControlData,
+          setStateVariable,
         });
         if (updatedValues) {
           //console.log("updatedValues", updatedValues);
@@ -1394,7 +1396,7 @@ export default function AddEditFormControll() {
         if (funcCallString) {
           let multiCallFunctions = funcCallString.split(";");
           multiCallFunctions.forEach((funcCall) => {
-            onLoadFunctionCall(funcCall, formControlData, setFormControlData);
+            onLoadFunctionCall(funcCall, formControlData, setFormControlData,setNewState);
           });
         }
       }
@@ -1578,7 +1580,8 @@ export default function AddEditFormControll() {
           if (data.success == true) {
             // toast.success(data.message);
             if (isReportPresent) {
-              const id = data?.data?.recordset[0]?.ParentId;
+              //const id = data?.data?.recordset[0]?.ParentId;
+              const id = data?.data?.recordset?.at(-1)?.ParentId;
               setOpenPrintModal((prev) => !prev);
               setSubmittedMenuId(search.menuName);
               setSubmittedRecordId(id);
@@ -1968,7 +1971,7 @@ export default function AddEditFormControll() {
                 ],
                 buyCurrencyId:
                   item.buyCurrencyId !== null &&
-                    item.buyCurrencyId !== undefined
+                  item.buyCurrencyId !== undefined
                     ? String(item.buyCurrencyId)
                     : null,
                 buyCurrencyIddropdown: [
@@ -1979,7 +1982,7 @@ export default function AddEditFormControll() {
                 ],
                 sellCurrencyId:
                   item.sellCurrencyId !== null &&
-                    item.sellCurrencyId !== undefined
+                  item.sellCurrencyId !== undefined
                     ? String(item.sellCurrencyId)
                     : null,
                 sellCurrencyIddropdown: [
@@ -1990,12 +1993,12 @@ export default function AddEditFormControll() {
                 ],
                 buyExchangeRate:
                   item.buyExchangeRate !== null &&
-                    item.buyExchangeRate !== undefined
+                  item.buyExchangeRate !== undefined
                     ? String(item.buyExchangeRate)
                     : null,
                 sellExchangeRate:
                   item.sellExchangeRate !== null &&
-                    item.sellExchangeRate !== undefined
+                  item.sellExchangeRate !== undefined
                     ? String(item.sellExchangeRate)
                     : null,
               };
@@ -2220,7 +2223,8 @@ export default function AddEditFormControll() {
           let data = await handleSubmitApi(cleanData);
           if (data.success == true) {
             toast.success(data.message);
-            const id = data?.data?.recordset[0]?.ParentId;
+            //const id = data?.data?.recordset[0]?.ParentId;
+            const id = data?.data?.recordset?.at(-1)?.ParentId;
             setOpenPrintModal((prev) => !prev);
             setSubmittedMenuId(search.menuName);
             setSubmittedRecordId(id);
@@ -3010,12 +3014,12 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-              const parsedValue =
-                typeof row[item.fieldname] === "number"
-                  ? row[item.fieldname]
-                  : parseFloat(row[item.fieldname] || 0);
-              return isNaN(parsedValue) ? sum : sum + parsedValue;
-            }, 0) // Calculate sum for 's' type
+                const parsedValue =
+                  typeof row[item.fieldname] === "number"
+                    ? row[item.fieldname]
+                    : parseFloat(row[item.fieldname] || 0);
+                return isNaN(parsedValue) ? sum : sum + parsedValue;
+              }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -3054,8 +3058,42 @@ function ChildAccordianComponent({
     calculateTotalVolumeAndWeight();
   }, [newState.tblRateRequestQty]);
 
-  const calculateTotalGrossWeight = () => {
+const calculateTotalNoOfPackages = () => {
+  if (!newState || !Array.isArray(newState.tblJobContainer)) {
+    return newState; // Return unchanged state if invalid
+  }
 
+  const toNum = (v) =>
+    v == null || v === "" ? 0 : Number(String(v).replace(/,/g, "")) || 0;
+
+  let totalNoPackages = 0;
+
+  newState.tblJobContainer.forEach((row) => {
+    totalNoPackages += toNum(row?.noOfPackages);
+  });
+
+  setNewState((prevState) => {
+    // If your state ever had a legacy key, prefer it
+    const targetKey = Object.prototype.hasOwnProperty.call(prevState, "noOfpackages")
+      ? "noOfpackages"
+      : "noOfPackages";
+
+    // Prevent unnecessary re-renders
+    if (toNum(prevState?.[targetKey]) === totalNoPackages) return prevState;
+
+    return {
+      ...prevState,
+      [targetKey]: totalNoPackages,
+    };
+  });
+};
+
+
+  useEffect(() => {
+    calculateTotalNoOfPackages();
+  }, [newState.tblJobContainer]);
+
+  const calculateTotalGrossWeight = () => {
     if (!newState || !Array.isArray(newState.tblJobContainer)) {
       return newState;
     }
@@ -3077,9 +3115,7 @@ function ChildAccordianComponent({
     calculateTotalGrossWeight();
   }, [newState.tblJobContainer]);
 
-
   const calculateTotalGrossWeightBl = () => {
-
     if (!newState || !Array.isArray(newState.tblBlContainer)) {
       return newState;
     }
@@ -3727,7 +3763,7 @@ function ChildAccordianComponent({
       const right = Math.round(
         Math.floor(
           tableRef.current?.getBoundingClientRect()?.width +
-          tableRef.current?.scrollLeft
+            tableRef.current?.scrollLeft
         )
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
@@ -3971,6 +4007,7 @@ function ChildAccordianComponent({
                       calculateTotalVolumeAndWeight();
                       calculateTotalGrossWeight();
                       calculateTotalGrossWeightBl();
+                      calculateTotalNoOfPackages();
                     }}
                   />
                 </div>
@@ -4116,7 +4153,7 @@ function ChildAccordianComponent({
                               isGridEdit={
                                 checker
                                   ? section?.gridEditableOnLoad?.toLowerCase() ===
-                                  "true"
+                                    "true"
                                   : isGridEdit
                               }
                               setIsGridEdit={setIsGridEdit}
@@ -4175,10 +4212,10 @@ function ChildAccordianComponent({
                                             {(field.type === "number" ||
                                               field.type === "decimal" ||
                                               field.type === "string") &&
-                                              field.gridTotal
+                                            field.gridTotal
                                               ? columnTotals[
-                                                field.fieldname
-                                              ].toString()
+                                                  field.fieldname
+                                                ].toString()
                                               : ""}
                                           </div>
                                         </div>

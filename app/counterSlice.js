@@ -4,7 +4,8 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
   isRedirection: true,
   reportTypeForPrint: "separate",
-  childRecord:null
+  childRecord: null,
+  selectedMenuId: null,
 };
 
 const appSlice = createSlice({
@@ -27,8 +28,11 @@ const appSlice = createSlice({
         case "reportTypeForPrint":
           state.reportTypeForPrint = value;
           break;
-          case "childRecord":
+        case "childRecord":
           state.childRecord = value;
+          break;
+        case "selectedMenuId":
+          state.selectedMenuId = value;
           break;
         default:
           // unknown flag—noop (or throw an error if you prefer)

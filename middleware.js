@@ -1,60 +1,57 @@
+// middleware.js
 import { NextResponse } from "next/server";
-// const jwt = require("jsonwebtoken");
 import { verifyRedisToken } from "./services/auth/Auth.services";
 
-// This function can be marked `async` if using `await` inside
 export default async function middleware(request) {
-  const token = request.cookies.get("token");
-  const url = new URL(request.url);
-  const pathname = url.pathname;
-  const isValid = token ? await verifyRedisToken(token?.value) : null;
+  const { pathname } = new URL(request.url);
 
-  if (pathname.startsWith("/redashChart/")) {
-    return NextResponse.next();
-  }
-
-  if (pathname.startsWith("/htmlReports/")) {
-    return NextResponse.next();
-  }
-
-  if (pathname === "/login") {
-    if (isValid) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    } else {
-      const response = NextResponse.next();
-      response.cookies.delete("token");
-      return response;
-    }
-  }
-
+  // 1) BYPASS THESE ROUTES COMPLETELY (no token checks)
   if (
+    pathname.startsWith("/htmlReports/") || // <-- your DO route lives here
+    pathname.startsWith("/redashChart/") ||
+    pathname.startsWith("/active/") ||
     pathname === "/LoginHelp" ||
     pathname === "/LoginReset" ||
-    pathname === `/ForgotPassword` ||
-    pathname === `/CreateDashboard`
+    pathname === "/ForgotPassword" ||
+    pathname === "/CreateDashboard"
   ) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/active/")) {
-    return NextResponse.next();
+  // 2) Only verify token for protected routes
+  const token = request.cookies.get("token")?.value;
+  let isValid = false;
+  if (token) {
+    try {
+      isValid = await verifyRedisToken(token);
+    } catch {
+      isValid = false;
+    }
   }
 
-  if (isValid) {
-    return NextResponse.next();
+  // 3) Login route handling
+  if (pathname === "/login") {
+    if (isValid) return NextResponse.redirect(new URL("/dashboard", request.url));
+    const res = NextResponse.next();
+    res.cookies.delete("token");
+    return res;
   }
 
+  // 4) Gate everything else matched by the config
+  if (isValid) return NextResponse.next();
   return NextResponse.redirect(new URL("/login", request.url));
 }
 
-// See "Matching Paths" below to learn more
+// Make sure /htmlReports is EXCLUDED from the matcher
 export const config = {
   matcher: [
     "/dashboard/:path*",
     "/formControl/:path*",
     "/login/:path*",
     {
-      source: "/((?!api|_next/static|_next/image|favicon.ico|/LoginHelp).*)",
+      // negative lookahead: do NOT match these public paths
+      source:
+        "/((?!api|_next/static|_next/image|favicon.ico|LoginHelp|LoginReset|ForgotPassword|CreateDashboard|htmlReports|redashChart|active).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

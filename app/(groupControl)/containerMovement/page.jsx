@@ -81,6 +81,7 @@ export default function AccordionUsage() {
   const [containerNo, setContainerNos] = useState("");
   const [bookingNo, setBookingNo] = useState("");
   const [blNo, setBlNo] = useState("");
+  const { companyId, branchId, userId, financialYear } = getUserDetails();
   const [childsFields, setChildsFields] = useState([
     {
       id: 1614,
@@ -90,7 +91,7 @@ export default function AccordionUsage() {
       isAttachmentRequired: "true",
       isCopyForSameTable: "true",
       functionOnLoad: null,
-      functionOnSubmit: null,
+      functionOnSubmit: "copyContainerData(activityId,activityDate,toLocationId)",
       functionOnEdit: null,
       functionOnDelete: null,
       searchApi: null,
@@ -274,9 +275,9 @@ export default function AccordionUsage() {
           isEditable: true,
           isSwitchToText: false,
           isBreak: false,
-          dropdownFilter: null,
+          dropdownFilter: `and id in (select id from fn_containerNextActivities(${'${values.containerNo}'},${companyId},${branchId},${financialYear},${userId},${clientId}))`,
           controlDefaultValue: null,
-          functionOnChange: "copyContainerData(activityId)",
+          functionOnChange: null,
           functionOnBlur: null,
           functionOnKeyPress: null,
           isEditableMode: "e",
@@ -630,7 +631,7 @@ export default function AccordionUsage() {
           columnsToDisabled: null,
           columnsToHide: null,
         },
-         {
+        {
           id: 15768,
           fieldname: "importBlId",
           yourlabel: "Import Bl",
@@ -678,7 +679,7 @@ export default function AccordionUsage() {
           columnsToDisabled: null,
           columnsToHide: null,
         },
-         {
+        {
           id: 15768,
           fieldname: "exportBlId",
           yourlabel: "Export Bl",
@@ -1005,6 +1006,7 @@ export default function AccordionUsage() {
   const [hideFieldName, setHideFieldName] = useState([]);
   const [labelName, setLabelName] = useState("");
 
+
   const getLabelValue = (labelValue) => {
     setLabelName(labelValue);
   };
@@ -1044,6 +1046,10 @@ export default function AccordionUsage() {
               fromLocationId: String(item.formLocationId),
               fromLocationIddropdown: [{ value: item.formLocationId, label: item.fromLocation }],
               lastActivityDate: item.activityDate,
+              activityId: Array.isArray(item.nextActivities) && item.nextActivities.length > 0 ? String(item.nextActivities[0].id) : "",
+              activityIddropdown: Array.isArray(item.nextActivities)
+                ? item.nextActivities.map(na => ({ value: na.id, label: na.name }))
+                : [],
               remarks: item.remarks ?? "",
               jobId: String(item.jobId),
               vesselId: String(item.vesselId),
@@ -1083,11 +1089,15 @@ export default function AccordionUsage() {
             lastActivityDate: item.activityDate,
             remarks: item.remarks ?? "",
             jobId: String(item.jobId),
-              vesselId: String(item.vesselId),
-              voyageId: String(item.voyageId),
-              importBlId: String(item.importBlId),
-              exportBlId: String(item.exportBlId),
+            vesselId: String(item.vesselId),
+            voyageId: String(item.voyageId),
+            importBlId: String(item.importBlId),
+            exportBlId: String(item.exportBlId),
             lastActivity: item.lastActivityname ?? "",
+            activityId: Array.isArray(item.nextActivities) && item.nextActivities.length > 0 ? String(item.nextActivities[0].id) : "",
+            activityIddropdown: Array.isArray(item.nextActivities)
+              ? item.nextActivities.map(na => ({ value: na.id, label: na.name }))
+              : [],
             indexValue: allRows.length + idx,
             isChecked: true,
           }));
@@ -1120,11 +1130,15 @@ export default function AccordionUsage() {
             lastActivityDate: item.activityDate,
             remarks: item.remarks ?? "",
             jobId: String(item.jobId),
-              vesselId: String(item.vesselId),
-              voyageId: String(item.voyageId),
-              importBlId: String(item.importBlId),
-              exportBlId: String(item.exportBlId),
+            vesselId: String(item.vesselId),
+            voyageId: String(item.voyageId),
+            importBlId: String(item.importBlId),
+            exportBlId: String(item.exportBlId),
             lastActivity: item.lastActivityname ?? "",
+            activityId: Array.isArray(item.nextActivities) && item.nextActivities.length > 0 ? String(item.nextActivities[0].id) : "",
+            activityIddropdown: Array.isArray(item.nextActivities)
+              ? item.nextActivities.map(na => ({ value: na.id, label: na.name }))
+              : [],
             indexValue: allRows.length + idx,
             isChecked: true,
           }));
@@ -1133,7 +1147,7 @@ export default function AccordionUsage() {
           toast.warn(`No BL data found for: ${newState.blNo}`);
         }
       }
-
+      console.log("newState", newState)
       // ✅ Final update
       if (allRows.length > 0) {
         setNewState(prev => ({
@@ -1181,162 +1195,162 @@ export default function AccordionUsage() {
   };
 
 
-// const handleEditLastActivityClick = async () => {
-//   try {
-//     if (newState?.containerNo && newState.containerNo.trim() !== "") {
-//       const containerNumbers = newState.containerNo.split(",").map(c => c.trim());
-//       const requestData = {
-//         columns: "id",
-//         tableName: "tblContainer",
-//         whereCondition: `containerNo ='${containerNumbers}'`,
-//         clientIdCondition: `status=1 FOR JSON PATH , INCLUDE_NULL_VALUES `,
-//       };
+  // const handleEditLastActivityClick = async () => {
+  //   try {
+  //     if (newState?.containerNo && newState.containerNo.trim() !== "") {
+  //       const containerNumbers = newState.containerNo.split(",").map(c => c.trim());
+  //       const requestData = {
+  //         columns: "id",
+  //         tableName: "tblContainer",
+  //         whereCondition: `containerNo ='${containerNumbers}'`,
+  //         clientIdCondition: `status=1 FOR JSON PATH , INCLUDE_NULL_VALUES `,
+  //       };
 
-//       const containerData = await fetchReportData(requestData);
-//       const containerIdData = containerData.data[0].id;
+  //       const containerData = await fetchReportData(requestData);
+  //       const containerIdData = containerData.data[0].id;
 
-//       const request = {
-//         clientId: clientId,
-//         containerId: containerIdData,
-//       };
+  //       const request = {
+  //         clientId: clientId,
+  //         containerId: containerIdData,
+  //       };
 
-//       const containerEdit = await editLastActivity(request);
-//       console.log("containerEdit", containerEdit);
+  //       const containerEdit = await editLastActivity(request);
+  //       console.log("containerEdit", containerEdit);
 
-//       if (containerEdit?.success && Array.isArray(containerEdit?.Chargers) && containerEdit.Chargers.length >= 1) {
-//         const firstRecord = containerEdit.Chargers[0];  // latest
-//         const secondRecord = containerEdit.Chargers.length >= 2 ? containerEdit.Chargers[1] : null;
+  //       if (containerEdit?.success && Array.isArray(containerEdit?.Chargers) && containerEdit.Chargers.length >= 1) {
+  //         const firstRecord = containerEdit.Chargers[0];  // latest
+  //         const secondRecord = containerEdit.Chargers.length >= 2 ? containerEdit.Chargers[1] : null;
 
-//         const updatedMovements = newState.tblContainerMovement.map((movement) => ({
-//           ...movement,
+  //         const updatedMovements = newState.tblContainerMovement.map((movement) => ({
+  //           ...movement,
 
-//           // ✅ Last activity from 2nd if exists, else 1st
-//           lastActivity: secondRecord?.activityName ?? firstRecord.activityName ?? "",
-//           lastActivitydropdown: [
-//             {
-//               value: (secondRecord?.activityId ?? firstRecord.activityId),
-//               label: (secondRecord?.activityName ?? firstRecord.activityName),
-//             },
-//           ],
-//           lastActivityDate: secondRecord?.activityDate ?? firstRecord.activityDate ?? "",
+  //           // ✅ Last activity from 2nd if exists, else 1st
+  //           lastActivity: secondRecord?.activityName ?? firstRecord.activityName ?? "",
+  //           lastActivitydropdown: [
+  //             {
+  //               value: (secondRecord?.activityId ?? firstRecord.activityId),
+  //               label: (secondRecord?.activityName ?? firstRecord.activityName),
+  //             },
+  //           ],
+  //           lastActivityDate: secondRecord?.activityDate ?? firstRecord.activityDate ?? "",
 
-//           // ✅ FromLocation → 2nd record if exists, else 1st
-//           fromLocation: secondRecord?.fromLocationName ?? firstRecord.fromLocationName ?? "",
-//           fromLocationdropdown: [
-//             {
-//               value: (secondRecord?.fromLocationId ?? firstRecord.fromLocationId),
-//               label: (secondRecord?.fromLocationName ?? firstRecord.fromLocationName),
-//             },
-//           ],
+  //           // ✅ FromLocation → 2nd record if exists, else 1st
+  //           fromLocation: secondRecord?.fromLocationName ?? firstRecord.fromLocationName ?? "",
+  //           fromLocationdropdown: [
+  //             {
+  //               value: (secondRecord?.fromLocationId ?? firstRecord.fromLocationId),
+  //               label: (secondRecord?.fromLocationName ?? firstRecord.fromLocationName),
+  //             },
+  //           ],
 
-//           // ✅ ToLocation → 1st record if 2 exist, else empty
-//           toLocation: secondRecord ? (firstRecord.toLocationName ?? "") : "",
-//           toLocationdropdown: secondRecord
-//             ? [{ value: firstRecord.toLocationId, label: firstRecord.toLocationName }]
-//             : [],
+  //           // ✅ ToLocation → 1st record if 2 exist, else empty
+  //           toLocation: secondRecord ? (firstRecord.toLocationName ?? "") : "",
+  //           toLocationdropdown: secondRecord
+  //             ? [{ value: firstRecord.toLocationId, label: firstRecord.toLocationName }]
+  //             : [],
 
-//           // ✅ ActivityId always from 1st
-//           activityId: firstRecord.activityId ?? "",
-//           activityIddropdown: [
-//             { value: firstRecord.activityId, label: firstRecord.activityName },
-//           ],
-//           activityDate: firstRecord.activityDate ?? "",
-//         }));
+  //           // ✅ ActivityId always from 1st
+  //           activityId: firstRecord.activityId ?? "",
+  //           activityIddropdown: [
+  //             { value: firstRecord.activityId, label: firstRecord.activityName },
+  //           ],
+  //           activityDate: firstRecord.activityDate ?? "",
+  //         }));
 
-//         setNewState({
-//           ...newState,
-//           tblContainerMovement: updatedMovements,
-//         });
-//       } else {
-//         toast.warn("No activity records found for this container.");
-//       }
-//     } else {
-//       toast.error("Please enter at least one container number.");
-//     }
-//   } catch (error) {
-//     console.error("Error fetching container activity:", error);
-//     toast.error("Something went wrong while fetching container data.");
-//   }
-// };
+  //         setNewState({
+  //           ...newState,
+  //           tblContainerMovement: updatedMovements,
+  //         });
+  //       } else {
+  //         toast.warn("No activity records found for this container.");
+  //       }
+  //     } else {
+  //       toast.error("Please enter at least one container number.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching container activity:", error);
+  //     toast.error("Something went wrong while fetching container data.");
+  //   }
+  // };
 
 
-const handleEditLastActivityClick = async () => {
-  try {
-    if (newState?.containerNo && newState.containerNo.trim() !== "") {
-      const containerNumbers = newState.containerNo.split(",").map(c => c.trim());
-      const requestData = {
-        columns: "id",
-        tableName: "tblContainer",
-        whereCondition: `containerNo ='${containerNumbers}'`,
-        clientIdCondition: `status=1 FOR JSON PATH , INCLUDE_NULL_VALUES `,
-      };
+  const handleEditLastActivityClick = async () => {
+    try {
+      if (newState?.containerNo && newState.containerNo.trim() !== "") {
+        const containerNumbers = newState.containerNo.split(",").map(c => c.trim());
+        const requestData = {
+          columns: "id",
+          tableName: "tblContainer",
+          whereCondition: `containerNo ='${containerNumbers}'`,
+          clientIdCondition: `status=1 FOR JSON PATH , INCLUDE_NULL_VALUES `,
+        };
 
-      const containerData = await fetchReportData(requestData);
-      const containerIdData = containerData.data[0].id;
+        const containerData = await fetchReportData(requestData);
+        const containerIdData = containerData.data[0].id;
 
-      const request = {
-        clientId: clientId,
-        containerId: containerIdData,
-      };
+        const request = {
+          clientId: clientId,
+          containerId: containerIdData,
+        };
 
-      const containerEdit = await editLastActivity(request);
-      console.log("containerEdit", containerEdit);
+        const containerEdit = await editLastActivity(request);
+        console.log("containerEdit", containerEdit);
 
-      if (containerEdit?.success && Array.isArray(containerEdit?.Chargers) && containerEdit.Chargers.length >= 1) {
-        const firstRecord = containerEdit.Chargers[0];   // latest
-        const secondRecord = containerEdit.Chargers.length >= 2 ? containerEdit.Chargers[1] : null;
+        if (containerEdit?.success && Array.isArray(containerEdit?.Chargers) && containerEdit.Chargers.length >= 1) {
+          const firstRecord = containerEdit.Chargers[0];   // latest
+          const secondRecord = containerEdit.Chargers.length >= 2 ? containerEdit.Chargers[1] : null;
 
-        const updatedMovements = newState.tblContainerMovement.map((movement) => ({
-          ...movement,
+          const updatedMovements = newState.tblContainerMovement.map((movement) => ({
+            ...movement,
 
-          // ✅ Last activity from 2nd if exists, else 1st
-          lastActivity: secondRecord?.activityName ?? firstRecord.activityName ?? "",
-          lastActivitydropdown: [
-            {
-              value: (secondRecord?.activityId ?? firstRecord.activityId),
-              label: (secondRecord?.activityName ?? firstRecord.activityName),
-            },
-          ],
-          lastActivityDate: secondRecord?.activityDate ?? firstRecord.activityDate ?? "",
+            // ✅ Last activity from 2nd if exists, else 1st
+            lastActivity: secondRecord?.activityName ?? firstRecord.activityName ?? "",
+            lastActivitydropdown: [
+              {
+                value: (secondRecord?.activityId ?? firstRecord.activityId),
+                label: (secondRecord?.activityName ?? firstRecord.activityName),
+              },
+            ],
+            lastActivityDate: secondRecord?.activityDate ?? firstRecord.activityDate ?? "",
 
-          // ✅ FromLocation always from 1st record
-          fromLocation: firstRecord.fromLocationName ?? "",
-          fromLocationdropdown: [
-            {
-              value: firstRecord.fromLocationId,
-              label: firstRecord.fromLocationName,
-            },
-          ],
+            // ✅ FromLocation always from 1st record
+            fromLocation: firstRecord.fromLocationName ?? "",
+            fromLocationdropdown: [
+              {
+                value: firstRecord.fromLocationId,
+                label: firstRecord.fromLocationName,
+              },
+            ],
 
-          // ✅ ToLocation from 2nd record (if exists), else empty
-          toLocation: secondRecord?.toLocationName ?? "",
-          toLocationdropdown: secondRecord
-            ? [{ value: secondRecord.toLocationId, label: secondRecord.toLocationName }]
-            : [],
+            // ✅ ToLocation from 2nd record (if exists), else empty
+            toLocation: secondRecord?.toLocationName ?? "",
+            toLocationdropdown: secondRecord
+              ? [{ value: secondRecord.toLocationId, label: secondRecord.toLocationName }]
+              : [],
 
-          // ✅ ActivityId always from 1st
-          activityId: firstRecord.activityId ?? "",
-          activityIddropdown: [
-            { value: firstRecord.activityId, label: firstRecord.activityName },
-          ],
-          activityDate: firstRecord.activityDate ?? "",
-        }));
+            // ✅ ActivityId always from 1st
+            activityId: firstRecord.activityId ?? "",
+            activityIddropdown: [
+              { value: firstRecord.activityId, label: firstRecord.activityName },
+            ],
+            activityDate: firstRecord.activityDate ?? "",
+          }));
 
-        setNewState({
-          ...newState,
-          tblContainerMovement: updatedMovements,
-        });
+          setNewState({
+            ...newState,
+            tblContainerMovement: updatedMovements,
+          });
+        } else {
+          toast.warn("No activity records found for this container.");
+        }
       } else {
-        toast.warn("No activity records found for this container.");
+        toast.error("Please enter at least one container number.");
       }
-    } else {
-      toast.error("Please enter at least one container number.");
+    } catch (error) {
+      console.error("Error fetching container activity:", error);
+      toast.error("Something went wrong while fetching container data.");
     }
-  } catch (error) {
-    console.error("Error fetching container activity:", error);
-    toast.error("Something went wrong while fetching container data.");
-  }
-};
+  };
 
   const handleFieldValuesChange = (updatedValues) => {
     const entries = Object.entries(updatedValues);

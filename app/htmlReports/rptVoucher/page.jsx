@@ -1,40 +1,36 @@
 "use client";
 /* eslint-disable */
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-import React, { useEffect, useState, useRef } from "react";
-import { useSearchParams } from "next/navigation";
-import "./rptVoucher.css";
-import Print from "@/components/Print/page";
+import React, { useEffect, useState, useMemo, useRef } from "react";
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL; // kept as-is per your original code
+import { useSearchParams, usePathname } from "next/navigation";
 import { decrypt } from "@/helper/security";
-const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
+import "jspdf-autotable";
+import Print from "@/components/Print/page";
 import "@/public/style/reportTheme.css";
-import { reportTheme } from "@/services/auth/FormControl.services";
-import { applyTheme } from "@/utils";
-import { array } from "prop-types";
+import { getUserDetails } from "@/helper/userDetails";
+import "./rptVoucher.css";
+import { color, text } from "d3";
 
-const rptVoucher = () => {
+export default function rptDoLetter() {
+  const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
+  const { clientId } = getUserDetails();
+  const enquiryModuleRefs = useRef([]);
+  enquiryModuleRefs.current = [];
   const searchParams = useSearchParams();
   const [reportIds, setReportIds] = useState([]);
-  const [data, setData] = useState(null);
-  const enquiryModuleRef = useRef();
-  const [html2pdf, setHtml2pdf] = useState(null);
-  const [ImageUrl, setImageUrl] = useState("");
+  const [data, setData] = useState([]);
+  const [voucherLedgerDetails, setVoucherLedgerDetails] = useState([]);
+  const [companyName, setCompanyName] = useState(null);
+
+  const voucherReportSize = 6;
 
   useEffect(() => {
-    const loadHtml2pdf = async () => {
-      const module = await import("html2pdf.js");
-      setHtml2pdf(() => module.default);
-    };
-    loadHtml2pdf();
-  }, []);
-
-  useEffect(() => {
+    setReportIds(["Voucher Report"]);
     const storedReportIds = sessionStorage.getItem("selectedReportIds");
     if (storedReportIds) {
       let reportIds = JSON.parse(storedReportIds);
       reportIds = Array.isArray(reportIds) ? reportIds : [reportIds];
-      console.log("Retrieved Report IDs:", reportIds);
-      setReportIds(reportIds);
+      setReportIds(["Voucher Report"]);
     } else {
       console.log("No Report IDs found in sessionStorage");
     }
@@ -43,28 +39,57 @@ const rptVoucher = () => {
   useEffect(() => {
     const fetchData = async () => {
       const id = searchParams.get("recordId");
+      console.log(id);
       if (id != null) {
         try {
           const token = localStorage.getItem("token");
           if (!token) throw new Error("No token found");
-          const requestBody = {
-            id: id,
-          };
-          const response = await fetch(
-            `${baseUrl}/Sql/api/Reports/vehicleRoute`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "x-access-token": JSON.parse(token),
-              },
-              body: JSON.stringify(requestBody),
-            }
-          );
-          if (!response.ok)
-            throw new Error("Failed to fetch vehicleRoute data");
+          const filterCondition = { id: id };
+          const response = await fetch(`${baseUrl}/Sql/api/Reports/voucher`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-access-token": JSON.parse(token),
+            },
+            body: JSON.stringify(filterCondition),
+          });
+          if (!response.ok) throw new Error("Failed to fetch Voucher data");
           const data = await response.json();
-          setData(data.data);
+          console.log("fetch Voucher", data?.data[0]);
+          setData(data?.data);
+          if (Array.isArray(data?.data) && data.data.length > 0) {
+            // parent rows may be under tblVoucherLedgerDetails (as you said) or sometimes under tblVoucherLedger
+            const parentRows = Array.isArray(
+              data.data[0]?.tblVoucherLedgerDetails
+            )
+              ? data.data[0].tblVoucherLedgerDetails
+              : Array.isArray(data.data[0]?.tblVoucherLedger)
+              ? data.data[0].tblVoucherLedger
+              : [];
+
+            const voucherLedgerDetailsFlat = parentRows.flatMap((row) =>
+              Array.isArray(row?.tblVoucherLedgerDetails)
+                ? row.tblVoucherLedgerDetails
+                : []
+            );
+
+            // console it
+            console.log("voucherLedgerDetailsFlat:", voucherLedgerDetailsFlat);
+            if (voucherLedgerDetailsFlat?.length) {
+              //console.table(voucherLedgerDetailsFlat); // nice readable table in devtools
+              setVoucherLedgerDetails(voucherLedgerDetailsFlat);
+            }
+          }
+
+          const storedUserData = localStorage.getItem("userData");
+          if (storedUserData) {
+            const decryptedData = decrypt(storedUserData);
+            const userData = JSON.parse(decryptedData);
+            const companyName = userData[0]?.companyName;
+            if (companyName) {
+              setCompanyName(companyName);
+            }
+          }
         } catch (error) {
           console.error("Error fetching job data:", error);
         }
@@ -75,390 +100,482 @@ const rptVoucher = () => {
     }
   }, [reportIds]);
 
-  useEffect(() => {
-    const fetchHeader = async () => {
-      const getReportId = searchParams.get("reportId");
-      const storedUserData = localStorage.getItem("userData");
-      if (storedUserData) {
-        const decryptedData = decrypt(storedUserData);
-        const userData = JSON.parse(decryptedData);
-        const headerLogoPath = userData[0]?.headerLogoPath;
-        if (headerLogoPath) {
-          setImageUrl(headerLogoPath);
-        }
-        const themeRequest = {
-          clientId: userData[0]?.clientId,
-          reportId: Number(getReportId),
-        };
-        const themeData = await reportTheme(themeRequest);
-        applyTheme(
-          themeData.data,
-          enquiryModuleRef.current?.querySelector(".bgTheme")
-        );
-        // enquiryModuleRef.current.style.backgroundColor =
-        //   themeData.data["bgColor"] || "white";
-      }
-    };
-    fetchHeader();
-  }, [reportIds]);
+  function formatDateToDMYMon(dateInput) {
+    if (!dateInput) return "";
+
+    // Support "dd/mm/yyyy" strings as well as Date/ISO inputs
+    let date;
+    if (
+      typeof dateInput === "string" &&
+      /^\d{2}\/(\d{2})\/\d{4}$/.test(dateInput)
+    ) {
+      const [d, m, y] = dateInput.split("/").map(Number);
+      date = new Date(y, m - 1, d); // avoid locale parsing issues
+    } else {
+      date = new Date(dateInput);
+    }
+
+    if (Number.isNaN(date.getTime())) return "";
+
+    const day = String(date.getDate()).padStart(2, "0");
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const mon = months[date.getMonth()];
+    const year = date.getFullYear();
+
+    return `${day}-${mon}-${year}`; // e.g., "30/oct/2025"
+  }
+
+  const containers = data[0]?.tblBlContainer || [];
+
+  const chunkArray = (arr, size) => {
+    if (!Array.isArray(arr) || size <= 0) return [arr || []];
+    const out = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  };
+
+  const VoucherReportChunks =
+    voucherReportSize > 0
+      ? chunkArray(containers, voucherReportSize)
+      : [containers];
 
   const CompanyImgModule = () => {
+    const storedUserData = localStorage.getItem("userData");
+    let imageHeader = null;
+    if (storedUserData) {
+      const decryptedData = decrypt(storedUserData);
+      const userData = JSON.parse(decryptedData);
+      imageHeader = userData[0]?.headerLogoPath;
+    }
     return (
       <img
-        src={`${baseUrlNext}${ImageUrl}`}
+        src={imageHeader ? baseUrlNext + imageHeader : ""}
+        style={{ width: "100%", height: "130px" }}
         alt="LOGO"
-        class="border-t border-l border-r border-black p-6 w-full"
-        style={{ color: "black" }}
-      ></img>
+      />
     );
   };
 
-  const VoucherGrid = (data) => {
-    const gridData =
-      Array.isArray(data.data) && data.data.length > 0 ? data.data : [];
-    const bindGridData =
-      Array.isArray(gridData[0]?.voucherLedger) &&
-      gridData[0]?.voucherLedger.length > 0
-        ? gridData[0]?.voucherLedger
-        : [];
-    console.log("bindGridData", bindGridData);
+  const VoucherReport = (input) => {
+    const containers = Array.isArray(input)
+      ? input
+      : Array.isArray(input?.containers)
+      ? input?.containers
+      : [];
+
+    const toNum = (v) => Number(String(v ?? "").replace(/,/g, "")) || 0;
+
+    // 1) add columns to each item
+    const rows = (voucherLedgerDetails ?? []).map((item, idx) => {
+      const invoiceAmount = +(
+        toNum(item?.debitAmount) - toNum(item?.creditAmount)
+      ).toFixed(2);
+
+      const tdsAmount = toNum(item?.tdsAmount);
+      const invAmountAdjusted = toNum(
+        item?.invoiceAmountHC ?? item?.invoiceAmountHc
+      );
+
+      return {
+        ...item,
+        indexValue: item.indexValue ?? idx,
+        invoiceAmount, // (balanceAmount - creditAmount)
+        tdsAmount, // as-is (normalized to number)
+        invAmountAdjusted, // from invoiceAmountHC
+      };
+    });
+
+    // 2) (optional) per-column totals
+    const totals = rows.reduce(
+      (acc, r) => {
+        acc.invoiceAmount += toNum(r.invoiceAmount);
+        acc.tdsAmount += toNum(r.tdsAmount);
+        acc.invAmountAdjusted += toNum(r.invAmountAdjusted);
+        return acc;
+      },
+      { invoiceAmount: 0, tdsAmount: 0, invAmountAdjusted: 0 }
+    );
+
+    // round once at the end
+    totals.invoiceAmount = +totals.invoiceAmount.toFixed(2);
+    totals.tdsAmount = +totals.tdsAmount.toFixed(2);
+    totals.invAmountAdjusted = +totals.invAmountAdjusted.toFixed(2);
+
+    // 3) console for verification
+    console.table(
+      rows.map((r) => ({
+        voucherNo: r.voucherNo ?? r.voucherNumber ?? r.voucher,
+        invoiceAmount: r.invoiceAmount,
+        tdsAmount: r.tdsAmount,
+        invAmountAdjusted: r.invAmountAdjusted,
+      }))
+    );
+    console.log("Column totals:", totals);
+
     return (
-      <>
-        <div className="w-full flex border-black border-l border-r border-t bg-gray-200">
-          <p
-            style={{ width: "25%", color: "black", fontSize: "10px" }}
-            className="pl-2 font-bold pt-1 pb-1 text-center"
-          >
-            Particulars
-          </p>
-          <p
-            style={{ width: "45%", color: "black", fontSize: "10px" }}
-            className="pl-2 border-l border-black font-bold pt-1 pb-1 text-center"
-          >
-            Narration{" "}
-          </p>
-          <p
-            style={{ width: "15%", color: "black", fontSize: "10px" }}
-            className="pl-2 border-l border-black font-bold pt-1 pb-1 text-center"
-          >
-            Debit Amount{" "}
-          </p>
-          <p
-            style={{ width: "15%", color: "black", fontSize: "10px" }}
-            className="pl-2 border-l border-black font-bold pt-1 pb-1 text-center"
-          >
-            Credit Amount
-          </p>
-        </div>
-        {bindGridData.map((row, idx) => (
-          <>
-            <div
-              key={idx}
-              style={{ color: "black", fontSize: "11px" }}
-              className="w-full flex border-black border-l border-r border-b border-t"
+      <div>
+        <div className="mx-auto">
+          <CompanyImgModule />
+          <div>
+            <h1
+              className="text-black font-bold text-center mt-2"
+              style={{ fontSize: "14px" }}
             >
-              <p style={{ width: "25%" }} className="pl-2 pt-1 pb-1 pr-1">
-                {row.generalLedger || "."}
-              </p>
-              <p
-                style={{ width: "45%" }}
-                className="pl-2 border-l border-black pt-1 pb-1 pr-1"
-              >
-                {row.narration}
-              </p>
-              <p
-                style={{ width: "15%" }}
-                className="pl-2 border-l border-black pt-1 pb-1 text-right pr-1"
-              >
-                {row.debitAmount}
-              </p>
-              <p
-                style={{ width: "15%" }}
-                className="pl-2 border-l border-black pt-1 pb-1 text-right pr-1"
-              >
-                {row.creditAmount}
-              </p>
-            </div>
-            <div>
-              <div className="w-full flex border-black border-l border-r border-b bg-gray-100">
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1 font-bold"
-                  style={{ color: "black", fontSize: "9px" }}
+              Receipt
+            </h1>
+            <table
+              className="mt-2"
+              style={{ width: "100%", borderCollapse: "collapse" }}
+            >
+              <tr>
+                <th
+                  className="text-black font-bold text-left"
+                  style={{ fontSize: "11px" }}
                 >
-                  Invoice No.
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1 font-bold"
-                  style={{ color: "black", fontSize: "9px" }}
+                  Party Name{" "}
+                </th>
+                <th
+                  className="text-black font-bold text-left"
+                  style={{ fontSize: "11px" }}
                 >
-                  Date
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1 font-bold"
-                  style={{ color: "black", fontSize: "9px" }}
+                  Receipt No
+                </th>
+                <th
+                  className="text-black font-bold text-left"
+                  style={{ fontSize: "11px" }}
                 >
-                  Invoice Amount FC
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1 font-bold"
-                  style={{ color: "black", fontSize: "9px" }}
+                  Receipt Date
+                </th>
+              </tr>
+              <tr>
+                <td
+                  className="text-black text-left"
+                  style={{ fontSize: "10px" }}
                 >
-                  Ex. Rate
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1 font-bold"
-                  style={{ color: "black", fontSize: "9px" }}
+                  {data[0]?.partyName}
+                </td>
+                <td
+                  className="text-black text-left"
+                  style={{ fontSize: "10px" }}
                 >
-                  Invoice Amount
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1 font-bold"
-                  style={{ color: "black", fontSize: "9px" }}
+                  {data[0]?.voucherNo}
+                </td>
+                <td
+                  className="text-black text-left"
+                  style={{ fontSize: "10px" }}
                 >
-                  TDS Amount
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1 font-bold"
-                  style={{ color: "black", fontSize: "9px" }}
+                  {formatDateToDMYMon(data[0]?.voucherDate)}
+                </td>
+              </tr>
+            </table>
+            <p
+              className="text-black text-left mt-2"
+              style={{ fontSize: "10px" }}
+            >
+              Received with thanks from{" "}
+              <span className="font-bold">{data[0]?.partyName}</span> as per
+              below details :
+            </p>
+            <table
+              className="mt-2"
+              style={{ width: "100%", borderCollapse: "collapse" }}
+            >
+              <tr>
+                <th
+                  className="text-black font-bold text-center border border-black p-1"
+                  style={{ fontSize: "9px", width: "10%" }}
+                >
+                  Type
+                </th>
+                <th
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "15%" }}
+                >
+                  Cheque / Reference No .
+                </th>
+                <th
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "15%" }}
+                >
+                  Cheque / Reference Date
+                </th>
+                <th
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "25%" }}
+                >
+                  Bank Name
+                </th>
+                <th
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "25%" }}
+                >
+                  Payment By
+                </th>
+                <th
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "10%" }}
                 >
                   Amount
-                </p>
-              </div>
-              <div className="w-full flex border-black border-l border-r">
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                </th>
+              </tr>
+              <tr>
+                <td
+                  className="text-black text-center border border-black p-1"
+                  style={{ fontSize: "9px", width: "10%" }}
                 >
-                  FSAMUMI2504068
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  {data[0]?.paymentType}
+                </td>
+                <td
+                  className="text-black text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "15%" }}
                 >
-                  10/04/2025
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  {data[0]?.referenceNo}
+                </td>
+                <td
+                  className="text-black text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "15%" }}
                 >
-                  19162.26
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  {formatDateToDMYMon(data[0]?.referenceDate)}
+                </td>
+                <td
+                  className="text-black text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "25%" }}
                 >
-                  1.00
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  {data[0]?.paymentByBank}
+                </td>
+                <td
+                  className="text-black text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "25%" }}
                 >
-                  19162.26
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  {data[0]?.partyName}
+                </td>
+                <td
+                  className="text-black text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "10%" }}
                 >
-                  0.00
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  {data[0]?.amount}
+                </td>
+              </tr>
+            </table>
+            <p
+              className="text-black text-left mt-2"
+              style={{ fontSize: "10px" }}
+            >
+              Payment Towards the below shipments :
+            </p>
+            <table
+              className="mt-2"
+              style={{ width: "100%", borderCollapse: "collapse" }}
+            >
+              <tr>
+                <th
+                  className="text-black font-bold text-center border border-black p-1"
+                  style={{ fontSize: "9px", width: "15%" }}
                 >
-                  18837.26
-                </p>
-              </div>
-              <div className="w-full flex border-black border-l border-r">
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  Invoice No.
+                </th>
+                <th
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "15%" }}
                 >
-                  FSAMUMI2504068
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  Invoice Date
+                </th>
+                <th
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "15%" }}
                 >
-                  10/04/2025
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  Job No
+                </th>
+                <th
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "10%" }}
                 >
-                  19162.26
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  BL No
+                </th>
+                <th
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "15%" }}
                 >
-                  1.00
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  Invoice Amount
+                </th>
+                <th
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "15%" }}
                 >
-                  19162.26
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  TDS Amount
+                </th>
+                <th
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "15%" }}
                 >
-                  0.00
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  Inv Amount Adjusted
+                </th>
+              </tr>
+              {voucherLedgerDetails.map((item, index) => (
+                <tr>
+                  <td
+                    className="text-black text-center border border-black p-1"
+                    style={{ fontSize: "9px", width: "15%" }}
+                  >
+                    {item?.invoiceNo}
+                  </td>
+                  <td
+                    className="text-black text-center  border border-black p-1"
+                    style={{ fontSize: "9px", width: "15%" }}
+                  >
+                    {formatDateToDMYMon(item?.invoiceDate)}
+                  </td>
+                  <td
+                    className="text-black text-center  border border-black p-1"
+                    style={{ fontSize: "9px", width: "15%" }}
+                  >
+                    {item?.jobNo}
+                  </td>
+                  <td
+                    className="text-black text-center  border border-black p-1"
+                    style={{ fontSize: "9px", width: "10%" }}
+                  >
+                    {item?.blNo}
+                  </td>
+                  <td
+                    className="text-black text-center  border border-black p-1"
+                    style={{ fontSize: "9px", width: "15%" }}
+                  >
+                    {(
+                      (+String(item?.debitAmount ?? "").replace(/,/g, "") ||
+                        0) -
+                      (+String(item?.creditAmount ?? "").replace(/,/g, "") || 0)
+                    ).toFixed(2)}
+                  </td>
+                  <td
+                    className="text-black text-center  border border-black p-1"
+                    style={{ fontSize: "9px", width: "15%" }}
+                  >
+                    {(item?.tdsAmount || 0).toFixed(2)}
+                  </td>
+                  <td
+                    className="text-black text-center  border border-black p-1"
+                    style={{ fontSize: "9px", width: "15%" }}
+                  >
+                    {(item?.invoiceAmountHC || 0).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+              <tr>
+                <td
+                  className="text-black font-bold text-right border border-black p-1"
+                  style={{ fontSize: "9px", width: "15%" }}
+                  colSpan={4}
                 >
-                  18837.26
-                </p>
-              </div>
-              <div className="w-full flex border-black border-l border-r">
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1 font-bold"
-                  style={{ color: "black", fontSize: "9px" }}
+                  Total Amount
+                </td>
+                <td
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "10%" }}
                 >
-                  Total
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
-                ></p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  {(totals.invoiceAmount || 0).toFixed(2)}
+                </td>
+                <td
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "10%" }}
                 >
-                  19162.26
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
-                ></p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
+                  {(totals.tdsAmount || 0).toFixed(2)}
+                </td>
+                <td
+                  className="text-black font-bold text-center  border border-black p-1"
+                  style={{ fontSize: "9px", width: "10%" }}
                 >
-                  19162.26
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
-                >
-                  0.00
-                </p>
-                <p
-                  className="pl-2 pt-1 pb-1 pr-1 flex-1"
-                  style={{ color: "black", fontSize: "9px" }}
-                ></p>
-              </div>
-            </div>
-          </>
-        ))}
-        <div
-          style={{ color: "black", fontSize: "10px" }}
-          className="w-full flex border-black border-l border-r border-b border-t font-bold bg-gray-300"
-        >
-          <p style={{ width: "25%" }} className="pl-2 pt-1 pb-1 pr-1"></p>
-          <p style={{ width: "15%" }} className="pl-2 pt-1 pb-1 pr-1"></p>
-          <p
-            style={{ width: "45%" }}
-            className="pl-2 pt-1 pb-1 pr-1 text-right font-bold"
-          >
-            Total
-          </p>
-          <p
-            style={{ width: "15%" }}
-            className="pl-2 border-l border-black pt-1 pb-1 text-right pr-1"
-          ></p>
-          <p
-            style={{ width: "15%" }}
-            className="pl-2 border-l border-black pt-1 pb-1 text-right pr-1"
-          ></p>
+                  {(totals.invAmountAdjusted || 0).toFixed(2)}
+                </td>
+              </tr>
+            </table>
+            <p
+              className="text-black text-left mt-8"
+              style={{ fontSize: "11px" }}
+            >
+              For <span className="font-bold">{data[0]?.company || ""}</span>
+            </p>
+          </div>
         </div>
-      </>
+      </div>
     );
   };
 
-  const voucherDetailsRpt = () => (
-    <div>
-      <div className="mx-auto">
-        <CompanyImgModule />
-        <div className="flex flex-grow w-full justify-center items-center border-black border-l border-r">
-          <h1 style={{ color: "black" }} className="font-bold text-sm">
-            Bank Receipt
-          </h1>
-        </div>
-        <div
-          style={{ width: "100%", color: "black", fontSize: "11px" }}
-          className="flex border-black border-l border-r"
-        >
-          <div style={{ width: "69%", fontSize: "11px" }}>
-            <p className="pl-2 pt-1 pb-1 w-full">
-              <span className="font-bold">Voucher No.:</span>
-              <span className="ml-5">BP/00317/25-26</span>
-            </p>
-          </div>
-          <div style={{ width: "31%", fontSize: "11px" }}>
-            <p className="pl-4 pt-1 pb-1 w-full">
-              <span className="font-bold">Date :</span>
-              <span className="ml-5">07/05/2025</span>
-            </p>
-          </div>
-        </div>
-        <VoucherGrid data={data} />
-      </div>
-    </div>
-  );
-
   return (
-    <main className="bg-gray-300 p-5">
-      <Print
-        enquiryModuleRef={enquiryModuleRef}
-        printOrientation="portrait"
-        reportIds={reportIds}
-      />
-      <div>
+    <main>
+      <div className="mt-5">
+        <Print
+          enquiryModuleRefs={enquiryModuleRefs}
+          reportIds={reportIds}
+          printOrientation="portrait"
+        />
+
         {reportIds.map((reportId, index) => {
           switch (reportId) {
-            case "Voucher Printing":
+            case "Voucher Report":
+              const voucherReport = Array.isArray(VoucherReportChunks)
+                ? VoucherReportChunks.filter(Boolean)
+                : [];
               return (
                 <>
-                  <div
-                    key={index}
-                    ref={enquiryModuleRef}
-                    className={
-                      index < reportIds.length - 1
-                        ? "report-spacing bg-white"
-                        : "bg-white"
-                    }
-                    style={{
-                      width: "210mm",
-                      height: "297mm",
-                      margin: "auto",
-                      boxSizing: "border-box",
-                      padding: "5mm", // space between page edge and inner border
-                      display: "flex",
-                      flexDirection: "column",
-                      marginBottom: "22px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        flex: 1,
-                        width: "100%",
-                        boxSizing: "border-box",
-                        fontFamily: "Arial sans-serif !important",
-                      }}
-                    >
-                      <div className="bgTheme removeFontSize">
-                        {voucherDetailsRpt()}
-                      </div>
-                      <style jsx>{`
-                        .black-text {
-                          color: black !important;
-                        }
-                      `}</style>
-                    </div>
-                  </div>
+                  {(voucherReport.length > 0 ? voucherReport : [undefined]).map(
+                    (voucherData, i) => (
+                      <>
+                        <div
+                          key={reportId}
+                          ref={(el) => enquiryModuleRefs.current.push(el)}
+                          id="Voucher Report"
+                          className={`relative bg-white shadow-lg black-text ${
+                            i < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
+                          style={{
+                            width: "210mm",
+                            minHeight: "297mm",
+                            maxHeight: "297mm",
+                            margin: "auto",
+                            padding: "24px",
+                            boxSizing: "border-box",
+                            display: "flex",
+                            flexDirection: "column",
+                            position: "relative",
+                          }}
+                        >
+                          {/* Print fix style */}
+                          {VoucherReport(voucherData, i)}
+
+                          <style jsx>{`
+                            body {
+                              margin: 24px;
+                              padding: 24px;
+                            }
+                            .black-text {
+                              color: black !important;
+                            }
+
+                            @media print {
+                              .report-spacing {
+                                page-break-after: always;
+                              }
+                            }
+                          `}</style>
+                        </div>
+                        <div className="bg-gray-300 h-2 no-print" />
+                      </>
+                    )
+                  )}
                 </>
               );
             default:
@@ -468,6 +585,4 @@ const rptVoucher = () => {
       </div>
     </main>
   );
-};
-
-export default rptVoucher;
+}

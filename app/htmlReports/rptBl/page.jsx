@@ -19802,6 +19802,1452 @@ function rptAirwayBill() {
     );
   };
 
+  const BlAttachmentPrintSBX = ({
+    bldata,
+    containerLines = [],
+    marksLines = [],
+    goodsLines = [],
+  }) => {
+    return (
+      <div className="pt-2 pl-2 pr-2">
+        <div>
+          <p
+            className="border-t border-l border-r border-black font-bold text-center uppercase"
+            style={{ fontSize: "10px", color: "black" }}
+          >
+            Attached Sheet
+          </p>
+        </div>
+
+        {/* header row */}
+        <div
+          style={{ fontSize: "10px", width: "100%" }}
+          className="!text-black  border-t border-l border-r border-black flex "
+        >
+          <div
+            style={{ fontSize: "10px", width: "50%" }}
+            className="!text-black font-bold ml-8 border-black flex "
+          >
+            <p>B/l NO : {bldata?.blNo}</p>
+          </div>
+          <div
+            style={{ fontSize: "10px", width: "50%" }}
+            className="!text-black font-bold ml-8 border-black flex"
+          >
+            <p>
+              vessel Name : {bldata?.polVessel} {bldata?.polVoyage}
+            </p>
+          </div>
+        </div>
+
+        {/* data row */}
+        <div
+          className="flex border-b border-l border-r border-t border-black text-left"
+          style={{ height: "20px" }}
+        >
+          <div className="flex-1 uppercase">
+            <p
+              className="pt-1 pb-1 text-center pl-1 !text-black "
+              style={{ fontWeight: "bold", fontSize: "9px" }}
+            >
+              {bldata?.hblNo || "CONTAINER NOS/SEAL/MARKS & NOS"}
+            </p>
+          </div>
+          <div className="flex-1 text-center uppercase border-0 border-black">
+            <p
+              className="pt-1 pb-1 text-center pl-1 !text-black"
+              style={{ fontWeight: "bold", fontSize: "9px" }}
+            >
+              {bldata?.polVessel || "Description of Goods"}
+            </p>
+          </div>
+        </div>
+
+        {(marksLines.length || goodsLines.length) && (
+          <>
+            {/* section headers */}
+            {/* <div
+              className="h-5 flex"
+              style={{
+                borderBottom: "1px solid black",
+                borderLeft: "1px solid black",
+                borderRight: "1px solid black",
+              }}
+            >
+              {[
+                { label: "  ", basis: "50%" },
+                {
+                  label:
+                    "  ",
+                  basis: "50%",
+                },
+              ].map(({ label, basis }) => (
+                <div key={label} style={{ flexBasis: basis, padding: "5px" }}>
+                  <p
+                    className="!text-black font-normal"
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "8px",
+                      textAlign: "left",
+                    }}
+                  >
+                    {label}
+                  </p>
+                </div>
+              ))}
+            </div> */}
+
+            {/* single content row */}
+            <div
+              className="flex"
+              style={{
+                borderLeft: "1px solid black",
+                borderRight: "1px solid black",
+                borderBottom: "1px solid black",
+                minHeight: "200px",
+                maxHeight: "auto",
+              }}
+            >
+              {/* Container lines */}
+              {/* <div style={{ flexBasis: "14%", padding: "5px" }}>
+                <pre
+                  className="!text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
+                    margin: 0,
+                  }}
+                >
+                  {containerLines.join("\n")}
+                </pre>
+              </div> */}
+              {/* Marks lines */}
+              <div
+                style={{
+                  flexBasis: "50%",
+                  marginBottom: "20px",
+                }}
+              >
+                <pre
+                  className="!text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
+                    margin: 0,
+                  }}
+                >
+                  {marksLines.join("\n")}
+                </pre>
+              </div>
+              {/* Goods lines */}
+              <div
+                style={{
+                  flexBasis: "50%",
+                  padding: "5px",
+                  marginBottom: "20px",
+                }}
+              >
+                <pre
+                  className="!text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
+                    margin: 0,
+                  }}
+                >
+                  {goodsLines.join("\n")}
+                </pre>
+              </div>
+              {/* Gross weight */}
+              {/* <div
+                style={{
+                  flexBasis: "22%",
+                  padding: "5px",
+                  textAlign: "center",
+                }}
+              >
+                <pre
+                  className="!text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
+                    margin: 0,
+                  }}
+                >
+                  {bldata?.[0]?.cargoWt || ""} {bldata?.[0]?.weightUnit || ""} /{" "}
+                  {bldata?.[0]?.noOfPackages || ""} {bldata?.[0]?.package || ""}
+                </pre>
+              </div> */}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const BlAttachmentPrintSBXNoLines = ({
+    bldata,
+    containerLines = [],
+    marksLines = [],
+    goodsLines = [],
+  }) => {
+    return (
+      <div className="pt-2 pl-2 pr-2">
+        <div>
+          <p
+            className="font-bold text-center uppercase"
+            style={{ fontSize: "10px", color: "black" }}
+          >
+            Attached Sheet
+          </p>
+        </div>
+
+        {/* header row */}
+        <div
+          style={{ fontSize: "10px", width: "100%" }}
+          className="!text-black flex "
+        >
+          <div
+            style={{ fontSize: "10px", width: "50%" }}
+            className="!text-black font-bold ml-8  flex "
+          >
+            <p>B/l NO : {bldata?.blNo}</p>
+          </div>
+          <div
+            style={{ fontSize: "10px", width: "50%" }}
+            className="!text-black font-bold ml-8  flex"
+          >
+            <p>
+              vessel Name : {bldata?.polVessel} {bldata?.polVoyage}
+            </p>
+          </div>
+        </div>
+
+        {/* data row */}
+        <div className="flex  text-left" style={{ height: "20px" }}>
+          <div className="flex-1 uppercase">
+            <p
+              className="pt-1 pb-1 text-center pl-1 !text-black "
+              style={{ fontWeight: "bold", fontSize: "9px" }}
+            >
+              {bldata?.hblNo || "CONTAINER NOS/SEAL/MARKS & NOS"}
+            </p>
+          </div>
+          <div className="flex-1 text-center uppercase ">
+            <p
+              className="pt-1 pb-1 text-center pl-1 !text-black"
+              style={{ fontWeight: "bold", fontSize: "9px" }}
+            >
+              {bldata?.polVessel || "Description of Goods"}
+            </p>
+          </div>
+        </div>
+
+        {(marksLines.length || goodsLines.length) && (
+          <>
+            {/* section headers */}
+            {/* <div
+              className="h-5 flex"
+              style={{
+                borderBottom: "1px solid black",
+                borderLeft: "1px solid black",
+                borderRight: "1px solid black",
+              }}
+            >
+              {[
+                { label: "  ", basis: "50%" },
+                {
+                  label:
+                    "  ",
+                  basis: "50%",
+                },
+              ].map(({ label, basis }) => (
+                <div key={label} style={{ flexBasis: basis, padding: "5px" }}>
+                  <p
+                    className="!text-black font-normal"
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "8px",
+                      textAlign: "left",
+                    }}
+                  >
+                    {label}
+                  </p>
+                </div>
+              ))}
+            </div> */}
+
+            {/* single content row */}
+            <div
+              className="flex"
+              style={{
+                minHeight: "200px",
+                maxHeight: "auto",
+              }}
+            >
+              {/* Container lines */}
+              {/* <div style={{ flexBasis: "14%", padding: "5px" }}>
+                <pre
+                  className="!text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
+                    margin: 0,
+                  }}
+                >
+                  {containerLines.join("\n")}
+                </pre>
+              </div> */}
+              {/* Marks lines */}
+              <div
+                style={{
+                  flexBasis: "50%",
+                  marginBottom: "20px",
+                }}
+              >
+                <pre
+                  className="!text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
+                    margin: 0,
+                  }}
+                >
+                  {marksLines.join("\n")}
+                </pre>
+              </div>
+              {/* Goods lines */}
+              <div
+                style={{
+                  flexBasis: "50%",
+                  padding: "5px",
+                  marginBottom: "20px",
+                }}
+              >
+                <pre
+                  className="!text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
+                    margin: 0,
+                  }}
+                >
+                  {goodsLines.join("\n")}
+                </pre>
+              </div>
+              {/* Gross weight */}
+              {/* <div
+                style={{
+                  flexBasis: "22%",
+                  padding: "5px",
+                  textAlign: "center",
+                }}
+              >
+                <pre
+                  className="!text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
+                    margin: 0,
+                  }}
+                >
+                  {bldata?.[0]?.cargoWt || ""} {bldata?.[0]?.weightUnit || ""} /{" "}
+                  {bldata?.[0]?.noOfPackages || ""} {bldata?.[0]?.package || ""}
+                </pre>
+              </div> */}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const rptBillOfLadingSBX = () => (
+    <div className="pr-2 pl-2">
+      <div id="156" className="mx-auto text-black mt-1">
+        <div
+          className="flex border-t border-l border-r border-black"
+          style={{ width: "100%" }}
+        >
+          <div style={{ width: "90%" }}>
+            <p
+              className="text-black text-xs font-bold pt-1 ml-10 pb-1"
+              style={{ textAlign: "center" }}
+            >
+              MULTI-MODAL TRANSPORT DOCUMENT
+            </p>
+          </div>
+          <div style={{ width: "10%" }}>
+            <p className="text-black text-xs font-bold text-right p-1">
+              {bldata?.blType}
+            </p>
+          </div>
+        </div>
+        <div
+          className="mx-auto border border-black"
+          style={{ height: "280mm" }}
+        >
+          {/* Header Section - 1 */}
+          <div
+            className="flex border-b border-black"
+            style={{ height: "33%", minHeight: "33%" }}
+          >
+            <div
+              className="border-r border-black"
+              style={{ height: "100%", width: "50%" }}
+            >
+              <div className="border-b border-black" style={{ height: "33%" }}>
+                <div className="p-2">
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Shipper (Name & Full Style Address)
+                  </p>
+                  <p className="text-black mt-1" style={{ fontSize: "9px" }}>
+                    {bldata?.shipperName}
+                  </p>
+                  <p
+                    className="text-black word-break"
+                    style={{ width: "70%", fontSize: "9px" }}
+                  >
+                    {bldata?.shipperAddress}
+                  </p>
+                </div>
+              </div>
+              <div className="border-b border-black" style={{ height: "33%" }}>
+                <div className="p-2">
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Consignee (Name & Full Style Address)
+                  </p>
+                  <p className="text-black mt-1" style={{ fontSize: "9px" }}>
+                    {bldata?.consigneeName}
+                  </p>
+                  <p
+                    className="text-black word-break"
+                    style={{ width: "70%", fontSize: "9px" }}
+                  >
+                    {bldata?.consigneeAddress}
+                  </p>
+                  {/* <p
+                    className="text-black word-break"
+                    style={{ width: "50%", fontSize: "9px" }}
+                  >
+                    space for telephone number
+                  </p> */}
+                </div>
+              </div>
+              <div className="border-black" style={{ height: "33%" }}>
+                <div className="p-2">
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Notify (Name & Full Style Address)
+                  </p>
+                  <p className="text-black mt-1" style={{ fontSize: "9px" }}>
+                    {bldata?.notifyPartyName}
+                  </p>
+                  <p
+                    className="text-black word-break"
+                    style={{ width: "70%", fontSize: "9px" }}
+                  >
+                    {bldata?.notifyPartyAddress}
+                  </p>
+                  {/* <p
+                    className="text-black word-break"
+                    style={{ width: "50%", fontSize: "9px" }}
+                  >
+                    space for telephone number
+                  </p> */}
+                </div>
+              </div>
+            </div>
+            <div style={{ height: "100%", width: "50%" }}>
+              <div className="p-2 border-b border-black">
+                <div className="flex" style={{ width: "100%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "10px", width: "20%" }}
+                  >
+                    MTD NO.:
+                  </p>
+                  <p
+                    className="text-black  ml-2  text-center"
+                    style={{ fontSize: "10px", width: "80%" }}
+                  >
+                    {bldata?.blNo}
+                  </p>
+                </div>
+              </div>
+              <div
+              className="pt-2"
+                style={{
+                  height: "25%",
+                  minHeight: "35% !important",
+                  maxHeight: "35% !important",
+                  display: "flex", // ✅ enables flexbox
+                  justifyContent: "left", // ✅ centers horizontally
+                  alignItems: "left", // ✅ centers vertically
+                }}
+              >
+                {/* <img
+                  className="pl-8"
+                  style={{
+                    height: "90%",
+                    minHeight: "110% !important",
+                    maxHeight: "110% !important",
+                    // width: "60%",
+                  }}
+                  src="https://expresswayshipping.com/sql-api/uploads/SmartBoxLogFinal.png"
+                  alt="Company Logo"
+                /> */}
+              {/* </div>
+              <div> */}
+              {/* <div className="pl-8">
+                <p
+                  className="text-[#233E99] font-bold  text-left"
+                  style={{ fontSize: "11px", color: "#233E99" }}
+                >
+                SMARTBOXX CONTAINERS PVT.LTD.
+                </p>
+              </div>
+              <div>
+                <p
+                  className="text-black pl-8 pb-2 font-bold  text-left"
+                  style={{ fontSize: "9px" }}
+                >
+                  MTO Registration No. MTO/DGS/3033/MAR/2026<br></br>Regd Off: Office
+                  No.6,Plot No.56,Great Eastern Summit<br></br> 'A'wing soc.ltd.sector
+                  15,CBD Belapur,Navi Mumbai-400614<br></br> Tel:022 - 41234044
+                  |Email:selva@smartboxxcontainer.com
+                </p>
+                
+              </div> */}
+              </div>
+
+              <div
+                className="border-t border-black"
+                style={{ height: "38%", minHeight: "38%" }}
+              >
+                <p
+                  className="text-black p-2 font-bold"
+                  style={{ fontSize: "8px" }}
+                >
+                  For Delivery of Goods please apply to :
+                </p>
+                <p
+                  className="text-black p-2 font-bold"
+                  style={{ fontSize: "8px" }}
+                >
+                  SMARTBOXX CONTAINERS PVT LTD SOC LID.PLOT NO: 56, SECTOR 15,
+                  CBD BELAPUR,NAVI MUMBAI-400614 INDIA A: OFFICE NO.6, GROUND
+                  FLOOR, THE GREAT EASTERN TEL NO: 022 41234044
+                  NAIR@SMARTBOXCONTAINER.COM
+                </p>
+              </div>
+              <div
+                className="border-t border-black"
+                style={{ height: "6%", minHeight: "6%" }}
+              >
+                <p
+                  className="text-black p-1 font-bold"
+                  style={{ fontSize: "8px" }}
+                >
+                  No. of Original MTD : {bldata?.noOfBl}
+                </p>
+              </div>
+            </div>
+          </div>
+          {/* Header Section - 2 */}
+          <div
+            className="flex border-b border-black"
+            style={{ height: "6%", minHeight: "6%" }}
+          >
+            <div
+              className="border-r border-black flex"
+              style={{ width: "50%" }}
+            >
+              <div className="border-r border-black" style={{ width: "50%" }}>
+                <div
+                  className="border-b border-black pt-1 pb-1 pl-2 pr-2"
+                  style={{ height: "50%" }}
+                >
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Place & Date of Receipt
+                  </p>
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {bldata?.plr}
+                  </p>
+                </div>
+                <div className="pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Vessel/Voyage
+                  </p>
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {bldata?.polVessel} {bldata?.polVoyage}
+                  </p>
+                </div>
+              </div>
+              <div style={{ width: "50%" }}>
+                <div
+                  className="border-b border-black pt-1 pb-1 pl-2 pr-2"
+                  style={{ height: "50%" }}
+                >
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Port of Loading
+                  </p>
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {bldata?.polName}
+                  </p>
+                </div>
+                <div className="pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Mode of Transportation
+                  </p>
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {bldata?.preCarriage}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex" style={{ width: "50%" }}>
+              <div className="border-r border-black" style={{ width: "50%" }}>
+                <div
+                  className="border-b border-black pt-1 pb-1 pl-2 pr-2"
+                  style={{ height: "50%" }}
+                >
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Port of Discharge{" "}
+                  </p>
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {bldata?.pod}
+                  </p>
+                </div>
+                <div className="pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Freight Payable at:
+                  </p>
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {bldata && bldata.freightpayableAtText}
+                  </p>
+                </div>
+              </div>
+              <div style={{ width: "50%" }}>
+                <div
+                  className="border-b border-black pt-1 pb-1 pl-2 pr-2"
+                  style={{ height: "50%" }}
+                >
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Port of Transhipment
+                  </p>
+                  <p className="text-black" style={{ fontSize: "9px" }}></p>
+                </div>
+                <div className="pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Place of Delivery:
+                  </p>
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {bldata?.fpd}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Grid 1 */}
+
+          <div style={{ height: "41%", maxHeight: "41%" }}>
+            <table
+              className="text-left"
+              style={{ width: "100%", fontSize: "9px" }}
+            >
+              <tr className="border-b border-black" style={{ width: "100%" }}>
+                <th
+                  className="pt-1 pb-1 pl-2 pr-2 border-r border-black"
+                  style={{ width: "24.5%" }}
+                >
+                  Container No(s) <br /> Seal / Marks &<br /> Number
+                </th>
+                <th
+                  className="pt-1 pb-1 pl-2 pr-2 border-r border-black"
+                  style={{ width: "13%" }}
+                >
+                  Number of
+                  <br /> Packages
+                </th>
+                <th
+                  className="pt-1 pb-1 pl-2 pr-2 border-r border-black"
+                  style={{ width: "36.5%" }}
+                >
+                  Particulars Furnished by Merchant
+                  <br />
+                  (Description of goods)
+                </th>
+                <th
+                  className="pt-1 pb-1 pl-2 pr-2 border-r border-black"
+                  style={{ width: "15%" }}
+                >
+                  Gross Weight
+                </th>
+                <th className="pt-1 pb-1 pl-2 pr-2" style={{ width: "10%" }}>
+                  Measurement
+                </th>
+              </tr>
+              <tr>
+                <td
+                  className="pt-1 pb-1 pl-2 pr-2 align-top text-left whitespace-pre-wrap break-words border-r border-black"
+                  style={{ fontSize: "9px", height: "240px" }}
+                >
+                  <pre className="text-left">
+                    {bldata?.marksAndNosDetails || bldata?.marksNos || ""}
+                  </pre>
+                  {Array.isArray(bldata?.tblBlContainer) && (
+                    <>
+                      {bldata.tblBlContainer.length <= 4 ? (
+                        // Case: 4 or fewer containers
+                        bldata.tblBlContainer.slice(0, 4).map((c, idx) => (
+                          <div key={idx} className="leading-tight mt-2">
+                            <div>
+                              {c?.containerNo ?? ""}
+                              {c?.sizeType ? ` ${c.sizeType}` : ""}
+                              {c?.agentSealNo ?? ""} {c?.customSealNo ?? ""}
+                            </div>
+                            <div>PKG: {c?.package ?? ""}</div>
+                            <div>GW: {c?.grossWt ?? ""}</div>
+                            <div>NW: {c?.netWt ?? ""}</div>
+                            <div>CBM: {c?.tareWt ?? ""}</div>
+                          </div>
+                        ))
+                      ) : (
+                        // Case: more than 4 containers – show alternative content
+                        <div
+                          className="text-black font-bold mt-2"
+                          style={{ fontSize: "9px" }}
+                        >
+                          {/* Replace this line with your custom display as per the attached sheet */}
+                          CONTAINER DETAILS ATTACHED AS PER AS PER ANNEXURE .
+                        </div>
+                      )}
+                    </>
+                  )}
+                </td>
+
+                <td
+                  className="pt-1 pb-1 pl-2 pr-2 align-top text-center border-r border-black"
+                  style={{ fontSize: "9px" }}
+                >
+                  <pre className="text-center">
+                    {bldata?.noOfPackages} {bldata?.packagesCode}
+                  </pre>
+                </td>
+                <td
+                  className="pt-1 pb-1 pl-2 pr-2 text-left border-r border-black"
+                  style={{ fontSize: "9px", height: "385px" }}
+                >
+                  <div className="flex flex-col justify-evenly h-full ">
+                    <div className="h-1/5">
+                      <p className="text-left align-top">
+                        {bldata?.goodsDescDetails} <br />{" "}
+                        {"SHIPPER'S LOAD/STOW AND / COUNT"}
+                      </p>
+                    </div>
+                    {/* <div className="h-2/5">
+                      <p
+                        style={{ fontSize: "9px" }}
+                        className="text-left align-top"
+                      >
+                        {trimByWordCount(bldata?.blClause, 50)}
+                      </p>
+                    </div> */}
+                  </div>
+                </td>
+
+                <td
+                  className="pt-1 pb-1 pl-2 pr-2 text-left border-r border-black"
+                  style={{ fontSize: "9px", height: "385px" }}
+                >
+                  <div className="flex flex-col justify-evenly h-full ">
+                    <div>
+                      <pre className="text-left">
+                        Gross Weight<br></br>
+                        {bldata?.grossWt} {bldata?.weightUnit}
+                      </pre>
+                    </div>
+                    <div className="h-2/5">
+                      <pre className="text-left">{bldata?.containerStatus}</pre>
+                      <pre className="text-left mt-4">
+                        FREIGHT: {bldata?.freightPrepaidCollect}
+                      </pre>
+                    </div>
+                  </div>
+                </td>
+                {/* 
+                <td
+                  className="pt-1 pb-1 pl-2 pr-2 align-top text-left border-r border-black "
+                  style={{ fontSize: "9px" }}
+                >
+                  <pre className="text-left">
+                    {bldata?.grossWt} {bldata?.weightUnit}
+
+                  </pre>
+                  <div className="h-3/5">
+                    <pre className="text-left mt=8">
+                      {bldata?.containerStatus}
+                    </pre>
+                  </div>
+
+                </td> */}
+                <td
+                  className="pt-1 pb-1 pl-2 pr-2 align-top text-left"
+                  style={{ fontSize: "9px" }}
+                >
+                  <pre className="text-left">
+                    {bldata?.volumeWt} {bldata?.volumeUnitName}
+                  </pre>
+                </td>
+              </tr>
+            </table>
+          </div>
+          {/* I'M here */}
+          <div
+            className="border-t border-black flex"
+            style={{ height: "20%", maxHeight: "20%" }}
+          >
+            <div className="border-r border-black" style={{ width: "50%" }}>
+              <div className="border-b border-black" style={{ height: "50%" }}>
+                <p
+                  style={{ fontSize: "9px", fontWeight: "bold" }}
+                  className="text-left align-top p-2"
+                >
+                  Freight Details, Charges etc.
+                </p>
+              </div>
+              <div style={{ height: "50%" }}>
+                <div>
+                  <p
+                    style={{ fontSize: "9px", fontWeight: "bold" }}
+                    className="text-left align-top p-2"
+                  >
+                    Shipped on board the Vessel :
+                  </p>
+                </div>
+                <div className="flex mt-14">
+                  <div>
+                    <p
+                      style={{ fontSize: "9px", fontWeight: "bold" }}
+                      className="text-left align-top pl-2"
+                    >
+                      Date :
+                    </p>
+                  </div>
+                  <div
+                    className="border-b border-black border-dashed"
+                    style={{ width: "30%" }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div style={{ width: "50%" }}>
+              <div className="border-b border-black" style={{ height: "50%" }}>
+                <div>
+                  <p
+                    style={{ fontSize: "8px", fontWeight: "bold" }}
+                    className="text-left align-top p-2"
+                  >
+                    In witness of the contract herein the above stated number of
+                    originals have been issued on which being accomplished the
+                    other(s) to be void.{" "}
+                  </p>
+                </div>
+                <div>
+                  <p
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                      textAlign: "right",
+                    }}
+                    className="text-right align-top pr-2"
+                  >
+                    For {bldata?.company}
+                  </p>
+                </div>
+                <div className="flex mt-6">
+                  <div>
+                    <p
+                      style={{ fontSize: "9px", fontWeight: "bold" }}
+                      className="text-left align-top pl-2"
+                    >
+                      Place and Date of issue
+                    </p>
+                  </div>
+                  <div
+                    className="border-b border-black border-dashed"
+                    style={{ width: "30%" }}
+                  ></div>
+                  <div>
+                    <p
+                      style={{ fontSize: "9px", fontWeight: "bold" }}
+                      className="text-left align-top pl-2 ml-2"
+                    >
+                      (Authorised Signatory)
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div style={{ height: "50%" }}>
+                <p
+                  style={{ fontSize: "7px", fontWeight: "bold" }}
+                  className="text-left align-top p-2"
+                >
+                  Taken in charge in apparently good condition herein at the
+                  place of receipt for transport & delivery as mentioned above
+                  unless otherwise stated . The MTO in accordance with the
+                  provision contained in the MTD undertakes to perform or to
+                  procure the performance of the multimodal transport from the
+                  place at which the goods are taken in charge, to the place
+                  designated for delivery & assume responsibility for such
+                  transport. <br />
+                  <br /> in One of the MTD (S) must be surrendered, duly
+                  endorsed in exchange for the goods in witness where of the
+                  original MTD all of this tenor & date have signed in the
+                  number indicated below one of which being accomplished the
+                  other(s) to be void.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const rptBillOfLadingPrintSBX = () => (
+    <div className="pr-2 pl-2">
+      <div id="156" className="mx-auto text-black mt-1">
+        <div className="flex " style={{ width: "100%" }}>
+          <div style={{ width: "90%" }}>
+            <p
+              className="text-black text-xs font-bold pt-1 ml-10 pb-1"
+              style={{ textAlign: "center" }}
+            ></p>
+          </div>
+          <div style={{ width: "10%" }}>
+            <p className="text-black text-xs font-bold text-right p-1">
+              {bldata?.blType}
+            </p>
+          </div>
+        </div>
+        <div className="mx-auto" style={{ height: "280mm" }}>
+          {/* Header Section - 1 */}
+          <div className="flex " style={{ height: "33%", minHeight: "33%" }}>
+            <div className="" style={{ height: "100%", width: "50%" }}>
+              <div className="" style={{ height: "33%" }}>
+                <div className="p-2">
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  ></p>
+                  <p className="text-black mt-1" style={{ fontSize: "9px" }}>
+                    {bldata?.shipperName}
+                  </p>
+                  <p
+                    className="text-black word-break"
+                    style={{ width: "70%", fontSize: "9px" }}
+                  >
+                    {bldata?.shipperAddress}
+                  </p>
+                </div>
+              </div>
+              <div className="" style={{ height: "33%" }}>
+                <div className="p-2">
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  ></p>
+                  <p className="text-black mt-1" style={{ fontSize: "9px" }}>
+                    {bldata?.consigneeName}
+                  </p>
+                  <p
+                    className="text-black word-break"
+                    style={{ width: "70%", fontSize: "9px" }}
+                  >
+                    {bldata?.consigneeAddress}
+                  </p>
+                  {/* <p
+                    className="text-black word-break"
+                    style={{ width: "50%", fontSize: "9px" }}
+                  >
+                    space for telephone number
+                  </p> */}
+                </div>
+              </div>
+              <div className="" style={{ height: "33%" }}>
+                <div className="p-2">
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  ></p>
+                  <p className="text-black mt-1" style={{ fontSize: "9px" }}>
+                    {bldata?.notifyPartyName}
+                  </p>
+                  <p
+                    className="text-black word-break"
+                    style={{ width: "70%", fontSize: "9px" }}
+                  >
+                    {bldata?.notifyPartyAddress}
+                  </p>
+                  {/* <p
+                    className="text-black word-break"
+                    style={{ width: "50%", fontSize: "9px" }}
+                  >
+                    space for telephone number
+                  </p> */}
+                </div>
+              </div>
+            </div>
+            <div style={{ height: "100%", width: "50%" }}>
+              <div className="p-2 ">
+                <div className="flex" style={{ width: "100%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "10px", width: "20%" }}
+                  ></p>
+                  <p
+                    className="text-black  ml-2  text-center"
+                    style={{ fontSize: "10px", width: "80%" }}
+                  >
+                    {bldata?.blNo}
+                  </p>
+                </div>
+              </div>
+              <div
+                style={{
+                  height: "44%",
+                  minHeight: "44% !important",
+                  maxHeight: "44% !important",
+                  display: "flex", // ✅ enables flexbox
+                  justifyContent: "center", // ✅ centers horizontally
+                  alignItems: "center", // ✅ centers vertically
+                }}
+              >
+                {/* <img
+                  style={{
+                    height: "110%",
+                    minHeight: "110% !important",
+                    maxHeight: "110% !important",
+                    width: "90%",
+                  }}
+                  //src="https://expresswayshipping.com/sql-api/uploads/1752843752950-03_SAR%20Logo%20PNG.png"
+                  src=""
+                  alt=""
+                /> */}
+              </div>
+              <div className="" style={{ height: "40%", minHeight: "40%" }}>
+                <p
+                  className="text-black p-2 font-bold"
+                  style={{ fontSize: "8px" }}
+                ></p>
+                <p
+                  className="text-black p-2 font-bold"
+                  style={{ fontSize: "8px" }}
+                >
+                  
+                </p>
+              </div>
+              <div className="" style={{ height: "6%", minHeight: "6%" }}>
+                <p
+                  className="text-black p-1 font-bold"
+                  style={{ fontSize: "8px" }}
+                >
+                  {bldata?.noOfBl}
+                </p>
+              </div>
+            </div>
+          </div>
+          {/* Header Section - 2 */}
+          <div className="flex " style={{ height: "6%", minHeight: "6%" }}>
+            <div className=" flex" style={{ width: "50%" }}>
+              <div className="" style={{ width: "50%" }}>
+                <div className=" pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  ></p>
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {bldata?.plr}
+                  </p>
+                </div>
+                <div className="pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  ></p>
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {bldata?.polVessel} {bldata?.polVoyage}
+                  </p>
+                </div>
+              </div>
+              <div style={{ width: "50%" }}>
+                <div className=" pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  ></p>
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {bldata?.polName}
+                  </p>
+                </div>
+                <div className="pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  ></p>
+                  <p className="text-black" style={{ fontSize: "9px" }}></p>
+                </div>
+              </div>
+            </div>
+            <div className="flex" style={{ width: "50%" }}>
+              <div className="" style={{ width: "50%" }}>
+                <div className=" pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  >
+                    {" "}
+                  </p>
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {bldata?.pod}
+                  </p>
+                </div>
+                <div className="pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  ></p>
+                  <p className="text-black" style={{ fontSize: "9px" }}></p>
+                </div>
+              </div>
+              <div style={{ width: "50%" }}>
+                <div className=" pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  ></p>
+                  <p className="text-black" style={{ fontSize: "9px" }}></p>
+                </div>
+                <div className="pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
+                  <p
+                    className="text-black font-bold"
+                    style={{ fontSize: "9px" }}
+                  ></p>
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {bldata?.fpd}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Grid 1 */}
+
+          <div style={{ height: "41%", maxHeight: "41%" }}>
+            <table
+              className="text-left"
+              style={{ width: "100%", fontSize: "9px" }}
+            >
+              <tr className="" style={{ width: "100%" }}>
+                <th
+                  className="pt-1 pb-1 pl-2 pr-2 "
+                  style={{ width: "24.5%" }}
+                ></th>
+                <th
+                  className="pt-1 pb-1 pl-2 pr-2 "
+                  style={{ width: "13%" }}
+                ></th>
+                <th
+                  className="pt-1 pb-1 pl-2 pr-2 "
+                  style={{ width: "36.5%" }}
+                ></th>
+                <th
+                  className="pt-1 pb-1 pl-2 pr-2 "
+                  style={{ width: "15%" }}
+                ></th>
+                <th
+                  className="pt-1 pb-1 pl-2 pr-2"
+                  style={{ width: "10%" }}
+                ></th>
+              </tr>
+              <tr>
+                <td
+                  className="pt-1 pb-1 pl-2 pr-2 align-top text-left whitespace-pre-wrap break-words "
+                  style={{ fontSize: "9px", height: "240px" }}
+                >
+                  <pre className="text-left">
+                    {bldata?.marksAndNosDetails || bldata?.marksNos || ""}
+                  </pre>
+                  {Array.isArray(bldata?.tblBlContainer) && (
+                    <>
+                      {bldata.tblBlContainer.length <= 4 ? (
+                        // Case: 4 or fewer containers
+                        bldata.tblBlContainer.slice(0, 4).map((c, idx) => (
+                          <div key={idx} className="leading-tight mt-2">
+                            <div>
+                              {c?.containerNo ?? ""}
+                              {c?.sizeType ? ` ${c.sizeType}` : ""}
+                              {c?.agentSealNo ?? ""} {c?.customSealNo ?? ""}
+                            </div>
+                            <div>PKG: {c?.package ?? ""}</div>
+                            <div>GW: {c?.grossWt ?? ""}</div>
+                            <div>NW: {c?.netWt ?? ""}</div>
+                            <div>CBM: {c?.tareWt ?? ""}</div>
+                          </div>
+                        ))
+                      ) : (
+                        // Case: more than 4 containers – show alternative content
+                        <div
+                          className="text-black font-bold mt-2"
+                          style={{ fontSize: "9px" }}
+                        >
+                          {/* Replace this line with your custom display as per the attached sheet */}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </td>
+
+                <td
+                  className="pt-1 pb-1 pl-2 pr-2 align-top text-center "
+                  style={{ fontSize: "9px" }}
+                >
+                  <pre className="text-center">
+                    {bldata?.noOfPackages} {bldata?.packagesCode}
+                  </pre>
+                </td>
+                <td
+                  className="pt-1 pb-1 pl-2 pr-2 text-left "
+                  style={{ fontSize: "9px", height: "385px" }}
+                >
+                  <div className="flex flex-col justify-evenly h-full ">
+                    <div className="h-1/5">
+                      <p className="text-left align-top">
+                        {bldata?.goodsDescDetails} <br />{" "}
+                        {"SHIPPER'S LOAD/STOW AND / COUNT"}
+                      </p>
+                    </div>
+                    {/* <div className="h-2/5">
+                      <p
+                        style={{ fontSize: "9px" }}
+                        className="text-left align-top"
+                      >
+                        {trimByWordCount(bldata?.blClause, 50)}
+                      </p>
+                    </div> */}
+                  </div>
+                </td>
+
+                <td
+                  className="pt-1 pb-1 pl-2 pr-2 text-left "
+                  style={{ fontSize: "9px", height: "385px" }}
+                >
+                  <div className="flex flex-col justify-evenly h-full ">
+                    <div>
+                      <pre className="text-left">
+                        Gross Weight<br></br>
+                        {bldata?.grossWt} {bldata?.weightUnit}
+                      </pre>
+                    </div>
+                    <div className="h-2/5">
+                      <pre className="text-left">{bldata?.containerStatus}</pre>
+                      <pre className="text-left mt-4">
+                        FREIGHT: {bldata?.freightPrepaidCollect}
+                      </pre>
+                    </div>
+                  </div>
+                </td>
+                {/* 
+                <td
+                  className="pt-1 pb-1 pl-2 pr-2 align-top text-left border-r border-black "
+                  style={{ fontSize: "9px" }}
+                >
+                  <pre className="text-left">
+                    {bldata?.grossWt} {bldata?.weightUnit}
+
+                  </pre>
+                  <div className="h-3/5">
+                    <pre className="text-left mt=8">
+                      {bldata?.containerStatus}
+                    </pre>
+                  </div>
+
+                </td> */}
+                <td
+                  className="pt-1 pb-1 pl-2 pr-2 align-top text-left"
+                  style={{ fontSize: "9px" }}
+                >
+                  <pre className="text-left">
+                    {bldata?.volumeWt} {bldata?.volumeUnitName}
+                  </pre>
+                </td>
+              </tr>
+            </table>
+          </div>
+          {/* I'M here */}
+          <div className="flex" style={{ height: "20%", maxHeight: "20%" }}>
+            <div className="" style={{ width: "50%" }}>
+              <div className="" style={{ height: "50%" }}>
+                <p
+                  style={{ fontSize: "9px", fontWeight: "bold" }}
+                  className="text-left align-top p-2"
+                >
+                  Freight Details, Charges etc.
+                </p>
+              </div>
+              <div style={{ height: "50%" }}>
+                <div>
+                  <p
+                    style={{ fontSize: "9px", fontWeight: "bold" }}
+                    className="text-left align-top p-2"
+                  >
+                    Shipped on board the Vessel :
+                  </p>
+                </div>
+                <div className="flex mt-14">
+                  <div>
+                    <p
+                      style={{ fontSize: "9px", fontWeight: "bold" }}
+                      className="text-left align-top pl-2"
+                    >
+                      Date :
+                    </p>
+                  </div>
+                  <div className="border-dashed" style={{ width: "30%" }}></div>
+                </div>
+              </div>
+            </div>
+            <div style={{ width: "50%" }}>
+              <div className="" style={{ height: "50%" }}>
+                <div>
+                  {/* <p
+                    style={{ fontSize: "8px", fontWeight: "bold" }}
+                    className="text-left align-top p-2"
+                  >
+                    In witness of the contract herein the above stated number of
+                    originals have been issued on which being accomplished the
+                    other(s) to be void.{" "}
+                  </p> */}
+                </div>
+                <div>
+                  {/* <p
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                      textAlign: "right",
+                    }}
+                    className="text-right align-top pr-2"
+                  >
+                    For {bldata?.company}
+                  </p> */}
+                </div>
+                <div className="flex mt-6">
+                  {/* <div>
+                    <p
+                      style={{ fontSize: "9px", fontWeight: "bold" }}
+                      className="text-left align-top pl-2"
+                    >
+                      Place and Date of issue
+                    </p>
+                  </div>
+                  <div
+                    className=" border-dashed"
+                    style={{ width: "30%" }}
+                  ></div>
+                  <div>
+                    <p
+                      style={{ fontSize: "9px", fontWeight: "bold" }}
+                      className="text-left align-top pl-2 ml-2"
+                    >
+                      (Authorised Signatory)
+                    </p>
+                  </div> */}
+                </div>
+              </div>
+              {/* <div style={{ height: "50%" }}>
+                <p
+                  style={{ fontSize: "7px", fontWeight: "bold" }}
+                  className="text-left align-top p-2"
+                >
+                  Taken in charge in apparently good condition herein at the
+                  place of receipt for transport & delivery as mentioned above
+                  unless otherwise stated . The MTO in accordance with the provision
+                  contained in the MTD undertakes to perform or to procure the
+                  performance of the
+                  multimodal transport from the place at which the goods are
+                  taken in charge, to the place designated for delivery & assume
+                  responsibility for such transport. <br />
+                  <br /> in One of the MTD (S) must be surrendered, duly
+                  endorsed in exchange for the goods in witness where of the
+                  original MTD all of this tenor & date have signed in the
+                  number indicated below one of which being accomplished the
+                  other(s) to be void.
+                </p>
+              </div> */}
+              <div>
+                {Array.isArray(bldata.tblBlContainer) &&
+                bldata.tblBlContainer.length < 4 ? (
+                  <p></p>
+                ) : (
+                  <p>– Continuing on Attach Sheet</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <main>
       <div className="mt-5">
@@ -20760,6 +22206,773 @@ function rptAirwayBill() {
                                       colIdx < columns.length - 1
                                         ? "1px solid black"
                                         : "none",
+                                    textAlign: align,
+                                  }}
+                                >
+                                  <pre
+                                    className="text-black font-normal"
+                                    style={{ ...basePre }}
+                                  >
+                                    {render(c)}
+                                  </pre>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="bg-gray-300 h-2 no-print" />
+                    </React.Fragment>
+                  ))}
+                </div>
+              );
+            }
+            case "BL DRAFT SBX": {
+              // --- utilities (inline) ---
+              const splitLines = (txt) =>
+                txt ? String(txt).split(/\r?\n/) : [];
+              const chunkArray = (arr, size) => {
+                if (!Array.isArray(arr) || size <= 0) return [];
+                const chunks = [];
+                for (let i = 0; i < arr.length; i += size) {
+                  chunks.push(arr.slice(i, i + size)); // correct slice
+                }
+                return chunks;
+              };
+              const nonEmpty = (arr) =>
+                (arr || []).filter((s) => String(s).trim().length > 0);
+
+              // --- paging plan (same behavior as BL Draft) ---
+              const LINES_PER_PAGE = 70;
+
+              const jd = bldata || {};
+
+              // Clean empty lines so blank strings don't create phantom pages
+              const containerLines = nonEmpty(
+                splitLines(jd.containerDetailsAttach)
+              );
+              const marksLines = nonEmpty(
+                splitLines(jd.marksAndNosDetailsAttach)
+              );
+              const goodsLines = nonEmpty(
+                splitLines(jd.goodsDescDetailsAttach)
+              );
+
+              const cChunks = chunkArray(containerLines, LINES_PER_PAGE);
+              const mChunks = chunkArray(marksLines, LINES_PER_PAGE);
+              const gChunks = chunkArray(goodsLines, LINES_PER_PAGE);
+
+              // GRID should begin from container #3 on attach sheets (skip first two printed on main page)
+              const gridSrc = jd.tblBlContainer || jd.tblblContainer || [];
+              const allGridRows = Array.isArray(gridSrc) ? gridSrc : [];
+              const attachStartIndex = 0; // skip 0 & 1 -> start at #3
+              const attachRows = allGridRows.slice(attachStartIndex);
+              const hasGrid = attachRows.length > 0;
+
+              // Base pages from text attachments
+              const baseAttachPages = Math.max(
+                cChunks.length,
+                mChunks.length,
+                gChunks.length,
+                0
+              );
+
+              // If no text attachments but we DO have grid rows, still create ONE attach page
+              const attachPages =
+                baseAttachPages > 0 ? baseAttachPages : hasGrid ? 1 : 0;
+              const includeAttachments = attachPages > 0;
+
+              // Used lines on last text-attachment page (0 if we only created a page for grid spill)
+              let usedOnLast = 0;
+              if (baseAttachPages > 0) {
+                const last = baseAttachPages - 1;
+                usedOnLast = Math.max(
+                  (cChunks[last] || []).length,
+                  (mChunks[last] || []).length,
+                  (gChunks[last] || []).length
+                );
+              }
+
+              // If there ARE attachments, we spill leftover grid rows onto the LAST attachment page.
+              // If there are NO attachments, we don't "reserve" spill space — start grid directly.
+              const firstGridCap = includeAttachments
+                ? Math.max(0, LINES_PER_PAGE - usedOnLast)
+                : 0;
+              const firstRows = includeAttachments
+                ? attachRows.slice(0, firstGridCap)
+                : [];
+
+              const restRows = includeAttachments
+                ? attachRows.slice(firstGridCap)
+                : attachRows;
+              const restChunks = chunkArray(restRows, LINES_PER_PAGE);
+
+              const basePre = {
+                fontSize: "8px",
+                whiteSpace: "pre-wrap",
+                overflowWrap: "break-word",
+                wordBreak: "break-word",
+                margin: 0,
+              };
+
+              // Your grid columns
+              const columns = [
+                {
+                  key: "containerNumber",
+                  header: "Container No.",
+                  render: (c) => c.containerNumber,
+                  align: "center",
+                },
+                {
+                  key: "Marks",
+                  header: "Marks",
+                  render: (c) => c.containerNumber,
+                  align: "center",
+                },
+                {
+                  key: "size",
+                  header: "Type",
+                  render: (c) => `${c.sizeType || ""}`.trim(),
+                  align: "center",
+                },
+                {
+                  key: "seal",
+                  header: "Agent/Custom Seal No",
+                  render: (c) =>
+                    `${c.customSealNo || ""} ${c.agentSealNo || ""}`.trim(),
+                  align: "center",
+                },
+                {
+                  key: "No of Packages",
+                  header: "Packages",
+                  render: (c) =>
+                    `${c.noOfPackages || ""}${" "}${
+                      c.packageCode || ""
+                    }`.trim(),
+                  align: "center",
+                },
+                {
+                  key: "grossWt",
+                  header: "Gross WT (KGS)",
+                  render: (c) => c.grossWt || "",
+                  align: "center",
+                },
+                {
+                  key: "netWt",
+                  header: "Net Wt (KGS)",
+                  render: (c) => `${c.netWt || ""}`.trim(),
+                  align: "center",
+                },
+                {
+                  key: "gw",
+                  header: "CBM",
+                  render: (c) => `${c.tareWt || ""}`.trim(),
+                  align: "center",
+                },
+              ];
+
+              return (
+                // ⬇️ single wrapper so ref captures EVERYTHING (main + attachments + grid pages)
+                <div
+                  key={index}
+                  ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                  data-report={`seaway-${index}`}
+                  style={{ width: "210mm", margin: "auto" }}
+                  className="mt-5"
+                >
+                  {/* Print-only rules so first and following pages break correctly */}
+                  <style jsx global>{`
+                    @media print {
+                      .first-page {
+                        page-break-after: always;
+                      }
+                      .second-page {
+                        page-break-before: always;
+                      }
+                      .no-print {
+                        display: none !important;
+                      }
+                    }
+                  `}</style>
+
+                  {/* MAIN (Seaway BL) PAGE */}
+                  <div
+                    className={
+                      index < reportIds.length - 1
+                        ? "report-spacing bg-white"
+                        : "bg-white"
+                    }
+                    style={{
+                      width: "210mm",
+                      height: "297mm",
+                      margin: "auto",
+                      boxSizing: "border-box",
+                      padding: "5mm",
+                      display: "flex",
+                      flexDirection: "column",
+                      marginBottom: "22px",
+                    }}
+                  >
+                    <div
+                      className="first-page"
+                      style={{
+                        flex: 1,
+                        width: "100%",
+                        boxSizing: "border-box",
+                        fontFamily: "Arial, sans-serif",
+                      }}
+                    >
+                      {rptBillOfLadingSBX()}
+                    </div>
+                  </div>
+                  <div className="bg-gray-300 h-2 no-print" />
+
+                  {/* ATTACHMENT PAGES (render if text lines exist OR tblBlContainer has rows) */}
+                  {includeAttachments &&
+                    Array.from({ length: attachPages }).map((_, p) => {
+                      // Only show this page if it has ANY lines OR it's the last page and we have spill rows
+                      const pageHasLines =
+                        (cChunks[p]?.length || 0) +
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
+                        0;
+                      const showThisPage =
+                        pageHasLines ||
+                        (p === attachPages - 1 && firstRows.length > 0);
+                      if (!showThisPage) return null;
+
+                      return (
+                        <React.Fragment key={`seaway-att-${p}`}>
+                          <div
+                            className={
+                              p === 0
+                                ? "second-page bg-white mainPadding"
+                                : "bg-white mainPadding"
+                            }
+                            style={{
+                              width: "210mm",
+                              height: "297mm",
+                              margin: "auto",
+                              boxSizing: "border-box",
+                              display: "flex",
+                              flexDirection: "column",
+                            }}
+                          >
+                            <BlAttachmentPrintSBX
+                              bldata={bldata}
+                              containerLines={cChunks[p] || []}
+                              marksLines={mChunks[p] || []}
+                              goodsLines={gChunks[p] || []}
+                            />
+
+                            {/* Spill first grid rows only on the last attachment page */}
+                            {p === attachPages - 1 && firstRows.length > 0 && (
+                              <div className="pl-2 pr-2">
+                                {/* Table Header */}
+                                <div className="flex border-b border-l border-r border-black text-center bg-gray-200">
+                                  {columns.map(({ key, header }, colIdx) => (
+                                    <div
+                                      key={key}
+                                      className="flex-1"
+                                      style={{
+                                        padding: "2px",
+                                        borderRight:
+                                          colIdx < columns.length - 1
+                                            ? "1px solid black"
+                                            : "none",
+                                      }}
+                                    >
+                                      <p
+                                        className="text-black"
+                                        style={{
+                                          fontWeight: "bold",
+                                          fontSize: "9px",
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        {header}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* Table Rows (spill) */}
+                                <div className="border-l border-r border-b border-black">
+                                  {firstRows.map((c, i) => (
+                                    <div key={i} className="flex">
+                                      {columns.map(
+                                        ({ key, render, align }, colIdx) => (
+                                          <div
+                                            key={key}
+                                            className="flex-1"
+                                            style={{
+                                              padding: "1px",
+                                              borderRight:
+                                                colIdx < columns.length - 1
+                                                  ? "1px solid black"
+                                                  : "none",
+                                              textAlign: align,
+                                            }}
+                                          >
+                                            <pre
+                                              className="text-black"
+                                              style={{ ...basePre }}
+                                            >
+                                              {render(c)}
+                                            </pre>
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="bg-gray-300 h-2 no-print" />
+                        </React.Fragment>
+                      );
+                    })}
+
+                  {/* REMAINING GRID PAGES */}
+                  {restChunks.map((rows, gi) => (
+                    <React.Fragment key={`seaway-grid-${gi}`}>
+                      <div
+                        className="second-page bg-white mainPadding"
+                        style={{
+                          width: "210mm",
+                          height: "297mm",
+                          margin: "auto",
+                          boxSizing: "border-box",
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                      >
+                        {/* Grid Header */}
+                        <div className="flex border border-black mr-2 ml-2 text-center bg-gray-200">
+                          {columns.map(({ key, header }, colIdx) => (
+                            <div
+                              key={key}
+                              className="flex-1"
+                              style={{
+                                padding: "2px",
+                                borderRight:
+                                  colIdx < columns.length - 1
+                                    ? "1px solid black"
+                                    : "none",
+                              }}
+                            >
+                              <p
+                                className="text-black font-normal"
+                                style={{
+                                  fontWeight: "bold",
+                                  fontSize: "9px",
+                                  textAlign: "center",
+                                }}
+                              >
+                                {header}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Grid Rows */}
+                        <div className="mr-2 ml-2 border-b border-black">
+                          {rows.map((c, i) => (
+                            <div
+                              key={i}
+                              className="flex border-l border-r border-black text-center"
+                            >
+                              {columns.map(({ key, render, align }, colIdx) => (
+                                <div
+                                  key={key}
+                                  className="flex-1"
+                                  style={{
+                                    padding: "1px",
+                                    borderRight:
+                                      colIdx < columns.length - 1
+                                        ? "1px solid black"
+                                        : "none",
+                                    textAlign: align,
+                                  }}
+                                >
+                                  <pre
+                                    className="text-black font-normal"
+                                    style={{ ...basePre }}
+                                  >
+                                    {render(c)}
+                                  </pre>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="bg-gray-300 h-2 no-print" />
+                    </React.Fragment>
+                  ))}
+                </div>
+              );
+            }
+            case "BL Print SBX": {
+              // --- utilities (inline) ---
+              const splitLines = (txt) =>
+                txt ? String(txt).split(/\r?\n/) : [];
+              const chunkArray = (arr, size) => {
+                if (!Array.isArray(arr) || size <= 0) return [];
+                const chunks = [];
+                for (let i = 0; i < arr.length; i += size) {
+                  chunks.push(arr.slice(i, i + size)); // correct slice
+                }
+                return chunks;
+              };
+              const nonEmpty = (arr) =>
+                (arr || []).filter((s) => String(s).trim().length > 0);
+
+              // --- paging plan (same behavior as BL Draft) ---
+              const LINES_PER_PAGE = 70;
+
+              const jd = bldata || {};
+
+              // Clean empty lines so blank strings don't create phantom pages
+              const containerLines = nonEmpty(
+                splitLines(jd.containerDetailsAttach)
+              );
+              const marksLines = nonEmpty(
+                splitLines(jd.marksAndNosDetailsAttach)
+              );
+              const goodsLines = nonEmpty(
+                splitLines(jd.goodsDescDetailsAttach)
+              );
+
+              const cChunks = chunkArray(containerLines, LINES_PER_PAGE);
+              const mChunks = chunkArray(marksLines, LINES_PER_PAGE);
+              const gChunks = chunkArray(goodsLines, LINES_PER_PAGE);
+
+              // GRID should begin from container #3 on attach sheets (skip first two printed on main page)
+              const gridSrc = jd.tblBlContainer || jd.tblblContainer || [];
+              const allGridRows = Array.isArray(gridSrc) ? gridSrc : [];
+              const attachStartIndex = 0; // skip 0 & 1 -> start at #3
+              const attachRows = allGridRows.slice(attachStartIndex);
+              const hasGrid = attachRows.length > 0;
+
+              // Base pages from text attachments
+              const baseAttachPages = Math.max(
+                cChunks.length,
+                mChunks.length,
+                gChunks.length,
+                0
+              );
+
+              // If no text attachments but we DO have grid rows, still create ONE attach page
+              const attachPages =
+                baseAttachPages > 0 ? baseAttachPages : hasGrid ? 1 : 0;
+              const includeAttachments = attachPages > 0;
+
+              // Used lines on last text-attachment page (0 if we only created a page for grid spill)
+              let usedOnLast = 0;
+              if (baseAttachPages > 0) {
+                const last = baseAttachPages - 1;
+                usedOnLast = Math.max(
+                  (cChunks[last] || []).length,
+                  (mChunks[last] || []).length,
+                  (gChunks[last] || []).length
+                );
+              }
+
+              // If there ARE attachments, we spill leftover grid rows onto the LAST attachment page.
+              // If there are NO attachments, we don't "reserve" spill space — start grid directly.
+              const firstGridCap = includeAttachments
+                ? Math.max(0, LINES_PER_PAGE - usedOnLast)
+                : 0;
+              const firstRows = includeAttachments
+                ? attachRows.slice(0, firstGridCap)
+                : [];
+
+              const restRows = includeAttachments
+                ? attachRows.slice(firstGridCap)
+                : attachRows;
+              const restChunks = chunkArray(restRows, LINES_PER_PAGE);
+
+              const basePre = {
+                fontSize: "8px",
+                whiteSpace: "pre-wrap",
+                overflowWrap: "break-word",
+                wordBreak: "break-word",
+                margin: 0,
+              };
+
+              // Your grid columns
+              const columns = [
+                {
+                  key: "containerNumber",
+                  header: "Container No.",
+                  render: (c) => c.containerNumber,
+                  align: "center",
+                },
+                {
+                  key: "Marks",
+                  header: "Marks",
+                  render: (c) => c.containerNumber,
+                  align: "center",
+                },
+                {
+                  key: "size",
+                  header: "Type",
+                  render: (c) => `${c.sizeType || ""}`.trim(),
+                  align: "center",
+                },
+                {
+                  key: "seal",
+                  header: "Agent/Custom Seal No",
+                  render: (c) =>
+                    `${c.customSealNo || ""} ${c.agentSealNo || ""}`.trim(),
+                  align: "center",
+                },
+                {
+                  key: "No of Packages",
+                  header: "Packages",
+                  render: (c) =>
+                    `${c.noOfPackages || ""}${" "}${
+                      c.packageCode || ""
+                    }`.trim(),
+                  align: "center",
+                },
+                {
+                  key: "grossWt",
+                  header: "Gross WT (KGS)",
+                  render: (c) => c.grossWt || "",
+                  align: "center",
+                },
+                {
+                  key: "netWt",
+                  header: "Net Wt (KGS)",
+                  render: (c) => `${c.netWt || ""}`.trim(),
+                  align: "center",
+                },
+                {
+                  key: "gw",
+                  header: "CBM",
+                  render: (c) => `${c.tareWt || ""}`.trim(),
+                  align: "center",
+                },
+              ];
+
+              return (
+                // ⬇️ single wrapper so ref captures EVERYTHING (main + attachments + grid pages)
+                <div
+                  key={index}
+                  ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                  data-report={`seaway-${index}`}
+                  style={{ width: "210mm", margin: "auto" }}
+                  className="mt-5"
+                >
+                  {/* Print-only rules so first and following pages break correctly */}
+                  <style jsx global>{`
+                    @media print {
+                      .first-page {
+                        page-break-after: always;
+                      }
+                      .second-page {
+                        page-break-before: always;
+                      }
+                      .no-print {
+                        display: none !important;
+                      }
+                    }
+                  `}</style>
+
+                  {/* MAIN (Seaway BL) PAGE */}
+                  <div
+                    className={
+                      index < reportIds.length - 1
+                        ? "report-spacing bg-white"
+                        : "bg-white"
+                    }
+                    style={{
+                      width: "210mm",
+                      height: "297mm",
+                      margin: "auto",
+                      boxSizing: "border-box",
+                      padding: "5mm",
+                      display: "flex",
+                      flexDirection: "column",
+                      marginBottom: "22px",
+                    }}
+                  >
+                    <div
+                      className="first-page"
+                      style={{
+                        flex: 1,
+                        width: "100%",
+                        boxSizing: "border-box",
+                        fontFamily: "Arial, sans-serif",
+                      }}
+                    >
+                      {rptBillOfLadingPrintSBX()}
+                    </div>
+                  </div>
+                  <div className="bg-gray-300 h-2 no-print" />
+
+                  {/* ATTACHMENT PAGES (render if text lines exist OR tblBlContainer has rows) */}
+                  {includeAttachments &&
+                    Array.from({ length: attachPages }).map((_, p) => {
+                      // Only show this page if it has ANY lines OR it's the last page and we have spill rows
+                      const pageHasLines =
+                        (cChunks[p]?.length || 0) +
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
+                        0;
+                      const showThisPage =
+                        pageHasLines ||
+                        (p === attachPages - 1 && firstRows.length > 0);
+                      if (!showThisPage) return null;
+
+                      return (
+                        <React.Fragment key={`seaway-att-${p}`}>
+                          <div
+                            className={
+                              p === 0
+                                ? "second-page bg-white mainPadding"
+                                : "bg-white mainPadding"
+                            }
+                            style={{
+                              width: "210mm",
+                              height: "297mm",
+                              margin: "auto",
+                              boxSizing: "border-box",
+                              display: "flex",
+                              flexDirection: "column",
+                            }}
+                          >
+                            <BlAttachmentPrintSBXNoLines
+                              bldata={bldata}
+                              containerLines={cChunks[p] || []}
+                              marksLines={mChunks[p] || []}
+                              goodsLines={gChunks[p] || []}
+                            />
+
+                            {/* Spill first grid rows only on the last attachment page */}
+                            {p === attachPages - 1 && firstRows.length > 0 && (
+                              <div className="pl-2 pr-2">
+                                {/* Table Header */}
+                                <div className="flex  text-center bg-gray-200">
+                                  {columns.map(({ key, header }, colIdx) => (
+                                    <div
+                                      key={key}
+                                      className="flex-1"
+                                      style={{
+                                        padding: "2px",
+                                        borderRight:
+                                          colIdx < columns.length - 1
+                                            ? ""
+                                            : "none",
+                                      }}
+                                    >
+                                      <p
+                                        className="text-black"
+                                        style={{
+                                          fontWeight: "bold",
+                                          fontSize: "9px",
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        {header}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* Table Rows (spill) */}
+                                <div className="">
+                                  {firstRows.map((c, i) => (
+                                    <div key={i} className="flex">
+                                      {columns.map(
+                                        ({ key, render, align }, colIdx) => (
+                                          <div
+                                            key={key}
+                                            className="flex-1"
+                                            style={{
+                                              padding: "1px",
+                                              borderRight:
+                                                colIdx < columns.length - 1
+                                                  ? ""
+                                                  : "none",
+                                              textAlign: align,
+                                            }}
+                                          >
+                                            <pre
+                                              className="text-black"
+                                              style={{ ...basePre }}
+                                            >
+                                              {render(c)}
+                                            </pre>
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="bg-gray-300 h-2 no-print" />
+                        </React.Fragment>
+                      );
+                    })}
+
+                  {/* REMAINING GRID PAGES */}
+                  {restChunks.map((rows, gi) => (
+                    <React.Fragment key={`seaway-grid-${gi}`}>
+                      <div
+                        className="second-page bg-white mainPadding"
+                        style={{
+                          width: "210mm",
+                          height: "297mm",
+                          margin: "auto",
+                          boxSizing: "border-box",
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                      >
+                        {/* Grid Header */}
+                        <div className="flex  mr-2 ml-2 text-center bg-gray-200">
+                          {columns.map(({ key, header }, colIdx) => (
+                            <div
+                              key={key}
+                              className="flex-1"
+                              style={{
+                                padding: "2px",
+                                borderRight:
+                                  colIdx < columns.length - 1 ? "" : "none",
+                              }}
+                            >
+                              <p
+                                className="text-black font-normal"
+                                style={{
+                                  fontWeight: "bold",
+                                  fontSize: "9px",
+                                  textAlign: "center",
+                                }}
+                              >
+                                {header}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Grid Rows */}
+                        <div className="mr-2 ml-2 ">
+                          {rows.map((c, i) => (
+                            <div key={i} className="flex   text-center">
+                              {columns.map(({ key, render, align }, colIdx) => (
+                                <div
+                                  key={key}
+                                  className="flex-1"
+                                  style={{
+                                    padding: "1px",
+                                    borderRight:
+                                      colIdx < columns.length - 1 ? "" : "none",
                                     textAlign: align,
                                   }}
                                 >

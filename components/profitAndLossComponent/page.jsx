@@ -290,7 +290,6 @@ function ProfitAndLossComponent({ data1, data2, reportTypeData, setLoader }) {
                   : item.Amount.toFixed(2) // Show positive numbers normally
                 : null}
             </td>
-
             <td
               className="text-right text-black"
               style={{

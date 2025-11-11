@@ -74,6 +74,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchReportData } from "@/services/auth/FormControl.services";
 import { encryptUrlFun } from "@/utils";
 import { getUserDetails } from "@/helper/userDetails";
+import { menu } from "@material-tailwind/react";
 function sortJSON(jsonArray, field, sortOrder) {
   return jsonArray.sort((a, b) => {
     const valueA = a[field];
@@ -187,6 +188,7 @@ function onSubmitFunctionCall(
 export default function AddEditFormControll() {
   const { push } = useRouter();
   const dispatch = useDispatch();
+  const selectedMenuId = useSelector((state) => state?.counter?.selectedMenuId);
   const isRedirected = useSelector((state) => state?.app?.isRedirection);
   const [firstState, setFirstState] = useState({ routeName: "mastervalue" });
   const paramsValue = useParams();
@@ -581,14 +583,22 @@ export default function AddEditFormControll() {
           return toast.error(error.message);
         }
         try {
-          const cleanData = replaceNullStrings(newState, ChildTableName);
+          const cleanData = replaceNullStrings(
+            { ...newState, menuId: selectedMenuId },
+            ChildTableName
+          );
           setIsFormSaved(true);
           let data = await handleSubmitApi(cleanData);
           if (data.success == true) {
             toast.success(data.message);
 
             if (isReportPresent) {
-              const id = data?.data?.recordset[0]?.id ?? data?.data?.recordset[0]?.ParentId;
+              // const id =
+              //   data?.data?.recordset[0]?.id ??
+              //   data?.data?.recordset[0]?.ParentId;
+              const id =
+                data?.data?.recordset?.at(-1)?.id ??
+                data?.data?.recordset?.at(-1)?.ParentId;
               setOpenPrintModal((prev) => !prev);
               setSubmittedMenuId(uriDecodedMenu?.id);
               setSubmittedRecordId(id);
@@ -671,7 +681,7 @@ export default function AddEditFormControll() {
       if (isFormSaved)
         return toast.error(
           "This form has already been saved. Please refresh the screen to save one more record"
-        )
+        );
       const isEqual = areObjectsEqual(newState, initialState);
       // event.preventDefault();
       if (!isEqual) {
@@ -692,8 +702,10 @@ export default function AddEditFormControll() {
 
         // return; // Exit the function if a value is missing
         try {
-
-          const cleanData = replaceNullStrings(newState, ChildTableName);
+          const cleanData = replaceNullStrings(
+            { ...newState, menuId: selectedMenuId },
+            ChildTableName
+          );
           setIsFormSaved(true);
           let data = await handleSubmitApi(cleanData);
           if (data.success == true) {
@@ -777,7 +789,10 @@ export default function AddEditFormControll() {
           return toast.error(error.message);
         }
         try {
-          const cleanData = replaceNullStrings(newState, ChildTableName);
+          const cleanData = replaceNullStrings(
+            { ...newState, menuId: selectedMenuId },
+            ChildTableName
+          );
           let data = await handleSubmitApi(cleanData);
           if (data.success == true) {
             toast.success(data.message);
@@ -1007,8 +1022,7 @@ export default function AddEditFormControll() {
       const noOfDays = parseFloat(item.noOfDays);
 
       // If noOfDays is null/undefined/0, ignore it in calculation
-      const effectiveNoOfDays =
-        isNaN(noOfDays) || noOfDays <= 0 ? 1 : noOfDays;
+      const effectiveNoOfDays = isNaN(noOfDays) || noOfDays <= 0 ? 1 : noOfDays;
 
       const totalAmountFc = qty * rate * effectiveNoOfDays;
       const totalAmount = totalAmountFc * exchangeRate;
@@ -1729,6 +1743,110 @@ function ChildAccordianComponent({
     }
   };
 
+  // const syncAllExchangeRatesByCurrency = () => {
+  //   if (!newState || !Array.isArray(newState.tblInvoiceCharge)) {
+  //     return newState;
+  //   }
+
+  //   const toNum = (v) => {
+  //     const n = Number(v);
+  //     return Number.isFinite(n) ? n : 0;
+  //   };
+
+  //   const getCurrencyId = (row) =>
+  //     row?.currencyId ?? row?.currencyIddropdown?.[0]?.value ?? null;
+
+  //   // Pass 1: Determine canonical (first non-zero) rate per currency from top-level rows
+  //   const canonicalRateByCurrency = {};
+  //   for (const row of newState.tblInvoiceCharge) {
+  //     const cId = getCurrencyId(row);
+  //     const r = toNum(row?.exchangeRate);
+  //     if (cId != null && r > 0 && canonicalRateByCurrency[cId] == null) {
+  //       canonicalRateByCurrency[cId] = r; // first non-zero wins
+  //     }
+  //   }
+
+  //   // Helper: recursively apply canonical rate to a row and its children
+  //   const applyCanonical = (row) => {
+  //     const cId = getCurrencyId(row);
+  //     const canon = cId != null ? canonicalRateByCurrency[cId] : undefined;
+
+  //     const updated = {
+  //       ...row,
+  //       ...(canon > 0 ? { exchangeRate: canon } : null),
+  //     };
+
+  //     // If children exist, update them too
+  //     if (Array.isArray(row.tblInvoiceCharge) && row.tblInvoiceCharge.length) {
+  //       updated.tblInvoiceCharge = row.tblInvoiceCharge.map(applyCanonical);
+  //     }
+
+  //     return updated;
+  //   };
+
+  //   // Pass 2: Update all rows (and nested children)
+  //   setNewState((prev) => {
+  //     const rows = Array.isArray(prev.tblInvoiceCharge) ? prev.tblInvoiceCharge : [];
+  //     const updated = rows.map(applyCanonical);
+  //     return { ...prev, tblInvoiceCharge: updated };
+  //   });
+  // };
+
+  const lockExchangeRateFirstWins = () => {
+    if (!newState || !Array.isArray(newState.tblInvoiceCharge)) {
+      return newState;
+    }
+
+    const toNum = (v) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const getCurrencyId = (row) =>
+      row?.currencyId ?? row?.currencyIddropdown?.[0]?.value ?? null;
+
+    // Pass 1: capture the FIRST non-zero rate and its FIRST index per currency
+    const firstRateByCurrency = {};
+    const firstIndexByCurrency = {};
+
+    newState.tblInvoiceCharge.forEach((row, idx) => {
+      const cId = getCurrencyId(row);
+      const rate = toNum(row?.exchangeRate);
+      if (cId != null && rate > 0 && firstRateByCurrency[cId] == null) {
+        firstRateByCurrency[cId] = rate; // lock the first non-zero rate
+        firstIndexByCurrency[cId] = idx; // remember first row index for that currency
+      }
+    });
+
+    // Nothing to do if we didn't find any non-zero rates
+    if (Object.keys(firstRateByCurrency).length === 0) {
+      return newState;
+    }
+
+    // Pass 2: enforce the locked rate on ALL subsequent rows of the same currency
+    setNewState((prev) => {
+      const rows = Array.isArray(prev.tblInvoiceCharge)
+        ? prev.tblInvoiceCharge
+        : [];
+
+      const updated = rows.map((row, idx) => {
+        const cId = getCurrencyId(row);
+        if (cId == null) return row;
+
+        const locked = firstRateByCurrency[cId];
+        const firstIdx = firstIndexByCurrency[cId];
+
+        // If this is NOT the first row for that currency, force the locked rate
+        if (locked > 0 && idx !== firstIdx) {
+          return { ...row, exchangeRate: locked };
+        }
+        return row; // leave the first row as-is
+      });
+
+      return { ...prev, tblInvoiceCharge: updated };
+    });
+  };
+
   useEffect(() => {
     let tmpData = { ...childObject };
     section.fields?.forEach((item) => {
@@ -1756,12 +1874,8 @@ function ChildAccordianComponent({
       }
     }
   };
-
-  // Function to calculate totals for a single row
   const calculateTotalForRow = (rowData) => {
-    // Iterate over each field in the fields array
     section.fields.forEach((item) => {
-      // Check if the field requires grid total and is of type 'number' or 'text'
       if (
         item.gridTotal &&
         (item.type === "number" ||
@@ -1772,13 +1886,13 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-              // const parsedValue = parseFloat(row[item.fieldname] || 0);
-              const parsedValue =
-                typeof row[item.fieldname] === "number"
-                  ? row[item.fieldname]
-                  : parseFloat(row[item.fieldname] || 0);
-              return isNaN(parsedValue) ? sum : sum + parsedValue;
-            }, 0) // Calculate sum for 's' type
+                // const parsedValue = parseFloat(row[item.fieldname] || 0);
+                const parsedValue =
+                  typeof row[item.fieldname] === "number"
+                    ? row[item.fieldname]
+                    : parseFloat(row[item.fieldname] || 0);
+                return isNaN(parsedValue) ? sum : sum + parsedValue;
+              }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -1790,8 +1904,7 @@ function ChildAccordianComponent({
   };
 
   useEffect(() => {
-    // Initialize with initial data
-    setRenderedData(newState[section.tableName]?.slice(0, 10)); // Initially render 10 items
+    setRenderedData(newState[section.tableName]?.slice(0, 10));
     calculateTotalForRow(newState[section.tableName]);
   }, [newState]);
 
@@ -2393,6 +2506,8 @@ function ChildAccordianComponent({
                     title={"Save"}
                     onClick={() => {
                       childButtonHandler(section, indexValue);
+                      //syncAllExchangeRatesByCurrency();
+                      lockExchangeRateFirstWins();
                     }}
                   />
                 </div>
@@ -2603,7 +2718,7 @@ function ChildAccordianComponent({
                                             {(field.type === "number" ||
                                               field.type === "decimal" ||
                                               field.type === "string") &&
-                                              field.gridTotal
+                                            field.gridTotal
                                               ? columnTotals[field.fieldname]
                                               : ""}
                                           </div>
