@@ -20,7 +20,10 @@ import LightTooltip from "@/components/Tooltip/customToolTip";
 import Button from "@mui/material/Button";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { TextareaAutosize } from "@mui/base/TextareaAutosize";
-import { dynamicDropDownFieldsData, fetchReportData, } from "@/services/auth/FormControl.services";
+import {
+  dynamicDropDownFieldsData,
+  fetchReportData,
+} from "@/services/auth/FormControl.services";
 import { getUserDetails } from "@/helper/userDetails";
 import {
   customDataPickerStyleCss,
@@ -185,6 +188,7 @@ CustomeInputFields.propTypes = {
   callSaveFunctionOnLastTab: PropTypes.func,
   hideColumnsId: PropTypes.any,
   formDataChange: PropTypes.any,
+  setBankExTrigger: PropTypes.any,
 };
 export default function CustomeInputFields({
   inputFieldData,
@@ -206,6 +210,7 @@ export default function CustomeInputFields({
   callSaveFunctionOnLastTab,
   hideColumnsId,
   formDataChange,
+  setBankExTrigger,
 }) {
   const { companyId, financialYear, branchId } = useThemeProvider();
   const [fileName, setFileName] = useState("");
@@ -214,7 +219,8 @@ export default function CustomeInputFields({
   const [dynamicFormData, setDynamicFormData] = useState({});
   const selectedIndex = useSelector((state) => state?.counter?.selectedIndex);
   const searchParams = useSearchParams();
-  const menuId = searchParams.get("menuName");
+  //const menuId = searchParams.get("menuName");
+  const menuId = "1384";
   const [menuName, setMenuName] = useState(null);
   useEffect(() => {
     const fetchMenuType = async () => {
@@ -302,7 +308,7 @@ export default function CustomeInputFields({
     Object.assign(updatedValues, {
       [field.fieldname]:
         Array.isArray(formattedValue) &&
-          field.controlname?.toLowerCase() === "dropdown"
+        field.controlname?.toLowerCase() === "dropdown"
           ? formattedValue.join(",")
           : formattedValue,
     });
@@ -400,7 +406,7 @@ export default function CustomeInputFields({
     Object.assign(updatedValues, {
       [field.fieldname]:
         Array.isArray(formattedValue) &&
-          field.controlname?.toLowerCase() === "dropdown"
+        field.controlname?.toLowerCase() === "dropdown"
           ? formattedValue.join(",")
           : formattedValue,
     });
@@ -433,7 +439,7 @@ export default function CustomeInputFields({
         );
       } else {
         if (menuId == "1384") {
-          onKeyDown(updatedValues)
+          onKeyDown(updatedValues);
         }
       }
     }
@@ -583,9 +589,8 @@ export default function CustomeInputFields({
     }, [field, values?.[field.fieldname]]);
 
     useEffect(() => {
-
       if (firstRender.current && values?.[field.fieldname] !== undefined) {
-        firstRender.current = false; 
+        firstRender.current = false;
         return;
       }
       if (
@@ -733,8 +738,8 @@ export default function CustomeInputFields({
         referenceView: field.referenceView,
         dropdownFilter:
           field.dropdownFilter &&
-            field.dropdownFilter !== null &&
-            field.dropdownFilter !== ""
+          field.dropdownFilter !== null &&
+          field.dropdownFilter !== ""
             ? dynamicValuReplace(field.dropdownFilter)
             : "",
         search: inputValueForDataFetch,
@@ -1180,11 +1185,11 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase()
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase()
+                      ) && !field.isEditable)
                 }
                 InputLabelProps={{
                   classes: {
@@ -1200,14 +1205,15 @@ export default function CustomeInputFields({
                 }}
               >
                 <p
-                  className={`absolute left-[11px] z-10 px-2 transition-all duration-200 ${showLabel ||
+                  className={`absolute left-[11px] z-10 px-2 transition-all duration-200 ${
+                    showLabel ||
                     values[field.fieldname] ||
                     inputValueChange.length > 0
-                    ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 opacity-100" // Label moves to the top
-                    : inputValueChange.length == 0 || !values[field.fieldname]
+                      ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 opacity-100" // Label moves to the top
+                      : inputValueChange.length == 0 || !values[field.fieldname]
                       ? "top-[calc(100%-1.2rem)] opacity-100"
                       : "" // Label sits at the bottom, emulating a placeholder
-                    }`}
+                  }`}
                   style={{ fontSize: "var(--inputFontSize)" }}
                 >
                   <span
@@ -1263,17 +1269,17 @@ export default function CustomeInputFields({
                       ? inEditMode?.isCopy === true
                         ? !field?.isCopyEditable
                         : ["e", "b"].includes(
-                          field.isEditableMode?.toLowerCase()
-                        ) && !field.isEditable
+                            field.isEditableMode?.toLowerCase()
+                          ) && !field.isEditable
                       : ["a", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable)
+                          field.isEditableMode?.toLowerCase()
+                        ) && !field.isEditable)
                   }
                   value={
                     Array.isArray(dropDownValues)
                       ? dropDownValues?.find(
-                        (item) => item.value == values?.[field.fieldname]
-                      )
+                          (item) => item.value == values?.[field.fieldname]
+                        )
                       : null
                   }
                   noOptionsMessage={() =>
@@ -1285,7 +1291,6 @@ export default function CustomeInputFields({
                   onFocus={() => {
                     setonFocusValue(values?.[field.fieldname]);
                     fetchData(field, 1, inputValueForDataFetch, "", "onPoen");
-
                   }}
                   onMenuOpen={() => {
                     setMenuOpen(true);
@@ -1392,14 +1397,15 @@ export default function CustomeInputFields({
           <LightTooltip title={inputLabel}>
             <div className="relative ">
               <p
-                className={`text-[8px] absolute left-[11px] z-10 px-2 transition-all duration-200 ${showLabel ||
+                className={`text-[8px] absolute left-[11px] z-10 px-2 transition-all duration-200 ${
+                  showLabel ||
                   values[field.fieldname] ||
                   inputValueChange.length > 0
-                  ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-75 opacity-100" // Label moves to the top
-                  : inputValueChange.length == 0 || !values[field.fieldname]
+                    ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-75 opacity-100" // Label moves to the top
+                    : inputValueChange.length == 0 || !values[field.fieldname]
                     ? "top-[calc(100%-1.2rem)] opacity-100"
                     : "" // Label sits at the bottom, emulating a placeholder
-                  }`}
+                }`}
               >
                 <span
                   onClick={() => {
@@ -1407,11 +1413,12 @@ export default function CustomeInputFields({
                     setMenuOpen(true);
                   }}
                   style={{ color: "rgba(0, 0, 0, 0.75)" }}
-                  className={`${(showLabel || inputValueChange.length > 0) &&
+                  className={`${
+                    (showLabel || inputValueChange.length > 0) &&
                     values[field.fieldname]
-                    ? "text-[8px]"
-                    : "text-[9px]"
-                    }`}
+                      ? "text-[8px]"
+                      : "text-[9px]"
+                  }`}
                 >
                   {field.isRequired ? (
                     <span className={`${styles.inputTextColor}`}>
@@ -1476,20 +1483,20 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase()
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase()
+                      ) && !field.isEditable)
                 }
                 value={
                   values?.[`${field.fieldname}multiselect`] ||
-                    dropDownValues?.length > 0
+                  dropDownValues?.length > 0
                     ? dropDownValues?.filter((value) =>
-                      values?.[`${field.fieldname}`]
-                        ?.split(",")
-                        ?.includes(value.value.toString())
-                    )
+                        values?.[`${field.fieldname}`]
+                          ?.split(",")
+                          ?.includes(value.value.toString())
+                      )
                     : [] || []
                 }
                 noOptionsMessage={() =>
@@ -1605,8 +1612,9 @@ export default function CustomeInputFields({
                 className="absolute px-2 inline bg-[--inputBg] pr-[10%] leading-[0.8px] top-[-1px] left-[8px] p-0 scale-100"
               >
                 <span
-                  className={`${isView ? "text-[#B2BAC2]" : styles.inputTextColor
-                    } font-[var(--inputFontWeight)]`}
+                  className={`${
+                    isView ? "text-[#B2BAC2]" : styles.inputTextColor
+                  } font-[var(--inputFontWeight)]`}
                   style={{ fontSize: "var(--inputFontSize)" }}
                 >
                   {field.isRequired ? (
@@ -1631,8 +1639,8 @@ export default function CustomeInputFields({
                   values[field.fieldname] !== null && !values[field.fieldname]
                     ? "0"
                     : values[field.fieldname] === true
-                      ? "1"
-                      : values[field.fieldname]
+                    ? "1"
+                    : values[field.fieldname]
                 }
                 onFocus={(e) => {
                   setonFocusValue(e.target.value);
@@ -1670,86 +1678,86 @@ export default function CustomeInputFields({
                 {/* Array source */}
                 {Array.isArray(field.dropDownValues)
                   ? field.dropDownValues.map((item, idx) => {
-                    const optionValue = item.id.toString();
-                    const optionLabel = item.value.toString();
-                    return (
-                      <FormControlLabel
-                        key={idx}
-                        value={optionValue}
-                        label={optionLabel}
-                        labelPlacement="start"
-                        sx={radioControlStyle}
-                        control={
-                          <Radio
-                            disabled={
-                              isView ||
-                              (inEditMode?.isEditMode
-                                ? inEditMode?.isCopy === true
-                                  ? !field?.isCopyEditable
-                                  : ["e", "b"].includes(
-                                    field.isEditableMode?.toLowerCase()
-                                  ) && !field.isEditable
-                                : ["a", "b"].includes(
-                                  field.isEditableMode?.toLowerCase()
-                                ) && !field.isEditable)
-                            }
-                            sx={radioControlStyle}
-                            onClick={(e) => {
-                              // Deselect when clicking the already-selected radio
-                              const current =
-                                values[field.fieldname]?.toString() ?? null;
-                              if (current === optionValue) {
-                                e.stopPropagation();
-                                handleChange(null, field);
-                                values[field.fieldname] = null;
+                      const optionValue = item.id.toString();
+                      const optionLabel = item.value.toString();
+                      return (
+                        <FormControlLabel
+                          key={idx}
+                          value={optionValue}
+                          label={optionLabel}
+                          labelPlacement="start"
+                          sx={radioControlStyle}
+                          control={
+                            <Radio
+                              disabled={
+                                isView ||
+                                (inEditMode?.isEditMode
+                                  ? inEditMode?.isCopy === true
+                                    ? !field?.isCopyEditable
+                                    : ["e", "b"].includes(
+                                        field.isEditableMode?.toLowerCase()
+                                      ) && !field.isEditable
+                                  : ["a", "b"].includes(
+                                      field.isEditableMode?.toLowerCase()
+                                    ) && !field.isEditable)
                               }
-                            }}
-                          />
-                        }
-                      />
-                    );
-                  })
+                              sx={radioControlStyle}
+                              onClick={(e) => {
+                                // Deselect when clicking the already-selected radio
+                                const current =
+                                  values[field.fieldname]?.toString() ?? null;
+                                if (current === optionValue) {
+                                  e.stopPropagation();
+                                  handleChange(null, field);
+                                  values[field.fieldname] = null;
+                                }
+                              }}
+                            />
+                          }
+                        />
+                      );
+                    })
                   : /* CSV string source */
-                  field.dropDownValues.split(",").map((item, idx) => {
-                    const parts = item.split(".");
-                    const optionValue = parts[0].trim();
-                    const optionLabel = parts[1]?.trim() || optionValue;
-                    return (
-                      <FormControlLabel
-                        key={idx}
-                        value={optionValue}
-                        label={optionLabel}
-                        labelPlacement="start"
-                        sx={radioControlStyle}
-                        control={
-                          <Radio
-                            disabled={
-                              isView ||
-                              (inEditMode?.isEditMode
-                                ? inEditMode?.isCopy === true
-                                  ? !field?.isCopyEditable
-                                  : ["e", "b"].includes(
-                                    field.isEditableMode?.toLowerCase()
-                                  ) && !field.isEditable
-                                : ["a", "b"].includes(
-                                  field.isEditableMode?.toLowerCase()
-                                ) && !field.isEditable)
-                            }
-                            sx={radioControlStyle}
-                            onClick={(e) => {
-                              const current =
-                                values[field.fieldname]?.toString() ?? null;
-                              if (current === optionValue) {
-                                e.stopPropagation();
-                                handleChange(null, field);
-                                values[field.fieldname] = null;
+                    field.dropDownValues.split(",").map((item, idx) => {
+                      const parts = item.split(".");
+                      const optionValue = parts[0].trim();
+                      const optionLabel = parts[1]?.trim() || optionValue;
+                      return (
+                        <FormControlLabel
+                          key={idx}
+                          value={optionValue}
+                          label={optionLabel}
+                          labelPlacement="start"
+                          sx={radioControlStyle}
+                          control={
+                            <Radio
+                              disabled={
+                                isView ||
+                                (inEditMode?.isEditMode
+                                  ? inEditMode?.isCopy === true
+                                    ? !field?.isCopyEditable
+                                    : ["e", "b"].includes(
+                                        field.isEditableMode?.toLowerCase()
+                                      ) && !field.isEditable
+                                  : ["a", "b"].includes(
+                                      field.isEditableMode?.toLowerCase()
+                                    ) && !field.isEditable)
                               }
-                            }}
-                          />
-                        }
-                      />
-                    );
-                  })}
+                              sx={radioControlStyle}
+                              onClick={(e) => {
+                                const current =
+                                  values[field.fieldname]?.toString() ?? null;
+                                if (current === optionValue) {
+                                  e.stopPropagation();
+                                  handleChange(null, field);
+                                  values[field.fieldname] = null;
+                                }
+                              }}
+                            />
+                          }
+                        />
+                      );
+                    })}
               </RadioGroup>
             </div>
           </LightTooltip>
@@ -1764,8 +1772,9 @@ export default function CustomeInputFields({
                 className={`absolute px-2 inline left-[8px] bg-[--inputBg] pr-[10%] leading-[0.8px] top-[-1px] scale-100 text-[8px] `}
               >
                 <span
-                  className={`${isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
-                    }`}
+                  className={`${
+                    isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
+                  }`}
                 >
                   {field.isRequired ? (
                     <span className={`${styles.inputTextColor}`}>
@@ -1851,11 +1860,11 @@ export default function CustomeInputFields({
                             ? inEditMode?.isCopy === true
                               ? !field?.isCopyEditable
                               : ["e", "b"].includes(
-                                field.isEditableMode?.toLowerCase()
-                              ) && !field.isEditable
+                                  field.isEditableMode?.toLowerCase()
+                                ) && !field.isEditable
                             : ["a", "b"].includes(
-                              field.isEditableMode?.toLowerCase()
-                            ) && !field.isEditable)
+                                field.isEditableMode?.toLowerCase()
+                              ) && !field.isEditable)
                         }
                       />
                     }
@@ -1876,8 +1885,9 @@ export default function CustomeInputFields({
                 className={`absolute px-2 inline top-[-8px] left-[8px] text-[8px] ${styles.pageBackground}`}
               >
                 <span
-                  className={`${isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
-                    }`}
+                  className={`${
+                    isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
+                  }`}
                 >
                   {field.isRequired ? (
                     <span className={`${styles.inputTextColor}`}>
@@ -1987,11 +1997,11 @@ export default function CustomeInputFields({
                                 ? inEditMode?.isCopy === true
                                   ? !field?.isCopyEditable
                                   : ["e", "b"].includes(
-                                    field.isEditableMode?.toLowerCase()
-                                  ) && !field.isEditable
+                                      field.isEditableMode?.toLowerCase()
+                                    ) && !field.isEditable
                                 : ["a", "b"].includes(
-                                  field.isEditableMode?.toLowerCase()
-                                ) && !field.isEditable)
+                                    field.isEditableMode?.toLowerCase()
+                                  ) && !field.isEditable)
                             }
                           />
                         }
@@ -2033,15 +2043,28 @@ export default function CustomeInputFields({
               //   values?.[field.fieldname] || field.controlDefaultValue || ""
               // }
               value={
-                values?.[field.fieldname] !== undefined && values?.[field.fieldname] !== null
+                values?.[field.fieldname] !== undefined &&
+                values?.[field.fieldname] !== null
                   ? values[field.fieldname]
                   : field.controlDefaultValue !== undefined &&
                     field.controlDefaultValue !== null &&
                     field.controlDefaultValue !== ""
-                    ? parseInt(field.controlDefaultValue, 10)
-                    : ""
+                  ? parseInt(field.controlDefaultValue, 10)
+                  : ""
               }
-
+              onKeyDown={(e) => {
+                if (menuId == "1384") {
+                  if (
+                    e.key === "Tab" &&
+                    (field.fieldname === "bankCharges" ||
+                      field.fieldname === "exGainLoss")
+                  ) {
+                    if (e.key === "Tab") {
+                      setBankExTrigger((prev) => prev + 1);
+                    }
+                  }
+                }
+              }}
               onChange={(e) => {
                 const inputVal = e.target.value;
                 const isInteger = /^-?\d*$/.test(inputVal); // Optional: add logic for positive-only with /^\d*$/
@@ -2154,10 +2177,10 @@ export default function CustomeInputFields({
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable
+                        field.isEditableMode?.toLowerCase()
+                      ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                    !field.isEditable)
               }
               InputLabelProps={{
                 classes: {
@@ -2498,11 +2521,11 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase()
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase()
+                      ) && !field.isEditable)
                 }
               />
             </div>
@@ -2702,11 +2725,11 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase()
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase()
+                      ) && !field.isEditable)
                 }
               />
             </div>
@@ -2927,11 +2950,11 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase()
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase()
+                      ) && !field.isEditable)
                 }
               />
             </div>
@@ -2942,13 +2965,18 @@ export default function CustomeInputFields({
           <LightTooltip title={inputLabel}>
             <div
               className={`textarea-container `}
-              style={{ position: "relative", minHeight: "27px", width: "10rem" }}
+              style={{
+                position: "relative",
+                minHeight: "27px",
+                width: "10rem",
+              }}
             >
               <p
-                className={`custom-placeholder ${textareaLabel || values?.[field.fieldname]
-                  ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 "
-                  : "top-[7px]"
-                  } `}
+                className={`custom-placeholder ${
+                  textareaLabel || values?.[field.fieldname]
+                    ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 "
+                    : "top-[7px]"
+                } `}
                 style={{
                   ...textAreaLabelStyle,
                 }}
@@ -2969,11 +2997,11 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase()
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase()
+                      ) && !field.isEditable)
                 }
                 onPaste={handlePaste}
                 onChange={(e) => {
@@ -3100,11 +3128,11 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase()
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase()
+                      ) && !field.isEditable)
                 }
               >
                 <span className="text-[10px]">
@@ -3363,10 +3391,11 @@ export default function CustomeInputFields({
               size="small"
               name={field.fieldname}
               required={field.isRequired}
-              className={`${styles.inputField} ${field.type === "decimal" || field.type === "number"
-                ? "w-[10rem]"
-                : ""
-                }`}
+              className={`${styles.inputField} ${
+                field.type === "decimal" || field.type === "number"
+                  ? "w-[10rem]"
+                  : ""
+              }`}
               value={
                 values?.[field.fieldname] ?? field.controlDefaultValue ?? ""
               }
@@ -3384,7 +3413,6 @@ export default function CustomeInputFields({
                     handleChangeDynamic(e.target.value, field);
                   }
                 }
-
               }}
               onBlur={(e) => {
                 if (onFocusValue !== e.target.value) {
@@ -3413,7 +3441,10 @@ export default function CustomeInputFields({
                 setIsFocused(false);
 
                 // Call form validation if defined
-                if (typeof formControlValidation?.[field.functionOnBlur] === "function") {
+                if (
+                  typeof formControlValidation?.[field.functionOnBlur] ===
+                  "function"
+                ) {
                   onBlurHandler((state) => {
                     return formControlValidation?.[field.functionOnBlur]({
                       state: state,
@@ -3459,10 +3490,10 @@ export default function CustomeInputFields({
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable
+                        field.isEditableMode?.toLowerCase()
+                      ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                    !field.isEditable)
               }
               InputLabelProps={{
                 classes: {
@@ -3477,10 +3508,11 @@ export default function CustomeInputFields({
 
   return (
     <div
-      className={`flex flex-wrap py-[3px] ${inputFieldData?.map((field) => field.isBreak).includes(true)
-        ? ""
-        : "mr-2 "
-        }
+      className={`flex flex-wrap py-[3px] ${
+        inputFieldData?.map((field) => field.isBreak).includes(true)
+          ? ""
+          : "mr-2 "
+      }
       `}
     >
       {inputFieldData?.map((field, index, array) => {

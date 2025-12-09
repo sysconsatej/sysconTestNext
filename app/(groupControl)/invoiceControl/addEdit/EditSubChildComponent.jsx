@@ -166,7 +166,7 @@ export default function EditSubChildComponent(props) {
   }
 
   function handleChangeFunction(result) {
-    if (result.isCheck === false) {
+    if (result?.isCheck === false) {
       if (result.alertShow) {
         setParaText(result.message);
         setIsError(true);
@@ -175,7 +175,7 @@ export default function EditSubChildComponent(props) {
       }
       return;
     }
-    let data = { ...result.values };
+    let data = { ...result?.values };
     // let data = { ...result.newState };
     setEditSubChildObj((pre) => {
       return {

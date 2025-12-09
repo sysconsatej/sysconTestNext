@@ -26,6 +26,8 @@ import {
   getThridDatePurchaseData,
   calculateDetentionRateData,
   fetchContainerNoData,
+  getVoucher,
+  getVoucherThirdLevelData,
 } from "@/services/auth/FormControl.services";
 import { getUserDetails } from "@/helper/userDetails";
 import moment from "moment";
@@ -298,8 +300,9 @@ const SetDecimalsGeneric = (obj) => {
         return {
           isCheck: false,
           type: "success",
-          message: `You can enter Max ${fieldSize - decimalCheck - 1
-            } Characters`,
+          message: `You can enter Max ${
+            fieldSize - decimalCheck - 1
+          } Characters`,
           alertShow: true,
           fieldName: fieldName,
           values: values,
@@ -947,11 +950,11 @@ const setNoOfContainer = (obj) => {
 
       let size = currentItem.length
         ? currentItem[0].sizeIdDropdown ||
-        currentItem[0].sizeIddropdown[0]?.label
+          currentItem[0].sizeIddropdown[0]?.label
         : "";
       let type = currentItem.length
         ? currentItem[0].typeIdDropdown ||
-        currentItem[0].typeIddropdown[0]?.label
+          currentItem[0].typeIddropdown[0]?.label
         : "";
 
       if (fieldName === "sizeId" && childCommonItem.length !== 0) {
@@ -966,9 +969,11 @@ const setNoOfContainer = (obj) => {
             return {
               isCheck: false,
               type: "error",
-              message: `For type ${typeIdDropdown || type
-                } and No Of Containers ${values.qty}, the size should be ${sizeIdDropdown || size
-                }.`,
+              message: `For type ${
+                typeIdDropdown || type
+              } and No Of Containers ${values.qty}, the size should be ${
+                sizeIdDropdown || size
+              }.`,
               alertShow: true,
               values: values,
               newState: newState,
@@ -997,9 +1002,11 @@ const setNoOfContainer = (obj) => {
             return {
               isCheck: false,
               type: "error",
-              message: `For size ${sizeIdDropdown || size
-                } and No Of Container ${values.qty} the type should be ${typeIdDropdown || type
-                } `,
+              message: `For size ${
+                sizeIdDropdown || size
+              } and No Of Container ${values.qty} the type should be ${
+                typeIdDropdown || type
+              } `,
               alertShow: true,
               values: values,
               newState: newState,
@@ -2814,10 +2821,10 @@ const removeFilterCondition = (obj) => {
         ...prev.formControlData,
         fields: prev.formControlData?.fields
           ? prev.formControlData.fields.map((field) =>
-            field.fieldname === fieldName
-              ? { ...field, dropdownFilter: null }
-              : field
-          )
+              field.fieldname === fieldName
+                ? { ...field, dropdownFilter: null }
+                : field
+            )
           : [],
       },
     }));
@@ -3958,8 +3965,9 @@ const checkGridsDuplication = (obj) => {
     const fieldsList =
       labels.slice(0, -1).join(", ") +
       (labels.length > 1 ? `, and ${labels.slice(-1)}` : labels[0]);
-    const message = `Duplicate entry found for ${fieldsList}. Please enter different ${labels[labels.length - 1]
-      }.`;
+    const message = `Duplicate entry found for ${fieldsList}. Please enter different ${
+      labels[labels.length - 1]
+    }.`;
 
     return {
       type: "error",
@@ -6382,10 +6390,11 @@ const setSameSizeValues = (obj) => {
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
-      const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
+      const editedString = `${dropFilterValueWithoutBraces} and ${
+        Array.isArray(sizeIds)
           ? `id in (${sizeIds.join(",")})`
           : `id = ${sizeIds}`
-        } `;
+      } `;
 
       console.log("editedString", editedString);
 
@@ -6432,10 +6441,11 @@ const setSameSizeValues = (obj) => {
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
-      const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
+      const editedString = `${dropFilterValueWithoutBraces} and ${
+        Array.isArray(sizeIds)
           ? `id in (${sizeIds.join(",")})`
           : `id = ${sizeIds}`
-        } `;
+      } `;
 
       if (editedString.trim()) {
         setterField.dropdownFilter = editedString;
@@ -6456,8 +6466,8 @@ const setSameSizeValues = (obj) => {
       let getterSize = newState[argsArray[0]];
       let currentSize =
         values &&
-          Array.isArray(values.sizeIddropdown) &&
-          values.sizeIddropdown.length > 0
+        Array.isArray(values.sizeIddropdown) &&
+        values.sizeIddropdown.length > 0
           ? values.sizeIddropdown[0].label
           : "";
 
@@ -6547,8 +6557,8 @@ const setSameSizeValues = (obj) => {
       let getterSize = newState[argsArray[0]];
       let currentSize =
         values &&
-          Array.isArray(values.sizeIddropdown) &&
-          values.sizeIddropdown.length > 0
+        Array.isArray(values.sizeIddropdown) &&
+        values.sizeIddropdown.length > 0
           ? values.sizeIddropdown[0].label
           : "";
 
@@ -7700,9 +7710,9 @@ const getVoucherInvoiceDetails = async (obj) => {
     const invoiceNumbers =
       Array.isArray(fetchInvoice?.Chargers) && fetchInvoice.Chargers.length > 0
         ? fetchInvoice.Chargers.map((invoice) => ({
-          value: invoice?.value ?? invoice?.invoiceNo, // Use invoiceNo if value is missing
-          label: invoice?.label ?? invoice?.invoiceNo, // Ensure label is never undefined
-        }))
+            value: invoice?.value ?? invoice?.invoiceNo, // Use invoiceNo if value is missing
+            label: invoice?.label ?? invoice?.invoiceNo, // Ensure label is never undefined
+          }))
         : [];
 
     console.log("invoiceNumbers", invoiceNumbers);
@@ -7756,17 +7766,17 @@ const homeCurrencyInvoice = async (obj) => {
       const updatedValues = {
         ...values,
         currencyId: currency,
-        demurragecurrencyId: currency,
-        demurrageCurrencyId: currency,
         exchangeRate: 1,
       };
+      //       demurragecurrencyId: currency,
+      // demurrageCurrencyId: currency,
       setStateVariable((prev) => ({
         ...prev,
         currencyId: currency,
-        demurragecurrencyId: currency,
-        demurrageCurrencyId: currency,
         exchangeRate: 1,
       }));
+      //       demurragecurrencyId: currency,
+      // demurrageCurrencyId: currency,
 
       return {
         type: "success",
@@ -9263,6 +9273,7 @@ const calculateVoucherAmt = async (obj) => {
     const response = await fetchReportData(request);
     const currencyId = response?.data[0]?.currencyId;
     if (currencyId == currency) {
+      //amtRecFC
       const amtRecFc = amtRec;
       const tdsAmtFc = amtRecFc * tdsPercent;
       const tdsAmt = amtRec * tdsPercent;
@@ -9271,9 +9282,30 @@ const calculateVoucherAmt = async (obj) => {
       setStateVariable((prev) => ({
         ...prev,
         [argNames[3]]: amtRecFc,
-        [argNames[4]]: tdsAmtFc,
-        [argNames[5]]: tdsAmt,
       }));
+      //[argNames[4]]: tdsAmtFc,
+      // [argNames[5]]: tdsAmt,
+
+      // const tdsApplicableData = newState?.tdsApplicable || null;
+      // if (tdsApplicableData == true || tdsApplicableData == "true") {
+      //   const amtRecFCValue = parseFloat(newState?.amtRecFC) || 0;
+      //   const amtRecValue = parseFloat(newState?.amtRec) || 0;
+      //   const tdsPercent = parseFloat([argNames[6]]) || 0;
+      //   //tdsAmtFC   // tdsAmt
+      //   const calculatedTdsAmtFc = amtRecFCValue * tdsPercent;
+      //   const CalculatedCTdsAmt = amtRecValue * tdsPercent;
+      //   setStateVariable((prev) => ({
+      //     ...prev,
+      //     tdsAmtFC: calculatedTdsAmtFc,
+      //     tdsAmt: CalculatedCTdsAmt,
+      //   }));
+      // } else {
+      //   setStateVariable((prev) => ({
+      //     ...prev,
+      //     tdsAmtFC: null,
+      //     tdsAmt: null,
+      //   }));
+      // }
 
       return {
         type: "success",
@@ -9292,15 +9324,35 @@ const calculateVoucherAmt = async (obj) => {
       setStateVariable((prev) => ({
         ...prev,
         [argNames[2]]: amtRec,
-        [argNames[4]]: tdsAmtFc,
-        [argNames[5]]: tdsAmt,
       }));
+      //[argNames[4]]: tdsAmtFc,
+      // [argNames[5]]: tdsAmt,
+
+      // const tdsApplicableData = newState?.tdsApplicable || null;
+      // if (tdsApplicableData == true || tdsApplicableData == "true") {
+      //   const amtRecFCValue = parseFloat(newState?.amtRecFC) || 0;
+      //   const amtRecValue = parseFloat(newState?.amtRec) || 0;
+      //   const tdsPercent = parseFloat([argNames[6]]) || 0;
+      //   //tdsAmtFC   // tdsAmt
+      //   const calculatedTdsAmtFc = amtRecFCValue * tdsPercent;
+      //   const CalculatedCTdsAmt = amtRecValue * tdsPercent;
+      //   setStateVariable((prev) => ({
+      //     ...prev,
+      //     tdsAmtFC: calculatedTdsAmtFc,
+      //     tdsAmt: CalculatedCTdsAmt,
+      //   }));
+      // } else {
+      //   setStateVariable((prev) => ({
+      //     ...prev,
+      //     tdsAmtFC: null,
+      //     tdsAmt: null,
+      //   }));
+      // }
 
       return {
         type: "success",
         result: true,
         message: "Amount & TDS calculated successfully",
-        amtRecFc,
         tdsAmtFc,
         tdsAmt,
       };
@@ -9526,6 +9578,7 @@ const getThirdLevelDetails = async (obj) => {
     podId,
     fpdId,
     polId,
+    depotId,
     billingPartyId,
     containerStatusId,
     fromDate,
@@ -9560,6 +9613,7 @@ const getThirdLevelDetails = async (obj) => {
     podId: podId,
     fpdId: fpdId,
     polId: polId,
+    depotId: depotId,
     containerStatusId: containerStatusId,
     cargoTypeId: cargoTypeId,
     sizeId: sizeId,
@@ -9591,11 +9645,11 @@ const getThirdLevelDetails = async (obj) => {
         containerIddropdown:
           _containerId !== null
             ? [
-              {
-                value: _containerId,
-                label: item.containerNo ?? String(_containerId),
-              },
-            ]
+                {
+                  value: _containerId,
+                  label: item.containerNo ?? String(_containerId),
+                },
+              ]
             : [],
         sizeIddropdown:
           _sizeId !== null
@@ -9612,22 +9666,22 @@ const getThirdLevelDetails = async (obj) => {
         containerTransactionIddropdown:
           _containerTransactionId !== null
             ? [
-              {
-                value: _containerTransactionId,
-                label:
-                  item.containerTransactionName ??
-                  String(_containerTransactionId),
-              },
-            ]
+                {
+                  value: _containerTransactionId,
+                  label:
+                    item.containerTransactionName ??
+                    String(_containerTransactionId),
+                },
+              ]
             : [],
         containerRepairIddropdown:
           _containerRepairId !== null
             ? [
-              {
-                value: _containerRepairId,
-                label: item.containerRepairName ?? String(_containerRepairId),
-              },
-            ]
+                {
+                  value: _containerRepairId,
+                  label: item.containerRepairName ?? String(_containerRepairId),
+                },
+              ]
             : [],
         blIddropdown:
           _blId !== null
@@ -10041,7 +10095,7 @@ const calculateDetentionRate = async (obj, noDays) => {
 
   const rate = [argNames[0]] || 0;
   const { businessSegmentId, blId } = newState;
-  const { chargeId, noOfDays,fromDate,toDate,containerId } = values;
+  const { chargeId, noOfDays, fromDate, toDate, containerId } = values;
   console.log("newState", newState);
   console.log("values", noDays, chargeId);
 
@@ -10050,9 +10104,9 @@ const calculateDetentionRate = async (obj, noDays) => {
     noOfDays: noDays,
     clientId: clientId,
     businessSegmentId: businessSegmentId,
-    fromDate:fromDate,
-    toDate:toDate,
-    containerId:containerId
+    fromDate: fromDate,
+    toDate: toDate,
+    containerId: containerId,
   };
 
   const fetchChargeDetails = await calculateDetentionRateData(requestData);
@@ -10188,8 +10242,8 @@ const getBlChargesForPaty = async (obj) => {
     const invoiceList = Array.isArray(fetchInvoice)
       ? fetchInvoice
       : Array.isArray(fetchInvoice?.Chargers)
-        ? fetchInvoice.Chargers
-        : [];
+      ? fetchInvoice.Chargers
+      : [];
 
     if (invoiceList.length > 0) {
       const selectedLedger = invoiceList[0];
@@ -10204,11 +10258,11 @@ const getBlChargesForPaty = async (obj) => {
         billingPartyId: finalBillingPartyId,
         billingPartyIddropdown: finalBillingPartyId
           ? [
-            {
-              value: finalBillingPartyId,
-              label: selectedLedger?.LedgerName || "",
-            },
-          ]
+              {
+                value: finalBillingPartyId,
+                label: selectedLedger?.LedgerName || "",
+              },
+            ]
           : [],
       };
 
@@ -10271,8 +10325,8 @@ const getBillingPartyFromJob = async (obj) => {
   const invoiceList = Array.isArray(fetchInvoice)
     ? fetchInvoice
     : Array.isArray(fetchInvoice?.Chargers)
-      ? fetchInvoice.Chargers
-      : [];
+    ? fetchInvoice.Chargers
+    : [];
 
   if (invoiceList.length > 0) {
     const selectedLedger = invoiceList[0];
@@ -10637,8 +10691,9 @@ const setTransit = async (obj) => {
 
     // --- Prepare Updated goodsDesc ---
     let updatedGoodsDesc = goodsDesc || "";
-    const transitRemark = `Cargo in transit to ${countryDestination || "(country of destination)"
-      } on consignee’s risk, cost & responsibilities`;
+    const transitRemark = `Cargo in transit to ${
+      countryDestination || "(country of destination)"
+    } on consignee’s risk, cost & responsibilities`;
 
     // Remove any previous existing instance of this line (avoid duplicates)
     updatedGoodsDesc = updatedGoodsDesc
@@ -11072,6 +11127,16 @@ const getBlCharges = async (obj) => {
     charge.index = index;
     charge.indexValue = index;
 
+    Object.keys(charge).forEach((key) => {
+      if (typeof charge[key] === "string" && isNaN(charge[key])) {
+        try {
+          charge[key] = JSON.parse(charge[key]);
+        } catch (error) {
+          charge[key] = charge[key];
+        }
+      }
+    });
+
     // Safe numeric fields
     const safeTotalAmount = Number(charge.totalAmount) || 0;
     const safeTotalAmountFc = Number(charge.totalAmountFc) || 0;
@@ -11364,7 +11429,7 @@ const setSalePerson = async (obj) => {
 
   try {
     const argNames = args.split(",").map((arg) => arg.trim());
-    const customer = newState[argNames[0]]; 
+    const customer = newState[argNames[0]];
 
     if (!customer) {
       return {
@@ -11410,8 +11475,334 @@ const setSalePerson = async (obj) => {
   }
 };
 
+const fetchPartyBalance = async (obj) => {
+  let {
+    args,
+    newState,
+    formControlData,
+    setFormControlData,
+    values,
+    fieldName,
+    tableName,
+    setStateVariable,
+  } = obj;
+  // parse args (unchanged)
+  let argNames;
+  let splitArgs = [];
+  if (
+    args === undefined ||
+    args === null ||
+    args === "" ||
+    (typeof args === "object" && Object.keys(args).length === 0)
+  ) {
+    argNames = args;
+  } else {
+    argNames = args.split(",").map((arg) => arg.trim());
+    for (const iterator of argNames) {
+      splitArgs.push(iterator.split("."));
+    }
+  }
+
+  const { paymentByParty } = newState;
+  const { clientId } = getUserDetails();
+  const requestBody = { clientId, glId: paymentByParty };
+
+  const fetchChargeDetails = await getVoucher(requestBody);
+  if (fetchChargeDetails) {
+    const vouchers = fetchChargeDetails?.vouchers ?? [];
+
+    // helper: only use fallback when value is null/undefined/""
+    const pick = (val, fallback) =>
+      val == null || val === "" ? fallback : val;
+
+    const normalized = vouchers.map((v, index) => ({
+      ...v,
+      idx: index,
+      index,
+      indexValue: index,
+      // prefill balances ONLY if they are empty; otherwise keep as-is
+      balanceAmtHC: pick(v.balanceAmtHC, v.OsAmtHC ?? v.balanceAmtHC ?? null),
+      balanceAmtFC: pick(v.balanceAmtFC, v.OsAmtFC ?? v.balanceAmtFC ?? null),
+      // leave allocated/tds exactly as they came (no type coercion)
+    }));
+
+    values.tblVoucherLedgerDetails = normalized;
+
+    // keep your existing flow exactly the same
+    homeCurrencyInvoice({ ...obj, values: { ...values } });
+
+    setStateVariable((prev) => ({ ...prev, ...values }));
+  }
+};
+
+const setSameCurrency = async (obj) => {
+  const { args, newState, setStateVariable } = obj;
+  ///currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt
+  return;
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+    const amtHc = newState?.[argNames[0]];
+    const amtFc = newState?.[argNames[1]] || 0;
+
+    // Store in newState
+    setStateVariable((prev) => ({
+      ...prev,
+      [argNames[2]]: amtHc,
+      [argNames[3]]: amtFc,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "Amount & TDS calculated successfully",
+    };
+  } catch (error) {
+    console.error("Error in setSameCurrency:", error);
+  }
+};
+
+const setSameCurrencyFc = async (obj) => {
+  const { args, newState, setStateVariable } = obj;
+
+  try {
+    // 🔹 Utility: safely convert to number
+    const toNum = (v) => {
+      if (v === null || v === undefined || v === "") return 0;
+      const n = Number(String(v).replace(/,/g, ""));
+      return Number.isNaN(n) ? 0 : n;
+    };
+
+    const fcData = toNum(newState?.amtRecFC);
+    const bankCharges = toNum(newState?.bankCharges);
+    const exGainLoss = toNum(newState?.exGainLoss);
+
+    const balanceAmtFc = fcData + bankCharges + exGainLoss;
+    // If you want 2 decimals, use:
+    // const balanceAmtFc = Math.round((fcData + bankCharges + exGainLoss) * 100) / 100;
+
+    console.log("rohit setSameCurrencyFc", {
+      fcData,
+      bankCharges,
+      exGainLoss,
+      balanceAmtFc,
+    });
+
+    // Store in newState
+    setStateVariable((prev) => ({
+      ...prev,
+      balanceAmtFc,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "Amount & TDS calculated successfully",
+    };
+  } catch (error) {
+    console.error("Error in setSameCurrencyFc:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Error while calculating FC amount",
+    };
+  }
+};
+
+const setSameCurrencyHc = async (obj) => {
+  const { args, newState, setStateVariable } = obj;
+
+  try {
+    // 🔹 Utility: safely convert to number
+    const toNum = (v) => {
+      if (v === null || v === undefined || v === "") return 0;
+      const n = Number(String(v).replace(/,/g, ""));
+      return Number.isNaN(n) ? 0 : n;
+    };
+
+    const hcData = toNum(newState?.amtRec);
+    const bankCharges = toNum(newState?.bankCharges);
+    const exGainLoss = toNum(newState?.exGainLoss);
+
+    const balanceAmtHc = hcData + bankCharges + exGainLoss;
+
+    console.log("rohit setSameCurrencyHc", {
+      hcData,
+      bankCharges,
+      exGainLoss,
+      balanceAmtHc,
+    });
+
+    // Store in newState
+    setStateVariable((prev) => ({
+      ...prev,
+      balanceAmtHc,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "Amount & TDS calculated successfully",
+    };
+  } catch (error) {
+    console.error("Error in setSameCurrencyHc:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Error while calculating HC amount",
+    };
+  }
+};
+
+const fetchPartyBalanceThirdLevel = async (obj) => {
+  let {
+    args,
+    newState,
+    formControlData,
+    setFormControlData,
+    values,
+    fieldName,
+    tableName,
+    setStateVariable,
+    onChangeHandler,
+  } = obj;
+
+  let argNames;
+  let splitArgs = [];
+  if (
+    args === undefined ||
+    args === null ||
+    args === "" ||
+    (typeof args === "object" && Object.keys(args).length === 0)
+  ) {
+    argNames = args;
+  } else {
+    argNames = args.split(",").map((arg) => arg.trim());
+    for (const iterator of argNames) {
+      splitArgs.push(iterator.split("."));
+    }
+  }
+  const { glId } = values;
+  const { clientId } = getUserDetails();
+  const requestBody = { clientId, glId: glId };
+
+  const fetchChargeDetails = await getVoucherThirdLevelData(requestBody);
+  if (fetchChargeDetails && fetchChargeDetails?.vouchers?.length > 0) {
+    const vouchers = fetchChargeDetails?.vouchers ?? [];
+
+    const updatedChargers = vouchers.map((item, index) => ({
+      ...item,
+      indexValue: index,
+    }));
+
+    // Update state variable
+    setStateVariable((prev) => ({
+      ...prev,
+      tblVoucherLedgerDetails: updatedChargers,
+    }));
+  }
+};
+
+const LedgerEntriesRule = (obj) => {
+  let {
+    args,
+    newState,
+    formControlData,
+    setFormControlData,
+    values,
+    fieldName,
+    tableName,
+    setStateVariable,
+    onChangeHandler,
+  } = obj;
+  console.log("LedgerEntriesRule called with field:", args);
+  const parameter = args.split(",").map((arg) => arg.trim());
+  if (parameter.length < 3)
+    return toast.error("Invalid parameters for LedgerEntriesRule");
+  if (fieldName == parameter[0]) {
+    if (values[parameter[2]] > 0 && values[parameter[0]] > 0) {
+      toast.error(
+        `Both Debit and Credit amounts cannot be greater than zero simultaneously.`
+      );
+      setStateVariable((prev) => ({
+        ...prev,
+        [parameter[0]]: 0,
+        [parameter[1]]: 0,
+      }));
+    } else {
+      setStateVariable((prev) => ({
+        ...prev,
+        [parameter[1]]:
+          values[parameter[0]] * Number(newState.exchangeRate || 1),
+      }));
+    }
+  }
+};
+
+const CompanyBranchSet = async (obj) => {
+  try {
+    let {
+      args,
+      newState,
+      formControlData,
+      setFormControlData,
+      values,
+      fieldName,
+      tableName,
+      setStateVariable,
+      onChangeHandler,
+    } = obj;
+    const [conpany, branch] = args.split(",").map((arg) => arg.trim());
+    let RequedObj = {
+      onfilterkey: "status",
+      onfiltervalue: 1,
+      referenceTable: "tblCompanyBranch",
+      referenceColumn: "name",
+      dropdownFilter: `and companyId=${newState[conpany]}`,
+      search: "",
+      pageNo: 1,
+    };
+    const res = await dynamicDropDownFieldsData(RequedObj);
+    const json = res.data;
+    setStateVariable((prev) => {
+      return {
+        ...prev,
+        [branch]: json[0]?.id,
+      };
+    });
+  } catch (error) {
+    console.error("Error in CompanyBranchSet:", error);
+  }
+};
+
+const getAutoAllocateAmount = async (obj) => {
+  let {
+    args,
+    newState,
+    formControlData,
+    setFormControlData,
+    values,
+    fieldName,
+    tableName,
+    setStateVariable,
+  } = obj;
+
+  console.log("getAutoAllocateAmount called with args:");
+  console.log("getAutoAllocateAmount newState =>>", newState);
+  console.log(
+    "getAutoAllocateAmount newState?.tblVoucherLedgerDetails =>>",
+    newState?.tblVoucherLedgerDetails
+  );
+  console.log("getAutoAllocateAmount values =>>", values);
+  console.log("fieldName values =>>", fieldName);
+  // setStateVariable((prev) => ({
+  //   ...prev,
+  //   tblInvoiceCharge: updatedCharges,
+  // }));
+};
 
 export {
+  setSameCurrencyFc,
+  setSameCurrencyHc,
   demoFunctionOnChange,
   copyTableFunction,
   dateCheck,
@@ -11529,5 +11920,11 @@ export {
   setBillingPartyForJob,
   setAllocation,
   setBillingPartyForJobCr,
-  setSalePerson
+  setSalePerson,
+  fetchPartyBalance,
+  // setSameCurrency
+  fetchPartyBalanceThirdLevel,
+  LedgerEntriesRule,
+  CompanyBranchSet,
+  getAutoAllocateAmount,
 };

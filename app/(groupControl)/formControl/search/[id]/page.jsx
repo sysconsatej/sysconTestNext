@@ -566,8 +566,8 @@ export default function AddEditFormControll() {
         .filter((data) => data.isChild)
         .forEach((data) => {
           // dataToCopy[data.tableName] = getCopyDetails.data[0][data?.toTableName];
-          dataToCopy[data?.toTableName] =
-            getCopyDetails.data[0][data?.toTableName];
+          dataToCopy[data?.toTableName] = formControlData?.controlname.toLowerCase() == "multiselect" ? [...newState[data?.toTableName], ...getCopyDetails.data[0][data?.toTableName]] : getCopyDetails.data[0][data?.toTableName]
+            ;
         });
 
       //      console.log("dataToCopy", dataToCopy);
@@ -599,9 +599,9 @@ export default function AddEditFormControll() {
         return updatedFields;
       });
 
-      console.log("getCopyDetails", getCopyDetails);
+      console.log("getCopyDetails", dataToCopy);
 
-      const dataObj = getCopyDetails.data[0];
+      const dataObj = dataToCopy;
 
       Object.keys(dataObj).forEach((key) => {
         if (Array.isArray(dataObj[key])) {

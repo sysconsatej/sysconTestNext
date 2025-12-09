@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable */
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import styles from "@/components/common.module.css";
 import TextField from "@mui/material/TextField";
@@ -20,6 +21,7 @@ import { TextareaAutosize } from "@mui/base/TextareaAutosize";
 import Button from "@mui/material/Button";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { dynamicDropDownFieldsData } from "@/services/auth/FormControl.services";
+import { getUserDetails } from "@/helper/userDetails";
 import {
   customDataPickerStyleCss,
   customDateTimePickerStyleCss,
@@ -80,7 +82,8 @@ export default function GridInputFields({
 }) {
   // const [fileName, setFileName] = useState("");
   // const [isFocused, setIsFocused] =useState(false);
-
+  const { dateFormat } = getUserDetails();
+  const acceptButtonRef = useRef(null);
   const handleChange = (value, field) => {
     let formattedValue = value;
     let updatedValues = {};
@@ -98,7 +101,7 @@ export default function GridInputFields({
 
     // For DatePicker component
     if (value && typeof value.format === "function") {
-      formattedValue = dayjs(value).format("YYYY-MM-DD HH:mm:ss");
+      formattedValue = dayjs(value).format("DD-MM-YYYY");
       updatedValues[`${field?.fieldname}`] = formattedValue; // Adjust the format as needed
     }
     // For Autocomplete component (single-select)
@@ -1757,12 +1760,6 @@ export default function GridInputFields({
             <DatePicker
               id={uniqueId}
               key={index}
-              //   label={
-              //     <span>
-              //       {inputLabel}
-              //       {field?.isRequired && <span style={{ color: "red" }}> *</span>}
-              //     </span>
-              //   }
               onOpen={() => {
                 setIsFocused(true);
               }}
@@ -1775,69 +1772,31 @@ export default function GridInputFields({
                 values[`${field?.fieldname}`]
                   ? dayjs(values[`${field?.fieldname}`])
                   : null
-              } // Use the state value, converted to a Day.js object
+              }
               onChange={(date) => {
                 handleChange(date, field);
 
                 let formattedValue = date;
                 if (date && typeof date.format === "function") {
-                  formattedValue = dayjs(date).format("YYYY-MM-DD HH:mm:ss");
-                  values[`${field?.fieldname}`] = formattedValue; // Adjust the format as needed
+                  if (dateFormat === "" || dateFormat === null) {
+                    formattedValue = dayjs(date)
+                      .format("DD-MM-YYYY")
+                      .toUpperCase();
+                  } else {
+                    formattedValue = dayjs(date)
+                      .format(dateFormat)
+                      .toUpperCase();
+                  }
+                  values[`${field.fieldname}`] = formattedValue; // Adjust the format as needed
                 }
-                const funcCallString = field?.functionOnChange;
-                if (
-                  funcCallString === undefined ||
-                  funcCallString === null ||
-                  funcCallString === ""
-                ) {
-                  // console.log("No function call string found.");
-                } else {
-                  let multiCallFunctions = funcCallString.split(";");
-
-                  console.log("multiCallFunctions", multiCallFunctions);
-
-                  multiCallFunctions.forEach((funcCall) => {
-                    // console.log("funcCall", funcCall);
-                    handleFuncChangeCall(funcCall);
-                  });
-
-                  // const funcNameMatch = funcCallString?.match(/^(\w+)/);
-                  // // Check for the presence of parentheses to confirm the argument list, even if it's empty
-                  // const argsMatch = funcCallString?.match(/\((.*)\)/);
-
-                  // // console.log("funcNameMatch", funcNameMatch?.[1]);
-                  // // This will log the entire match including empty parentheses
-                  // // console.log("argsMatch", argsMatch?.[1]);
-
-                  // // Check if we have a function name match, and we have an argsMatch (even if there are no arguments)
-                  // if (funcNameMatch && argsMatch !== null) {
-                  //   const funcName = funcNameMatch[1];
-                  //   const argsStr = argsMatch[1] || ""; // argsStr could be an empty string
-                  //   // Find the function in formControlValidation by the extracted name
-                  //   const func = formControlValidation?.[funcName];
-                  //   if (typeof func === "function") {
-                  //     // Prepare arguments: If there are no arguments, argsStr will be an empty string
-                  //     let args;
-                  //     if (argsStr === "") {
-                  //       args = {}; // No arguments, so pass an empty object or as per the function's expected parameters
-                  //     } else {
-                  //       args = { argsStr, values }; // Has arguments, pass them as an object
-                  //     }
-
-                  //     // Call the function with the prepared arguments
-                  //     const updatedValues = func(args);
-                  //     // console.log("OUTPUT:", updatedValues);
-                  //     onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
-                  //   }
-                  // }
+                // Automatically click the accept button when a date is selected
+                if (acceptButtonRef.current) {
+                  acceptButtonRef.current.click();
                 }
               }}
               slotProps={{
                 field: { clearable: true },
               }}
-              // onOpen={() => {
-              //   setIsFocused(false);
-              // }}
               onBlur={(e) => {
                 console.log("onBlur", e.target.value);
                 typeof formControlValidation?.[field?.functionOnBlur] ===
@@ -1849,59 +1808,21 @@ export default function GridInputFields({
                       e.target.value
                     );
                   });
-
-                // values[field?.fieldname] = e.target.value;
                 const funcCallString = field?.functionOnBlur;
                 if (
                   funcCallString === undefined ||
                   funcCallString === null ||
                   funcCallString === ""
                 ) {
-                  // console.log("No function call string found.");
                 } else {
                   let multiCallFunctions = funcCallString.split(";");
-
-                  console.log("multiCallFunctions", multiCallFunctions);
-
                   multiCallFunctions.forEach((funcCall) => {
-                    // console.log("funcCall", funcCall);
                     handleFuncBlurCall(funcCall);
                   });
-
-                  // const funcNameMatch = funcCallString?.match(/^(\w+)/);
-                  // // console.log("funcNameMatch", funcNameMatch?.[1]);
-                  // // Check for the presence of parentheses to confirm the argument list, even if it's empty
-                  // const argsMatch = funcCallString?.match(/\((.*)\)/);
-
-                  // // console.log("funcNameMatch", funcNameMatch?.[1]);
-                  // // This will log the entire match including empty parentheses
-                  // // console.log("argsMatch", argsMatch?.[1]);
-
-                  // // Check if we have a function name match, and we have an argsMatch (even if there are no arguments)
-                  // if (funcNameMatch && argsMatch !== null) {
-                  //   const funcName = funcNameMatch[1];
-                  //   const argsStr = argsMatch[1] || ""; // argsStr could be an empty string
-                  //   // Find the function in formControlValidation by the extracted name
-                  //   const func = formControlValidation?.[funcName];
-                  //   if (typeof func === "function") {
-                  //     // Prepare arguments: If there are no arguments, argsStr will be an empty string
-                  //     let args;
-                  //     if (argsStr === "") {
-                  //       args = {}; // No arguments, so pass an empty object or as per the function's expected parameters
-                  //     } else {
-                  //       args = { argsStr, values }; // Has arguments, pass them as an object
-                  //     }
-
-                  //     // Call the function with the prepared arguments
-                  //     const updatedValues = func(args);
-                  //     // console.log("OUTPUT:", updatedValues);
-                  //     onBlurHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
-                  //   }
-                  // }
                 }
               }}
               required={field?.isRequired}
-              format="LL"
+              format={dateFormat || "DD-MM-YYYY"}
               sx={{
                 ...customDataPickerStyleCss({
                   fieldname: values?.[`${field?.fieldname}`],

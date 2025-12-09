@@ -489,7 +489,7 @@ export default function CustomeInputFields({
 
     const [intPart, fracPart = ""] = parts;
     // both parts must be purely digits
-    if (!/^\d+$/.test(intPart) || (fracPart && !/^\d+$/.test(fracPart))) {
+    if (!/^(-?\d+)$/.test(intPart) || (fracPart && !/^\d+$/.test(fracPart))) {
       return false;
     }
 

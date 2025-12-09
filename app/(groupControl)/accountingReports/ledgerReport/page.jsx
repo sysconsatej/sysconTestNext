@@ -123,27 +123,6 @@ const LedgerReport = () => {
       ordering: 4,
     },
     {
-      id: 192,
-      fieldname: "bankName",
-      controlname: "dropdown",
-      controlDefaultValue: null,
-      dropdownFilter:
-        "and masterListId = (select id from tblMasterList where name='tblBank')",
-      dropDownValues: null,
-      functionOnBlur: null,
-      functionOnChange: null,
-      functionOnKeyPress: null,
-      isControlShow: true,
-      isEditable: true,
-      isRequired: false,
-      referenceColumn: "name",
-      referenceTable: "tblMasterData",
-      toolTipMessage: "Bank",
-      type: "number",
-      yourlabel: "Bank",
-      ordering: 1,
-    },
-    {
       id: 196,
       fieldname: "fromDate",
       controlname: "date",
@@ -244,6 +223,27 @@ const LedgerReport = () => {
       ordering: 9,
     },
   ]);
+  //   {
+  //   id: 192,
+  //   fieldname: "bankName",
+  //   controlname: "dropdown",
+  //   controlDefaultValue: null,
+  //   dropdownFilter:
+  //     "and masterListId = (select id from tblMasterList where name='tblBank')",
+  //   dropDownValues: null,
+  //   functionOnBlur: null,
+  //   functionOnChange: null,
+  //   functionOnKeyPress: null,
+  //   isControlShow: true,
+  //   isEditable: true,
+  //   isRequired: false,
+  //   referenceColumn: "name",
+  //   referenceTable: "tblMasterData",
+  //   toolTipMessage: "Bank",
+  //   type: "number",
+  //   yourlabel: "Bank",
+  //   ordering: 1,
+  // },
   const [newState, setNewState] = useState({
     fromDate: null,
     toDate: null,
@@ -354,12 +354,15 @@ const LedgerReport = () => {
 
   //Fetch Ledger Report Data Function
   async function fetchLedgerReportData() {
+    console.log('data', newState)
     const filterCondition = {
       fromDate: formatDate(newState?.fromDate),
       toDate: formatDate(newState?.toDate),
-      companyBranchId: toIntOrNull(newState?.companyBranchId),
-      ledgerId: toIntOrNull(newState?.ledgerId),
+      companyBranchId: toIntOrNull(newState?.companyBranchName),
+      companyId: toIntOrNull(newState?.companyName),
+      ledgerId: toIntOrNull(newState?.ledgerName),
       clientId: toIntOrNull(clientId),
+      voucherGrouping: newState?.voucherGrouping || null,
     };
 
     const payload = {
@@ -407,9 +410,9 @@ const LedgerReport = () => {
     const num = Number(n);
     return Number.isFinite(num)
       ? num.toLocaleString(undefined, {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
       : "";
   };
   // --- helpers Ends ---
@@ -751,7 +754,7 @@ const LedgerReport = () => {
                             position: "sticky",
                           }}
                           className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
-                          //sx={{ minWidth: 110 }}
+                        //sx={{ minWidth: 110 }}
                         >
                           Date
                         </TableCell>
@@ -981,7 +984,7 @@ const LedgerReport = () => {
                             position: "sticky",
                           }}
                           className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
-                          //sx={{ minWidth: 110 }}
+                        //sx={{ minWidth: 110 }}
                         >
                           Date
                         </TableCell>

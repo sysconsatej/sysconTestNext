@@ -18,7 +18,7 @@ import PropTypes from "prop-types";
 import LightTooltip from "../Tooltip/customToolTip";
 import { TextareaAutosize } from "@mui/base/TextareaAutosize";
 // import { Textarea } from "@material-tailwind/react";
-
+import { getUserDetails } from "@/helper/userDetails";
 import Button from "@mui/material/Button";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { dynamicDropDownFieldsDataCreateForm } from "@/services/auth/FormControl.services";
@@ -80,7 +80,8 @@ export default function CustomeInputFields({
   newState,
 }) {
   // const [fileName, setFileName] = useState("");
-
+  const { dateFormat } = getUserDetails();
+  const acceptButtonRef = useRef(null);
   const handleChange = (value, field) => {
     let formattedValue = value;
     let updatedValues = {};
@@ -123,10 +124,9 @@ export default function CustomeInputFields({
         [`${field.fieldname}multiselect`]: value,
       });
       console.log("value", value);
-      
+
       formattedValue = value.map((item) => item.value).join(",");
       console.log("formattedValue", formattedValue);
-      
     }
     // Update the state or context with the new value
     Object.assign(updatedValues, {
@@ -151,7 +151,7 @@ export default function CustomeInputFields({
     const [dropDownValues, setdropDownValues] = useState([]);
     const [pageNo, setPageNo] = useState(1);
     const [inputValueForDataFetch, setInputValueForDataFetch] = useState("");
-
+    const acceptButtonRef = useRef(null);
     const inputRef = useRef(null);
     const [isNextPageNull, setIsNextPageNull] = useState(false);
 
@@ -656,7 +656,7 @@ export default function CustomeInputFields({
         return (
           <LightTooltip title={field.yourlabel}>
             <div className="relative ">
-            <p
+              <p
                 className={` absolute left-[11px] z-[1] px-2 transition-all duration-200 ${
                   showLabel ||
                   values?.[field.fieldname] ||
@@ -699,8 +699,6 @@ export default function CustomeInputFields({
                 placeholder=""
                 options={dropDownValues}
                 className={`w-[12rem] ${styles.inputField}  `}
-
-
                 components={{
                   MenuList: (props) => (
                     <CustomMenuList
@@ -718,12 +716,12 @@ export default function CustomeInputFields({
                 // }}
                 value={
                   values?.[`${field.fieldname}multiselect`] ||
-                    dropDownValues?.length > 0
+                  dropDownValues?.length > 0
                     ? dropDownValues?.filter((value) =>
-                      values?.[`${field.fieldname}`]
-                        ?.split(",")
-                        ?.includes(value.value.toString())
-                    )
+                        values?.[`${field.fieldname}`]
+                          ?.split(",")
+                          ?.includes(value.value.toString())
+                      )
                     : [] || []
                 }
                 noOptionsMessage={() =>
@@ -1088,7 +1086,27 @@ export default function CustomeInputFields({
                   ? dayjs(values[`${field.fieldname}`])
                   : null
               } // Use the state value, converted to a Day.js object
-              onChange={(date) => handleChange(date, field)}
+              onChange={(date) => {
+                handleChange(date, field);
+
+                let formattedValue = date;
+                if (date && typeof date.format === "function") {
+                  if (dateFormat === "" || dateFormat === null) {
+                    formattedValue = dayjs(date)
+                      .format("DD-MM-YYYY")
+                      .toUpperCase();
+                  } else {
+                    formattedValue = dayjs(date)
+                      .format(dateFormat)
+                      .toUpperCase();
+                  }
+                  values[`${field.fieldname}`] = formattedValue; // Adjust the format as needed
+                }
+                // Automatically click the accept button when a date is selected
+                if (acceptButtonRef.current) {
+                  acceptButtonRef.current.click();
+                }
+              }}
               slotProps={{
                 field: { clearable: true },
                 actionBar: {

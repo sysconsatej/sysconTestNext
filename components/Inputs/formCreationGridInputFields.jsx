@@ -41,6 +41,7 @@ import {
 import { debounce } from "@/helper/debounceFile";
 import Select from "react-select";
 import { components } from "react-select";
+import { getUserDetails } from "@/helper/userDetails";
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -77,7 +78,8 @@ export default function FormCreationGridInputFields({
   inEditMode,
 }) {
   // const [fileName, setFileName] = useState("");
-
+  const acceptButtonRef = useRef(null);
+  const { dateFormat } = getUserDetails();
   const handleChange = (value, field) => {
     let formattedValue = value;
     let updatedValues = {};
@@ -1079,7 +1081,27 @@ export default function FormCreationGridInputFields({
                   ? dayjs(values[`${field.fieldname}`])
                   : null
               } // Use the state value, converted to a Day.js object
-              onChange={(date) => handleChange(date, field)}
+              onChange={(date) => {
+                handleChange(date, field);
+
+                let formattedValue = date;
+                if (date && typeof date.format === "function") {
+                  if (dateFormat === "" || dateFormat === null) {
+                    formattedValue = dayjs(date)
+                      .format("DD-MM-YYYY")
+                      .toUpperCase();
+                  } else {
+                    formattedValue = dayjs(date)
+                      .format(dateFormat)
+                      .toUpperCase();
+                  }
+                  values[`${field.fieldname}`] = formattedValue; // Adjust the format as needed
+                }
+                // Automatically click the accept button when a date is selected
+                if (acceptButtonRef.current) {
+                  acceptButtonRef.current.click();
+                }
+              }}
               slotProps={{
                 field: { clearable: true },
               }}

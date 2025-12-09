@@ -400,7 +400,10 @@ export default function RowComponent({
 
       // If newCopy[tableName] is an array of objects (not nested arrays), remove the inner map
       if (!Array.isArray(newCopy[tableName])) {
-        console.error(`Expected an array at newCopy[${tableName}], but got:`, newCopy[tableName]);
+        console.error(
+          `Expected an array at newCopy[${tableName}], but got:`,
+          newCopy[tableName]
+        );
         return prev; // don't update state if data is malformed
       }
 
@@ -423,38 +426,40 @@ export default function RowComponent({
     });
   };
 
-const reCalculate = (childIndex, tableName) => {
-  if (tableName !== "tblRateRequestQty") return; 
+  const reCalculate = (childIndex, tableName) => {
+    if (tableName !== "tblRateRequestQty") return;
 
-  if (!newState || !Array.isArray(newState[tableName])) return;
+    if (!newState || !Array.isArray(newState[tableName])) return;
 
-  const filteredRows = newState[tableName].filter((_, index) => index !== childIndex);
+    const filteredRows = newState[tableName].filter(
+      (_, index) => index !== childIndex
+    );
 
-  let totalVolume = 0;
-  let totalVolumeWt = 0;
-  let totalNoOfPackages = 0;
+    let totalVolume = 0;
+    let totalVolumeWt = 0;
+    let totalNoOfPackages = 0;
 
-  filteredRows.forEach((row) => {
-    const volume = parseFloat(row.volume) || 0;
-    const volumeWt = parseFloat(row.volumeWt) || 0;
-    const noOfPackages = parseInt(row.noOfPackages, 10) || 0;
+    filteredRows.forEach((row) => {
+      const volume = parseFloat(row.volume) || 0;
+      const volumeWt = parseFloat(row.volumeWt) || 0;
+      const noOfPackages = parseInt(row.noOfPackages, 10) || 0;
 
-    totalVolume += volume;
-    totalVolumeWt += volumeWt;
-    totalNoOfPackages += noOfPackages;
-  });
+      totalVolume += volume;
+      totalVolumeWt += volumeWt;
+      totalNoOfPackages += noOfPackages;
+    });
 
-  const updatedVolume = parseFloat(totalVolume.toFixed(2));
-  const updatedVolumeWt = parseFloat(totalVolumeWt.toFixed(2));
-  const updatedNoOfPackages = totalNoOfPackages.toString();
+    const updatedVolume = parseFloat(totalVolume.toFixed(2));
+    const updatedVolumeWt = parseFloat(totalVolumeWt.toFixed(2));
+    const updatedNoOfPackages = totalNoOfPackages.toString();
 
-  setNewState((prevState) => ({
-    ...prevState,
-    volume: updatedVolume,
-    volumeWt: updatedVolumeWt,
-    noOfPackages: updatedNoOfPackages,
-  }));
-};
+    setNewState((prevState) => ({
+      ...prevState,
+      volume: updatedVolume,
+      volumeWt: updatedVolumeWt,
+      noOfPackages: updatedNoOfPackages,
+    }));
+  };
 
   const stylesIconsHover =
     tableBodyWidhth === "0"
@@ -495,18 +500,18 @@ const reCalculate = (childIndex, tableName) => {
                       style={{ maxWidth: "200px" }}
                     >
                       {field.controlname === "dropdown" ||
-                        field.controlname === "multiselect"
+                      field.controlname === "multiselect"
                         ? (
-                          row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                          row[`${field.fieldname}Dropdown`]
-                        )?.length > 50
-                          ? (
                             row[`${field.fieldname}dropdown`]?.[0]?.label ||
                             row[`${field.fieldname}Dropdown`]
-                          )?.slice(0, 50) + "..."
+                          )?.length > 50
+                          ? (
+                              row[`${field.fieldname}dropdown`]?.[0]?.label ||
+                              row[`${field.fieldname}Dropdown`]
+                            )?.slice(0, 50) + "..."
                           : row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                          row[`${field.fieldname}Dropdown`] ||
-                          ""
+                            row[`${field.fieldname}Dropdown`] ||
+                            ""
                         : isDateFormat(row[`${field.fieldname}`]) || ""}
                     </div>
 
@@ -536,7 +541,7 @@ const reCalculate = (childIndex, tableName) => {
               className={`group-hover:visible flex flex-nowrap justify-end invisible absolute`}
               style={stylesIconsHover}
             >
-              <LightTooltip title="Delete Record 1">
+              <LightTooltip title="Delete Record ">
                 <IconButton
                   disabled={
                     typeof sectionData.isDeleteFunctionality !== "undefined"
@@ -630,7 +635,7 @@ const reCalculate = (childIndex, tableName) => {
                   }}
                 >
                   <Box className="flex gap-4">
-                    {childName !="tblVoucherLedgerDetails" && index === 0 ?  (
+                    {childName != "tblVoucherLedgerDetails" && index === 0 ? (
                       <ActionButton
                         onDelete={() => deleteChildRecord(childIndex)}
                         key={index}
@@ -645,7 +650,9 @@ const reCalculate = (childIndex, tableName) => {
                     <GridInputFields
                       fieldData={field}
                       indexValue={index}
-                      onValuesChange={(e) => handleValuesChangeOfChildGrid(e, index)}
+                      onValuesChange={(e) =>
+                        handleValuesChangeOfChildGrid(e, index)
+                      }
                       values={childValuseObj}
                       inEditMode={inEditMode}
                       onChangeHandler={null}

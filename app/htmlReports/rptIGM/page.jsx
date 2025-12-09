@@ -272,7 +272,8 @@ export default function RptIGM() {
               <p className="text-black">
                 {groupedHeaderName.movementCarrier} CARGO FROM{" "}
                 {groupedHeaderName.plrName} TO {groupedHeaderName.fpdName} VIA{" "}
-                {groupedHeaderName.fpdName}
+                {/* {groupedHeaderName.fpdName} */}
+                {data[0]?.pod || ""}
               </p>
               <p className="text-black">
                 EX VESSEL {data[0]?.polVessel} VOYAGE {data[0]?.polVoyage}
@@ -360,24 +361,14 @@ export default function RptIGM() {
                   <div style={{ width: "6%" }}>
                     {containerItem.containerSize || ""}
                   </div>
-                  {/* <div style={{ width: "20%" }}>
-                    {containerItem.ContainerType || ""}
-                  </div> */}
                   <div style={{ width: "13%" }}>
                     {containerItem.containerStatusName || ""}
                   </div>
-                  {/* <div style={{ width: "20%" }}>
+                  <div style={{ width: "20%" }}>
                     {containerItem.containerSealNo || ""}
-                  </div> */}
-                  <div style={{ width: "10%" }}>
-                    {containerItem.containerGrossWT || ""}
                   </div>
-                  {/* <div style={{ width: "25%" }}>
-                    {containerItem.containerGrossWT || ""}{" "}
-                    {containerItem.containerGrossWTUnit || ""}
-                  </div> */}
-                  <div style={{ width: "25%" }}>
-                    {containerItem.containerGrossWTUnit || ""}
+                  <div style={{ width: "10%" }}>
+                    {containerItem.noOfPackagesAndPackageType || ""}
                   </div>
                 </div>
               ))}
@@ -386,14 +377,6 @@ export default function RptIGM() {
       </>
     );
   };
-
-  //  We hereby ceritify that Item Nos 153 - 156.IGM No 1121859 dated
-  //           04-02-2025 Item List are on account of our principals. We, as agents
-  //           are responsible for the cargo manifested under the above items and
-  //           will be liable for any penalty or other dues in case of any
-  //           shortland / survey shortages. We ceritify that all items indicated
-  //           on this hard copy of IGM have been fully represented in the magnetic
-  //           medium.
 
   const ImportGeneralManifestFooter = ({ sortedData }) => {
     return (
@@ -430,127 +413,13 @@ export default function RptIGM() {
     );
   };
   // Constants used throughout for pagination calculation
-  const PAGE_HEIGHT = 791;
-  const HEADER_HEIGHT = 160;
-  const FOOTER_HEIGHT = 120;
-  const rowBaseHeight = 75;
-  const DEFAULT_ROW_HEIGHT = 70;
-  const CONTAINER_ROW_HEIGHT = 70; // ✅ Add this line
+  const PAGE_HEIGHT = 791; // virtual full page height
+  const HEADER_HEIGHT = 140; // header space
+  const FOOTER_HEIGHT = 90; // footer space (when visible)
+  const DEFAULT_ROW_HEIGHT = 55; // base row height
+  const CONTAINER_ROW_HEIGHT = 20; // each container row height
+  const PAGE_SAFETY_MARGIN = 40; // extra safety so nothing overflows
 
-  //----- first try
-  // function groupSortedBlData(sortedData) {
-  //   const groups = [];
-  //   let currentGroupKey = null;
-  //   let currentGroup = [];
-
-  //   for (const item of sortedData) {
-  //     const groupKey = [
-  //       item.movementCarrier || "",
-  //       item.plrName || "",
-  //       item.fpdName || "",
-  //     ].join("|||");
-
-  //     if (groupKey !== currentGroupKey) {
-  //       if (currentGroup.length > 0) {
-  //         groups.push({
-  //           movementCarrier: currentGroup[0].movementCarrier || "",
-  //           plrName: currentGroup[0].plrName || "",
-  //           fpdName: currentGroup[0].fpdName || "",
-  //           records: currentGroup,
-  //         });
-  //       }
-  //       currentGroupKey = groupKey;
-  //       currentGroup = [item];
-  //     } else {
-  //       currentGroup.push(item);
-  //     }
-  //   }
-
-  //   if (currentGroup.length > 0) {
-  //     groups.push({
-  //       movementCarrier: currentGroup[0].movementCarrier || "",
-  //       plrName: currentGroup[0].plrName || "",
-  //       fpdName: currentGroup[0].fpdName || "",
-  //       records: currentGroup,
-  //     });
-  //   }
-
-  //   return groups;
-  // }
-  //----- second try
-  // function groupSortedBlData(sortedData) {
-  //   // --- order helpers (no change to output structure) ---
-  //   const carrierRank = (v) => {
-  //     const s = String(v ?? "")
-  //       .trim()
-  //       .toUpperCase();
-  //     if (s === "LOCAL") return 0;
-  //     if (s === "SMTP") return 1;
-  //     if (s === "TP") return 2;
-  //     if (s === "") return 3; // empty last
-  //     return 4; // anything else after empty
-  //   };
-  //   const text = (v) => String(v ?? "");
-
-  //   // Ensure desired order before grouping
-  //   const arr = [...(sortedData || [])].sort(
-  //     (a, b) =>
-  //       carrierRank(a.movementCarrier) - carrierRank(b.movementCarrier) ||
-  //       text(a.plrName).localeCompare(text(b.plrName), undefined, {
-  //         sensitivity: "base",
-  //       }) ||
-  //       text(a.fpdName).localeCompare(text(b.fpdName), undefined, {
-  //         sensitivity: "base",
-  //       })
-  //   );
-
-  //   // --- original grouping logic unchanged ---
-  //   const groups = [];
-  //   let currentGroupKey = null;
-  //   let currentGroup = [];
-
-  //   for (const item of arr) {
-  //     const groupKey = [
-  //       item.movementCarrier || "",
-  //       item.plrName || "",
-  //       item.fpdName || "",
-  //     ].join("|||");
-
-  //     if (groupKey !== currentGroupKey) {
-  //       if (currentGroup.length > 0) {
-  //         groups.push({
-  //           movementCarrier: currentGroup[0].movementCarrier || "",
-  //           plrName: currentGroup[0].plrName || "",
-  //           fpdName: currentGroup[0].fpdName || "",
-  //           VesselVoyageName: currentGroup[0].VesselVoyageName || "",
-  //           igmNo: currentGroup[0].igmNo || "",
-  //           igmDate: currentGroup[0].igmDate || "",
-  //           records: currentGroup,
-  //         });
-  //       }
-  //       currentGroupKey = groupKey;
-  //       currentGroup = [item];
-  //     } else {
-  //       currentGroup.push(item);
-  //     }
-  //   }
-
-  //   if (currentGroup.length > 0) {
-  //     groups.push({
-  //       movementCarrier: currentGroup[0].movementCarrier || "",
-  //       plrName: currentGroup[0].plrName || "",
-  //       fpdName: currentGroup[0].fpdName || "",
-  //       VesselVoyageName: currentGroup[0].VesselVoyageName || "",
-  //       igmNo: currentGroup[0].igmNo || "",
-  //       igmDate: currentGroup[0].igmDate || "",
-  //       records: currentGroup,
-  //     });
-  //   }
-
-  //   return groups;
-  // }
-
-  //----- third try
   function groupSortedBlData(sortedData) {
     // --- helpers ---
     const carrierRank = (v) => {
@@ -563,7 +432,9 @@ export default function RptIGM() {
       if (s === "") return 3; // empty last
       return 4; // anything else after empty
     };
+
     const text = (v) => String(v ?? "");
+
     const toNum = (v) => {
       if (v == null || v === "") return Infinity;
       const n = Number(String(v).replace(/,/g, "").trim());
@@ -575,23 +446,34 @@ export default function RptIGM() {
 
     console.log("🔹 Input data:", sortedData);
 
-    // >>> Comparator: carrier → lineNo → PLR → FPD <<<
+    // >>> Correct comparator: carrier → PLR → FPD → lineNo <<<
     const arr = [...(sortedData || [])].sort((a, b) => {
       const r1 =
         carrierRank(a.movementCarrier) - carrierRank(b.movementCarrier);
-      const rLn = toNum(a.lineNo) - toNum(b.lineNo); // numeric asc wins within carrier
+
       const r2 = text(getPLR(a)).localeCompare(text(getPLR(b)), undefined, {
         sensitivity: "base",
       });
+
       const r3 = text(getFPD(a)).localeCompare(text(getFPD(b)), undefined, {
         sensitivity: "base",
       });
 
-      const total = r1 || rLn || r2 || r3;
+      const r4 = toNum(a.lineNo) - toNum(b.lineNo); // now last
+
+      const total = r1 || r2 || r3 || r4;
+
       console.log(
-        "⚖️ Compare (carrier → lineNo → PLR → FPD):",
-        { aLine: a.lineNo, bLine: b.lineNo, aPlr: getPLR(a), bPlr: getPLR(b) },
-        { r1_carrier: r1, rLineNo: rLn, r2_plr: r2, r3_fpd: r3, total }
+        "⚖️ Compare (carrier → PLR → FPD → lineNo):",
+        {
+          aLine: a.lineNo,
+          bLine: b.lineNo,
+          aPlr: getPLR(a),
+          bPlr: getPLR(b),
+          aFpd: getFPD(a),
+          bFpd: getFPD(b),
+        },
+        { r1_carrier: r1, r2_plr: r2, r3_fpd: r3, r4_lineNo: r4, total }
       );
 
       return total;
@@ -618,7 +500,11 @@ export default function RptIGM() {
         getPLR(item),
         getFPD(item),
       ].join("|||");
-      console.log("➡️ Processing item:", { lineNo: item.lineNo, groupKey });
+
+      console.log("➡️ Processing item:", {
+        lineNo: item.lineNo,
+        groupKey,
+      });
 
       if (groupKey !== currentGroupKey) {
         if (currentGroup.length > 0) {
@@ -672,19 +558,21 @@ export default function RptIGM() {
   console.log("sortedData", sortedData);
 
   function estimateRecordHeight(record) {
-    const goodsDescLines = Math.ceil((record.goodsDesc?.length || 0) / 40);
-    const marksLines = Math.ceil((record.marksNos?.length || 0) / 50);
+    const goodsDescLines = Math.ceil((record.goodsDesc?.length || 0) / 45);
+    const marksLines = Math.ceil((record.marksNos?.length || 0) / 60);
     const consigneeLines = Math.ceil(
       ((record.consigneeText?.length || 0) +
         (record.consigneeAddress || "").length) /
-        60
+        70
     );
-    const containerLines =
+
+    const containerHeight =
       (record.tblBlContainer?.length || 0) * CONTAINER_ROW_HEIGHT;
 
-    const textHeight = (goodsDescLines + marksLines + consigneeLines) * 15;
+    // a bit more conservative line height now
+    const textHeight = (goodsDescLines + marksLines + consigneeLines) * 13;
 
-    return DEFAULT_ROW_HEIGHT + textHeight + containerLines;
+    return DEFAULT_ROW_HEIGHT + textHeight + containerHeight;
   }
 
   function chunkRecordsByHeight(
@@ -700,7 +588,8 @@ export default function RptIGM() {
     const calcBodyHeight = (isLastChunk = false) =>
       PAGE_HEIGHT -
       HEADER_HEIGHT -
-      (isLastChunk && showFooterOnLastChunk ? FOOTER_HEIGHT : 0);
+      (isLastChunk && showFooterOnLastChunk ? FOOTER_HEIGHT : 0) -
+      PAGE_SAFETY_MARGIN; // 👈 safety so nothing touches bottom
 
     const estimatedHeights = records.map(estimateRecordHeight);
     let index = 0;
@@ -788,42 +677,57 @@ export default function RptIGM() {
   }, [data]);
 
   useEffect(() => {
-    if (sortedData.length > 0) {
-      setTimeout(() => {
-        const newChunks = []; // ✅ Declare here before use
-
-        sortedData.forEach((group) => {
-          const groupKey = [
-            group.movementCarrier,
-            group.plrName,
-            group.fpdName,
-          ].join("|||");
-
-          const recordChunks = chunkRecordsByHeight(
-            group.records,
-            rowRefsByGroup,
-            groupKey,
-            true // showFooterOnLastChunk
-          );
-
-          recordChunks.forEach((chunk, index) => {
-            const isLastChunkOfGroup = index === recordChunks.length - 1;
-
-            newChunks.push({
-              movementCarrier: group.movementCarrier,
-              plrName: group.plrName,
-              fpdName: group.fpdName,
-              groupKey,
-              chunkIndex: index,
-              isLastChunkOfGroup,
-              records: chunk,
-            });
-          });
-        });
-
-        setPaginatedChunks(newChunks); // ✅ After loop ends
-      }, 500);
+    if (!sortedData.length) {
+      setPaginatedChunks([]);
+      return;
     }
+
+    const newChunks = [];
+
+    sortedData.forEach((group) => {
+      const groupKey = [
+        group.movementCarrier || "",
+        group.plrName || "",
+        group.fpdName || "",
+      ].join("|||");
+
+      const recordChunks = chunkRecordsByHeight(
+        group.records || [],
+        rowRefsByGroup,
+        groupKey,
+        true // showFooterOnLastChunk (for height calc only)
+      );
+
+      recordChunks.forEach((chunk, index) => {
+        const isLastChunkOfGroup = index === recordChunks.length - 1;
+
+        newChunks.push({
+          movementCarrier: group.movementCarrier,
+          plrName: group.plrName,
+          fpdName: group.fpdName,
+          groupKey,
+          chunkIndex: index,
+          isLastChunkOfGroup, // still keep if you need it for debug
+          isLastCarrierChunk: false, // we'll fill this in below
+          records: chunk,
+        });
+      });
+    });
+
+    // 🔹 Mark the last page for each movementCarrier
+    const lastIndexByCarrier = {};
+    newChunks.forEach((chunk, idx) => {
+      const carrier = chunk.movementCarrier || "";
+      lastIndexByCarrier[carrier] = idx; // last occurrence wins
+    });
+
+    Object.entries(lastIndexByCarrier).forEach(([carrier, lastIdx]) => {
+      if (newChunks[lastIdx]) {
+        newChunks[lastIdx].isLastCarrierChunk = true;
+      }
+    });
+
+    setPaginatedChunks(newChunks);
   }, [sortedData]);
 
   console.log("sortedData", sortedData);
@@ -841,10 +745,10 @@ export default function RptIGM() {
         {reportIds.map((reportId, index) => {
           switch (reportId) {
             case "Import General Manifest":
-              const PAGE_HEIGHT_PX = 650; // slight buffer
+              const PAGE_HEIGHT_PX = 650;
               const headerHeight = 160;
               const footerHeight = 120;
-              const rowBaseHeight = 70; // was 70
+              const rowBaseHeight = 70;
               const CONTAINER_ROW_HEIGHT = 20;
 
               function estimateRecordHeight(record) {
@@ -1000,46 +904,76 @@ export default function RptIGM() {
                           return g.groupKey === group.groupKey ? idx : lastIdx;
                         }, -1);
 
+                      if (!paginatedChunks.length) return null;
+
                       return (
-                        <React.Fragment key={`page-${chunkIndex}`}>
-                          <div
-                            ref={(el) =>
-                              (enquiryModuleRefs.current[chunkIndex] = el)
-                            }
-                            className="bg-white shadow-md p-4 border border-gray-300 print:break-after-page relative mb-8"
-                            style={{
-                              width: "297mm",
-                              height: "210mm",
-                              boxSizing: "border-box",
-                              display: "flex",
-                              flexDirection: "column",
-                              margin: "auto",
-                              overflow: "hidden",
-                              pageBreakAfter: "always",
-                            }}
-                          >
-                            <ImportGeneralManifest
-                              data={group.records}
-                              index={chunkIndex}
-                            />
+                        <>
+                          <div className="flex flex-col items-center gap-4 bg-gray-300 min-h-screen">
+                            {paginatedChunks.map((group, chunkIndex) => {
+                              const {
+                                groupKey,
+                                movementCarrier,
+                                plrName,
+                                fpdName,
+                                records,
+                                isLastCarrierChunk, // 👈 use carrier-level flag
+                              } = group;
 
-                            <ImportGeneralManifestGrid
-                              sortedData={group.records}
-                              groupedHeaderName={group}
-                              groupKey={group.groupKey}
-                              rowRefsByGroup={rowRefsByGroup}
-                              hideHeaderData={group.records[0]?.hideHeaderData}
-                            />
+                              return (
+                                <React.Fragment key={`page-${chunkIndex}`}>
+                                  <div
+                                    ref={(el) =>
+                                      (enquiryModuleRefs.current[chunkIndex] =
+                                        el)
+                                    }
+                                    className="bg-white shadow-md p-4 border border-gray-300 print:break-after-page relative mb-8"
+                                    style={{
+                                      width: "297mm",
+                                      height: "210mm",
+                                      boxSizing: "border-box",
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      margin: "auto",
+                                      overflow: "hidden",
+                                      pageBreakAfter: "always",
+                                    }}
+                                  >
+                                    {/* Header */}
+                                    <ImportGeneralManifest
+                                      data={records}
+                                      index={chunkIndex}
+                                    />
 
-                            {isLastChunkOfGroup && (
-                              <ImportGeneralManifestFooter
-                                sortedData={group.records}
-                              />
-                            )}
+                                    {/* Detail grid */}
+                                    <ImportGeneralManifestGrid
+                                      sortedData={records}
+                                      groupedHeaderName={{
+                                        movementCarrier,
+                                        plrName,
+                                        fpdName,
+                                      }}
+                                      groupKey={groupKey}
+                                      rowRefsByGroup={rowRefsByGroup}
+                                      hideHeaderData={
+                                        records[0]?.hideHeaderData
+                                      }
+                                    />
+
+                                    {/* Footer only on last page of that movementCarrier (LOCAL block, TP block, etc.) */}
+                                    {isLastCarrierChunk && (
+                                      <ImportGeneralManifestFooter
+                                        sortedData={records}
+                                      />
+                                    )}
+                                  </div>
+
+                                  {/* small gap between pages in on-screen view */}
+                                  <div className="bg-gray-300 h-2 no-print" />
+                                </React.Fragment>
+                              );
+                            })}
                           </div>
-
-                          <div className="bg-gray-300 h-2 no-print" />
-                        </React.Fragment>
+                        </>
                       );
                     })}
                   </div>

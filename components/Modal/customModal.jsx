@@ -19,15 +19,15 @@ export default function CustomeModal({
   const handleClose = () => setOpenModal((prev) => !prev);
 
   //  code to remove the fieldName and add LabelName
-  const arrStr = paraText.split(' ');
-  const newArr = arrStr.reduce((acc, current, index) => {
+  const arrStr = paraText?.split(' ');
+  const newArr = arrStr?.reduce((acc, current, index) => {
     if (index !== 0) {
       acc.push(current);
     }
     return acc;
   }, []);
 
-  const modalText = newArr.join(' ');
+  const modalText = newArr?.join(' ');
 
   return (
     <div>

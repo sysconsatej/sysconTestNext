@@ -21,7 +21,6 @@ export default function Print({
   const handlePrint = async () => {
     const style = await fetch("/style/reportTheme.css");
     const css = await style.text();
-    console.log('css',css)
     // 👇 Merge all report HTMLs
     const elements = enquiryModuleRefs.current || [];
     // const allInnerHTML = elements

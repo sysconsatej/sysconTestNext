@@ -601,7 +601,7 @@ export default function RowComponent({
               className={`group-hover:visible flex flex-nowrap justify-end invisible absolute`}
               style={stylesIconsHover}
             >
-              <LightTooltip title="Delete Record 1">
+              <LightTooltip title="Delete Record ">
                 <IconButton
                   disabled={
                     typeof sectionData.isDeleteFunctionality !== "undefined"

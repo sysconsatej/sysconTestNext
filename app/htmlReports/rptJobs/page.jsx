@@ -7893,7 +7893,8 @@ const rptJobs = () => {
           <tr>
             <th style={thStyle}>Issued Vessel / Voyage</th>
             <td style={tdStyle}>
-              {jobData[0].podVessel} {" / "} {jobData[0].podVoyage}
+              {/* {jobData[0].podVessel} {" / "} {jobData[0].podVoyage} */}
+              {jobData[0].podVesselName} {" / "} {jobData[0].podVoyage}
             </td>
           </tr>
           <tr>

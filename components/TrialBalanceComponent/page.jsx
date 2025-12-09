@@ -362,23 +362,22 @@ function TrialBalanceComponent({
             className="whitespace-nowrap text-xs text-gray-900 dark:text-white text-right"
             // className=" text-black"
           >
-            {item.drBalance?.toLocaleString("en-IN", {
-              style: "currency",
-              currency: "INR",
-            }) || "0.00"}
+            {item.drBalance?.toLocaleString("en-IN") || "0.00"}
           </TableCell>
           <TableCell
             style={{ border: "1px solid grey" }}
             className="whitespace-nowrap text-xs text-gray-900 dark:text-white text-right"
           >
-            {item.crBalance?.toLocaleString("en-IN", {
-              style: "currency",
-              currency: "INR",
-            }) || "0.00"}
+            {item.crBalance?.toLocaleString("en-IN") || "0.00"}
           </TableCell>
         </TableRow>
       );
     });
+
+    //     {item.drBalance?.toLocaleString("en-IN", {
+    //   style: "currency",
+    //   currency: "INR",
+    // }) || "0.00"}
 
     // Add the grand total row at the end
     groupedRows.push(
@@ -387,16 +386,10 @@ function TrialBalanceComponent({
           Grand Total
         </td>
         <td className="text-right text-black font-bold">
-          {drBalanceGrandTotal.toLocaleString("en-IN", {
-            style: "currency",
-            currency: "INR",
-          })}
+          {drBalanceGrandTotal.toLocaleString("en-IN")}
         </td>
         <td className="text-right text-black font-bold">
-          {crBalanceGrandTotal.toLocaleString("en-IN", {
-            style: "currency",
-            currency: "INR",
-          })}
+          {crBalanceGrandTotal.toLocaleString("en-IN")}
         </td>
       </tr>
     );
@@ -506,19 +499,13 @@ function TrialBalanceComponent({
             style={{ border: "1px solid grey" }}
             className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white"
           >
-            {(item.drBalanceOpeningBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.drBalanceOpeningBalance ?? 0.0}
           </TableCell>
           <TableCell
             style={{ border: "1px solid grey" }}
             className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white"
           >
-            {(item.crBalanceOpeningBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.crBalanceOpeningBalance ?? 0.0}
           </TableCell>
         </TableRow>
       );
@@ -537,16 +524,10 @@ function TrialBalanceComponent({
               <strong>Subtotal</strong>
             </td>
             <td className="text-right text-black">
-              {drOpeningSubtotal.toLocaleString(undefined, {
-                style: "currency",
-                currency: "INR",
-              })}
+              {(drOpeningSubtotal ?? 0.0).toFixed(2)}
             </td>
             <td className="text-right text-black">
-              {crOpeningSubtotal.toLocaleString(undefined, {
-                style: "currency",
-                currency: "INR",
-              })}
+              {(crOpeningSubtotal ?? 0.0).toFixed(2)}
             </td>
           </tr>
         );
@@ -567,16 +548,10 @@ function TrialBalanceComponent({
           <strong>Grand Total</strong>
         </td>
         <td className="text-right text-black bg-gray-300 font-bold">
-          {drOpeningGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
+          {drOpeningGrandTotal}
         </td>
         <td className="text-right text-black bg-gray-300 font-bold">
-          {crOpeningGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
+          {crOpeningGrandTotal}
         </td>
       </tr>
     );
@@ -682,16 +657,10 @@ function TrialBalanceComponent({
             </TableCell>
           ) : null}
           <TableCell className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.drBalanceClosingBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.drBalanceClosingBalance ?? 0}
           </TableCell>
           <TableCell className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.crBalanceClosingBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.crBalanceClosingBalance ?? 0}
           </TableCell>
         </TableRow>
       );
@@ -710,16 +679,10 @@ function TrialBalanceComponent({
               <strong>Subtotal</strong>
             </td>
             <td className="text-right text-black">
-              {drClosingSubtotal.toLocaleString(undefined, {
-                style: "currency",
-                currency: "INR",
-              })}
+              {(drClosingSubtotal ?? 0.0).toFixed(2)}
             </td>
             <td className="text-right text-black">
-              {crClosingSubtotal.toLocaleString(undefined, {
-                style: "currency",
-                currency: "INR",
-              })}
+              {(crClosingSubtotal ?? 0.0).toFixed(2)}
             </td>
           </tr>
         );
@@ -740,16 +703,10 @@ function TrialBalanceComponent({
           <strong>Grand Total</strong>
         </td>
         <td className="text-right text-black bg-gray-300 font-bold">
-          {drClosingGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
+          {drClosingGrandTotal}
         </td>
         <td className="text-right text-black bg-gray-300 font-bold">
-          {crClosingGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
+          {crClosingGrandTotal}
         </td>
       </tr>
     );
@@ -871,40 +828,22 @@ function TrialBalanceComponent({
             </TableCell>
           ) : null}
           <TableCell className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.drBalanceOpeningBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.drBalanceOpeningBalance ?? 0}
           </TableCell>
           <TableCell className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.crBalanceOpeningBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.crBalanceOpeningBalance ?? 0}
           </TableCell>
           <TableCell className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.drBalanceTransactionBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.drBalanceTransactionBalance ?? 0}
           </TableCell>
           <TableCell className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.crBalanceTransactionBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.crBalanceTransactionBalance ?? 0}
           </TableCell>
           <TableCell className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.drBalanceClosingBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.drBalanceClosingBalance ?? 0}
           </TableCell>
           <TableCell className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.crBalanceClosingBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.crBalanceClosingBalance ?? 0}
           </TableCell>
         </TableRow>
       );
@@ -923,40 +862,22 @@ function TrialBalanceComponent({
               <strong>Subtotal</strong>
             </td>
             <td className="text-right text-black">
-              {drOpeningSubtotal.toLocaleString(undefined, {
-                style: "currency",
-                currency: "INR",
-              })}
+              {(drOpeningSubtotal ?? 0.0).toFixed(2)}
             </td>
             <td className="text-right text-black">
-              {crOpeningSubtotal.toLocaleString(undefined, {
-                style: "currency",
-                currency: "INR",
-              })}
+              {(crOpeningSubtotal ?? 0.0).toFixed(2)}
             </td>
             <td className="text-right text-black">
-              {drTransactionSubtotal.toLocaleString(undefined, {
-                style: "currency",
-                currency: "INR",
-              })}
+              {(drTransactionSubtotal ?? 0.0).toFixed(2)}
             </td>
             <td className="text-right text-black">
-              {crTransactionSubtotal.toLocaleString(undefined, {
-                style: "currency",
-                currency: "INR",
-              })}
+              {(crTransactionSubtotal ?? 0.0).toFixed(2)}
             </td>
             <td className="text-right text-black">
-              {drClosingSubtotal.toLocaleString(undefined, {
-                style: "currency",
-                currency: "INR",
-              })}
+              {(drClosingSubtotal ?? 0.0).toFixed(2)}
             </td>
             <td className="text-right text-black">
-              {crClosingSubtotal.toLocaleString(undefined, {
-                style: "currency",
-                currency: "INR",
-              })}
+              {(crClosingSubtotal ?? 0.0).toFixed(2)}
             </td>
           </tr>
         );
@@ -981,40 +902,22 @@ function TrialBalanceComponent({
           <strong>Grand Total</strong>
         </td>
         <td className="text-right text-black bg-gray-300 font-bold">
-          {drOpeningGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
+          {drOpeningGrandTotal}
         </td>
         <td className="text-right text-black bg-gray-300 font-bold">
-          {crOpeningGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
+          {crOpeningGrandTotal}
         </td>
         <td className="text-right text-black bg-gray-300 font-bold">
-          {drTransactionGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
+          {drTransactionGrandTotal}
         </td>
         <td className="text-right text-black bg-gray-300 font-bold">
-          {crTransactionGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
+          {crTransactionGrandTotal}
         </td>
         <td className="text-right text-black bg-gray-300 font-bold">
-          {drClosingGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
+          {drClosingGrandTotal}
         </td>
         <td className="text-right text-black bg-gray-300 font-bold">
-          {crClosingGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
+          {crClosingGrandTotal}
         </td>
       </tr>
     );
@@ -1102,40 +1005,22 @@ function TrialBalanceComponent({
             </TableCell>
           ) : null}
           <TableCell className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.drBalanceOpeningBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.drBalanceOpeningBalance ?? 0}
           </TableCell>
           <TableCell className="text-right  whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.crBalanceOpeningBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.crBalanceOpeningBalance ?? 0}
           </TableCell>
           <TableCell className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.drBalanceTransactionBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.drBalanceTransactionBalance ?? 0}
           </TableCell>
           <TableCell className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.crBalanceTransactionBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.crBalanceTransactionBalance ?? 0}
           </TableCell>
           <TableCell className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.drBalanceClosingBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.drBalanceClosingBalance ?? 0}
           </TableCell>
           <TableCell className="text-right whitespace-nowrap text-xs text-gray-900 dark:text-white">
-            {(item.crBalanceClosingBalance ?? 0).toLocaleString(undefined, {
-              style: "currency",
-              currency: "INR",
-            })}
+            {item.crBalanceClosingBalance ?? 0}
           </TableCell>
         </TableRow>
       );
@@ -1151,42 +1036,12 @@ function TrialBalanceComponent({
           <strong>Grand Total:</strong>
         </td>
         <td></td>
-        <td className="text-right text-black">
-          {drOpeningGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
-        </td>
-        <td className="text-right text-black">
-          {crOpeningGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
-        </td>
-        <td className="text-right text-black">
-          {drTransactionGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
-        </td>
-        <td className="text-right text-black">
-          {crTransactionGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
-        </td>
-        <td className="text-right text-black">
-          {drClosingGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
-        </td>
-        <td className="text-right text-black">
-          {crClosingGrandTotal.toLocaleString(undefined, {
-            style: "currency",
-            currency: "INR",
-          })}
-        </td>
+        <td className="text-right text-black">{drOpeningGrandTotal}</td>
+        <td className="text-right text-black">{crOpeningGrandTotal}</td>
+        <td className="text-right text-black">{drTransactionGrandTotal}</td>
+        <td className="text-right text-black">{crTransactionGrandTotal}</td>
+        <td className="text-right text-black">{drClosingGrandTotal}</td>
+        <td className="text-right text-black">{crClosingGrandTotal}</td>
       </tr>
     );
 

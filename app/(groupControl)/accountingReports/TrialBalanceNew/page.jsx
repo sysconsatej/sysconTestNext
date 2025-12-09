@@ -34,6 +34,7 @@ import { getUserDetails } from "@/helper/userDetails";
 import { fontFamilyStyles } from "@/app/globalCss";
 import { fetchReportData } from "@/services/auth/FormControl.services";
 import { useSearchParams } from "next/navigation";
+import TrialBalanceGrid from "@/components/Accounting/TrialBalanceGrid";
 
 const TrialBalance = () => {
   const searchParams = useSearchParams();
@@ -155,15 +156,36 @@ const TrialBalance = () => {
       yourlabel: "Balance Type",
       ordering: 5,
     },
+    {
+      id: 133,
+      fieldname: "suppressZero",
+      controlname: "checkbox",
+      controlDefaultValue: null,
+      dropdownFilter: null,
+      dropDownValues: null,
+      functionOnBlur: null,
+      functionOnChange: null,
+      functionOnKeyPress: null,
+      isControlShow: true,
+      isEditable: true,
+      isRequired: false,
+      referenceColumn: null,
+      referenceTable: null,
+      toolTipMessage: "Suppress Zero",
+      type: "boolean",
+      yourlabel: "Suppress Zero",
+      ordering: 7,
+    },
   ]);
   const [balanceSheetData, setBalanceSheetData] = useState(null);
   const [newState, setNewState] = useState({
     companybranchIddropdown: [],
     companybranchId: null,
-    reportType: "S",
+    reportType: "D",
     balanceType: "E",
     fromDate: null,
     toDate: null,
+    suppressZero: null,
   });
   const [clearFlag, setClearFlag] = useState({
     isClear: false,
@@ -176,7 +198,7 @@ const TrialBalance = () => {
   const [isFirstTime, setIsFirstTime] = useState(true);
   const [menuId, setMenuId] = useState(null);
   const didRun = useRef(false); // guards dev double-invoke
-
+  const gridRef = useRef();
   console.log("newState", newState);
 
   useEffect(() => {
@@ -362,6 +384,12 @@ const TrialBalance = () => {
       clientId: toIntOrNull(clientId),
       finYearId: toIntOrNull(defaultFinYearId),
       tbGroupId: toIntOrNull(searchParamsTbGroupId),
+      suppressZero:
+        newState?.suppressZero == true
+          ? 1
+          : newState?.suppressZero == false
+          ? 0
+          : null,
     };
 
     const data = await trialBalanceReportData(requestBody);
@@ -383,7 +411,6 @@ const TrialBalance = () => {
       return;
     }
   };
-
   return (
     <>
       <React.Fragment>
@@ -446,35 +473,36 @@ const TrialBalance = () => {
               >
                 Go
               </button>
-               <button
-                // onClick={async () => {
-                //   await handleExportToExcel();
-                // }}
+              <button
+                onClick={() => {
+                  gridRef.current?.exportToExcel();
+                }}
                 style={{ marginLeft: "8px" }}
                 className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
               >
                 Export to Excel
               </button>
-              {/* <button
-                // onClick={async () => {
-                //   await handleExportToPDF(selectedBalanceAndProfitAndLossRadio);
-                // }}
+              <button
+                onClick={() => {
+                  gridRef.current?.exportToPDF();
+                }}
                 style={{ marginLeft: "8px" }}
                 className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
               >
-                Export to Pdf
-              </button>  */}
+                Export to PDF
+              </button>
             </div>
           </AccordionDetails>
         </Accordion>
       </React.Fragment>
-      <TrialBalanceComponent
-        balanceSheetData={balanceSheetData}
-        reportTypeData={selectedRadio}
-        reportBalanceType={selectedRadioType}
-        menuId={menuId}
-        tableToggle={toggle}
-      />
+      <div className="mt-2">
+        <TrialBalanceGrid
+          ref={gridRef}
+          balanceSheetData={balanceSheetData}
+          selectedRadio={selectedRadio}
+          selectedRadioType={selectedRadioType}
+        />
+      </div>
     </>
   );
 };

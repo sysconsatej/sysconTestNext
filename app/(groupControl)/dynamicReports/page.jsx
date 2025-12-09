@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable */
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+const BackEndUrl = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
 import React, { useState, useEffect, useRef, use } from "react";
 import styles from "@/app/app.module.css";
 import CustomeModal from "@/components/Modal/customModal";
@@ -21,6 +22,8 @@ import {
   fetchExcelDataInsert,
   insertExcelData,
   insertExcelDataInDatabase,
+  fetchReportAPIData,
+  fetchAnaylsisData,
 } from "@/services/auth/FormControl.services.js";
 import { ButtonPanel } from "@/components/Buttons/customeButton.jsx";
 import { CustomSpinner } from "@/components/Spinner/spinner";
@@ -45,6 +48,7 @@ import {
   AccordionSummary,
   AccordionDetails,
   Typography,
+  Box,
 } from "@mui/material";
 import { get, orderBy, set } from "lodash";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
@@ -158,6 +162,7 @@ export default function AddEditFormControll({ reportData }) {
   const { financialYear } = getUserDetails();
   const { emailId } = getUserDetails();
   const { userId } = getUserDetails();
+  const { headerLogoPath } = getUserDetails();
   const [dataForExcel, setDataForExcel] = useState([]);
   const [rowColorsForExcel, setRowColorsForExcel] = useState({});
   const [isDefaultDataShow, setIsDefaultDataShow] = useState(true);
@@ -183,6 +188,29 @@ export default function AddEditFormControll({ reportData }) {
   const [isInputVisible, setInputVisible] = useState(false);
   const [activeColumn, setActiveColumn] = useState(null);
   const [isDisplayGrandTotal, setIsDisplayGrandTotal] = useState(true);
+  const [NewpivotRowFields, setNewpivotRowFields] = useState(null);
+  const [NewpivotColFields, setNewpivotColFields] = useState(null);
+  const [NewpivotAggregateField, setNewpivotAggregateField] = useState(null);
+  const [NewpivotAggregateFunction, setNewpivotAggregateFunction] =
+    useState(null);
+  const [enablePivot, setenablePivot] = useState(false);
+  const [analysisData, setAnalysisData] = useState([]);
+  const [activeTableKey, setActiveTableKey] = useState("");
+  const [isShowHeader, setIsShowHeader] = useState(false);
+  const [editableErrors, setEditableErrors] = useState(false);
+  const [editableErrorsData, setEditableErrorsData] = useState([]);
+
+  const header = BackEndUrl + headerLogoPath;
+  useEffect(() => {
+    // Set first non-empty array as default active table
+    const firstKey = Object.entries(analysisData || {}).find(
+      ([key, value]) => Array.isArray(value) && value.length > 0
+    )?.[0];
+
+    if (firstKey && !activeTableKey) {
+      setActiveTableKey(firstKey);
+    }
+  }, [analysisData, activeTableKey]);
 
   useEffect(() => {
     if (menuType == "C") {
@@ -440,7 +468,7 @@ export default function AddEditFormControll({ reportData }) {
     }
   };
 
-  useEffect(() => { }, [newState, filterCondition]);
+  useEffect(() => {}, [newState, filterCondition]);
 
   function removeSingleQuotes(obj) {
     if (Array.isArray(obj)) {
@@ -788,16 +816,22 @@ export default function AddEditFormControll({ reportData }) {
             getSpName
           );
           if (responseData && responseData.success) {
-            // buildPivotData(responseData.data, "Party Name",         // row field
-            //   "Voucher No",         // column field
-            //   "Invoice Amount");
+            if (enablePivot) {
+              responseData.data = buildPivotData(
+                responseData.data,
+                NewpivotRowFields, // row field
+                NewpivotColFields, // column field
+                NewpivotAggregateField,
+                NewpivotAggregateFunction
+              );
+            }
+
             // if (responseData.data.length > 0) {
             const keys = Object.keys(responseData.data[0]);
 
             const fieldNamesFormattedArray = keys
               .filter(
-                (key) =>
-                  key !== "groupSpans" && key !== "startIndexForGroup"
+                (key) => key !== "groupSpans" && key !== "startIndexForGroup"
               )
               .map((key) => ({
                 fieldname: key,
@@ -883,7 +917,6 @@ export default function AddEditFormControll({ reportData }) {
               setGridHeader(header);
             }
 
-
             // Filter out rows with all null or empty fields
             const filteredTableData = processedData.filter((data) => {
               return Object.values(data).some(
@@ -938,15 +971,24 @@ export default function AddEditFormControll({ reportData }) {
             const spName = reportData.data[0].spName;
             let json = { ...newState, clientId: clientId, createdBy: userId };
             let formatJson = removeSingleQuotes(json);
-            // const data = await fetchExcelData(spName, formatJson);
             const response = await fetchExcelDataInsert(spName, formatJson);
-            //const response = await insertExcelDataInDatabase(insertData);
-            console.log("errors", response.rowsAffected[0].errors);
-            console.log("errors", response.rowsAffected[0].success);
-            if (response.rowsAffected[0].success) {
-              return toast.success(`${response.rowsAffected[0].message}`);
+            if (
+              response.rowsAffected[0].success ||
+              response.rowsAffected.success
+            ) {
+              return toast.success(
+                `${
+                  response.rowsAffected[0].message ||
+                  response.rowsAffected.message
+                }`
+              );
             } else {
               setAllErrors(response.rowsAffected[0].errors);
+              if (menuType === "E") {
+                setAllErrors(response.rowsAffected[0].errors); // Ensure `setAllErrors` is defined
+                setEditableErrors(true);
+                setEditableErrorsData(response.rowsAffected[0].errors);
+              }
               return toast.error(`${response.rowsAffected[0].message}`);
             }
           } else {
@@ -955,6 +997,8 @@ export default function AddEditFormControll({ reportData }) {
 
           if (menuType === "E") {
             setAllErrors(allErrors); // Ensure `setAllErrors` is defined
+            setEditableErrors(true);
+            setEditableErrorsData(allErrors);
           }
         } else {
           throw new Error("Failed to fetch data");
@@ -1029,6 +1073,7 @@ export default function AddEditFormControll({ reportData }) {
             clientId,
           };
           let formatJson = removeSingleQuotes(json);
+          console.log("formatJson", formatJson);
           // const data = await fetchExcelData(spName, formatJson);
           const response = await fetchExcelDataInsert(spName, formatJson);
 
@@ -1283,7 +1328,8 @@ export default function AddEditFormControll({ reportData }) {
               let previousValue = null;
               dataToExport.forEach((row) => {
                 if (row[colIndex] === previousValue) {
-                  row[colIndex] = ""; // Replace duplicate value with an empty string
+                  //row[colIndex] = ""; uncomment to add grouping, // Replace duplicate value with an empty string
+                  row[colIndex] = previousValue;
                 } else {
                   previousValue = row[colIndex];
                 }
@@ -2059,6 +2105,64 @@ export default function AddEditFormControll({ reportData }) {
       );
       setPivotGrid(currentItemsPagination);
     },
+    handleAnaylsisSubmit: async () => {
+      if (search !== null) {
+        const originalUploads = newState;
+        console.log("originalUploads", originalUploads);
+        const requestBodyForMenuReportDetails = {
+          columns:
+            "spName,reportCriteriaId,isDefaultDataShow,outputFileType,isSp",
+          tableName: "tblMenuReportMapping",
+          whereCondition: `menuId = ${search}`,
+          clientIdCondition: `status = 1 FOR JSON PATH,INCLUDE_NULL_VALUES`,
+        };
+        reportData = await fetchReportData(requestBodyForMenuReportDetails);
+        const spName = reportData.data[0].spName;
+        let json = {
+          ...newState,
+          companyId,
+          branchId,
+          financialYear,
+          userId,
+          clientId,
+        };
+        let filterCondition = {
+          spName,
+          json,
+        };
+        // const data = await fetchExcelData(spName, formatJson);
+        const response = await fetchAnaylsisData(spName, filterCondition);
+        setAnalysisData(response?.data);
+        setIsShowHeader(true);
+        console.log("response", response?.data);
+        if (response?.data?.success) {
+          return toast.success(`${response?.data?.message}`);
+        } else {
+          setAllErrors(response?.rowsAffected?.errors);
+          return toast.error(`${response?.rowsAffected?.message}`);
+        }
+      } else {
+        toast.error("Failed to fetch data");
+        throw new Error("Failed to fetch data");
+      }
+    },
+  };
+
+  // Build column list from first row of editableErrorsData
+  const errorColumns =
+    Array.isArray(editableErrorsData) && editableErrorsData.length > 0
+      ? Object.keys(editableErrorsData[0] || {})
+      : [];
+  const formatHeader = (key) => {
+    const k = String(key ?? "");
+    if (!k) return "";
+
+    return k
+      .replace(/_/g, " ") // snake_case -> snake case
+      .replace(/([A-Z])/g, " $1") // camelCase -> camel Case
+      .replace(/\s+/g, " ") // collapse spaces
+      .trim()
+      .replace(/^./, (s) => s.toUpperCase()); // Capitalize first letter
   };
 
   const handlePageChange = (page, tableData) => {
@@ -2075,7 +2179,8 @@ export default function AddEditFormControll({ reportData }) {
     const endIndex = startIndex + itemsPerPaginatedPage;
     const currentItemsPagination = fullPivotValues?.slice(startIndex, endIndex);
     const lastPagePagination = Math.ceil(
-      (fullPivotValues?.length || paginatedData?.length) / (tableData?.length > 0 ? itemsPerPage : itemsPerPaginatedPage)
+      (fullPivotValues?.length || paginatedData?.length) /
+        (tableData?.length > 0 ? itemsPerPage : itemsPerPaginatedPage)
     );
     setPivotGrid(currentItemsPagination);
     setLastPagePagination(lastPagePagination);
@@ -2127,6 +2232,11 @@ export default function AddEditFormControll({ reportData }) {
       if (apiResponse.success) {
         const fetchedData = apiResponse.data[0];
         setReportName(fetchedData.reportName);
+        setNewpivotRowFields(fetchedData?.pivotRowFields);
+        setNewpivotColFields(fetchedData?.pivotColumnFields);
+        setNewpivotAggregateField(fetchedData?.pivotAggregateField);
+        setNewpivotAggregateFunction(fetchedData?.pivotAggregateFunction);
+        setenablePivot(fetchedData?.enablePivot);
         for (const field of fetchedData.fields) {
           if (
             field.referenceTable !== "" &&
@@ -2272,11 +2382,11 @@ export default function AddEditFormControll({ reportData }) {
         setOriginalData(fetchedData.grid);
         setFetchedDataFromAPI(fetchedData.grid);
         const apiGrid = fetchedData.grid;
-        setApiGRidDataNew(apiGrid)
+        setApiGRidDataNew(apiGrid);
         setApiGridData(apiGrid);
         const apiId = fetchedData.apiUrl;
         const fetchGrid = fetchedData.grid;
-        setFetchGridNew(fetchGrid)
+        setFetchGridNew(fetchGrid);
         var grid = [];
 
         console.log("grid", grid);
@@ -2399,8 +2509,7 @@ export default function AddEditFormControll({ reportData }) {
 
               const fieldNamesFormattedArray = keys
                 .filter(
-                  (key) =>
-                    key !== "groupSpans" && key !== "startIndexForGroup"
+                  (key) => key !== "groupSpans" && key !== "startIndexForGroup"
                 )
                 .map((key) => ({
                   fieldname: key,
@@ -2648,7 +2757,11 @@ export default function AddEditFormControll({ reportData }) {
         finalData.push(...currentGroup);
 
         // add total row for that group
-        if (groupedData > totalGroupingDepth) {
+        if (
+          !Number.isNaN(groupingDepth) &&
+          groupingDepth < totalGroupingDepth &&
+          groupingDepth > 0
+        ) {
           const totalInvoice = currentGroup.reduce(
             (sum, d) => sum + Number(d["Invoice Amount"] || 0),
             0
@@ -2677,7 +2790,11 @@ export default function AddEditFormControll({ reportData }) {
     // push last group
     if (currentGroup.length > 0) {
       finalData.push(...currentGroup);
-      if (groupedData > totalGroupingDepth) {
+      if (
+        !Number.isNaN(groupingDepth) &&
+        groupingDepth < totalGroupingDepth &&
+        groupingDepth > 0
+      ) {
         const totalInvoice = currentGroup.reduce(
           (sum, d) => sum + Number(d["Invoice Amount"] || 0),
           0
@@ -2700,7 +2817,6 @@ export default function AddEditFormControll({ reportData }) {
 
     return finalData;
   };
-
 
   function isSameGroupContext(data, currentIndex, depth, grid) {
     if (currentIndex === 0) return false;
@@ -3031,61 +3147,75 @@ export default function AddEditFormControll({ reportData }) {
     });
   }
 
-  const buildPivotData = (data, rowField, colField, valueField) => {
-    const pivot = {};
-    const rowKeys = new Set();
-    const colKeys = new Set();
+  const buildPivotData = (
+    data,
+    pivotRowField,
+    pivotColumnField,
+    pivotAggregateField,
+    pivotAggregateFunction = "sum"
+  ) => {
+    try {
+      const rowSet = new Set();
+      const colSet = new Set();
 
-    data.forEach((item) => {
-      const rowKey = item[rowField];
-      const colKey = item[colField];
-      const value = Number(item[valueField]) || 0;
+      // Step 1: Collect unique row & column identifiers
+      for (const item of data) {
+        rowSet.add(item[pivotRowField]);
+        colSet.add(item[pivotColumnField]);
+      }
 
-      rowKeys.add(rowKey);
-      colKeys.add(colKey);
+      const rows = [...rowSet];
+      const columns = [...colSet];
 
-      if (!pivot[rowKey]) pivot[rowKey] = {};
-      pivot[rowKey][colKey] = (pivot[rowKey][colKey] || 0) + value;
-    });
+      // Step 2: Create a lookup: row → column → aggregateValue
+      const aggregationMap = {};
 
-    // Build header
-    const pivotHeader = Array.from(colKeys).map((key) => ({
-      level1: key,
-      key: key,
-    }));
+      for (const item of data) {
+        const rowKey = item[pivotRowField];
+        const colKey = item[pivotColumnField];
+        const value = Number(item[pivotAggregateField]) || 0;
 
-    // Build grid rows
-    const pivotGrid = Array.from(rowKeys).map((rowKey) => {
-      const row = [rowKey];
-      Array.from(colKeys).forEach((colKey) => {
-        row.push(pivot[rowKey][colKey] || 0);
-      });
-      // Add Row Total
-      const total = Object.values(pivot[rowKey]).reduce((a, b) => a + b, 0);
-      row.push(total);
-      return row;
-    });
+        if (!aggregationMap[rowKey]) aggregationMap[rowKey] = {};
+        if (!aggregationMap[rowKey][colKey]) {
+          aggregationMap[rowKey][colKey] =
+            pivotAggregateFunction === "count" ? 0 : 0;
+        }
 
-    // Add Grand Total row
-    const grandTotalRow = [
-      "Grand Total",
-      ...Array.from(colKeys).map((colKey) =>
-        Array.from(rowKeys).reduce(
-          (sum, rowKey) => sum + (pivot[rowKey][colKey] || 0),
-          0
-        )
-      ),
-    ];
-    grandTotalRow.push(
-      grandTotalRow.slice(1).reduce((a, b) => a + b, 0)
-    );
-    pivotGrid.push(grandTotalRow);
-    console.log("Pivot Header:", pivotHeader);
-    console.log("Pivot Grid:", pivotGrid);
-    return { pivotHeader, pivotGrid };
+        if (pivotAggregateFunction === "sum") {
+          aggregationMap[rowKey][colKey] += value;
+        } else if (pivotAggregateFunction === "count") {
+          aggregationMap[rowKey][colKey] += 1;
+        }
+      }
+
+      // Step 3: Build final output rows
+      const result = [];
+
+      for (const rowKey of rows) {
+        // get any row with that key (for main row fields)
+        const baseRow = data.find((d) => d[pivotRowField] === rowKey);
+        const rowObj = { ...baseRow };
+
+        let total = 0;
+
+        for (const colKey of columns) {
+          const val = aggregationMap[rowKey]?.[colKey] || 0;
+          rowObj[colKey] = val;
+          total += Number(val);
+        }
+
+        rowObj.total = total;
+        result.push(rowObj);
+      }
+
+      return result;
+    } catch (err) {
+      console.error(err);
+      return [];
+    }
   };
 
-
+  console.log("analysisData", analysisData);
   return (
     <React.Fragment>
       <div className={`h-auto relative`}>
@@ -3306,8 +3436,9 @@ export default function AddEditFormControll({ reportData }) {
                                 currentPage === lastPagePagination && (
                                   <TableRow
                                     style={{
-                                      border: `2px solid ${toggledThemeValue ? "white" : "black"
-                                        }`,
+                                      border: `2px solid ${
+                                        toggledThemeValue ? "white" : "black"
+                                      }`,
                                     }}
                                     className={` ${styles.tableCellHoverEffect} ${styles.hh} rounded-lg p-0 opacity-1 z-0`}
                                     sx={{
@@ -3333,15 +3464,17 @@ export default function AddEditFormControll({ reportData }) {
                                         <TableCell
                                           key={`total-${item.fieldname}`}
                                           style={{
-                                            border: `1px solid ${toggledThemeValue
-                                              ? "white"
-                                              : "black"
-                                              }`,
+                                            border: `1px solid ${
+                                              toggledThemeValue
+                                                ? "white"
+                                                : "black"
+                                            }`,
                                             fontWeight: "bold",
-                                            color: `${toggledThemeValue
-                                              ? "white"
-                                              : "black"
-                                              }`,
+                                            color: `${
+                                              toggledThemeValue
+                                                ? "white"
+                                                : "black"
+                                            }`,
                                           }}
                                           className={`${styles.striped} ${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
                                         >
@@ -3349,8 +3482,8 @@ export default function AddEditFormControll({ reportData }) {
                                             ? index === 0
                                               ? "Grand Total"
                                               : grandTotalValue !== undefined
-                                                ? grandTotalValue
-                                                : ""
+                                              ? grandTotalValue
+                                              : ""
                                             : ""}
                                         </TableCell>
                                       );
@@ -3368,85 +3501,112 @@ export default function AddEditFormControll({ reportData }) {
                     ) : null)}
 
                   {/* Render a static table if menuType is "E" */}
-                  {menuType === "E" && (
-                    <Paper
-                      sx={{
-                        ...displayReportTablePaperStyles,
-                      }}
-                      className={`${styles.pageBackground} `}
-                    >
-                      <TableContainer
-                        id={"paper"}
-                        className={` ${styles.thinScrollBar} ${styles.pageBackground} `}
+                  {editableErrors &&
+                    editableErrorsData.length > 0 &&
+                    menuType === "E" && (
+                      <Paper
                         sx={{
-                          ...displayReportTableContainerStyles,
-                          position: "relative !important",
+                          ...displayReportTablePaperStyles,
                         }}
+                        className={`${styles.pageBackground} `}
                       >
-                        {/* Table */}
-                        <Table
-                          stickyHeader
-                          aria-label="sticky table"
-                          style={{
-                            tableLayout:
-                              "fixed" /* Fixed layout prevents expansion */,
-                            width: "100%",
-                            border: "1px solid grey",
-                            borderCollapse: "collapse",
-                            borderSpacing: 0,
+                        <TableContainer
+                          id={"paper"}
+                          className={` ${styles.thinScrollBar} ${styles.pageBackground} `}
+                          sx={{
+                            ...displayReportTableContainerStyles,
+                            position: "relative !important",
                           }}
-                          className={`min-w-full text-[9px] overflow-auto ${styles.hideScrollbar} ${styles.thinScrollBar}`}
                         >
-                          {/* Table Head */}
-                          <TableHead
-                            className="text-white"
-                            sx={{
-                              ...displaytableHeadStyles,
+                          {/* Table */}
+                          <Table
+                            stickyHeader
+                            aria-label="sticky table"
+                            style={{
+                              tableLayout: "auto", // Fixed layout prevents expansion
+                              width: "100%",
+                              border: "1px solid grey",
+                              borderCollapse: "collapse",
+                              borderSpacing: 0,
                             }}
+                            className={`min-w-full text-xs overflow-auto ${styles.hideScrollbar} ${styles.thinScrollBar}`}
                           >
-                            <TableRow>
-                              <TableCell className="w-[10%] !text-center">Sr No</TableCell>
-                              {/* <TableCell>Row No</TableCell> */}
-                              <TableCell>Errors</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {sortedErrors?.map((error, index) => (
-                              <TableRow
-                                key={index}
-                                sx={{
-                                  ...displaytableRowStyles_two(),
-                                }}
-                              >
+                            {/* Table Head (dynamic from JSON keys) */}
+                            <TableHead
+                              className="text-white"
+                              sx={{
+                                ...displaytableHeadStyles,
+                              }}
+                            >
+                              <TableRow className={`${styles.tblHead}`}>
                                 <TableCell
                                   style={{
-                                    padding: "2px 4px",
-                                    fontSize: "9px",
+                                    position: "sticky",
+                                    whiteSpace: "nowrap",
+                                    cursor: isSortingEnabled
+                                      ? "pointer"
+                                      : "default",
                                   }}
-                                  align="center"
-                                  className="w-[10%]"
+                                  className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
                                 >
-                                  {index + 1}
+                                  Sr No
                                 </TableCell>
-                                {/* <TableCell
-                                  style={{ padding: "0px 4px" }}
-                                  align="left"
-                                >
-                                  {error.row}
-                                </TableCell> */}
-                                <TableCell
-                                  style={{ padding: "0px 4px" }}
-                                  align="left"
-                                >
-                                  {error.message}
-                                </TableCell>
+                                {errorColumns.map((col) => (
+                                  <TableCell
+                                    style={{
+                                      position: "sticky",
+                                      whiteSpace: "nowrap",
+                                      cursor: isSortingEnabled
+                                        ? "pointer"
+                                        : "default",
+                                    }}
+                                    className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
+                                    key={col}
+                                  >
+                                    {formatHeader(col)}
+                                  </TableCell>
+                                ))}
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Paper>
-                  )}
+                            </TableHead>
+
+                            {/* Table Body (cells also dynamic) */}
+                            <TableBody>
+                              {editableErrorsData.map((row, index) => (
+                                <TableRow
+                                  style={{ border: "1px solid grey" }}
+                                  className={`${styles.tableCellHoverEffect} ${styles.hh} rounded-lg p-0 opacity-1 z-0`}
+                                  sx={{
+                                    ...(toggledThemeValue
+                                      ? displayTableRowStylesNoHover
+                                      : displaytableRowStyles),
+                                  }}
+                                  key={index}
+                                >
+                                  <TableCell
+                                    className={`pt-1 pb-1 ps-4 text-xs`}
+                                    style={{ whiteSpace: "nowrap" }}
+                                    align="left"
+                                  >
+                                    {index + 1}
+                                  </TableCell>
+
+                                  {errorColumns.map((col) => (
+                                    <TableCell
+                                      key={col}
+                                      className={`pt-1 pb-1 ps-4 text-xs`}
+                                      style={{ whiteSpace: "nowrap" }}
+                                      align="left"
+                                    >
+                                      {row?.[col] ?? ""}
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Paper>
+                    )}
 
                   {menuType === "P" && (
                     <>
@@ -3625,12 +3785,15 @@ export default function AddEditFormControll({ reportData }) {
                                       rowRefs.current &&
                                       (rowRefs.current[rowIndex] = el)
                                     }
-                                    className={`${styles.tableCellHoverEffect
-                                      } ${styles.hh
-                                      } border border-gray-600 rounded-lg p-0 opacity-1 z-0 ${isSubtotalRow
+                                    className={`${
+                                      styles.tableCellHoverEffect
+                                    } ${
+                                      styles.hh
+                                    } border border-gray-600 rounded-lg p-0 opacity-1 z-0 ${
+                                      isSubtotalRow
                                         ? "font-bold bg-gray-100"
                                         : ""
-                                      }`}
+                                    }`}
                                     sx={
                                       toggledThemeValue
                                         ? displayTableRowStylesNoHover
@@ -3655,8 +3818,8 @@ export default function AddEditFormControll({ reportData }) {
                                             backgroundColor: isSubtotalColumn
                                               ? "#F5F5F5"
                                               : isSubtotalRow
-                                                ? "#DDDDDD"
-                                                : "",
+                                              ? "#DDDDDD"
+                                              : "",
                                             color:
                                               rowData[0] === "Grand Total"
                                                 ? toggledThemeValue
@@ -3746,6 +3909,149 @@ export default function AddEditFormControll({ reportData }) {
                       chartData={chartData}
                       clientId={clientId}
                     />
+                  )}
+                  {menuType === "A" && (
+                    <>
+                      {isShowHeader == true && <img src={header} alt="Logo" />}
+                      {isShowHeader == true && (
+                        <h1 className="text-[14px] text-[var(--tableRowTextColor)] font-semibold !text-center w-full">
+                          {menuName}
+                        </h1>
+                      )}
+                      <Box
+                        sx={{
+                          flex: 1,
+                          overflowY: "auto", // ✅ single scroll: main content scrolls
+                          maxHeight: "calc(100vh - 150px)", // ✅ page-level scroll area
+                        }}
+                        className={styles.thinScrollBar}
+                      >
+                        {Object.entries(analysisData || {})
+                          .filter(
+                            ([, value]) =>
+                              Array.isArray(value) && value.length > 0
+                          )
+                          .map(([key, rows]) => {
+                            const columns = Object.keys(rows[0] || {});
+
+                            const title = key
+                              .replace(/([a-z])([A-Z])/g, "$1 $2")
+                              .replace(/_/g, " ")
+                              .replace(/\b\w/g, (c) => c.toUpperCase());
+
+                            return (
+                              <Box key={key} className="mb-4">
+                                {/* Table Heading */}
+                                <Box
+                                  className={`${styles.pageBackground} px-2 py-1`}
+                                >
+                                  <p className="text-[11px] text-[var(--tableRowTextColor)] font-semibold !text-center w-full">
+                                    {title}
+                                  </p>
+                                </Box>
+
+                                <Paper
+                                  sx={{
+                                    ...displayReportTablePaperStyles,
+                                    // 🔹 Force Paper to grow with table, no scroll
+                                    maxHeight: "none !important",
+                                    height: "auto !important",
+                                    overflow: "visible !important",
+                                  }}
+                                  className={`${styles.pageBackground}`}
+                                >
+                                  <TableContainer
+                                    id={`paper-${key}`}
+                                    className={styles.pageBackground}
+                                    sx={{
+                                      ...displayReportTableContainerStyles,
+                                      position: "relative",
+                                      // 🔹 Kill any internal scroll / fixed height from shared styles
+                                      maxHeight: "none !important",
+                                      height: "auto !important",
+                                      overflowY: "visible !important",
+                                      // keep horizontal scroll only if columns overflow width
+                                      overflowX: "auto !important",
+                                    }}
+                                  >
+                                    <Table
+                                      stickyHeader
+                                      aria-label={`${title} table`}
+                                      style={{
+                                        tableLayout: "fixed",
+                                        width: "100%",
+                                        border: "1px solid grey",
+                                        borderCollapse: "collapse",
+                                        borderSpacing: 0,
+                                      }}
+                                      // 🔹 remove scrollbar-related helper classes to avoid hidden inner scroll behavior
+                                      className="min-w-full text-[9px]"
+                                    >
+                                      {/* Table Head */}
+                                      <TableHead
+                                        className="text-white"
+                                        sx={{
+                                          ...displaytableHeadStyles,
+                                        }}
+                                      >
+                                        <TableRow>
+                                          <TableCell className="w-[6%] !text-center">
+                                            Sr No
+                                          </TableCell>
+                                          {columns.map((col) => (
+                                            <TableCell
+                                              key={col}
+                                              className="!text-left"
+                                            >
+                                              {col}
+                                            </TableCell>
+                                          ))}
+                                        </TableRow>
+                                      </TableHead>
+
+                                      {/* Table Body */}
+                                      <TableBody>
+                                        {rows.map((row, index) => (
+                                          <TableRow
+                                            key={index}
+                                            sx={{
+                                              ...displaytableRowStyles_two(),
+                                            }}
+                                          >
+                                            <TableCell
+                                              style={{
+                                                padding: "2px 4px",
+                                                fontSize: "9px",
+                                              }}
+                                              align="center"
+                                              className="w-[6%]"
+                                            >
+                                              {index + 1}
+                                            </TableCell>
+
+                                            {columns.map((col) => (
+                                              <TableCell
+                                                key={col}
+                                                style={{
+                                                  padding: "0px 4px",
+                                                  fontSize: "9px",
+                                                }}
+                                                align="left"
+                                              >
+                                                {row[col]}
+                                              </TableCell>
+                                            ))}
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </TableContainer>
+                                </Paper>
+                              </Box>
+                            );
+                          })}
+                      </Box>
+                    </>
                   )}
                 </React.Fragment>
               );

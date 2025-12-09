@@ -176,7 +176,8 @@ export default function AddEditFormControll({ reportData }) {
   const [lastPagePagination, setLastPagePagination] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]); // use this state to get all selected row ids
   const [fullRowJson, setFullRowJson] = useState([]); // use this state to get all selected row ids
-
+  const [editableErrors, setEditableErrors] = useState(false);
+  const [editableErrorsData, setEditableErrorsData] = useState([]);
   useEffect(() => {
     if (menuType == "C") {
       setToggle(false);
@@ -221,7 +222,8 @@ export default function AddEditFormControll({ reportData }) {
           if (!record && Array.isArray(dataToGetSelectedRowData)) {
             record = dataToGetSelectedRowData[Number(rowIndex)];
           }
-          const id = record?.ID ?? record?.id ?? record?.Id ?? null;
+          const id =
+            record?.ID ?? record?.id ?? record?.Id ?? record?.rowIndex ?? null;
           return id != null ? { id } : null;
         })
         .filter(Boolean);
@@ -2164,6 +2166,50 @@ export default function AddEditFormControll({ reportData }) {
             console.error("Error saving edited data:", error);
             toast.error(error.message);
           }
+        } else if (menuName === "Update Bl Line No Details") {
+          function removeRecordWrapper(data) {
+            if (!Array.isArray(data)) return [];
+
+            return data.map((item) => {
+              // If "record" exists and is an object, return its content
+              if (item && typeof item.record === "object") {
+                return { ...item.record };
+              }
+
+              // Otherwise return the item unchanged
+              return item;
+            });
+          }
+          const cleanedJson = removeRecordWrapper(fullRowJson);
+          const filterConditionWithoutDropdowns =
+            removeDropdownFields(filterCondition);
+          const updatedCondition = {
+            ...filterConditionWithoutDropdowns,
+            companyId,
+            branchId,
+            financialYear,
+            userId,
+            clientId,
+          };
+          let cleanSelectedRows = {
+            ...updatedCondition,
+            data: cleanedJson,
+          };
+
+          let response = await saveEditedReport({
+            json: cleanSelectedRows,
+            spName: saveSpName,
+          });
+
+          if (
+            response?.data[0]?.success === true ||
+            response?.success === true
+          ) {
+            return toast.success(response?.message);
+          }
+          toast.error(response.data[0].message);
+          setEditableErrors(true);
+          setEditableErrorsData(response.data[0].errors);
         } else {
           const getRowId = (row) => row?.Id ?? row?.id ?? row?.ID;
 
@@ -2204,10 +2250,12 @@ export default function AddEditFormControll({ reportData }) {
             spName: saveSpName,
           });
 
-          if (response.success === true) {
-            return toast.success(response.message);
+          if (response?.data[0]?.success === true) {
+            return toast.success(response?.data[0]?.message);
           }
-          toast.error(response.message);
+          toast.error(response.data[0].message);
+          setEditableErrors(true);
+          setEditableErrorsData(response.data[0].errors);
         }
       } catch (error) {
         console.error("Error saving edited data:", error);
@@ -2318,6 +2366,25 @@ export default function AddEditFormControll({ reportData }) {
     handleCreateSplitBL: async () => {
       alert("Create Split BL");
     },
+  };
+
+  // Build column list from first row of editableErrorsData
+  const errorColumns =
+    Array.isArray(editableErrorsData) && editableErrorsData.length > 0
+      ? Object.keys(editableErrorsData[0] || {})
+      : [];
+
+  // Nice header labels: containerNo -> "Container No", etc.
+  const formatHeader = (key) => {
+    const k = String(key ?? "");
+    if (!k) return "";
+
+    return k
+      .replace(/_/g, " ") // snake_case -> snake case
+      .replace(/([A-Z])/g, " $1") // camelCase -> camel Case
+      .replace(/\s+/g, " ") // collapse spaces
+      .trim()
+      .replace(/^./, (s) => s.toUpperCase()); // Capitalize first letter
   };
 
   useEffect(() => {
@@ -3079,7 +3146,7 @@ export default function AddEditFormControll({ reportData }) {
           const blCount = parseInt(currentRow.BLCount, 10);
 
           if (!isNaN(from) && !isNaN(blCount)) {
-            currentRow.To = (from + blCount).toString(); // Convert back to string
+            currentRow.To = (from + blCount - 1).toString(); // Convert back to string
           }
         }
 
@@ -3750,7 +3817,8 @@ export default function AddEditFormControll({ reportData }) {
                     </AccordionDetails>
                   </Accordion>
                   {/* Conditionally render the table based on menuType */}
-                  {isDefaultDataShow &&
+                  {editableErrors === false &&
+                    isDefaultDataShow &&
                     outputFileType &&
                     menuType === "D" &&
                     (isLoading ? (
@@ -4090,7 +4158,7 @@ export default function AddEditFormControll({ reportData }) {
                     ) : null)}
 
                   {/* Render a static table if menuType is "E" */}
-                  {menuType === "E" && (
+                  {editableErrors && editableErrorsData.length > 0 && (
                     <Paper
                       sx={{
                         ...displayReportTablePaperStyles,
@@ -4110,49 +4178,83 @@ export default function AddEditFormControll({ reportData }) {
                           stickyHeader
                           aria-label="sticky table"
                           style={{
-                            tableLayout:
-                              "fixed" /* Fixed layout prevents expansion */,
+                            tableLayout: "auto", // Fixed layout prevents expansion
                             width: "100%",
                             border: "1px solid grey",
                             borderCollapse: "collapse",
                             borderSpacing: 0,
                           }}
-                          className={`min-w-full text-sm overflow-auto ${styles.hideScrollbar} ${styles.thinScrollBar}`}
+                          className={`min-w-full text-xs overflow-auto ${styles.hideScrollbar} ${styles.thinScrollBar}`}
                         >
-                          {/* Table Head */}
+                          {/* Table Head (dynamic from JSON keys) */}
                           <TableHead
                             className="text-white"
                             sx={{
                               ...displaytableHeadStyles,
                             }}
                           >
-                            <TableRow>
-                              <TableCell>Sr No</TableCell>
-                              <TableCell>Row No</TableCell>
-                              <TableCell>Errors</TableCell>
+                            <TableRow className={`${styles.tblHead}`}>
+                              <TableCell
+                                style={{
+                                  position: "sticky",
+                                  whiteSpace: "nowrap",
+                                  cursor: isSortingEnabled
+                                    ? "pointer"
+                                    : "default",
+                                }}
+                                className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
+                              >
+                                Sr No
+                              </TableCell>
+                              {errorColumns.map((col) => (
+                                <TableCell
+                                  style={{
+                                    position: "sticky",
+                                    whiteSpace: "nowrap",
+                                    cursor: isSortingEnabled
+                                      ? "pointer"
+                                      : "default",
+                                  }}
+                                  className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
+                                  key={col}
+                                >
+                                  {formatHeader(col)}
+                                </TableCell>
+                              ))}
                             </TableRow>
                           </TableHead>
+
+                          {/* Table Body (cells also dynamic) */}
                           <TableBody>
-                            {sortedErrors.map((error, index) => (
-                              <TableRow key={index}>
+                            {editableErrorsData.map((row, index) => (
+                              <TableRow
+                                style={{ border: "1px solid grey" }}
+                                className={`${styles.tableCellHoverEffect} ${styles.hh} rounded-lg p-0 opacity-1 z-0`}
+                                sx={{
+                                  ...(toggledThemeValue
+                                    ? displayTableRowStylesNoHover
+                                    : displaytableRowStyles),
+                                }}
+                                key={index}
+                              >
                                 <TableCell
                                   className={`pt-1 pb-1 ps-4 text-xs`}
+                                  style={{ whiteSpace: "nowrap" }}
                                   align="left"
                                 >
                                   {index + 1}
                                 </TableCell>
-                                <TableCell
-                                  className={`pt-1 pb-1 ps-4 text-xs`}
-                                  align="left"
-                                >
-                                  {error.row}
-                                </TableCell>
-                                <TableCell
-                                  className={`pt-1 pb-1 ps-4 text-xs`}
-                                  align="left"
-                                >
-                                  {error.message}
-                                </TableCell>
+
+                                {errorColumns.map((col) => (
+                                  <TableCell
+                                    key={col}
+                                    className={`pt-1 pb-1 ps-4 text-xs`}
+                                    style={{ whiteSpace: "nowrap" }}
+                                    align="left"
+                                  >
+                                    {row?.[col] ?? ""}
+                                  </TableCell>
+                                ))}
                               </TableRow>
                             ))}
                           </TableBody>
@@ -4160,6 +4262,7 @@ export default function AddEditFormControll({ reportData }) {
                       </TableContainer>
                     </Paper>
                   )}
+
                   {menuType === "C" && (
                     <ChartReports
                       newState={newState}

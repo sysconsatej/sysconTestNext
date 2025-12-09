@@ -41,10 +41,7 @@ import * as onSubmitValidation from "@/helper/onSubmitFunction";
 
 const icons = [PlayIcon1, PlayIcon2, PlayIcon3, PlayIcon4];
 
-function onSubmitFunctionCall(
-  functionData,
-  data
-) {
+function onSubmitFunctionCall(functionData, data) {
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
   console.log(functionData, "functionData");
@@ -67,8 +64,8 @@ function onSubmitFunctionCall(
       console.log(args);
       // Call the function with the prepared arguments
       onSubmitValidation?.[funcName]({
-        ...data
-      })
+        ...data,
+      });
       // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
     }
   }
@@ -151,7 +148,6 @@ export default function RowComponent({
     expandAll ? true : false
   );
 
-
   let groupedData = subChild.reduce((result, obj) => {
     const { tableName } = obj;
 
@@ -168,11 +164,11 @@ export default function RowComponent({
   const toggleSubChildRow = (key) => {
     // Prevent toggling if groupedData[key].isHideGrid is true
     if (groupedData[key]?.isHideGrid) return;
-  
+
     if (subChildViewData.includes(key)) {
       setSubChildViewData((prev) => prev.filter((item) => item !== key));
       if (subChildViewData.length !== 0) {
-        setSubChildComponent(true); 
+        setSubChildComponent(true);
       } else {
         setSubChildComponent(false);
       }
@@ -185,7 +181,10 @@ export default function RowComponent({
   function copyDocument(obj) {
     if (Object.keys(obj).length !== 0) {
       const tmpData = { ...newState };
-      tmpData[sectionData.tableName].push({ ...obj, indexValue: tmpData[sectionData.tableName].length });
+      tmpData[sectionData.tableName].push({
+        ...obj,
+        indexValue: tmpData[sectionData.tableName].length,
+      });
       setNewState(tmpData);
       setSubmitNewState(tmpData);
       setRenderedData(newState[sectionData.tableName]);
@@ -241,11 +240,14 @@ export default function RowComponent({
 
   useEffect(() => {
     Object.keys(groupedData).forEach((key) => {
-      if (groupedData[key]?.isGridExpandOnLoad === true && row[key].length !== 0) {
+      if (
+        groupedData[key]?.isGridExpandOnLoad === true &&
+        row[key].length !== 0
+      ) {
         toggleSubChildRow(key);
-      } 
+      }
     });
-  }, [ ]);
+  }, []);
 
   function handleChangeFunction(result) {
     if (result?.isCheck === false) {
@@ -257,7 +259,7 @@ export default function RowComponent({
       }
       return;
     }
-    let data = { ...result.values };
+    let data = { ...result?.values };
     // let data = { ...result.newState };
     setChildValuseObj((pre) => {
       return {
@@ -348,7 +350,6 @@ export default function RowComponent({
                     ...gridSectionStyles,
                     paddingLeft: index === 0 ? "29px" : "0px",
                   }}
-                
                 >
                   <div className="relative">
                     <div
@@ -356,18 +357,18 @@ export default function RowComponent({
                       style={{ maxWidth: "200px" }}
                     >
                       {field.controlname === "dropdown" ||
-                        field.controlname === "multiselect"
+                      field.controlname === "multiselect"
                         ? (
-                          row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                          row[`${field.fieldname}Dropdown`]
-                        )?.length > 15
-                          ? (
                             row[`${field.fieldname}dropdown`]?.[0]?.label ||
                             row[`${field.fieldname}Dropdown`]
-                          )?.slice(0, 15) + "..."
+                          )?.length > 15
+                          ? (
+                              row[`${field.fieldname}dropdown`]?.[0]?.label ||
+                              row[`${field.fieldname}Dropdown`]
+                            )?.slice(0, 15) + "..."
                           : row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                          row[`${field.fieldname}Dropdown`] ||
-                          ""
+                            row[`${field.fieldname}Dropdown`] ||
+                            ""
                         : isDateFormat(row[`${field.fieldname}`]) || ""}
                     </div>
 
@@ -388,7 +389,6 @@ export default function RowComponent({
                             }
                           />
                         </div>
-
                       </div>
                     )}
                   </div>
@@ -397,7 +397,11 @@ export default function RowComponent({
             <div className="group absolute right-0 w-fit">
               <LightTooltip title="Delete Record">
                 <IconButton
-                  disabled={typeof sectionData.isDeleteFunctionality !== "undefined" ? !sectionData.isDeleteFunctionality : false}
+                  disabled={
+                    typeof sectionData.isDeleteFunctionality !== "undefined"
+                      ? !sectionData.isDeleteFunctionality
+                      : false
+                  }
                   aria-label="Delete"
                   className={styles.icon}
                   onClick={() => deleteChildRecord(childIndex)}
@@ -405,11 +409,7 @@ export default function RowComponent({
                   onMouseLeave={() => setHoveredIcon(null)}
                 >
                   <Image
-                    src={
-                      hoveredIcon === "delete"
-                        ? DeleteHover
-                        : DeleteIcon2
-                    }
+                    src={hoveredIcon === "delete" ? DeleteHover : DeleteIcon2}
                     alt="Delete Icon"
                     priority={false}
                     className="gridIcons2"
@@ -418,7 +418,11 @@ export default function RowComponent({
               </LightTooltip>
               <LightTooltip title="Copy Document">
                 <IconButton
-                  disabled={typeof sectionData.isCopyFunctionality !== "undefined" ? !sectionData.isCopyFunctionality : false}
+                  disabled={
+                    typeof sectionData.isCopyFunctionality !== "undefined"
+                      ? !sectionData.isCopyFunctionality
+                      : false
+                  }
                   aria-label="Document"
                   className={styles.icon}
                   onClick={() => copyDocument(childValuseObj)}
@@ -435,7 +439,7 @@ export default function RowComponent({
               </LightTooltip>
 
               {Object.keys(groupedData).map((key, index) => {
-                if(groupedData[key]?.isHideGrid) return null;
+                if (groupedData[key]?.isHideGrid) return null;
                 return (
                   <LightTooltip key={index} title={key}>
                     <IconButton
@@ -479,18 +483,18 @@ export default function RowComponent({
                   }}
                 >
                   <Box className="flex gap-4">
-                    {index === 0 ?
-                      <Fragment key={index} >
+                    {index === 0 ? (
+                      <Fragment key={index}>
                         <ActionButton
                           copyImagepath={copyDoc}
                           deleteImagePath={DeleteIcon2}
                           onCopy={() => copyDocument(childValuseObj)}
                           onDelete={() => deleteChildRecord(childIndex)}
-
                         />
-
                       </Fragment>
-                      : <></>}
+                    ) : (
+                      <></>
+                    )}
                     <GridInputFields
                       fieldData={field}
                       indexValue={index}
@@ -533,7 +537,6 @@ export default function RowComponent({
                     />
                   </Box>
                 </TableCell>
-
               ))}
           </TableRow>
         </>
@@ -541,7 +544,7 @@ export default function RowComponent({
 
       {/* EDIT CHILD */}
       {openChildEdit && (
-        <TableRow >
+        <TableRow>
           <TableCell style={{ padding: 0 }} colSpan={4} className="">
             <Collapse
               className=""
@@ -615,12 +618,18 @@ export default function RowComponent({
                             }
                           }
                           try {
-                            if (sectionData.functionOnSubmit && sectionData.functionOnSubmit !== null) {
-                              sectionData?.functionOnSubmit.split(";").forEach((fn) => { onSubmitFunctionCall(fn, childValuseObj) })
+                            if (
+                              sectionData.functionOnSubmit &&
+                              sectionData.functionOnSubmit !== null
+                            ) {
+                              sectionData?.functionOnSubmit
+                                .split(";")
+                                .forEach((fn) => {
+                                  onSubmitFunctionCall(fn, childValuseObj);
+                                });
                               // onSubmitValidation[sectionData.functionOnSubmit]({
                               //   ...childValuseObj})
                             }
-
                           } catch (error) {
                             return toast.error(error.message);
                           }
@@ -690,8 +699,7 @@ export default function RowComponent({
                 <Collapse in={subChildComponent} timeout="auto" unmountOnExit>
                   <Box
                     sx={{ margin: 1, overflow: "auto", position: "relative" }}
-                    
-                     className={`${styles.hideScrollbar} ${styles.thinScrollBar} ${styles.pageBackground} mb-0 mt-0`}
+                    className={`${styles.hideScrollbar} ${styles.thinScrollBar} ${styles.pageBackground} mb-0 mt-0`}
                   >
                     <SubChildComponent
                       key={index}

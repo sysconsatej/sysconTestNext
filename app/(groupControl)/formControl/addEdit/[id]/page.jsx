@@ -4032,7 +4032,7 @@ const calculateTotalNoOfPackages = () => {
                         overflowX: "auto",
                         height:
                           newState[section.tableName]?.length > 10
-                            ? "290px"
+                            ? "280px"
                             : "auto",
                         overflowY:
                           newState[section.tableName]?.length > 10
@@ -4187,7 +4187,8 @@ const calculateTotalNoOfPackages = () => {
                                   className={
                                     isView
                                       ? ""
-                                      : `${styles.tableCellHoverEffect} ${styles.hh}`
+                                      :
+                                       `${styles.tableCellHoverEffect} ${styles.hh}`
                                   }
                                   sx={{
                                     "& > *": { borderBottom: "unset" },

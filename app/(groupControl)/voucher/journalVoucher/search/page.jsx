@@ -1,12 +1,11 @@
 "use client";
 /* eslint-disable */
 // If your tooling expects React in scope:
-import React, { useState, useRef, useEffect, useMemo, use } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import Accordion from "@mui/material/Accordion";
 import Typography from "@mui/material/Typography";
 import { getUserDetails } from "@/helper/userDetails";
 import PropTypes from "prop-types";
-import CustomeModal from "@/components/Modal/customModal.jsx";
 import {
   parentAccordionSection,
   SummaryStyles,
@@ -55,10 +54,7 @@ import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import RowComponent from "@/app/(groupControl)/voucher/bankReceipt/addEdit/RowComponent/RowComponent.jsx";
 import { fontFamilyStyles } from "@/app/globalCss";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
-import {
-  getVoucher,
-  tallyDebitCredit,
-} from "@/services/auth/FormControl.services";
+import { getVoucher } from "@/services/auth/FormControl.services";
 import { insertVoucherData } from "@/services/auth/FormControl.services";
 import { expandAllIcon, closeIconRed } from "@/assets";
 import Image from "next/image";
@@ -67,8 +63,6 @@ import { fetchReportData } from "@/services/auth/FormControl.services.js";
 import { useDispatch, useSelector } from "react-redux";
 
 export default function VoucherBankReceiptAdd() {
-  const isView = false;
-  const prevCidRef = useRef(""); // hide unhide currencyId value
   const selectedMenuId = useSelector((state) => state?.counter?.selectedMenuId);
   const { push } = useRouter();
   const [openModal, setOpenModal] = useState(false);
@@ -112,436 +106,334 @@ export default function VoucherBankReceiptAdd() {
     debitAmountFc: 0,
     creditAmountFc: 0,
   });
+  const isView = false;
   const { clientId } = getUserDetails();
   const { companyId } = getUserDetails();
-  const [bankExTrigger, setBankExTrigger] = useState(0);
+  const { branchId } = getUserDetails();
+  const { financialYear } = getUserDetails();
+  const { emailId } = getUserDetails();
+  const { userId } = getUserDetails();
 
-  const allocPrevRowsRef = useRef([]);
-  const autoPrevRef = useRef([]);
-  console.log("voucherLedgerTotals =>", voucherLedgerTotals);
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const prevFilledRef = useRef(false);
 
-  useEffect(() => {
-    // Only skip if rows are missing
-    if (!Array.isArray(newState?.tblVoucherLedgerDetails)) {
-      return;
-    }
+  console.log("newState=>", newState);
 
-    setNewState((prev) => {
-      const rows = prev?.tblVoucherLedgerDetails;
-      if (!Array.isArray(rows) || rows.length === 0) return prev;
-
-      // -------------------------------
-      // CASE 1: tdsApplicable = false
-      // → clear all row & header TDS
-      // -------------------------------
-      if (!newState?.tdsApplicable) {
-        let anyRowChanged = false;
-
-        const clearedRows = rows.map((row) => {
-          if (!row) return row;
-
-          if (row.tdsAmtFC != null || row.tdsAmtHC != null) {
-            anyRowChanged = true;
-            return {
-              ...row,
-              tdsAmtFC: null,
-              tdsAmtHC: null,
-            };
-          }
-
-          return row;
-        });
-
-        const headerAlreadyCleared =
-          prev.tdsAmtFC == null && prev.tdsAmtHC == null && prev.tdsAmt == null;
-
-        if (!anyRowChanged && headerAlreadyCleared) {
-          return prev;
-        }
-
-        return {
-          ...prev,
-          tblVoucherLedgerDetails: clearedRows,
-          tdsAmtFC: null,
-          tdsAmtHC: null,
-          tdsAmt: null,
-        };
-      }
-
-      // -------------------------------
-      // CASE 2: tdsApplicable = true
-      // → existing auto-calc logic
-      // -------------------------------
-      let totalTdsFC = 0;
-      let totalTdsHC = 0;
-      let anyRowChanged = false;
-
-      const updatedRows = rows.map((row) => {
-        if (!row) return row;
-
-        let tdsFC = Number(row.tdsAmtFC) || 0;
-        let tdsHC = Number(row.tdsAmtHC) || 0;
-        let rowChanged = false;
-
-        if (row.autoSetAllocatedAmount === true) {
-          // ✅ Checkbox checked → calculate 2% of allocatedAmtFC / HC
-          const allocatedFC = Number(row.allocatedAmtFC) || 0;
-          const allocatedHC = Number(row.allocatedAmtHC) || 0;
-
-          const calcFC = +(allocatedFC * 0.02).toFixed(2);
-          const calcHC = +(allocatedHC * 0.02).toFixed(2);
-
-          if (calcFC !== tdsFC) {
-            tdsFC = calcFC;
-            rowChanged = true;
-          }
-          if (calcHC !== tdsHC) {
-            tdsHC = calcHC;
-            rowChanged = true;
-          }
-        } else {
-          // ❌ Checkbox UNCHECKED → reset row TDS to 0.00
-          if (tdsFC !== 0 || tdsHC !== 0) {
-            tdsFC = 0;
-            tdsHC = 0;
-            rowChanged = true;
-          }
-        }
-
-        totalTdsFC += tdsFC;
-        totalTdsHC += tdsHC;
-
-        if (rowChanged) {
-          anyRowChanged = true;
-          return {
-            ...row,
-            tdsAmtFC: tdsFC,
-            tdsAmtHC: tdsHC,
-          };
-        }
-
-        return row;
-      });
-
-      totalTdsFC = +totalTdsFC.toFixed(2);
-      totalTdsHC = +totalTdsHC.toFixed(2);
-
-      const prevTotalTdsFC = Number(prev.tdsAmtFC) || 0;
-      const prevTotalTdsHC = Number(prev.tdsAmtHC) || 0;
-      const prevTotalTds = Number(prev.tdsAmt) || 0;
-
-      // nothing changed → avoid re-render loop
-      if (
-        !anyRowChanged &&
-        prevTotalTdsFC === totalTdsFC &&
-        prevTotalTdsHC === totalTdsHC &&
-        prevTotalTds === totalTdsHC
-      ) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        tblVoucherLedgerDetails: updatedRows,
-        // header-level totals (recalculated every time based on present values)
-        tdsAmtFC: totalTdsFC,
-        tdsAmtHC: totalTdsHC,
-        tdsAmt: totalTdsHC, // main TDS in HC
-      };
-    });
-  }, [newState?.tdsApplicable, newState?.tblVoucherLedgerDetails]);
-
-  useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10);
-
-    setNewState((prev) =>
-      prev.voucherDate
-        ? prev // already set, don't touch
-        : { ...prev, voucherDate: today }
-    );
-  }, []);
-
-  const onConfirm = async (conformData) => {
-    setOpenModal((prev) => !prev);
+  // helper to safely parse numbers
+  // ----------------- helpers -----------------
+  const toNum = (v, fallback = 0) => {
+    if (v == null) return fallback;
+    const s = String(v).replace(/,/g, "").trim();
+    const n = Number(s);
+    return Number.isFinite(n) ? n : fallback;
   };
 
+  function useDebouncedValue(value, delay = 250) {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+      const id = setTimeout(() => setDebounced(value), delay);
+      return () => clearTimeout(id);
+    }, [value, delay]);
+    return debounced;
+  }
+
+  const parseForCalc = (v) => {
+    const raw = v ?? "";
+    const s = String(raw).replace(/,/g, "").trim();
+    if (s === "") return { n: 0, empty: true }; // allow empty in UI; treat as 0 for math
+    const n = Number(s);
+    return { n: Number.isFinite(n) ? n : 0, empty: false };
+  };
+
+  const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+  // ----------------- inside your component -----------------
+  const rowsAll = newState?.tblVoucherLedgerDetails ?? [];
+
+  /* ========= HC debounce signal (UNIQUE NAME) ========= */
+  const detailsSigHC = useMemo(() => {
+    try {
+      return JSON.stringify(
+        rowsAll.map((r) => ({
+          OsAmtHC: r?.OsAmtHC ?? 0,
+          allocatedAmtHC: r?.allocatedAmtHC ?? "",
+          balanceAmtHC: r?.balanceAmtHC ?? null,
+          voucherNo: r?.voucherNo ?? null,
+          invoiceIds: r?.invoiceIds ?? null,
+        }))
+      );
+    } catch {
+      return String(rowsAll?.length || 0);
+    }
+  }, [rowsAll]);
+
+  const debouncedHCSig = useDebouncedValue(detailsSigHC, 250);
+
+  /* ========= FC debounce signal (UNIQUE NAME) ========= */
+  const detailsSigFC = useMemo(() => {
+    try {
+      return JSON.stringify(
+        rowsAll.map((r) => ({
+          OsAmtFC: r?.OsAmtFC ?? 0,
+          allocatedAmtFC: r?.allocatedAmtFC ?? "",
+          balanceAmtFC: r?.balanceAmtFC ?? null,
+          voucherNo: r?.voucherNo ?? null,
+          invoiceIds: r?.invoiceIds ?? null,
+        }))
+      );
+    } catch {
+      return String(rowsAll?.length || 0);
+    }
+  }, [rowsAll]);
+
+  const debouncedFCSig = useDebouncedValue(detailsSigFC, 200);
+
+  /* =========================
+   * HC ROW-WISE CLAMP EFFECT
+   * ========================= */
   useEffect(() => {
-    const details = Array.isArray(newState?.tblVoucherLedgerDetails)
+    const rows = Array.isArray(newState?.tblVoucherLedgerDetails)
+      ? newState.tblVoucherLedgerDetails
+      : [];
+    if (rows.length === 0) return;
+
+    const amtRecHC = toNum(newState?.amtRec);
+    const hasHCCap = amtRecHC > 0;
+
+    // Parse rows once
+    const parsed = rows.map((r) => ({
+      osHC: toNum(r.OsAmtHC),
+      ...parseForCalc(r.allocatedAmtHC),
+      raw: r,
+    }));
+
+    // Prefix sum of previous allocations (as-is from user)
+    const prefixAllocated = new Array(parsed.length).fill(0);
+    for (let i = 1; i < parsed.length; i++) {
+      prefixAllocated[i] = round2(
+        prefixAllocated[i - 1] + Math.max(0, parsed[i - 1].n)
+      );
+    }
+
+    let didChange = false;
+
+    const next = parsed.map((p, i) => {
+      // remaining BEFORE this row
+      let remainingBefore = hasHCCap
+        ? round2(amtRecHC - prefixAllocated[i])
+        : Number.POSITIVE_INFINITY;
+      if (!Number.isFinite(remainingBefore) || remainingBefore < 0)
+        remainingBefore = 0;
+
+      // cap by OS only if OS > 0
+      const osCap = p.osHC > 0 ? p.osHC : Number.POSITIVE_INFINITY;
+      const allowed = Math.max(0, Math.min(osCap, remainingBefore));
+
+      let allocAdj = p.n;
+      let mutatedAlloc = false;
+
+      if (allocAdj < 0) {
+        allocAdj = 0;
+        mutatedAlloc = true;
+      } else if ((hasHCCap || p.osHC > 0) && allocAdj > allowed) {
+        allocAdj = allowed; // clamp to remaining
+        mutatedAlloc = true;
+      }
+
+      const balance =
+        p.osHC > 0 ? round2(p.osHC - allocAdj) : p.raw.balanceAmtHC ?? "";
+      const balanceStr =
+        typeof balance === "number"
+          ? balance === 0
+            ? "0"
+            : String(balance)
+          : balance;
+
+      const nextRow = { ...p.raw };
+
+      // update balance if changed
+      if (String(nextRow.balanceAmtHC ?? "") !== String(balanceStr ?? "")) {
+        nextRow.balanceAmtHC = balanceStr;
+        didChange = true;
+      }
+
+      // only overwrite allocatedAmtHC if we actually clamped/adjusted it
+      if (mutatedAlloc) {
+        const allocStr = allocAdj === 0 ? "0" : String(allocAdj);
+        if (String(nextRow.allocatedAmtHC ?? "") !== allocStr) {
+          nextRow.allocatedAmtHC = allocStr;
+          didChange = true;
+        }
+      }
+
+      return nextRow;
+    });
+
+    if (didChange) {
+      setNewState((prev) => ({
+        ...prev,
+        tblVoucherLedgerDetails: next,
+      }));
+    }
+  }, [debouncedHCSig, newState?.amtRec]);
+
+  /* =========================
+   * HC GLOBAL BALANCE EFFECT
+   * ========================= */
+  useEffect(() => {
+    const amtRecHC = toNum(newState?.amtRec);
+    const rows = Array.isArray(newState?.tblVoucherLedgerDetails)
       ? newState.tblVoucherLedgerDetails
       : [];
 
-    const toNum = (v) => {
-      if (v === null || v === undefined || v === "") return 0;
-      const n = Number(String(v).replace(/,/g, ""));
-      return isNaN(n) ? 0 : n;
-    };
+    const totalAllocatedHC = round2(
+      rows.reduce((sum, r) => sum + toNum(r?.allocatedAmtHC), 0)
+    );
+    if (Number.isNaN(amtRecHC) || Number.isNaN(totalAllocatedHC)) return;
 
-    // ✅ round to 2 decimals (numeric)
-    const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+    let remainingHC = round2(amtRecHC - totalAllocatedHC);
+    if (remainingHC < 0) remainingHC = 0;
 
-    // ✅ convert to string with 2 decimals
-    const asStr = (n) => round2(n).toFixed(2);
+    const remainingHCStr = remainingHC === 0 ? "0" : String(remainingHC);
 
-    if (!details.length) {
-      allocPrevRowsRef.current = [];
-      return;
+    if (newState?.balanceAmtHc !== remainingHCStr) {
+      setNewState((prev) => ({
+        ...prev,
+        balanceAmtHc: remainingHCStr,
+      }));
     }
+  }, [newState?.amtRec, newState?.tblVoucherLedgerDetails]);
 
-    const prevDetails = allocPrevRowsRef.current || [];
-    const maxLen = Math.max(details.length, prevDetails.length);
+  /* =========================
+   * FC ROW-WISE CLAMP EFFECT
+   * ========================= */
+  useEffect(() => {
+    const fcRows = Array.isArray(newState?.tblVoucherLedgerDetails)
+      ? newState.tblVoucherLedgerDetails
+      : [];
+    if (fcRows.length === 0) return;
 
-    // 🔹 Find which row changed (HC and/or FC)
-    let changedIndex = -1;
+    const amtRecFC = toNum(newState?.amtRecFC); // total received in FC
+    const hasFCCap = amtRecFC > 0;
 
-    for (let i = 0; i < maxLen; i++) {
-      const curr = details[i];
-      const prev = prevDetails[i];
-
-      // row removed → structural change, just sync and exit
-      if (!curr && prev) {
-        allocPrevRowsRef.current = details;
-        return;
-      }
-
-      // new row added → treat as changed row
-      if (curr && !prev) {
-        changedIndex = i;
-        break;
-      }
-
-      if (!curr && !prev) break;
-
-      const hcCurr = toNum(curr.allocatedAmtHC);
-      const hcPrev = toNum(prev.allocatedAmtHC);
-      const fcCurr = toNum(curr.allocatedAmtFC);
-      const fcPrev = toNum(prev.allocatedAmtFC);
-
-      if (hcCurr !== hcPrev || fcCurr !== fcPrev) {
-        changedIndex = i;
-        break;
-      }
-    }
-
-    // nothing changed in allocations
-    if (changedIndex === -1) {
-      allocPrevRowsRef.current = details;
-      return;
-    }
-
-    // 🔹 Current header balances
-    const prevBalanceHC = toNum(newState?.balanceAmtHc);
-    const prevBalanceFC = toNum(newState?.balanceAmtFc);
-
-    // Copy rows to work on
-    const working = details.map((row) => ({ ...row }));
-
-    const prevRow = prevDetails[changedIndex] || {};
-    const row = working[changedIndex];
-
-    const hcPrev = toNum(prevRow.allocatedAmtHC);
-    const hcCurr = toNum(row.allocatedAmtHC);
-    const fcPrev = toNum(prevRow.allocatedAmtFC);
-    const fcCurr = toNum(row.allocatedAmtFC);
-
-    let newBalanceHC = prevBalanceHC;
-    let newBalanceFC = prevBalanceFC;
-    let hcTouched = false;
-    let fcTouched = false;
-
-    // ---------- HC logic ----------
-    if (hcCurr !== hcPrev) {
-      const deltaHC = hcCurr - hcPrev; // +ve when increasing, -ve when decreasing
-      let tempBalanceHC = prevBalanceHC - deltaHC;
-      let finalHC = hcCurr;
-
-      // if negative balance → clamp this row to available HC
-      if (tempBalanceHC < 0) {
-        finalHC = hcPrev + prevBalanceHC; // can only add what's left
-        tempBalanceHC = 0;
-      }
-
-      // 🔹 Row-level balanceAmtHC update
-      const prevRowBalanceHC = toNum(prevRow.balanceAmtHC);
-      const effectiveDeltaHC = finalHC - hcPrev; // after clamp
-      let newRowBalanceHC = prevRowBalanceHC - effectiveDeltaHC;
-      if (newRowBalanceHC < 0) newRowBalanceHC = 0;
-
-      newBalanceHC = tempBalanceHC;
-
-      // 🔸 always store "0.00" etc (rounded)
-      row.allocatedAmtHC = asStr(finalHC); // ✅ rounded 2 decimals
-      row.balanceAmtHC = asStr(newRowBalanceHC); // ✅ rounded 2 decimals
-
-      hcTouched = true;
-    }
-
-    // ---------- FC logic ----------
-    if (fcCurr !== fcPrev) {
-      const deltaFC = fcCurr - fcPrev;
-      let tempBalanceFC = prevBalanceFC - deltaFC;
-      let finalFC = fcCurr;
-
-      if (tempBalanceFC < 0) {
-        finalFC = fcPrev + prevBalanceFC;
-        tempBalanceFC = 0;
-      }
-
-      // 🔹 Row-level balanceAmtFC update
-      const prevRowBalanceFC = toNum(prevRow.balanceAmtFC);
-      const effectiveDeltaFC = finalFC - fcPrev; // after clamp
-      let newRowBalanceFC = prevRowBalanceFC - effectiveDeltaFC;
-      if (newRowBalanceFC < 0) newRowBalanceFC = 0;
-
-      newBalanceFC = tempBalanceFC;
-
-      // 🔸 always store "0.00" etc (rounded)
-      row.allocatedAmtFC = asStr(finalFC); // ✅ rounded 2 decimals
-      row.balanceAmtFC = asStr(newRowBalanceFC); // ✅ rounded 2 decimals
-
-      fcTouched = true;
-    }
-
-    // 🔹 If nothing effectively changed (no balance change, no clamp), skip setState
-    const balanceHcChanged = hcTouched && newBalanceHC !== prevBalanceHC;
-    const balanceFcChanged = fcTouched && newBalanceFC !== prevBalanceFC;
-
-    const rowActualSame =
-      row.allocatedAmtHC === details[changedIndex].allocatedAmtHC &&
-      row.allocatedAmtFC === details[changedIndex].allocatedAmtFC;
-
-    if (!balanceHcChanged && !balanceFcChanged && rowActualSame) {
-      allocPrevRowsRef.current = details;
-      return;
-    }
-
-    // 🔹 Commit
-    setNewState((prev) => ({
-      ...prev,
-      // header balances: also guarantee "0" instead of empty
-      balanceAmtHc: hcTouched
-        ? asStr(newBalanceHC) // ✅ rounded 2 decimals
-        : prev.balanceAmtHc != null && prev.balanceAmtHc !== ""
-        ? String(prev.balanceAmtHc)
-        : "0.00",
-      balanceAmtFc: fcTouched
-        ? asStr(newBalanceFC) // ✅ rounded 2 decimals
-        : prev.balanceAmtFc != null && prev.balanceAmtFc !== ""
-        ? String(prev.balanceAmtFc)
-        : "0.00",
-      tblVoucherLedgerDetails: working,
+    // Parse rows once for FC values
+    const parsedFC = fcRows.map((r) => ({
+      osAmtFC: toNum(r.OsAmtFC), // opening/bill FC
+      ...parseForCalc(r.allocatedAmtFC), // { n, empty }
+      rawRow: r,
     }));
 
-    allocPrevRowsRef.current = working;
-  }, [newState.tblVoucherLedgerDetails]);
+    // Prefix sum of previous FC allocations
+    const prefixAllocatedFC = new Array(parsedFC.length).fill(0);
+    for (let i = 1; i < parsedFC.length; i++) {
+      prefixAllocatedFC[i] = round2(
+        prefixAllocatedFC[i - 1] + Math.max(0, parsedFC[i - 1].n)
+      );
+    }
 
-  console.log("newState =>", newState);
+    let didChange = false;
 
+    const updatedRows = parsedFC.map((p, i) => {
+      // Remaining FC before this row
+      let remainingBeforeFC = hasFCCap
+        ? round2(amtRecFC - prefixAllocatedFC[i])
+        : Number.POSITIVE_INFINITY;
+      if (!Number.isFinite(remainingBeforeFC) || remainingBeforeFC < 0)
+        remainingBeforeFC = 0;
+
+      // Cap by OS FC only if > 0
+      const osCapFC = p.osAmtFC > 0 ? p.osAmtFC : Number.POSITIVE_INFINITY;
+
+      // Allowed allocation for this row
+      const allowedFC = Math.max(0, Math.min(osCapFC, remainingBeforeFC));
+
+      let adjustedAllocFC = p.n;
+      let mutatedAllocFC = false;
+
+      if (adjustedAllocFC < 0) {
+        adjustedAllocFC = 0;
+        mutatedAllocFC = true;
+      } else if ((hasFCCap || p.osAmtFC > 0) && adjustedAllocFC > allowedFC) {
+        adjustedAllocFC = allowedFC; // clamp to remaining
+        mutatedAllocFC = true;
+      }
+
+      // Compute balance FC if OS > 0, otherwise leave as-is
+      const balanceFC =
+        p.osAmtFC > 0
+          ? round2(p.osAmtFC - adjustedAllocFC)
+          : p.rawRow.balanceAmtFC ?? "";
+      const balanceFCStr =
+        typeof balanceFC === "number"
+          ? balanceFC === 0
+            ? "0"
+            : String(balanceFC)
+          : balanceFC;
+
+      const nextRow = { ...p.rawRow };
+
+      // Update balanceAmtFC if changed
+      if (String(nextRow.balanceAmtFC ?? "") !== String(balanceFCStr ?? "")) {
+        nextRow.balanceAmtFC = balanceFCStr;
+        didChange = true;
+      }
+
+      // Only overwrite allocatedAmtFC if we clamped
+      if (mutatedAllocFC) {
+        const allocFCStr =
+          adjustedAllocFC === 0 ? "0" : String(adjustedAllocFC);
+        if (String(nextRow.allocatedAmtFC ?? "") !== allocFCStr) {
+          nextRow.allocatedAmtFC = allocFCStr;
+          didChange = true;
+        }
+      }
+
+      return nextRow;
+    });
+
+    if (didChange) {
+      setNewState((prev) => ({
+        ...prev,
+        tblVoucherLedgerDetails: updatedRows,
+      }));
+    }
+  }, [debouncedFCSig, newState?.amtRecFC]);
+
+  /* =========================
+   * FC GLOBAL BALANCE EFFECT
+   * ========================= */
   useEffect(() => {
-    const details = Array.isArray(newState?.tblVoucherLedgerDetails)
+    const amtRecFC = toNum(newState?.amtRecFC);
+    const fcRows = Array.isArray(newState?.tblVoucherLedgerDetails)
       ? newState.tblVoucherLedgerDetails
       : [];
 
-    // No rows → reset snapshot and exit
-    if (!details.length) {
-      autoPrevRef.current = [];
-      return;
-    }
-
-    const toNum = (v) => {
-      if (v === null || v === undefined || v === "") return 0;
-      const n = Number(String(v).replace(/,/g, ""));
-      return isNaN(n) ? 0 : n;
-    };
-
-    // ✅ round to 2 decimals (numeric)
-    const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
-
-    // ✅ convert to string with 2 decimals
-    const asStr = (n) => round2(n).toFixed(2);
-
-    const prevAuto = autoPrevRef.current || [];
-    const maxLen = Math.max(details.length, prevAuto.length);
-
-    // 🔹 Find which row's autoSetAllocatedAmount changed
-    let changedIndex = -1;
-
-    for (let i = 0; i < maxLen; i++) {
-      const currVal = details[i]?.autoSetAllocatedAmount ?? "";
-      const prevVal = prevAuto[i] ?? "";
-
-      if (currVal !== prevVal) {
-        changedIndex = i;
-        break;
-      }
-    }
-
-    // 🔹 Update snapshot for next time
-    autoPrevRef.current = details.map(
-      (row) => row?.autoSetAllocatedAmount ?? ""
+    const totalAllocatedFC = round2(
+      fcRows.reduce((sum, r) => sum + toNum(r?.allocatedAmtFC), 0)
     );
+    if (Number.isNaN(amtRecFC) || Number.isNaN(totalAllocatedFC)) return;
 
-    // nothing changed → exit
-    if (changedIndex === -1) return;
+    let remainingFC = round2(amtRecFC - totalAllocatedFC);
+    if (remainingFC < 0) remainingFC = 0;
 
-    const changedRow = details[changedIndex];
-    if (!changedRow) return;
+    const remainingFCStr = remainingFC === 0 ? "0" : String(remainingFC);
 
-    // Treat truthy as ON, falsy as OFF
-    const isAutoOn = !!changedRow.autoSetAllocatedAmount;
-
-    let newAllocHCStr = "";
-    let newAllocFCStr = "";
-
-    if (isAutoOn) {
-      // ---------- AUTO ON ----------
-      // allocatedAmtHC = OsAmtFC
-      // allocatedAmtFC = OsAmtHC
-      const osAmtFC = toNum(changedRow.OsAmtFC ?? changedRow.osAmtFC);
-      const osAmtHC = toNum(changedRow.OsAmtHC ?? changedRow.osAmtHC);
-
-      newAllocHCStr = osAmtFC ? asStr(osAmtFC) : ""; // ✅ rounded
-      newAllocFCStr = osAmtHC ? asStr(osAmtHC) : ""; // ✅ rounded
-    } else {
-      // ---------- AUTO OFF ----------
-      // empty both allocated fields
-      newAllocHCStr = "";
-      newAllocFCStr = "";
+    if (newState?.balanceAmtFc !== remainingFCStr) {
+      setNewState((prev) => ({
+        ...prev,
+        balanceAmtFc: remainingFCStr,
+      }));
     }
+  }, [newState?.amtRecFC, newState?.tblVoucherLedgerDetails]);
 
-    const currAllocHCStr =
-      changedRow.allocatedAmtHC != null
-        ? String(changedRow.allocatedAmtHC)
-        : "";
-    const currAllocFCStr =
-      changedRow.allocatedAmtFC != null
-        ? String(changedRow.allocatedAmtFC)
-        : "";
-
-    // If nothing actually changed, skip setState
-    if (currAllocHCStr === newAllocHCStr && currAllocFCStr === newAllocFCStr) {
-      return;
-    }
-
-    // Build updated array (do not mutate original details)
-    const working = details.map((row, idx) =>
-      idx === changedIndex
-        ? {
-            ...row,
-            allocatedAmtHC: newAllocHCStr,
-            allocatedAmtFC: newAllocFCStr,
-          }
-        : row
-    );
-
-    // 🔹 Commit
-    setNewState((prev) => ({
-      ...prev,
-      tblVoucherLedgerDetails: working,
-    }));
-  }, [newState.tblVoucherLedgerDetails]);
-
-  // Total of voucher ledger Details
+  /* =========================
+   * TOTALS (HC + FC)
+   * ========================= */
   useEffect(() => {
+    console.log(
+      "newState?.tblVoucherLedgerDetails",
+      newState?.tblVoucherLedgerDetails
+    );
     const list = newState?.tblVoucherLedgerDetails ?? [];
     if (!list.length) return;
 
@@ -559,82 +451,181 @@ export default function VoucherBankReceiptAdd() {
       tdsAmtHC: sumField("tdsAmtHC").toFixed(2),
     });
   }, [newState?.tblVoucherLedgerDetails]);
+  //omkar
+  const lastCreditTotalRef = useRef(0);
+  const lastDebitTotalRef = useRef(0);
 
-  const ledgerWatch = (newState?.tblVoucherLedger ?? [])
-    .map((r) =>
-      [
-        r?.debitAmount ?? "",
-        r?.creditAmount ?? "",
-        r?.debitAmountFc ?? "",
-        r?.creditAmountFc ?? "",
-        r?.glId ?? "",
-        r?.indexValue ?? "",
-      ].join("|")
-    )
-    .join("§");
-
-  // Total of voucher ledger
   useEffect(() => {
-    const details = Array.isArray(newState?.tblVoucherLedger)
-      ? newState.tblVoucherLedger
-      : [];
+    const list = newState?.tblVoucherLedger ?? [];
+
+    // When list is empty, reset refs and exit
+    if (!list.length) {
+      lastCreditTotalRef.current = 0;
+      lastDebitTotalRef.current = 0;
+      return;
+    }
 
     const toNum = (v) =>
-      v == null || v === "" ? 0 : Number(String(v).replace(/,/g, "")) || 0;
-    const sum = (field) => details.reduce((s, r) => s + toNum(r?.[field]), 0);
+      v === null || v === undefined ? 0 : parseFloat(v) || 0;
 
-    const nextTotals = {
-      debitAmount: sum("debitAmount").toFixed(2),
-      creditAmount: sum("creditAmount").toFixed(2),
-      debitAmountFc: sum("debitAmountFc").toFixed(2),
-      creditAmountFc: sum("creditAmountFc").toFixed(2),
+    const totalCredit = list.reduce((sum, r) => sum + toNum(r.creditAmount), 0);
+    const totalDebit = list.reduce((sum, r) => sum + toNum(r.debitAmount), 0);
+
+    const deltaCredit = totalCredit - lastCreditTotalRef.current; // add
+    const deltaDebit = totalDebit - lastDebitTotalRef.current; // subtract
+    const netDelta = deltaCredit - deltaDebit;
+
+    if (netDelta !== 0) {
+      setNewState((prev) => {
+        const prevBal = toNum(prev.balanceAmtHc);
+        const newBal = prevBal + netDelta; // credit adds, debit subtracts
+        return { ...prev, balanceAmtHc: newBal.toString() };
+      });
+    }
+
+    // update refs after applying
+    lastCreditTotalRef.current = totalCredit;
+    lastDebitTotalRef.current = totalDebit;
+  }, [JSON.stringify(newState?.tblVoucherLedger)]);
+
+  //omkar
+  useEffect(() => {
+    console.log("newState?.tblVoucherLedger", newState?.tblVoucherLedger);
+    if (newState?.tblVoucherLedger?.length) {
+      const details = newState.tblVoucherLedger;
+
+      // Utility function to sum a field safely
+      const sumField = (field) =>
+        details.reduce((sum, row) => sum + (parseFloat(row[field]) || 0), 0);
+
+      setVoucherLedgerTotals({
+        debitAmount: sumField("debitAmount").toFixed(2),
+        creditAmount: sumField("creditAmount").toFixed(2),
+        debitAmountFc: sumField("debitAmountFc").toFixed(2),
+        creditAmountFc: sumField("creditAmountFc").toFixed(2),
+      });
+    }
+  }, [newState]);
+
+  //Setting allocated amount
+  const rows = newState?.tblVoucherLedgerDetails ?? [];
+
+  // Build a signature so the effect runs when any relevant field changes
+  const allocSig = useMemo(
+    () =>
+      rows
+        .map((r) => {
+          const key = r.id ?? r.indexValue ?? "";
+          const auto = r.autoSetAllocatedAmount ? 1 : 0;
+          return `${key}:${auto}:${r.OsAmtFC ?? ""}:${r.OsAmtHC ?? ""}`;
+        })
+        .join("|"),
+    [rows]
+  );
+
+  useEffect(() => {
+    if (!rows.length) return;
+
+    const toNumOrNull = (v) => {
+      if (v === null || v === undefined || v === "") return null;
+      const n = Number(String(v).replace(/,/g, ""));
+      return Number.isFinite(n) ? n : null;
     };
 
-    // avoid extra renders if nothing actually changed
-    setVoucherLedgerTotals((prev) => {
-      if (
-        prev.debitAmount === nextTotals.debitAmount &&
-        prev.creditAmount === nextTotals.creditAmount &&
-        prev.debitAmountFc === nextTotals.debitAmountFc &&
-        prev.creditAmountFc === nextTotals.creditAmountFc
-      )
-        return prev;
-      return nextTotals;
+    let changed = false;
+
+    const nextRows = rows.map((r) => {
+      const targetFC = r.autoSetAllocatedAmount ? toNumOrNull(r.OsAmtFC) : null;
+      const targetHC = r.autoSetAllocatedAmount ? toNumOrNull(r.OsAmtHC) : null;
+
+      const curFC = r.allocatedAmtFC ?? null;
+      const curHC = r.allocatedAmtHC ?? null;
+
+      if (curFC !== targetFC || curHC !== targetHC) {
+        changed = true;
+        return { ...r, allocatedAmtFC: targetFC, allocatedAmtHC: targetHC };
+      }
+      return r;
     });
 
-    console.log("[totals effect] hit; rows =", details.length);
-  }, [ledgerWatch]);
-
-  useEffect(() => {
-    const v = newState?.tdsApplicable;
-
-    // No action if not set yet
-    if (v === undefined || v === null || v === "") return;
-
-    const isTrue = v === true || v === "true" || v === 1 || v === "1";
-    const isFalse = v === false || v === "false" || v === 0 || v === "0";
-
-    if (isTrue) {
-      setChildsFields(isTdsApplicable);
-      setParentsFields(parentFieldIsTdsApplied);
-      setDisplayField(true);
-    } else if (isFalse) {
-      setChildsFields(isTdsNotApplicable);
-      setParentsFields(parentFieldIsTdsNotApplied);
+    if (changed) {
       setNewState((prev) => ({
         ...prev,
-        tdsAmt: null,
-        tdsAmtFC: null,
+        tblVoucherLedgerDetails: nextRows,
       }));
-      setDisplayField(false);
     }
-  }, [newState?.tdsApplicable]);
+  }, [allocSig]);
+  //Setting allocated amount
+
+  // //Setting currency
+  useEffect(() => {
+    // already set (by user or earlier)? do nothing
+    if (newState?.currencyId) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const requestBody = {
+          columns: "cp.currencyId, md.code",
+          tableName:
+            "tblCompanyParameter cp Left Join tblMasterData md on md.id = cp.currencyId",
+          whereCondition: `cp.status = 1 and cp.clientId = ${clientId}`,
+          clientIdCondition: `cp.companyId = ${companyId} FOR JSON PATH`,
+        };
+
+        const response = await fetchReportData(requestBody);
+        const row = Array.isArray(response?.data) ? response.data[0] : null;
+
+        if (!cancelled && row?.currencyId) {
+          // set only if still missing (don’t overwrite user changes)
+          setNewState((prev) =>
+            prev?.currencyId
+              ? prev
+              : {
+                  ...prev,
+                  currencyId: row.currencyId,
+                  currencyIddropdown: row.code,
+                }
+          );
+        }
+      } catch (err) {
+        console.error("fetchReportData failed:", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clientId, companyId]); // run on mount / when ids change
+
+  //Setting currency
+
+  //Set Voucher Date
+  const todayStr = () => {
+    const d = new Date(); // local (IST)
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const didInitRef = useRef(false);
 
   useEffect(() => {
-    const getCurrencyId = (s) =>
-      s?.currencyId ?? s?.currencyIddropdown?.[0]?.value ?? null;
-    const norm = (v) => (v == null ? "" : String(v).trim());
+    if (didInitRef.current) return; // run only once
+    setNewState((prev) =>
+      prev?.voucherDate ? prev : { ...prev, voucherDate: todayStr() }
+    );
+    didInitRef.current = true;
+  }, []);
 
+  const getCurrencyId = (s) =>
+    s?.currencyId ?? s?.currencyIddropdown?.[0]?.value ?? null;
+  const norm = (v) => (v == null ? "" : String(v).trim());
+  const prevCidRef = useRef(""); // stores the last *normalized* currencyId we acted on
+
+  useEffect(() => {
     let active = true;
 
     const run = async () => {
@@ -673,10 +664,6 @@ export default function VoucherBankReceiptAdd() {
 
           if (dbCurrencyId === cid) {
             setParentsFields(sameCurrencyHideField);
-            setNewState((prev) => ({
-              ...prev,
-              tdsApplicable: false,
-            }));
           } else {
             setParentsFields(parentFieldIsTdsNotApplied);
           }
@@ -694,6 +681,68 @@ export default function VoucherBankReceiptAdd() {
       active = false;
     };
   }, [newState?.currencyId, newState?.currencyIddropdown]);
+
+  const getLabelValue = (labelValue) => {
+    setLabelName(labelValue);
+  };
+
+  useEffect(() => {
+    const fetchVoucher = async () => {
+      try {
+        const requestBody = {
+          clientId: clientId,
+          glId: newState.paymentByParty,
+        };
+        const result = await getVoucher(requestBody);
+        setVoucher(result.vouchers);
+        if (result.vouchers && result.vouchers.length > 0) {
+          const voucherDataToInsert = result?.vouchers.map(
+            (voucher, index) => ({
+              ...voucher,
+              autoSetAllocatedAmount: false,
+              indexValue: index,
+            })
+          );
+          setNewState((pre) => ({
+            ...pre,
+            tblVoucherLedgerDetails: voucherDataToInsert,
+          }));
+        }
+        console.log("voucher", result.vouchers);
+      } catch (err) {
+        console.error("Error fetching voucher:", err);
+      }
+    };
+
+    if (newState) {
+      fetchVoucher();
+    }
+  }, [newState.paymentByParty]);
+
+  useEffect(() => {
+    const v = newState?.tdsApplicable;
+
+    // No action if not set yet
+    if (v === undefined || v === null || v === "") return;
+
+    const isTrue = v === true || v === "true" || v === 1 || v === "1";
+    const isFalse = v === false || v === "false" || v === 0 || v === "0";
+
+    if (isTrue) {
+      setChildsFields(isTdsApplicable);
+      setParentsFields(parentFieldIsTdsApplied);
+      setDisplayField(true);
+    } else if (isFalse) {
+      setChildsFields(isTdsNotApplicable);
+      setParentsFields(parentFieldIsTdsNotApplied);
+      setNewState((prev) => ({
+        ...prev,
+        tdsAmt: null,
+        tdsAmtFC: null,
+      }));
+      setDisplayField(false);
+    }
+  }, [newState?.tdsApplicable]);
 
   const handleFieldValuesChange = (updatedValues) => {
     const entries = Object.entries(updatedValues);
@@ -829,18 +878,10 @@ export default function VoucherBankReceiptAdd() {
       console.error("Fetch Error :", error);
     }
   };
-
   const handleSubmit = async () => {
     try {
       const { clientId, userId, companyId, branchId, financialYear, emailId } =
         getUserDetails();
-
-      const hasVal = (v) =>
-        v !== null && v !== undefined && String(v).trim() !== "";
-
-      // normalize numbers; keep null if empty
-      const toNumOrNull = (v) =>
-        hasVal(v) ? Number(String(v).replace(/,/g, "").trim()) : null;
 
       for (const [section, fields] of Object.entries(parentsFields)) {
         const missingField = Object.entries(fields).find(
@@ -856,20 +897,6 @@ export default function VoucherBankReceiptAdd() {
         }
       }
 
-      //TaLLy Debit and Credit amounts
-      const tallyDebitCreditRequestBody = {
-        debitAmt: voucherLedgerTotals?.debitAmount,
-        creditAmt: voucherLedgerTotals?.creditAmount,
-      };
-      const tallyDebitCreditData = await tallyDebitCredit(
-        tallyDebitCreditRequestBody
-      );
-      if (tallyDebitCreditData.success != true) {
-        setParaText(tallyDebitCreditData.message);
-        setIsError(false);
-        setOpenModal((prev) => !prev);
-        return;
-      }
       const now = new Date(); // optional, if you want to add createdDate
 
       let insertData = {
@@ -903,21 +930,20 @@ export default function VoucherBankReceiptAdd() {
       }
 
       if (
-        Array.isArray(insertData?.tblVoucherLedgerDetails) &&
-        insertData.tblVoucherLedgerDetails.length
+        insertData &&
+        insertData.tblVoucherLedgerDetails &&
+        insertData.tblVoucherLedgerDetails.length > 0
       ) {
-        insertData.tblVoucherLedgerDetails = insertData.tblVoucherLedgerDetails
-          .filter((d) => hasVal(d?.allocatedAmtFC) || hasVal(d?.allocatedAmtHC))
-          .map((item) => ({
+        insertData.tblVoucherLedgerDetails =
+          insertData.tblVoucherLedgerDetails.map((item) => ({
             ...item,
-            allocatedAmtFC: toNumOrNull(item.allocatedAmtFC),
-            allocatedAmtHC: toNumOrNull(item.allocatedAmtHC),
             clientId,
             createdBy: userId,
             companyId,
             companyBranchId: branchId,
             financialYearId: financialYear,
             tdsApp: true,
+            // createdDate: now, // optional
           }));
       }
 
@@ -952,13 +978,22 @@ export default function VoucherBankReceiptAdd() {
     push("/voucher/bankReceipt");
   };
 
-  const getLabelValue = (labelValue) => {
-    setLabelName(labelValue);
-  };
-
   return (
     <>
       <div className="overflow-y-auto overflow-x-hidden h-[90vh] [scrollbar-gutter:stable] pr-2">
+        {/* <button
+            className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
+            type="button"
+            onClick={() => handleSubmit()}
+          >
+            {"Submit"}
+          </button>
+          <button
+            className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
+            type="Close"
+          >
+            {"Close"}
+          </button> */}
         <div className="flex justify-between items-center w-full">
           {/* Left buttons */}
           <div className="flex gap-2">
@@ -1050,7 +1085,6 @@ export default function VoucherBankReceiptAdd() {
                   getLabelValue={getLabelValue}
                   hideColumnsId={hideFieldName}
                   isView={isView}
-                  setBankExTrigger={setBankExTrigger}
                 />
               </React.Fragment>
             );
@@ -1173,18 +1207,6 @@ export default function VoucherBankReceiptAdd() {
           ))}
         </div>
       </div>
-      <div>
-        {openModal && (
-          <CustomeModal
-            setOpenModal={setOpenModal}
-            openModal={openModal}
-            onConfirm={onConfirm}
-            isError={isError}
-            paraText={paraText}
-            labelValue={""}
-          />
-        )}
-      </div>
     </>
   );
 }
@@ -1211,7 +1233,6 @@ ParentAccordianComponent.propTypes = {
   hideColumnsId: PropTypes.any,
   getLabelValue: PropTypes.any,
   isView: PropTypes.any,
-  setBankExTrigger: PropTypes.any,
 };
 
 function ParentAccordianComponent({
@@ -1236,7 +1257,6 @@ function ParentAccordianComponent({
   getLabelValue,
   hideColumnsId,
   isView,
-  setBankExTrigger,
 }) {
   const [isParentAccordionOpen, setIsParentAccordionOpen] = useState(false);
   const [fieldId, setFieldId] = useState([]);
@@ -1276,10 +1296,6 @@ function ParentAccordianComponent({
         ...data,
       };
     });
-  }
-
-  function handleFunctionOnChange() {
-    alert("alert data");
   }
   function handleBlurFunction(result) {
     if (result.isCheck === false) {
@@ -1348,7 +1364,6 @@ function ParentAccordianComponent({
               inEditMode={{ isEditMode: false, isCopy: true }}
               onChangeHandler={(result) => {
                 handleChangeFunction(result);
-                //handleFunctionOnChange();
                 //                console.log("result---", result);
               }}
               onBlurHandler={(result) => {
@@ -1363,7 +1378,6 @@ function ParentAccordianComponent({
               getLabelValue={getLabelValue}
               hideColumnsId={fieldId}
               isView={isView}
-              setBankExTrigger={setBankExTrigger}
             />
           </div>
         </AccordionDetails>
@@ -2733,607 +2747,607 @@ function ChildAccordianComponent({
 }
 
 const isTdsApplicable = [
-  {
-    id: 1614,
-    formName: "Invoice",
-    childHeading: "Invoice",
-    tableName: "tblVoucherLedgerDetails",
-    isAttachmentRequired: "true",
-    isCopyForSameTable: "true",
-    functionOnLoad: null,
-    functionOnSubmit: null,
-    functionOnEdit: null,
-    functionOnDelete: null,
-    searchApi: null,
-    searchApiFields: null,
-    clientId: 1,
-    functionOnAdd: null,
-    isHideGrid: "false",
-    isHideGridHeader: false,
-    isGridExpandOnLoad: false,
-    buttons: [],
-    fields: [
-      {
-        id: 856534,
-        fieldname: "autoSetAllocatedAmount",
-        yourlabel: "Set Allocation",
-        controlname: "checkbox",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: false,
-        copyMappingName: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: false,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        hyperlinkValue: null,
-        referenceColumn: null,
-        type: 6903,
-        typeValue: "boolean",
-        size: "100",
-        ordering: 1,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: true,
-        isSwitchToText: true,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: "getAutoAllocateAmount()",
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        isEditableMode: "b",
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: true,
-        position: "Top",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29116,
-        fieldname: "invoiceIds",
-        yourlabel: "Invoice No",
-        controlname: "dropdown",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: "tblVoucher",
-        referenceColumn: "voucherNo",
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 2,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: false,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29118,
-        fieldname: "invoiceDate",
-        yourlabel: "Invoice Date",
-        controlname: "date",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "date",
-        size: "100",
-        ordering: 4,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: false,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: "",
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29119,
-        fieldname: "OsAmtFC",
-        yourlabel: "O/s Amt FC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 5,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: false,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: "",
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29120,
-        fieldname: "OsAmtHC",
-        yourlabel: "O/s Amt HC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 6,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: false,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29121,
-        fieldname: "exchangeRate",
-        yourlabel: "Ex. Rate",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 7,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: false,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29121,
-        fieldname: "allocatedAmtFC",
-        yourlabel: "Allocated Amt FC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 7,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: true,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29121,
-        fieldname: "allocatedAmtHC",
-        yourlabel: "Allocated Amt HC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 7,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: true,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29121,
-        fieldname: "tdsAmtFC",
-        yourlabel: "TDS Amt FC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 7,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: true,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: "getAutoAllocateAmount()",
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-        columnsToBeVisible: true,
-      },
-      {
-        id: 29121,
-        fieldname: "tdsAmtHC",
-        yourlabel: "TDS Amt HC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 7,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: true,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: "getAutoAllocateAmount()",
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-        columnsToBeVisible: true,
-      },
-      {
-        id: 29121,
-        fieldname: "balanceAmtFC",
-        yourlabel: "Balance Amt FC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 7,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: false,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29121,
-        fieldname: "balanceAmtHC",
-        yourlabel: "Balance Amt HC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6706,
-        typeValue: "decimal",
-        size: "100",
-        ordering: 7,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: true,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-    ],
-    subChild: [],
-  },
+  // {
+  //   id: 1614,
+  //   formName: "Invoice",
+  //   childHeading: "Invoice",
+  //   tableName: "tblVoucherLedgerDetails",
+  //   isAttachmentRequired: "true",
+  //   isCopyForSameTable: "true",
+  //   functionOnLoad: null,
+  //   functionOnSubmit: null,
+  //   functionOnEdit: null,
+  //   functionOnDelete: null,
+  //   searchApi: null,
+  //   searchApiFields: null,
+  //   clientId: 1,
+  //   functionOnAdd: null,
+  //   isHideGrid: "false",
+  //   isHideGridHeader: false,
+  //   isGridExpandOnLoad: false,
+  //   buttons: [],
+  //   fields: [
+  //     {
+  //       id: 856534,
+  //       fieldname: "autoSetAllocatedAmount",
+  //       yourlabel: "Set Allocation",
+  //       controlname: "checkbox",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: false,
+  //       copyMappingName: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: false,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       hyperlinkValue: null,
+  //       referenceColumn: null,
+  //       type: 6903,
+  //       typeValue: "boolean",
+  //       size: "100",
+  //       ordering: 1,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: true,
+  //       isSwitchToText: true,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       isEditableMode: "b",
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: true,
+  //       position: "Top",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29116,
+  //       fieldname: "invoiceIds",
+  //       yourlabel: "Invoice No",
+  //       controlname: "dropdown",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: "tblVoucher",
+  //       referenceColumn: "voucherNo",
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 2,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: false,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29118,
+  //       fieldname: "invoiceDate",
+  //       yourlabel: "Invoice Date",
+  //       controlname: "date",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "date",
+  //       size: "100",
+  //       ordering: 4,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: false,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: "",
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29119,
+  //       fieldname: "OsAmtFC",
+  //       yourlabel: "O/s Amt FC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 5,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: false,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: "",
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29120,
+  //       fieldname: "OsAmtHC",
+  //       yourlabel: "O/s Amt HC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 6,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: false,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29121,
+  //       fieldname: "exchangeRate",
+  //       yourlabel: "Ex. Rate",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 7,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: false,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29121,
+  //       fieldname: "allocatedAmtFC",
+  //       yourlabel: "Allocated Amt FC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 7,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: true,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29121,
+  //       fieldname: "allocatedAmtHC",
+  //       yourlabel: "Allocated Amt HC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 7,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: true,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29121,
+  //       fieldname: "tdsAmtFC",
+  //       yourlabel: "TDS Amt FC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 7,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: true,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //       columnsToBeVisible: true,
+  //     },
+  //     {
+  //       id: 29121,
+  //       fieldname: "tdsAmtHC",
+  //       yourlabel: "TDS Amt HC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 7,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: true,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //       columnsToBeVisible: true,
+  //     },
+  //     {
+  //       id: 29121,
+  //       fieldname: "balanceAmtFC",
+  //       yourlabel: "Balance Amt FC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 7,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: false,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29121,
+  //       fieldname: "balanceAmtHC",
+  //       yourlabel: "Balance Amt HC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6706,
+  //       typeValue: "decimal",
+  //       size: "100",
+  //       ordering: 7,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: true,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //   ],
+  //   subChild: [],
+  // },
   {
     id: 1614,
     formName: "",
@@ -3388,7 +3402,7 @@ const isTdsApplicable = [
           "setVoucher(glId);getVoucherParty(glId);setGeneralLedgerName()",
         functionOnBlur: null,
         functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
+        sectionHeader: "Journal Voucher",
         sectionOrder: 2,
         isCopy: true,
         isCopyEditable: false,
@@ -3436,7 +3450,7 @@ const isTdsApplicable = [
         functionOnChange: null,
         functionOnBlur: null,
         functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
+        sectionHeader: "Journal Voucher",
         sectionOrder: 2,
         isCopy: true,
         isCopyEditable: false,
@@ -3470,7 +3484,7 @@ const isTdsApplicable = [
         referenceTable: null,
         referenceColumn: null,
         type: 6653,
-        typeValue: "decimal",
+        typeValue: "number",
         size: "100",
         ordering: 4,
         gridTotal: false,
@@ -3485,7 +3499,7 @@ const isTdsApplicable = [
         functionOnChange: "",
         functionOnBlur: null,
         functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
+        sectionHeader: "Journal Voucher",
         sectionOrder: 2,
         isCopy: true,
         isCopyEditable: false,
@@ -3518,7 +3532,7 @@ const isTdsApplicable = [
         referenceTable: null,
         referenceColumn: null,
         type: 6653,
-        typeValue: "decimal",
+        typeValue: "number",
         size: "100",
         ordering: 5,
         gridTotal: false,
@@ -3533,7 +3547,7 @@ const isTdsApplicable = [
         functionOnChange: "",
         functionOnBlur: null,
         functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
+        sectionHeader: "Journal Voucher",
         sectionOrder: 2,
         isCopy: true,
         isCopyEditable: false,
@@ -3566,7 +3580,7 @@ const isTdsApplicable = [
         referenceTable: null,
         referenceColumn: null,
         type: 6653,
-        typeValue: "decimal",
+        typeValue: "number",
         size: "100",
         ordering: 6,
         gridTotal: false,
@@ -3581,7 +3595,7 @@ const isTdsApplicable = [
         functionOnChange: null,
         functionOnBlur: null,
         functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
+        sectionHeader: "Journal Voucher",
         sectionOrder: 2,
         isCopy: true,
         isCopyEditable: false,
@@ -3614,7 +3628,7 @@ const isTdsApplicable = [
         referenceTable: null,
         referenceColumn: null,
         type: 6653,
-        typeValue: "decimal",
+        typeValue: "number",
         size: "100",
         ordering: 7,
         gridTotal: false,
@@ -3629,7 +3643,7 @@ const isTdsApplicable = [
         functionOnChange: null,
         functionOnBlur: null,
         functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
+        sectionHeader: "Journal Voucher",
         sectionOrder: 2,
         isCopy: true,
         isCopyEditable: false,
@@ -3650,509 +3664,509 @@ const isTdsApplicable = [
 ];
 
 const isTdsNotApplicable = [
-  {
-    id: 1614,
-    formName: "Invoice",
-    childHeading: "Invoice",
-    tableName: "tblVoucherLedgerDetails",
-    isAttachmentRequired: "true",
-    isCopyForSameTable: "true",
-    functionOnLoad: null,
-    functionOnSubmit: null,
-    functionOnEdit: null,
-    functionOnDelete: null,
-    searchApi: null,
-    searchApiFields: null,
-    clientId: 1,
-    functionOnAdd: null,
-    isHideGrid: "false",
-    isHideGridHeader: false,
-    isGridExpandOnLoad: false,
-    buttons: [],
-    fields: [
-      {
-        id: 856531,
-        fieldname: "autoSetAllocatedAmount",
-        yourlabel: "Set Allocation",
-        controlname: "checkbox",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: false,
-        copyMappingName: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: false,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        hyperlinkValue: null,
-        referenceColumn: null,
-        type: 6903,
-        typeValue: "boolean",
-        size: "100",
-        ordering: 1,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: true,
-        isSwitchToText: true,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        isEditableMode: "e",
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: true,
-        position: "Top",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29116,
-        fieldname: "invoiceIds",
-        yourlabel: "Invoice No",
-        controlname: "dropdown",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: "tblVoucher",
-        referenceColumn: "voucherNo",
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 2,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: false,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29118,
-        fieldname: "invoiceDate",
-        yourlabel: "Invoice Date",
-        controlname: "date",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "date",
-        size: "100",
-        ordering: 4,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: false,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: "",
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29119,
-        fieldname: "OsAmtFC",
-        yourlabel: "O/s Amt FC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 5,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: false,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: "",
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29120,
-        fieldname: "OsAmtHC",
-        yourlabel: "O/s Amt HC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 6,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: false,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29121,
-        fieldname: "exchangeRate",
-        yourlabel: "Ex. Rate",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 7,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: false,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29121,
-        fieldname: "allocatedAmtFC",
-        yourlabel: "Allocated Amt FC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 7,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: true,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29121,
-        fieldname: "allocatedAmtHC",
-        yourlabel: "Allocated Amt HC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 7,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: true,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29121,
-        fieldname: "balanceAmtFC",
-        yourlabel: "Balance Amt FC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6653,
-        typeValue: "number",
-        size: "100",
-        ordering: 7,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: false,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-      {
-        id: 29121,
-        fieldname: "balanceAmtHC",
-        yourlabel: "Balance Amt HC",
-        controlname: "number",
-        isControlShow: true,
-        isGridView: true,
-        isDataFlow: true,
-        copyMappingName: null,
-        hyperlinkValue: null,
-        isCommaSeparatedOrCount: null,
-        isAuditLog: true,
-        keyToShowOnGrid: null,
-        isDummy: false,
-        dropDownValues: null,
-        referenceTable: null,
-        referenceColumn: null,
-        type: 6706,
-        typeValue: "decimal",
-        size: "100",
-        ordering: 7,
-        gridTotal: false,
-        gridTypeTotal: null,
-        toolTipMessage: null,
-        isRequired: false,
-        isEditable: true,
-        isSwitchToText: false,
-        isBreak: false,
-        dropdownFilter: null,
-        controlDefaultValue: null,
-        functionOnChange: null,
-        functionOnBlur: null,
-        functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
-        sectionOrder: 2,
-        isCopy: true,
-        isCopyEditable: false,
-        isEditableMode: "b",
-        position: "bottom",
-        isHideGrid: false,
-        isHideGridHeader: false,
-        isGridExpandOnLoad: false,
-        clientId: 1,
-        isColumnVisible: null,
-        isColumnDisabled: null,
-        columnsToDisabled: null,
-        columnsToHide: null,
-      },
-    ],
-    subChild: [],
-  },
+  // {
+  //   id: 1614,
+  //   formName: "Invoice",
+  //   childHeading: "Invoice",
+  //   tableName: "tblVoucherLedgerDetails",
+  //   isAttachmentRequired: "true",
+  //   isCopyForSameTable: "true",
+  //   functionOnLoad: null,
+  //   functionOnSubmit: null,
+  //   functionOnEdit: null,
+  //   functionOnDelete: null,
+  //   searchApi: null,
+  //   searchApiFields: null,
+  //   clientId: 1,
+  //   functionOnAdd: null,
+  //   isHideGrid: "false",
+  //   isHideGridHeader: false,
+  //   isGridExpandOnLoad: false,
+  //   buttons: [],
+  //   fields: [
+  //     {
+  //       id: 856531,
+  //       fieldname: "autoSetAllocatedAmount",
+  //       yourlabel: "Set Allocation",
+  //       controlname: "checkbox",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: false,
+  //       copyMappingName: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: false,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       hyperlinkValue: null,
+  //       referenceColumn: null,
+  //       type: 6903,
+  //       typeValue: "boolean",
+  //       size: "100",
+  //       ordering: 1,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: true,
+  //       isSwitchToText: true,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       isEditableMode: "e",
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: true,
+  //       position: "Top",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29116,
+  //       fieldname: "invoiceIds",
+  //       yourlabel: "Invoice No",
+  //       controlname: "dropdown",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: "tblVoucher",
+  //       referenceColumn: "voucherNo",
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 2,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: false,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29118,
+  //       fieldname: "invoiceDate",
+  //       yourlabel: "Invoice Date",
+  //       controlname: "date",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "date",
+  //       size: "100",
+  //       ordering: 4,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: false,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: "",
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29119,
+  //       fieldname: "OsAmtFC",
+  //       yourlabel: "O/s Amt FC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 5,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: false,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: "",
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29120,
+  //       fieldname: "OsAmtHC",
+  //       yourlabel: "O/s Amt HC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 6,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: false,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29121,
+  //       fieldname: "exchangeRate",
+  //       yourlabel: "Ex. Rate",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 7,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: false,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29121,
+  //       fieldname: "allocatedAmtFC",
+  //       yourlabel: "Allocated Amt FC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 7,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: true,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29121,
+  //       fieldname: "allocatedAmtHC",
+  //       yourlabel: "Allocated Amt HC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 7,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: true,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29121,
+  //       fieldname: "balanceAmtFC",
+  //       yourlabel: "Balance Amt FC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6653,
+  //       typeValue: "number",
+  //       size: "100",
+  //       ordering: 7,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: false,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //     {
+  //       id: 29121,
+  //       fieldname: "balanceAmtHC",
+  //       yourlabel: "Balance Amt HC",
+  //       controlname: "number",
+  //       isControlShow: true,
+  //       isGridView: true,
+  //       isDataFlow: true,
+  //       copyMappingName: null,
+  //       hyperlinkValue: null,
+  //       isCommaSeparatedOrCount: null,
+  //       isAuditLog: true,
+  //       keyToShowOnGrid: null,
+  //       isDummy: false,
+  //       dropDownValues: null,
+  //       referenceTable: null,
+  //       referenceColumn: null,
+  //       type: 6706,
+  //       typeValue: "decimal",
+  //       size: "100",
+  //       ordering: 7,
+  //       gridTotal: false,
+  //       gridTypeTotal: null,
+  //       toolTipMessage: null,
+  //       isRequired: false,
+  //       isEditable: true,
+  //       isSwitchToText: false,
+  //       isBreak: false,
+  //       dropdownFilter: null,
+  //       controlDefaultValue: null,
+  //       functionOnChange: null,
+  //       functionOnBlur: null,
+  //       functionOnKeyPress: null,
+  //       sectionHeader: "Journal Voucher",
+  //       sectionOrder: 2,
+  //       isCopy: true,
+  //       isCopyEditable: false,
+  //       isEditableMode: "b",
+  //       position: "bottom",
+  //       isHideGrid: false,
+  //       isHideGridHeader: false,
+  //       isGridExpandOnLoad: false,
+  //       clientId: 1,
+  //       isColumnVisible: null,
+  //       isColumnDisabled: null,
+  //       columnsToDisabled: null,
+  //       columnsToHide: null,
+  //     },
+  //   ],
+  //   subChild: [],
+  // },
   {
     id: 1614,
     formName: "",
@@ -4207,7 +4221,7 @@ const isTdsNotApplicable = [
           "setVoucher(glId);getVoucherParty(glId);setGeneralLedgerName()",
         functionOnBlur: null,
         functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
+        sectionHeader: "Journal Voucher",
         sectionOrder: 2,
         isCopy: true,
         isCopyEditable: false,
@@ -4255,7 +4269,7 @@ const isTdsNotApplicable = [
         functionOnChange: null,
         functionOnBlur: null,
         functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
+        sectionHeader: "Journal Voucher",
         sectionOrder: 2,
         isCopy: true,
         isCopyEditable: false,
@@ -4289,7 +4303,7 @@ const isTdsNotApplicable = [
         referenceTable: null,
         referenceColumn: null,
         type: 6653,
-        typeValue: "decimal",
+        typeValue: "number",
         size: "100",
         ordering: 4,
         gridTotal: false,
@@ -4304,7 +4318,7 @@ const isTdsNotApplicable = [
         functionOnChange: "",
         functionOnBlur: null,
         functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
+        sectionHeader: "Journal Voucher",
         sectionOrder: 2,
         isCopy: true,
         isCopyEditable: false,
@@ -4337,7 +4351,7 @@ const isTdsNotApplicable = [
         referenceTable: null,
         referenceColumn: null,
         type: 6653,
-        typeValue: "decimal",
+        typeValue: "number",
         size: "100",
         ordering: 5,
         gridTotal: false,
@@ -4352,7 +4366,7 @@ const isTdsNotApplicable = [
         functionOnChange: "",
         functionOnBlur: null,
         functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
+        sectionHeader: "Journal Voucher",
         sectionOrder: 2,
         isCopy: true,
         isCopyEditable: false,
@@ -4385,7 +4399,7 @@ const isTdsNotApplicable = [
         referenceTable: null,
         referenceColumn: null,
         type: 6653,
-        typeValue: "decimal",
+        typeValue: "number",
         size: "100",
         ordering: 6,
         gridTotal: false,
@@ -4400,7 +4414,7 @@ const isTdsNotApplicable = [
         functionOnChange: null,
         functionOnBlur: null,
         functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
+        sectionHeader: "Journal Voucher",
         sectionOrder: 2,
         isCopy: true,
         isCopyEditable: false,
@@ -4433,7 +4447,7 @@ const isTdsNotApplicable = [
         referenceTable: null,
         referenceColumn: null,
         type: 6653,
-        typeValue: "decimal",
+        typeValue: "number",
         size: "100",
         ordering: 7,
         gridTotal: false,
@@ -4448,7 +4462,7 @@ const isTdsNotApplicable = [
         functionOnChange: null,
         functionOnBlur: null,
         functionOnKeyPress: null,
-        sectionHeader: "Bank Receipt",
+        sectionHeader: "Journal Voucher",
         sectionOrder: 2,
         isCopy: true,
         isCopyEditable: false,
@@ -4469,7 +4483,7 @@ const isTdsNotApplicable = [
 ];
 
 const parentFieldIsTdsApplied = {
-  "Bank Receipt": [
+  "Journal Voucher": [
     {
       id: 50102,
       fieldname: "voucherNo",
@@ -4504,7 +4518,7 @@ const parentFieldIsTdsApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -4552,7 +4566,55 @@ const parentFieldIsTdsApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
+      sectionOrder: 1,
+      isCopy: true,
+      isCopyEditable: false,
+      position: "top",
+      isHideGrid: false,
+      isHideGridHeader: false,
+      isGridExpandOnLoad: false,
+      clientId: 1,
+      isColumnVisible: null,
+      isColumnDisabled: null,
+      columnsToDisabled: null,
+      columnsToHide: null,
+    },
+    {
+      id: 50110,
+      fieldname: "paymentByParty",
+      yourlabel: "Party Name",
+      controlname: "dropdown",
+      isControlShow: true,
+      isGridView: true,
+      isDataFlow: true,
+      copyMappingName: null,
+      isCommaSeparatedOrCount: null,
+      isAuditLog: true,
+      keyToShowOnGrid: null,
+      isDummy: false,
+      dropDownValues: null,
+      referenceTable: "tblGeneralLedger",
+      hyperlinkValue: null,
+      referenceColumn: "name",
+      type: 6653,
+      typeValue: "number",
+      size: "100",
+      ordering: 4,
+      gridTotal: false,
+      gridTypeTotal: null,
+      toolTipMessage: null,
+      isRequired: true,
+      isEditable: true,
+      isSwitchToText: false,
+      isBreak: false,
+      dropdownFilter: "and glTypeId in (select id from tblmasterdata where masterlistname = 'tblgltype' and name IN ('BANK','CASH'))",
+      controlDefaultValue: null,
+      functionOnChange: "getVoucherInvoiceDetails(paymentByParty)",
+      functionOnBlur: null,
+      functionOnKeyPress: null,
+      isEditableMode: "b",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -4593,7 +4655,7 @@ const parentFieldIsTdsApplied = {
       isRequired: true,
       isEditable: true,
       isSwitchToText: false,
-      isBreak: false,
+      isBreak: true,
       dropdownFilter:
         "and  glTypeId in (select id from tblmasterdata where masterlistname = 'tblgltype' and name = 'BANK')",
       controlDefaultValue: null,
@@ -4601,7 +4663,7 @@ const parentFieldIsTdsApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -4615,56 +4677,6 @@ const parentFieldIsTdsApplied = {
       columnsToDisabled: null,
       columnsToHide: null,
     },
-    {
-      id: 50110,
-      fieldname: "paymentByParty",
-      yourlabel: "Ledger Name",
-      controlname: "dropdown",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: "tblGeneralLedger",
-      hyperlinkValue: null,
-      referenceColumn: "name",
-      type: 6653,
-      typeValue: "number",
-      size: "100",
-      ordering: 4,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: true,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: true,
-      dropdownFilter:
-        "and glTypeId not in (select id from tblmasterdata where masterlistname = 'tblgltype' and name IN ('BANK','CASH'))",
-      controlDefaultValue: null,
-      functionOnChange:
-        "getVoucherInvoiceDetails(paymentByParty);fetchPartyBalance(paymentByParty);",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      position: "top",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    }, //Done
     {
       id: 50106,
       fieldname: "referenceNo",
@@ -4699,7 +4711,7 @@ const parentFieldIsTdsApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -4747,7 +4759,7 @@ const parentFieldIsTdsApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -4796,7 +4808,7 @@ const parentFieldIsTdsApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -4845,7 +4857,7 @@ const parentFieldIsTdsApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -4894,470 +4906,11 @@ const parentFieldIsTdsApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
       position: "top",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 133,
-      fieldname: "calculationType",
-      controlname: "radio",
-      controlDefaultValue: null,
-      dropdownFilter: null,
-      dropDownValues: "FCHC.FC-HC,HCFC.HC-FC",
-      functionOnBlur: null,
-      functionOnChange: null,
-      functionOnKeyPress: null,
-      isControlShow: true,
-      isEditable: true,
-      isRequired: false,
-      referenceColumn: null,
-      referenceTable: null,
-      toolTipMessage: null,
-      isBreak: true,
-      type: "string",
-      yourlabel: "Calculation Type",
-      ordering: 4,
-    },
-    {
-      id: 29118,
-      fieldname: "amtRecFC",
-      yourlabel: "Bank Amt Rec FC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "number",
-      size: "100",
-      ordering: 4,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "setSameCurrencyHc();setSameCurrencyFc();calculateVoucherAmt(currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt,0.02);",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29119,
-      fieldname: "amtRec",
-      yourlabel: "Bank Amt Rec HC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6706,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 5,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "setSameCurrencyHc();setSameCurrencyFc();calculateVoucherAmt(currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt,0.02)",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 85653,
-      fieldname: "tdsApplicable",
-      yourlabel: "Tds Applicable",
-      controlname: "checkbox",
-      isControlShow: true,
-      isGridView: false,
-      isDataFlow: false,
-      copyMappingName: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: false,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      hyperlinkValue: null,
-      referenceColumn: null,
-      type: 6903,
-      typeValue: "boolean",
-      size: "100",
-      ordering: 1,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: true,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "calculateVoucherAmt(currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt,0.02);",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      isEditableMode: "e",
-      sectionHeader: "Charges",
-      sectionOrder: 2,
-      isCopy: true,
-      isCopyEditable: true,
-      position: "Top",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29120,
-      fieldname: "tdsAmtFC",
-      yourlabel: "TDS Amt FC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6706,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 6,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Charges",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-      columnsToBeVisible: true,
-    },
-    {
-      id: 29121,
-      fieldname: "tdsAmt",
-      yourlabel: "TDS Amt",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6706,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-      columnsToBeVisible: true,
-    },
-    {
-      id: 29121,
-      fieldname: "bankCharges",
-      yourlabel: "Bank Charges",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "checkVoucherDataChanges();setSameCurrencyHc();setSameCurrencyFc();",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29121,
-      fieldname: "exGainLoss",
-      yourlabel: "Ex Gain / Loss",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "setSameCurrencyHc();setSameCurrencyFc();",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29121,
-      fieldname: "balanceAmtFc",
-      yourlabel: "On Account FC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "number",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29121,
-      fieldname: "balanceAmtHc",
-      yourlabel: "On Account HC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6706,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: null,
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
       isHideGrid: false,
       isHideGridHeader: false,
       isGridExpandOnLoad: false,
@@ -5401,7 +4954,7 @@ const parentFieldIsTdsApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -5444,12 +4997,12 @@ const parentFieldIsTdsApplied = {
       isSwitchToText: false,
       isBreak: false,
       dropdownFilter: null,
-      controlDefaultValue: "BANK RECEIPT",
+      controlDefaultValue: "JOURNAL VOUCHER",
       functionOnChange: null,
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -5467,7 +5020,7 @@ const parentFieldIsTdsApplied = {
 };
 
 const parentFieldIsTdsNotApplied = {
-  "Bank Receipt": [
+  "Journal Voucher": [
     {
       id: 50102,
       fieldname: "voucherNo",
@@ -5502,7 +5055,7 @@ const parentFieldIsTdsNotApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -5550,7 +5103,55 @@ const parentFieldIsTdsNotApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
+      sectionOrder: 1,
+      isCopy: true,
+      isCopyEditable: false,
+      position: "top",
+      isHideGrid: false,
+      isHideGridHeader: false,
+      isGridExpandOnLoad: false,
+      clientId: 1,
+      isColumnVisible: null,
+      isColumnDisabled: null,
+      columnsToDisabled: null,
+      columnsToHide: null,
+    },
+    {
+      id: 50110,
+      fieldname: "paymentByParty",
+      yourlabel: "Party Name",
+      controlname: "dropdown",
+      isControlShow: true,
+      isGridView: true,
+      isDataFlow: true,
+      copyMappingName: null,
+      isCommaSeparatedOrCount: null,
+      isAuditLog: true,
+      keyToShowOnGrid: null,
+      isDummy: false,
+      dropDownValues: null,
+      referenceTable: "tblGeneralLedger",
+      hyperlinkValue: null,
+      referenceColumn: "name",
+      type: 6653,
+      typeValue: "number",
+      size: "100",
+      ordering: 4,
+      gridTotal: false,
+      gridTypeTotal: null,
+      toolTipMessage: null,
+      isRequired: true,
+      isEditable: true,
+      isSwitchToText: false,
+      isBreak: false,
+      dropdownFilter: "and glTypeId in (select id from tblmasterdata where masterlistname = 'tblgltype' and name IN ('BANK','CASH'))",
+      controlDefaultValue: null,
+      functionOnChange: "getVoucherInvoiceDetails(paymentByParty)",
+      functionOnBlur: null,
+      functionOnKeyPress: null,
+      isEditableMode: "b",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -5591,7 +5192,7 @@ const parentFieldIsTdsNotApplied = {
       isRequired: true,
       isEditable: true,
       isSwitchToText: false,
-      isBreak: false,
+      isBreak: true,
       dropdownFilter:
         "and glTypeId in (select id from tblmasterdata where masterlistname = 'tblgltype' and name = 'BANK')",
       controlDefaultValue: null,
@@ -5599,7 +5200,7 @@ const parentFieldIsTdsNotApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -5613,55 +5214,6 @@ const parentFieldIsTdsNotApplied = {
       columnsToDisabled: null,
       columnsToHide: null,
     },
-    {
-      id: 50110,
-      fieldname: "paymentByParty",
-      yourlabel: "Ledger Name",
-      controlname: "dropdown",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: "tblGeneralLedger",
-      hyperlinkValue: null,
-      referenceColumn: "name",
-      type: 6653,
-      typeValue: "number",
-      size: "100",
-      ordering: 4,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: true,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: true,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "getVoucherInvoiceDetails(paymentByParty);fetchPartyBalance(paymentByParty)",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      position: "top",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    }, //done
     {
       id: 50106,
       fieldname: "referenceNo",
@@ -5692,11 +5244,11 @@ const parentFieldIsTdsNotApplied = {
       isBreak: false,
       dropdownFilter: null,
       controlDefaultValue: null,
-      functionOnChange: null,
+      functionOnChange: "",
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -5740,11 +5292,11 @@ const parentFieldIsTdsNotApplied = {
       isBreak: false,
       dropdownFilter: null,
       controlDefaultValue: null,
-      functionOnChange: null,
+      functionOnChange: "",
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -5789,11 +5341,11 @@ const parentFieldIsTdsNotApplied = {
       dropdownFilter:
         "and masterListId in (select id from tblMasterList  where name = 'tblChequeType')",
       controlDefaultValue: null,
-      functionOnChange: null,
+      functionOnChange: "",
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -5842,7 +5394,7 @@ const parentFieldIsTdsNotApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -5891,470 +5443,11 @@ const parentFieldIsTdsNotApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
       position: "top",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 133,
-      fieldname: "calculationType",
-      controlname: "radio",
-      controlDefaultValue: null,
-      dropdownFilter: null,
-      dropDownValues: "FCHC.FC-HC,HCFC.HC-FC",
-      functionOnBlur: null,
-      functionOnChange: null,
-      functionOnKeyPress: null,
-      isControlShow: true,
-      isEditable: true,
-      isRequired: false,
-      referenceColumn: null,
-      referenceTable: null,
-      toolTipMessage: null,
-      isBreak: true,
-      type: "string",
-      yourlabel: "Calculation Type",
-      ordering: 4,
-    },
-    {
-      id: 29118,
-      fieldname: "amtRecFC",
-      yourlabel: "Bank Amt Rec FC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "number",
-      size: "100",
-      ordering: 4,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "setSameCurrencyHc();setSameCurrencyFc();calculateVoucherAmt(currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt,0.02)",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29119,
-      fieldname: "amtRec",
-      yourlabel: "Bank Amt Rec HC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6706,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 5,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "calculateVoucherAmt(currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt,0.02)",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt ",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 85653,
-      fieldname: "tdsApplicable",
-      yourlabel: "Tds Applicable",
-      controlname: "checkbox",
-      isControlShow: true,
-      isGridView: false,
-      isDataFlow: false,
-      copyMappingName: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: false,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      hyperlinkValue: null,
-      referenceColumn: null,
-      type: 6903,
-      typeValue: "boolean",
-      size: "100",
-      ordering: 1,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: true,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "calculateVoucherAmt(currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt,0.02);",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      isEditableMode: "e",
-      sectionHeader: "Charges",
-      sectionOrder: 2,
-      isCopy: true,
-      isCopyEditable: true,
-      position: "Top",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29120,
-      fieldname: "tdsAmtFC",
-      yourlabel: "TDS Amt FC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6706,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 6,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Charges",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-      columnsToBeVisible: false,
-    },
-    {
-      id: 29121,
-      fieldname: "tdsAmt",
-      yourlabel: "TDS Amt",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6706,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-      columnsToBeVisible: false,
-    },
-    {
-      id: 29121,
-      fieldname: "bankCharges",
-      yourlabel: "Bank Charges",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "checkVoucherDataChanges();setSameCurrencyHc();setSameCurrencyFc();",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29121,
-      fieldname: "exGainLoss",
-      yourlabel: "Ex Gain / Loss",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "setSameCurrencyHc();setSameCurrencyFc();",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29121,
-      fieldname: "balanceAmtFc",
-      yourlabel: "On Account FC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "number",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29121,
-      fieldname: "balanceAmtHc",
-      yourlabel: "On Account HC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6706,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: null,
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
       isHideGrid: false,
       isHideGridHeader: false,
       isGridExpandOnLoad: false,
@@ -6398,7 +5491,7 @@ const parentFieldIsTdsNotApplied = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -6441,12 +5534,12 @@ const parentFieldIsTdsNotApplied = {
       isSwitchToText: false,
       isBreak: false,
       dropdownFilter: null,
-      controlDefaultValue: "BANK RECEIPT",
+      controlDefaultValue: "JOURNAL VOUCHER",
       functionOnChange: null,
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -6465,61 +5558,34 @@ const parentFieldIsTdsNotApplied = {
 
 const formState = {
   routeName: "mastervalue",
-  voucherTypeId: 9,
-  voucherTypeIddropdown: [
+  paymentBankdropdown: [
     {
-      value: 9,
-      label: "BANK RECEIPT",
+      value: 1554,
+      label: "DESTINATION CHARGES INCOME",
     },
   ],
-  paymentBank: null,
-  bankVoucherLedgerId: null,
-  partyVoucherLedgerId: null,
-  tdsVoucherLedgerId: null,
-  bankChangesVoucherLedgerId: null,
-  exGainLossVoucherLedgerId: null,
-  onAccountVoucherLedgerId: null,
-  tdsApplicable: false,
-  voucherNo: null,
-  voucherDate: null,
-  paymentByParty: null,
+  voucherTypeId: 12,
+  voucherTypeIddropdown: [
+    {
+      value: 12,
+      label: "JOURNAL VOUCHER",
+    },
+  ],
+  paymentBank: 1554,
+  voucherNo:null,
+  voucherDate:null,
+  paymentByParty:null,
+  narration: null,
   referenceNo: null,
   referenceDate: null,
   paymentTypeId: null,
   currencyId: null,
   exchangeRate: null,
-  calculationType: null,
-  amtRecFC: null,
-  amtRec: null,
-  tdsAmtFC: null,
-  tdsAmt: null,
-  bankCharges: null,
-  exGainLoss: null,
-  balanceAmtFc: null,
-  balanceAmtHc: null,
-  narration: null,
   tblVoucherLedger: [],
-  tblVoucherLedgerDetails: [
-    {
-      invoiceIds: null,
-      invoiceDate: null,
-      OsAmtFC: null,
-      OsAmtHC: null,
-      exchangeRate: null,
-      allocatedAmtHC: null,
-      allocatedAmtFC: null,
-      balanceAmtFC: null,
-      balanceAmtHC: null,
-      tdsAmtFC: null,
-      tdsAmtHC: null,
-      invoiceVoucherLedgerId: null,
-      autoSetAllocatedAmount: false,
-    },
-  ],
 };
 
 const sameCurrencyHideField = {
-  "Bank Receipt": [
+  "Journal Voucher": [
     {
       id: 50102,
       fieldname: "voucherNo",
@@ -6554,7 +5620,7 @@ const sameCurrencyHideField = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -6602,7 +5668,55 @@ const sameCurrencyHideField = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
+      sectionOrder: 1,
+      isCopy: true,
+      isCopyEditable: false,
+      position: "top",
+      isHideGrid: false,
+      isHideGridHeader: false,
+      isGridExpandOnLoad: false,
+      clientId: 1,
+      isColumnVisible: null,
+      isColumnDisabled: null,
+      columnsToDisabled: null,
+      columnsToHide: null,
+    },
+    {
+      id: 50110,
+      fieldname: "paymentByParty",
+      yourlabel: "Party Name",
+      controlname: "dropdown",
+      isControlShow: true,
+      isGridView: true,
+      isDataFlow: true,
+      copyMappingName: null,
+      isCommaSeparatedOrCount: null,
+      isAuditLog: true,
+      keyToShowOnGrid: null,
+      isDummy: false,
+      dropDownValues: null,
+      referenceTable: "tblGeneralLedger",
+      hyperlinkValue: null,
+      referenceColumn: "name",
+      type: 6653,
+      typeValue: "number",
+      size: "100",
+      ordering: 4,
+      gridTotal: false,
+      gridTypeTotal: null,
+      toolTipMessage: null,
+      isRequired: true,
+      isEditable: true,
+      isSwitchToText: false,
+      isBreak: false,
+      dropdownFilter: "and glTypeId in (select id from tblmasterdata where masterlistname = 'tblgltype' and name IN ('BANK','CASH'))",
+      controlDefaultValue: null,
+      functionOnChange: "getVoucherInvoiceDetails(paymentByParty)",
+      functionOnBlur: null,
+      functionOnKeyPress: null,
+      isEditableMode: "b",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -6643,7 +5757,7 @@ const sameCurrencyHideField = {
       isRequired: true,
       isEditable: true,
       isSwitchToText: false,
-      isBreak: false,
+      isBreak: true,
       dropdownFilter:
         "and glTypeId in (select id from tblmasterdata where masterlistname = 'tblgltype' and name = 'BANK')",
       controlDefaultValue: null,
@@ -6651,7 +5765,7 @@ const sameCurrencyHideField = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -6665,55 +5779,6 @@ const sameCurrencyHideField = {
       columnsToDisabled: null,
       columnsToHide: null,
     },
-    {
-      id: 50110,
-      fieldname: "paymentByParty",
-      yourlabel: "Ledger Name",
-      controlname: "dropdown",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: "tblGeneralLedger",
-      hyperlinkValue: null,
-      referenceColumn: "name",
-      type: 6653,
-      typeValue: "number",
-      size: "100",
-      ordering: 4,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: true,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: true,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "getVoucherInvoiceDetails(paymentByParty);fetchPartyBalance(paymentByParty)",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      position: "top",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    }, //Done
     {
       id: 50106,
       fieldname: "referenceNo",
@@ -6748,7 +5813,7 @@ const sameCurrencyHideField = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -6796,7 +5861,7 @@ const sameCurrencyHideField = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -6845,7 +5910,7 @@ const sameCurrencyHideField = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -6894,7 +5959,7 @@ const sameCurrencyHideField = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -6943,472 +6008,11 @@ const sameCurrencyHideField = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
       position: "top",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 133,
-      fieldname: "calculationType",
-      controlname: "radio",
-      controlDefaultValue: null,
-      dropdownFilter: null,
-      dropDownValues: "FCHC.FC-HC,HCFC.HC-FC",
-      functionOnBlur: null,
-      functionOnChange: null,
-      functionOnKeyPress: null,
-      isControlShow: true,
-      isEditable: true,
-      isRequired: false,
-      referenceColumn: null,
-      referenceTable: null,
-      toolTipMessage: null,
-      isBreak: true,
-      type: "string",
-      yourlabel: "Calculation Type",
-      ordering: 4,
-    },
-    {
-      id: 29118,
-      fieldname: "amtRecFC",
-      yourlabel: "Bank Amt Rec FC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "number",
-      size: "100",
-      ordering: 4,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "setSameCurrencyHc();setSameCurrencyFc();calculateVoucherAmt(currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt,0.02)",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29119,
-      fieldname: "amtRec",
-      yourlabel: "Bank Amt Rec HC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6706,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 5,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "setSameCurrencyHc();setSameCurrencyFc();calculateVoucherAmt(currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt,0.02)",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt ",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 85653,
-      fieldname: "tdsApplicable",
-      yourlabel: "Tds Applicable",
-      controlname: "checkbox",
-      isControlShow: true,
-      isGridView: false,
-      isDataFlow: false,
-      copyMappingName: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: false,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      hyperlinkValue: null,
-      referenceColumn: null,
-      type: 6903,
-      typeValue: "boolean",
-      size: "100",
-      ordering: 1,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: true,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "calculateVoucherAmt(currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt,0.02);",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      isEditableMode: "e",
-      sectionHeader: "Charges",
-      sectionOrder: 2,
-      isCopy: true,
-      isCopyEditable: true,
-      position: "Top",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29120,
-      fieldname: "tdsAmtFC",
-      yourlabel: "TDS Amt FC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6706,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 6,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Charges",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-      columnsToBeVisible: false,
-    },
-    {
-      id: 29121,
-      fieldname: "tdsAmt",
-      yourlabel: "TDS Amt",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6706,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-      columnsToBeVisible: false,
-    },
-    {
-      id: 29121,
-      fieldname: "bankCharges",
-      yourlabel: "Bank Charges",
-      controlname: "number",
-      isControlShow: true,
-      columnsToBeVisible: false,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange:
-        "checkVoucherDataChanges();setSameCurrencyHc();setSameCurrencyFc();",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29121,
-      fieldname: "exGainLoss",
-      yourlabel: "Ex Gain / Loss",
-      controlname: "number",
-      isControlShow: true,
-      columnsToBeVisible: false,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "setSameCurrencyHc();setSameCurrencyFc();",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29121,
-      fieldname: "balanceAmtFc",
-      yourlabel: "On Account FC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6653,
-      typeValue: "number",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: "",
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
-      isHideGrid: false,
-      isHideGridHeader: false,
-      isGridExpandOnLoad: false,
-      clientId: 1,
-      isColumnVisible: null,
-      isColumnDisabled: null,
-      columnsToDisabled: null,
-      columnsToHide: null,
-    },
-    {
-      id: 29121,
-      fieldname: "balanceAmtHc",
-      yourlabel: "On Account HC",
-      controlname: "number",
-      isControlShow: true,
-      isGridView: true,
-      isDataFlow: true,
-      copyMappingName: null,
-      hyperlinkValue: null,
-      isCommaSeparatedOrCount: null,
-      isAuditLog: true,
-      keyToShowOnGrid: null,
-      isDummy: false,
-      dropDownValues: null,
-      referenceTable: null,
-      referenceColumn: null,
-      type: 6706,
-      typeValue: "decimal",
-      size: "100",
-      ordering: 7,
-      gridTotal: false,
-      gridTypeTotal: null,
-      toolTipMessage: null,
-      isRequired: false,
-      isEditable: true,
-      isSwitchToText: false,
-      isBreak: false,
-      dropdownFilter: null,
-      controlDefaultValue: null,
-      functionOnChange: null,
-      functionOnBlur: null,
-      functionOnKeyPress: null,
-      sectionHeader: "Bank Receipt",
-      sectionOrder: 1,
-      isCopy: true,
-      isCopyEditable: false,
-      isEditableMode: "b",
-      position: "bottom",
       isHideGrid: false,
       isHideGridHeader: false,
       isGridExpandOnLoad: false,
@@ -7452,7 +6056,7 @@ const sameCurrencyHideField = {
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -7495,12 +6099,12 @@ const sameCurrencyHideField = {
       isSwitchToText: false,
       isBreak: false,
       dropdownFilter: null,
-      controlDefaultValue: "BANK RECEIPT",
+      controlDefaultValue: "JOURNAL VOUCHER",
       functionOnChange: null,
       functionOnBlur: null,
       functionOnKeyPress: null,
       isEditableMode: "b",
-      sectionHeader: "Bank Receipt",
+      sectionHeader: "Journal Voucher",
       sectionOrder: 1,
       isCopy: true,
       isCopyEditable: false,
@@ -7516,4 +6120,3 @@ const sameCurrencyHideField = {
     },
   ],
 };
-//last
