@@ -1,118 +1,89 @@
-const numberToWords = (num, currencyCode) => {
-  if (num === 0) return "zero";
+const numberToWords = (num, currencyCode = "INR") => {
+  if (num === null || num === undefined || num === "") return "";
+  const n = Number(num);
+  if (!Number.isFinite(n)) return "";
 
   const currencyData = {
     USD: { currency: "dollars", cents: "cents" },
     EUR: { currency: "euros", cents: "cents" },
     GBP: { currency: "pounds", cents: "pence" },
-    INR: { currency: " ", cents: "paise" },
-    CNY: { currency: "yuan", cents: "fen" },
-    JPY: { currency: "yen", cents: "sen" },
-    RUB: { currency: "rubles", cents: "kopeks" },
-    AED: { currency: "dirhams", cents: "fils" },
-    AUD: { currency: "dollars", cents: "cents" },
-    CAD: { currency: "dollars", cents: "cents" },
-    SGD: { currency: "dollars", cents: "cents" },
-    MXN: { currency: "pesos", cents: "centavos" },
-    BRL: { currency: "reais", cents: "centavos" },
-    ZAR: { currency: "rand", cents: "cents" },
-    SEK: { currency: "kronor", cents: "ore" },
-    NOK: { currency: "kroner", cents: "ore" },
-    DKK: { currency: "kroner", cents: "ore" },
-    PLN: { currency: "zloty", cents: "groszy" },
-    CHF: { currency: "francs", cents: "rappen" },
-    THB: { currency: "baht", cents: "satang" },
-    MYR: { currency: "ringgit", cents: "sen" },
-    IDR: { currency: "rupiah", cents: "sen" },
-    PKR: { currency: "rupees", cents: "paisa" },
+    INR: { currency: "rupees", cents: "paise" },
   };
 
   const belowTwenty = [
-    "",
-    "one",
-    "two",
-    "three",
-    "four",
-    "five",
-    "six",
-    "seven",
-    "eight",
-    "nine",
-    "ten",
-    "eleven",
-    "twelve",
-    "thirteen",
-    "fourteen",
-    "fifteen",
-    "sixteen",
-    "seventeen",
-    "eighteen",
-    "nineteen",
+    "zero","one","two","three","four","five","six","seven","eight","nine",
+    "ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen",
   ];
-  const tens = [
-    "",
-    "",
-    "twenty",
-    "thirty",
-    "forty",
-    "fifty",
-    "sixty",
-    "seventy",
-    "eighty",
-    "ninety",
-  ];
-  const thousands = ["", "thousand", "million", "billion", "trillion"];
+  const tens = ["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
 
-  const convertHundreds = (num) => {
-    let result = "";
-    if (num >= 100) {
-      result += belowTwenty[Math.floor(num / 100)] + " hundred ";
-      num %= 100;
-    }
-    if (num > 0) {
-      if (num < 20) {
-        result += belowTwenty[num];
-      } else {
-        result += tens[Math.floor(num / 10)];
-        if (num % 10 > 0) {
-          result += "-" + belowTwenty[num % 10];
-        }
-      }
-    }
-    return result.trim();
+  const twoDigits = (x) => {
+    if (x < 20) return belowTwenty[x];
+    const t = Math.floor(x / 10);
+    const u = x % 10;
+    return u ? `${tens[t]}-${belowTwenty[u]}` : tens[t];
   };
 
-  const [integerPart, decimalPart] = num.toString().split(".");
-  let word = "";
-  let thousandCounter = 0;
-  let intNum = parseInt(integerPart, 10);
-
-  while (intNum > 0) {
-    if (intNum % 1000 !== 0) {
-      word =
-        convertHundreds(intNum % 1000) +
-        (thousands[thousandCounter] ? " " + thousands[thousandCounter] : "") +
-        " " +
-        word;
+  const threeDigits = (x) => {
+    let out = "";
+    if (x >= 100) {
+      out += `${belowTwenty[Math.floor(x / 100)]} hundred`;
+      x %= 100;
+      if (x) out += " ";
     }
+    if (x) out += twoDigits(x);
+    return out.trim();
+  };
+
+  const indian = (intNum) => {
+    if (intNum === 0) return "zero";
+    const units = ["", "thousand", "lakh", "crore", "arab", "kharab"];
+    const chunks = [];
+
+    const last3 = intNum % 1000;
     intNum = Math.floor(intNum / 1000);
-    thousandCounter++;
+    if (last3) chunks.push({ val: last3, unit: "" });
+
+    let i = 1;
+    while (intNum > 0 && i < units.length) {
+      const grp = intNum % 100;
+      if (grp) chunks.push({ val: grp, unit: units[i] });
+      intNum = Math.floor(intNum / 100);
+      i++;
+    }
+
+    return chunks
+      .reverse()
+      .map((c) => {
+        const w = c.val < 100 ? twoDigits(c.val) : threeDigits(c.val);
+        return `${w}${c.unit ? " " + c.unit : ""}`.trim();
+      })
+      .join(" ")
+      .trim();
+  };
+
+  const isNeg = n < 0;
+  const abs = Math.abs(n);
+
+  const fixed = abs.toFixed(2);
+  const [intStr, decStr] = fixed.split(".");
+  const intNum = parseInt(intStr, 10);
+  const decNum = parseInt(decStr, 10);
+
+  const cur = currencyData[currencyCode] || { currency: "currency", cents: "cents" };
+
+  let result = `${isNeg ? "minus " : ""}${currencyCode === "INR" ? indian(intNum) : ""} ${cur.currency}`.trim();
+
+  if (currencyCode !== "INR") {
+    // fallback for non-INR (optional)
+    result = `${isNeg ? "minus " : ""}${intNum} ${cur.currency}`.trim();
   }
 
-  let result =
-    word.trim() +
-    " " +
-    (currencyData[currencyCode]
-      ? currencyData[currencyCode].currency
-      : "currency");
-  if (decimalPart) {
-    result +=
-      " and " +
-      convertHundreds(parseInt(decimalPart, 10)) +
-      " " +
-      (currencyData[currencyCode] ? currencyData[currencyCode].cents : "cents");
-  }
-  return result.trim();
+  if (decNum > 0) result += ` and ${twoDigits(decNum)} ${cur.cents}`;
+
+  // ✅ Remove trailing "Only" no matter who added it earlier
+  result = result.replace(/\s*only\s*$/i, "").trim();
+
+  return result;
 };
 
 export default numberToWords;

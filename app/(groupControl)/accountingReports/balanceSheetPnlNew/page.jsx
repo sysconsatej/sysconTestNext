@@ -3,18 +3,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { parentAccordionSection, accordianDetailsStyle } from "@/app/globalCss";
 import {
-  Box,
-  FormControl,
-  InputLabel,
-  OutlinedInput,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  FormLabel,
-  MenuItem,
-  Select,
-  TextField,
-  Button,
   Typography,
   Accordion,
   AccordionSummary,
@@ -23,13 +11,11 @@ import {
 import styles from "@/app/app.module.css";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LightTooltip from "@/components/Tooltip/customToolTip";
-import { AccountingReport } from "@/services/auth/FormControl.services.js";
 import { fetchReportData } from "@/services/auth/FormControl.services.js";
 import { accountData } from "@/constant/data";
 import "jspdf-autotable";
 import { getUserDetails } from "@/helper/userDetails";
 import { toast } from "react-toastify";
-import { exportLocalPDFReports } from "@/services/auth/FormControl.services";
 import CustomeInputFields from "@/components/Inputs/customeInputFields";
 import { fontFamilyStyles } from "@/app/globalCss";
 import PNLGrid from "@/components/Accounting/PNLGrid";
@@ -39,11 +25,7 @@ import { balanceSheetReportData } from "@/services/auth/FormControl.services.js"
 const BalanceSheetPNL = () => {
   const searchParams = useSearchParams();
   const [toggle, setToggle] = useState(false);
-  const [year, setYear] = useState("");
   const [companyBranch, setCompanyBranch] = useState(null);
-  const [pageData, setPageData] = useState(null);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
   const [selectedRadio, setSelectedRadio] = useState("S");
   const [
     selectedBalanceAndProfitAndLossRadio,
@@ -58,11 +40,6 @@ const BalanceSheetPNL = () => {
   const { companyId } = getUserDetails();
   const { defaultFinYearId } = getUserDetails();
   const { defaultCompanyId } = getUserDetails();
-  const { branchId } = getUserDetails();
-  const [selectedBranchId, setSelectedBranchId] = useState(null);
-  const { financialYear } = getUserDetails();
-  const { emailId } = getUserDetails();
-  const { userId } = getUserDetails();
   const [typeofModal, setTypeofModal] = useState("onClose");
   const [reportOrientation, setReportOrientation] = useState("H");
   const [menuName, setMenuName] = useState(
@@ -479,7 +456,7 @@ const BalanceSheetPNL = () => {
       setNewState((pre) => {
         return {
           ...pre,
-          reportOrientation: "H",
+          reportOrientation: "V",
         };
       });
     }
@@ -724,6 +701,7 @@ const BalanceSheetPNL = () => {
       <div className="mt-2">
         <PNLGrid
           ref={gridRef}
+          toggle={toggle}
           balanceSheetData={balanceSheetData}
           selectedRadio={selectedRadio}
           reportOrientation={reportOrientation}

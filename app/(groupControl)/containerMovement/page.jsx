@@ -299,7 +299,7 @@ export default function AccordionUsage() {
           id: 15770,
           fieldname: "activityDate",
           yourlabel: "Next Activity Date",
-          controlname: "date",
+          controlname: "datetime",
           isControlShow: true,
           isGridView: true,
           isDataFlow: null,

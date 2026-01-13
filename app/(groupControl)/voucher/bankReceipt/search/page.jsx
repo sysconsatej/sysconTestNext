@@ -266,6 +266,9 @@ export default function VoucherBankReceiptAdd() {
   };
 
   useEffect(() => {
+    console.log("exchangeRate", newState?.exchangeRate);
+    console.log("calculationType", newState?.calculationType);
+
     const details = Array.isArray(newState?.tblVoucherLedgerDetails)
       ? newState.tblVoucherLedgerDetails
       : [];
@@ -276,11 +279,26 @@ export default function VoucherBankReceiptAdd() {
       return isNaN(n) ? 0 : n;
     };
 
-    // ✅ round to 2 decimals (numeric)
     const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
-
-    // ✅ convert to string with 2 decimals
     const asStr = (n) => round2(n).toFixed(2);
+
+    // 🔹 read rate + type once
+    const exchangeRate = toNum(newState?.exchangeRate);
+    const calculationType = newState?.calculationType;
+
+    // 🔹 helper to apply exchange logic to a delta
+    const applyDeltaByCalcType = (delta) => {
+      if (!exchangeRate || exchangeRate === 0) return delta; // avoid divide by 0
+      if (calculationType === "FCHC") {
+        // divide by rate
+        return delta / exchangeRate;
+      }
+      if (calculationType === "HCFC") {
+        // multiply by rate
+        return delta * exchangeRate;
+      }
+      return delta;
+    };
 
     if (!details.length) {
       allocPrevRowsRef.current = [];
@@ -290,40 +308,40 @@ export default function VoucherBankReceiptAdd() {
     const prevDetails = allocPrevRowsRef.current || [];
     const maxLen = Math.max(details.length, prevDetails.length);
 
-    // 🔹 Find which row changed (HC and/or FC)
     let changedIndex = -1;
 
+    // 🔹 Find which row changed (HC and/or FC) – RAW comparison (no rate)
     for (let i = 0; i < maxLen; i++) {
       const curr = details[i];
       const prev = prevDetails[i];
 
-      // row removed → structural change, just sync and exit
       if (!curr && prev) {
+        // row removed → structural change, just sync and exit
         allocPrevRowsRef.current = details;
         return;
       }
 
-      // new row added → treat as changed row
       if (curr && !prev) {
+        // new row added
         changedIndex = i;
         break;
       }
 
       if (!curr && !prev) break;
 
-      const hcCurr = toNum(curr.allocatedAmtHC);
-      const hcPrev = toNum(prev.allocatedAmtHC);
-      const fcCurr = toNum(curr.allocatedAmtFC);
-      const fcPrev = toNum(prev.allocatedAmtFC);
+      const hcCurrRaw = toNum(curr.allocatedAmtHC);
+      const hcPrevRaw = toNum(prev.allocatedAmtHC);
+      const fcCurrRaw = toNum(curr.allocatedAmtFC);
+      const fcPrevRaw = toNum(prev.allocatedAmtFC);
 
-      if (hcCurr !== hcPrev || fcCurr !== fcPrev) {
+      if (hcCurrRaw !== hcPrevRaw || fcCurrRaw !== fcPrevRaw) {
         changedIndex = i;
         break;
       }
     }
 
-    // nothing changed in allocations
     if (changedIndex === -1) {
+      // nothing changed in allocations
       allocPrevRowsRef.current = details;
       return;
     }
@@ -334,69 +352,71 @@ export default function VoucherBankReceiptAdd() {
 
     // Copy rows to work on
     const working = details.map((row) => ({ ...row }));
-
+    console.log("changedIndex =", changedIndex);
     const prevRow = prevDetails[changedIndex] || {};
     const row = working[changedIndex];
 
     const hcPrev = toNum(prevRow.allocatedAmtHC);
-    const hcCurr = toNum(row.allocatedAmtHC);
+    const hcCurrInput = toNum(row.allocatedAmtHC); // what user just typed
     const fcPrev = toNum(prevRow.allocatedAmtFC);
-    const fcCurr = toNum(row.allocatedAmtFC);
+    const fcCurrInput = toNum(row.allocatedAmtFC); // what user just typed
 
     let newBalanceHC = prevBalanceHC;
     let newBalanceFC = prevBalanceFC;
     let hcTouched = false;
     let fcTouched = false;
 
-    // ---------- HC logic ----------
-    if (hcCurr !== hcPrev) {
-      const deltaHC = hcCurr - hcPrev; // +ve when increasing, -ve when decreasing
-      let tempBalanceHC = prevBalanceHC - deltaHC;
-      let finalHC = hcCurr;
+    // ---------- HC logic with exchangeRate ----------
+    if (hcCurrInput !== hcPrev) {
+      const rawDeltaHC = hcCurrInput - hcPrev; // user-level delta
+      let effectiveDeltaHC = applyDeltaByCalcType(rawDeltaHC); // delta after FCHC/HCFC
+      let tempBalanceHC = prevBalanceHC - effectiveDeltaHC;
+      let finalHC = hcPrev + effectiveDeltaHC; // final stored HC after conversion
 
-      // if negative balance → clamp this row to available HC
+      // clamp if header balance goes negative
       if (tempBalanceHC < 0) {
-        finalHC = hcPrev + prevBalanceHC; // can only add what's left
+        const allowedDelta = prevBalanceHC; // we can only consume what is left
+        effectiveDeltaHC = allowedDelta;
+        finalHC = hcPrev + allowedDelta;
         tempBalanceHC = 0;
       }
 
       // 🔹 Row-level balanceAmtHC update
       const prevRowBalanceHC = toNum(prevRow.balanceAmtHC);
-      const effectiveDeltaHC = finalHC - hcPrev; // after clamp
       let newRowBalanceHC = prevRowBalanceHC - effectiveDeltaHC;
       if (newRowBalanceHC < 0) newRowBalanceHC = 0;
 
       newBalanceHC = tempBalanceHC;
 
-      // 🔸 always store "0.00" etc (rounded)
-      row.allocatedAmtHC = asStr(finalHC); // ✅ rounded 2 decimals
-      row.balanceAmtHC = asStr(newRowBalanceHC); // ✅ rounded 2 decimals
+      row.allocatedAmtHC = asStr(finalHC);
+      row.balanceAmtHC = asStr(newRowBalanceHC);
 
       hcTouched = true;
     }
 
-    // ---------- FC logic ----------
-    if (fcCurr !== fcPrev) {
-      const deltaFC = fcCurr - fcPrev;
-      let tempBalanceFC = prevBalanceFC - deltaFC;
-      let finalFC = fcCurr;
+    // ---------- FC logic with exchangeRate ----------
+    if (fcCurrInput !== fcPrev) {
+      const rawDeltaFC = fcCurrInput - fcPrev; // user-level delta
+      let effectiveDeltaFC = applyDeltaByCalcType(rawDeltaFC); // delta after FCHC/HCFC
+      let tempBalanceFC = prevBalanceFC - effectiveDeltaFC;
+      let finalFC = fcPrev + effectiveDeltaFC; // final stored FC after conversion
 
       if (tempBalanceFC < 0) {
-        finalFC = fcPrev + prevBalanceFC;
+        const allowedDelta = prevBalanceFC;
+        effectiveDeltaFC = allowedDelta;
+        finalFC = fcPrev + allowedDelta;
         tempBalanceFC = 0;
       }
 
       // 🔹 Row-level balanceAmtFC update
       const prevRowBalanceFC = toNum(prevRow.balanceAmtFC);
-      const effectiveDeltaFC = finalFC - fcPrev; // after clamp
       let newRowBalanceFC = prevRowBalanceFC - effectiveDeltaFC;
       if (newRowBalanceFC < 0) newRowBalanceFC = 0;
 
       newBalanceFC = tempBalanceFC;
 
-      // 🔸 always store "0.00" etc (rounded)
-      row.allocatedAmtFC = asStr(finalFC); // ✅ rounded 2 decimals
-      row.balanceAmtFC = asStr(newRowBalanceFC); // ✅ rounded 2 decimals
+      row.allocatedAmtFC = asStr(finalFC);
+      row.balanceAmtFC = asStr(newRowBalanceFC);
 
       fcTouched = true;
     }
@@ -417,14 +437,13 @@ export default function VoucherBankReceiptAdd() {
     // 🔹 Commit
     setNewState((prev) => ({
       ...prev,
-      // header balances: also guarantee "0" instead of empty
       balanceAmtHc: hcTouched
-        ? asStr(newBalanceHC) // ✅ rounded 2 decimals
+        ? asStr(newBalanceHC)
         : prev.balanceAmtHc != null && prev.balanceAmtHc !== ""
         ? String(prev.balanceAmtHc)
         : "0.00",
       balanceAmtFc: fcTouched
-        ? asStr(newBalanceFC) // ✅ rounded 2 decimals
+        ? asStr(newBalanceFC)
         : prev.balanceAmtFc != null && prev.balanceAmtFc !== ""
         ? String(prev.balanceAmtFc)
         : "0.00",
@@ -4877,7 +4896,7 @@ const parentFieldIsTdsApplied = {
       hyperlinkValue: null,
       referenceColumn: null,
       type: 6653,
-      typeValue: "number",
+      typeValue: "decimal",
       size: "100",
       ordering: 10,
       gridTotal: false,
@@ -4916,7 +4935,7 @@ const parentFieldIsTdsApplied = {
       dropdownFilter: null,
       dropDownValues: "FCHC.FC-HC,HCFC.HC-FC",
       functionOnBlur: null,
-      functionOnChange: null,
+      functionOnChange: "checkExchangesRate();",
       functionOnKeyPress: null,
       isControlShow: true,
       isEditable: true,
@@ -5874,7 +5893,7 @@ const parentFieldIsTdsNotApplied = {
       hyperlinkValue: null,
       referenceColumn: null,
       type: 6653,
-      typeValue: "number",
+      typeValue: "decimal",
       size: "100",
       ordering: 10,
       gridTotal: false,
@@ -5913,7 +5932,7 @@ const parentFieldIsTdsNotApplied = {
       dropdownFilter: null,
       dropDownValues: "FCHC.FC-HC,HCFC.HC-FC",
       functionOnBlur: null,
-      functionOnChange: null,
+      functionOnChange: "checkExchangesRate();",
       functionOnKeyPress: null,
       isControlShow: true,
       isEditable: true,
@@ -6926,7 +6945,7 @@ const sameCurrencyHideField = {
       hyperlinkValue: null,
       referenceColumn: null,
       type: 6653,
-      typeValue: "number",
+      typeValue: "decimal",
       size: "100",
       ordering: 10,
       gridTotal: false,
@@ -6965,7 +6984,7 @@ const sameCurrencyHideField = {
       dropdownFilter: null,
       dropDownValues: "FCHC.FC-HC,HCFC.HC-FC",
       functionOnBlur: null,
-      functionOnChange: null,
+      functionOnChange: "checkExchangesRate();",
       functionOnKeyPress: null,
       isControlShow: true,
       isEditable: true,
@@ -7229,7 +7248,7 @@ const sameCurrencyHideField = {
       yourlabel: "Bank Charges",
       controlname: "number",
       isControlShow: true,
-      columnsToBeVisible: false,
+      columnsToBeVisible: true,
       isGridView: true,
       isDataFlow: true,
       copyMappingName: null,

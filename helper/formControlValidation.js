@@ -300,9 +300,8 @@ const SetDecimalsGeneric = (obj) => {
         return {
           isCheck: false,
           type: "success",
-          message: `You can enter Max ${
-            fieldSize - decimalCheck - 1
-          } Characters`,
+          message: `You can enter Max ${fieldSize - decimalCheck - 1
+            } Characters`,
           alertShow: true,
           fieldName: fieldName,
           values: values,
@@ -950,11 +949,11 @@ const setNoOfContainer = (obj) => {
 
       let size = currentItem.length
         ? currentItem[0].sizeIdDropdown ||
-          currentItem[0].sizeIddropdown[0]?.label
+        currentItem[0].sizeIddropdown[0]?.label
         : "";
       let type = currentItem.length
         ? currentItem[0].typeIdDropdown ||
-          currentItem[0].typeIddropdown[0]?.label
+        currentItem[0].typeIddropdown[0]?.label
         : "";
 
       if (fieldName === "sizeId" && childCommonItem.length !== 0) {
@@ -969,11 +968,9 @@ const setNoOfContainer = (obj) => {
             return {
               isCheck: false,
               type: "error",
-              message: `For type ${
-                typeIdDropdown || type
-              } and No Of Containers ${values.qty}, the size should be ${
-                sizeIdDropdown || size
-              }.`,
+              message: `For type ${typeIdDropdown || type
+                } and No Of Containers ${values.qty}, the size should be ${sizeIdDropdown || size
+                }.`,
               alertShow: true,
               values: values,
               newState: newState,
@@ -1002,11 +999,9 @@ const setNoOfContainer = (obj) => {
             return {
               isCheck: false,
               type: "error",
-              message: `For size ${
-                sizeIdDropdown || size
-              } and No Of Container ${values.qty} the type should be ${
-                typeIdDropdown || type
-              } `,
+              message: `For size ${sizeIdDropdown || size
+                } and No Of Container ${values.qty} the type should be ${typeIdDropdown || type
+                } `,
               alertShow: true,
               values: values,
               newState: newState,
@@ -2821,10 +2816,10 @@ const removeFilterCondition = (obj) => {
         ...prev.formControlData,
         fields: prev.formControlData?.fields
           ? prev.formControlData.fields.map((field) =>
-              field.fieldname === fieldName
-                ? { ...field, dropdownFilter: null }
-                : field
-            )
+            field.fieldname === fieldName
+              ? { ...field, dropdownFilter: null }
+              : field
+          )
           : [],
       },
     }));
@@ -3965,9 +3960,8 @@ const checkGridsDuplication = (obj) => {
     const fieldsList =
       labels.slice(0, -1).join(", ") +
       (labels.length > 1 ? `, and ${labels.slice(-1)}` : labels[0]);
-    const message = `Duplicate entry found for ${fieldsList}. Please enter different ${
-      labels[labels.length - 1]
-    }.`;
+    const message = `Duplicate entry found for ${fieldsList}. Please enter different ${labels[labels.length - 1]
+      }.`;
 
     return {
       type: "error",
@@ -6390,11 +6384,10 @@ const setSameSizeValues = (obj) => {
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
-      const editedString = `${dropFilterValueWithoutBraces} and ${
-        Array.isArray(sizeIds)
+      const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
           ? `id in (${sizeIds.join(",")})`
           : `id = ${sizeIds}`
-      } `;
+        } `;
 
       console.log("editedString", editedString);
 
@@ -6441,11 +6434,10 @@ const setSameSizeValues = (obj) => {
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
-      const editedString = `${dropFilterValueWithoutBraces} and ${
-        Array.isArray(sizeIds)
+      const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
           ? `id in (${sizeIds.join(",")})`
           : `id = ${sizeIds}`
-      } `;
+        } `;
 
       if (editedString.trim()) {
         setterField.dropdownFilter = editedString;
@@ -6466,8 +6458,8 @@ const setSameSizeValues = (obj) => {
       let getterSize = newState[argsArray[0]];
       let currentSize =
         values &&
-        Array.isArray(values.sizeIddropdown) &&
-        values.sizeIddropdown.length > 0
+          Array.isArray(values.sizeIddropdown) &&
+          values.sizeIddropdown.length > 0
           ? values.sizeIddropdown[0].label
           : "";
 
@@ -6557,8 +6549,8 @@ const setSameSizeValues = (obj) => {
       let getterSize = newState[argsArray[0]];
       let currentSize =
         values &&
-        Array.isArray(values.sizeIddropdown) &&
-        values.sizeIddropdown.length > 0
+          Array.isArray(values.sizeIddropdown) &&
+          values.sizeIddropdown.length > 0
           ? values.sizeIddropdown[0].label
           : "";
 
@@ -7710,9 +7702,9 @@ const getVoucherInvoiceDetails = async (obj) => {
     const invoiceNumbers =
       Array.isArray(fetchInvoice?.Chargers) && fetchInvoice.Chargers.length > 0
         ? fetchInvoice.Chargers.map((invoice) => ({
-            value: invoice?.value ?? invoice?.invoiceNo, // Use invoiceNo if value is missing
-            label: invoice?.label ?? invoice?.invoiceNo, // Ensure label is never undefined
-          }))
+          value: invoice?.value ?? invoice?.invoiceNo, // Use invoiceNo if value is missing
+          label: invoice?.label ?? invoice?.invoiceNo, // Ensure label is never undefined
+        }))
         : [];
 
     console.log("invoiceNumbers", invoiceNumbers);
@@ -9645,11 +9637,11 @@ const getThirdLevelDetails = async (obj) => {
         containerIddropdown:
           _containerId !== null
             ? [
-                {
-                  value: _containerId,
-                  label: item.containerNo ?? String(_containerId),
-                },
-              ]
+              {
+                value: _containerId,
+                label: item.containerNo ?? String(_containerId),
+              },
+            ]
             : [],
         sizeIddropdown:
           _sizeId !== null
@@ -9666,22 +9658,22 @@ const getThirdLevelDetails = async (obj) => {
         containerTransactionIddropdown:
           _containerTransactionId !== null
             ? [
-                {
-                  value: _containerTransactionId,
-                  label:
-                    item.containerTransactionName ??
-                    String(_containerTransactionId),
-                },
-              ]
+              {
+                value: _containerTransactionId,
+                label:
+                  item.containerTransactionName ??
+                  String(_containerTransactionId),
+              },
+            ]
             : [],
         containerRepairIddropdown:
           _containerRepairId !== null
             ? [
-                {
-                  value: _containerRepairId,
-                  label: item.containerRepairName ?? String(_containerRepairId),
-                },
-              ]
+              {
+                value: _containerRepairId,
+                label: item.containerRepairName ?? String(_containerRepairId),
+              },
+            ]
             : [],
         blIddropdown:
           _blId !== null
@@ -10242,8 +10234,8 @@ const getBlChargesForPaty = async (obj) => {
     const invoiceList = Array.isArray(fetchInvoice)
       ? fetchInvoice
       : Array.isArray(fetchInvoice?.Chargers)
-      ? fetchInvoice.Chargers
-      : [];
+        ? fetchInvoice.Chargers
+        : [];
 
     if (invoiceList.length > 0) {
       const selectedLedger = invoiceList[0];
@@ -10258,11 +10250,11 @@ const getBlChargesForPaty = async (obj) => {
         billingPartyId: finalBillingPartyId,
         billingPartyIddropdown: finalBillingPartyId
           ? [
-              {
-                value: finalBillingPartyId,
-                label: selectedLedger?.LedgerName || "",
-              },
-            ]
+            {
+              value: finalBillingPartyId,
+              label: selectedLedger?.LedgerName || "",
+            },
+          ]
           : [],
       };
 
@@ -10325,8 +10317,8 @@ const getBillingPartyFromJob = async (obj) => {
   const invoiceList = Array.isArray(fetchInvoice)
     ? fetchInvoice
     : Array.isArray(fetchInvoice?.Chargers)
-    ? fetchInvoice.Chargers
-    : [];
+      ? fetchInvoice.Chargers
+      : [];
 
   if (invoiceList.length > 0) {
     const selectedLedger = invoiceList[0];
@@ -10691,9 +10683,8 @@ const setTransit = async (obj) => {
 
     // --- Prepare Updated goodsDesc ---
     let updatedGoodsDesc = goodsDesc || "";
-    const transitRemark = `Cargo in transit to ${
-      countryDestination || "(country of destination)"
-    } on consignee’s risk, cost & responsibilities`;
+    const transitRemark = `Cargo in transit to ${countryDestination || "(country of destination)"
+      } on consignee’s risk, cost & responsibilities`;
 
     // Remove any previous existing instance of this line (avoid duplicates)
     updatedGoodsDesc = updatedGoodsDesc
@@ -11800,6 +11791,219 @@ const getAutoAllocateAmount = async (obj) => {
   // }));
 };
 
+const getJournalVoucherBalanceCalculate = (obj) => {
+  const {
+    args,
+    values,
+    fieldName,
+    newState,
+    formControlData,
+    setStateVariable,
+  } = obj || {};
+
+  const argNames = (args || "").split(",").map((arg) => arg.trim());
+
+  const clamp0 = (n) => (n < 0 ? 0 : n);
+
+  const toNum = (v) => {
+    if (v === null || v === undefined || v === "") return 0;
+    const n = Number(String(v).replace(/,/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const debitAmount = toNum(values?.[argNames[0]]);
+  const debitAmountFC = toNum(values?.[argNames[1]]);
+  const balanceAmount = toNum(values?.[argNames[2]]);
+  const balanceAmountFC = toNum(values?.[argNames[3]]);
+  const debitAmountChild = toNum(values?.[argNames[4]]); // optional
+  const openingBalanceAmount =
+    values?.__openingBalanceAmount !== undefined
+      ? toNum(values.__openingBalanceAmount)
+      : balanceAmount;
+
+  const openingBalanceAmountFC =
+    values?.__openingBalanceAmountFC !== undefined
+      ? toNum(values.__openingBalanceAmountFC)
+      : balanceAmountFC;
+
+  const reduceAmt = debitAmountChild > 0 ? debitAmountChild : debitAmount;
+
+  const reduceAmtFC = debitAmountFC;
+
+  const newBal = clamp0(openingBalanceAmount - reduceAmt);
+  const newBalFC = clamp0(openingBalanceAmountFC - reduceAmtFC);
+
+  values.__openingBalanceAmount = openingBalanceAmount;
+  values.__openingBalanceAmountFC = openingBalanceAmountFC;
+
+  setStateVariable((prev) => ({
+    ...(prev || {}),
+    [argNames[2]]: newBal.toFixed(2),
+    [argNames[3]]: newBalFC.toFixed(2),
+  }));
+
+  return {
+    isCheck: false,
+    type: "success",
+    message: "",
+    alertShow: false,
+    fieldName,
+    values,
+    newState,
+    formControlData,
+  };
+};
+
+const checkExchangesRate = async (obj) => {
+  let {
+    args,
+    newState,
+    formControlData,
+    setFormControlData,
+    values,
+    fieldName,
+    tableName,
+    setStateVariable,
+  } = obj;
+
+  if (newState?.exchangeRate == null && newState?.calculationType == "FCHC") {
+    toast.error("Please Enter Exchange Rate");
+    setStateVariable((prev) => ({
+      ...prev,
+      calculationType: null,
+    }));
+    return;
+  }
+
+  if (
+    newState?.calculationType == "FCHC" &&
+    (newState?.exchangeRate != 1 || newState?.exchangeRate != "1")
+  ) {
+    toast.error("For FC-HC Calculation Exchange Rate should be 1");
+    setStateVariable((prev) => ({
+      ...prev,
+      calculationType: null,
+      exchangeRate: null,
+    }));
+    return;
+  }
+};
+
+const setBlData = async (obj) => {
+  const { args, values, fieldName, newState, setStateVariable } = obj;
+
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+    const containerNo = newState[argNames[0]]; // e.g., "blId"
+    if (!containerNo) {
+      return {
+        type: "warning",
+        result: false,
+        message: "containerNo is missing. Please select a BL first.",
+      };
+    }
+
+    const requestObj = {
+      columns: " bl.hblNo,bl.id as blId ",
+      tableName: "tblbl bl inner join tblBlContainer blc on bl.id=blc.blid",
+      whereCondition: ` blc.containerId = ${containerNo}`,
+      clientIdCondition: `bl.status=1 order by hblDate desc FOR JSON PATH, INCLUDE_NULL_VALUES`,
+    };
+
+    const response = await fetchReportData(requestObj);
+    const jobData = response?.data?.[0];
+    const { hblNo,blId } = jobData || {};
+    console.log("jobData",jobData);
+    setStateVariable((prev) => ({
+      ...prev,
+      blNo:hblNo,
+      blId: blId,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "Billing party set successfully.",
+      values: { ...values, blNo:hblNo,blId: blId },
+      newState: { ...newState,blNo:hblNo, blId: blId},
+    };
+  } catch (error) {
+    console.error("Error in setBillingPartyForJob:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Error while setting billing party. Please try again.",
+    };
+  }
+};
+
+const calculateVoucherAmtDy = async (obj) => {
+  const { args, newState, setStateVariable } = obj;
+  ///currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+    const currency = newState?.[argNames[0]];
+    const exchangeRate = parseFloat(newState?.[argNames[1]]) || 0; // e.g. "exchangeRate"
+    const amtRec = parseFloat(newState?.[argNames[2]]) || 0;
+    const amtRecFcValue = parseFloat(newState?.[argNames[3]]) || 0;
+    const tdsPercent = [argNames[6]] || 0;
+    const request = {
+      columns: "*",
+      tableName: "tblCompanyParameter",
+      whereCondition: `currencyId = ${currency} and status = 1`,
+      clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+    };
+
+    const response = await fetchReportData(request);
+    const currencyId = response?.data[0]?.currencyId;
+    if (currencyId == currency) {
+      //amtRecFC
+      const amtRecFc = amtRec;
+      const onAccountHc = amtRec;
+      const OnAccountHFc =amtRec
+      // Store in newState
+      setStateVariable((prev) => ({
+        ...prev,
+        [argNames[3]]: amtRecFc,
+      }));
+
+      return {
+        type: "success",
+        result: true,
+        message: "Amount & TDS calculated successfully",
+        amtRecFc,
+        tdsAmtFc,
+        tdsAmt,
+      };
+    } else if (currencyId != currency) {
+      const amtRec = amtRecFcValue * exchangeRate;
+      const tdsAmtFc = amtRecFcValue * tdsPercent;
+      const tdsAmt = amtRec * tdsPercent;
+
+      // Store in newState
+      setStateVariable((prev) => ({
+        ...prev,
+        [argNames[2]]: amtRec,
+      }));
+
+      return {
+        type: "success",
+        result: true,
+        message: "Amount & TDS calculated successfully",
+        tdsAmtFc,
+        tdsAmt,
+      };
+    }
+  } catch (error) {
+    console.error("Error in calculateVoucherAmt:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Error calculating voucher amount. Please try again.",
+    };
+  }
+};
+
 export {
   setSameCurrencyFc,
   setSameCurrencyHc,
@@ -11927,4 +12131,8 @@ export {
   LedgerEntriesRule,
   CompanyBranchSet,
   getAutoAllocateAmount,
+  getJournalVoucherBalanceCalculate,
+  checkExchangesRate,
+  setBlData,
+  calculateVoucherAmtDy
 };

@@ -78,7 +78,6 @@ import { useSearchParams } from "next/navigation";
 import PaginationButtons from "@/components/Pagination/index.jsx";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import SearchIcon from "@mui/icons-material/Search";
 import {
   displaytableHeadStyles,
@@ -103,6 +102,41 @@ import { menuAccessByEmailId } from "@/services/auth/Auth.services";
 import { fetchReportData } from "@/services/auth/FormControl.services";
 import { getUserDetails } from "@/helper/userDetails";
 import PrintModal from "@/components/Modal/printModal.jsx";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import { useTheme } from "@mui/material/styles";
+import Pagination from "@mui/material/Pagination";
+
+/* ✅ put these styles ABOVE return OR near your component (same file) */
+const chipBtnStyle = {
+  height: 34,
+  padding: "0 12px",
+  borderRadius: 999,
+  border: "1px solid rgba(148,163,184,0.22)",
+  background: "rgba(255,255,255,0.06)",
+  fontSize: 12,
+  fontWeight: 900,
+  letterSpacing: "0.1px",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+};
+
+const chipBtnStyleStrong = {
+  ...chipBtnStyle,
+  border: "1px solid rgba(99,102,241,0.30)",
+  background: "rgba(99,102,241,0.14)",
+};
+
+const chipBtnStyleDanger = {
+  ...chipBtnStyle,
+  width: 38,
+  justifyContent: "center",
+  padding: 0,
+  border: "1px solid rgba(239,68,68,0.26)",
+  background: "rgba(239,68,68,0.10)",
+};
 
 function onEditAndDeleteFunctionCall(
   functionData,
@@ -203,7 +237,147 @@ export default function StickyHeadTable() {
   //const [defaultCompanyBranch, setDefaultCompanyBranch] = useState([]);
   const [operatorsBg, setOperatorsBg] = useState("blue");
 
-  console.log("=>", search);
+  const isMobile = useMediaQuery("(max-width:768px)");
+  const [expandedRows, setExpandedRows] = useState({}); // { [rowId]: true/false }
+  const theme = useTheme();
+
+  // Tailwind lg starts at 1024px
+  //const isLgUp = useMediaQuery("(min-width:1024px)", { noSsr: true });
+  const isLgUp = useMediaQuery("(min-width:1024px)");
+
+  // ✅ small screen height = full viewport height (dynamic, correct on mobile address bar too)
+  const [mobileViewportH, setMobileViewportH] = React.useState(0);
+
+  const SWIPE_REVEAL_PX = 72; // width of action tray
+  const SWIPE_THRESHOLD_PX = 26; // swipe distance to open
+
+  const [swipeOpenId, setSwipeOpenId] = useState(null);
+  const [dragX, setDragX] = useState({});
+  const [draggingId, setDraggingId] = useState(null);
+
+  const swipeRef = useRef({
+    id: null,
+    startX: 0,
+    startY: 0,
+    baseX: 0,
+    dragging: false,
+    intentLocked: false,
+    isHorizontal: false,
+  });
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+  const closeSwipe = (id) => {
+    if (!id) return;
+    setDragX((prev) => ({ ...prev, [id]: 0 }));
+    setSwipeOpenId((cur) => (cur === id ? null : cur));
+  };
+
+  const openSwipe = (id) => {
+    if (!id) return;
+    setDragX((prev) => ({ ...prev, [id]: -SWIPE_REVEAL_PX }));
+    setSwipeOpenId(id);
+  };
+
+  const onSwipeStart = (id, e) => {
+    const tag = (e.target?.tagName || "").toLowerCase();
+
+    // ✅ Don’t start swipe when clicking on buttons/icons inside
+    if (tag === "button" || tag === "img" || tag === "svg" || tag === "path")
+      return;
+
+    const point = e.touches?.[0] ?? e;
+    const clientX = point?.clientX ?? 0;
+    const clientY = point?.clientY ?? 0;
+
+    // ✅ close another open card before starting
+    if (swipeOpenId && swipeOpenId !== id) closeSwipe(swipeOpenId);
+
+    swipeRef.current.id = id;
+    swipeRef.current.startX = clientX;
+    swipeRef.current.startY = clientY;
+    swipeRef.current.baseX =
+      dragX?.[id] ?? (swipeOpenId === id ? -SWIPE_REVEAL_PX : 0);
+
+    swipeRef.current.dragging = true;
+    swipeRef.current.intentLocked = false;
+    swipeRef.current.isHorizontal = false;
+
+    setDraggingId(id);
+
+    try {
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    } catch {}
+  };
+
+  const onSwipeMove = (e) => {
+    const id = swipeRef.current.id;
+    if (!id || !swipeRef.current.dragging) return;
+
+    const point = e.touches?.[0] ?? e;
+    const clientX = point?.clientX ?? 0;
+    const clientY = point?.clientY ?? 0;
+
+    const dx = clientX - swipeRef.current.startX;
+    const dy = clientY - swipeRef.current.startY;
+
+    // ✅ decide swipe intent once
+    if (!swipeRef.current.intentLocked) {
+      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      swipeRef.current.intentLocked = true;
+      swipeRef.current.isHorizontal = Math.abs(dx) > Math.abs(dy);
+    }
+
+    // ✅ only handle horizontal swipe
+    if (!swipeRef.current.isHorizontal) return;
+
+    e.preventDefault?.(); // ✅ prevent vertical scroll when swiping horizontally
+
+    const next = clamp(swipeRef.current.baseX + dx, -SWIPE_REVEAL_PX, 0);
+    setDragX((prev) => ({ ...prev, [id]: next }));
+  };
+
+  const onSwipeEnd = () => {
+    const id = swipeRef.current.id;
+    if (!id) return;
+
+    const current = dragX?.[id] ?? 0;
+
+    // ✅ snap open or close based on threshold
+    if (current < -SWIPE_THRESHOLD_PX) openSwipe(id);
+    else closeSwipe(id);
+
+    swipeRef.current = {
+      id: null,
+      startX: 0,
+      startY: 0,
+      baseX: 0,
+      dragging: false,
+      intentLocked: false,
+      isHorizontal: false,
+    };
+
+    setDraggingId(null);
+  };
+
+  React.useEffect(() => {
+    const setH = () => {
+      // visualViewport handles mobile browser bars better than innerHeight
+      const h = window.visualViewport?.height || window.innerHeight || 0;
+      setMobileViewportH(h);
+    };
+
+    setH();
+    window.addEventListener("resize", setH);
+    window.visualViewport?.addEventListener("resize", setH);
+
+    return () => {
+      window.removeEventListener("resize", setH);
+      window.visualViewport?.removeEventListener("resize", setH);
+    };
+  }, []);
+
+  console.log("isLgUp=>", isLgUp);
 
   // const validateEdit = async (tableName, recordId) => {
   //   const requestBody = {
@@ -220,25 +394,24 @@ export default function StickyHeadTable() {
   //   }
   // };
 
-
-   const validateEdit = async (tableName, recordId) => {
-      //alert("working")
-      const requestBody = {
-        tableName: tableName,
-        recordId: recordId.id,
-        clientId: clientId,
-        menuId:search
-      };
-      const data = await disableEdit(requestBody);
-      if (data.success === false) {
-        setParaText(data.message);
-        //setIsError(true);
-        setOpenModal((prev) => !prev);
-        return;
-      } else {
-        addEditController(recordId);
-      }
+  const validateEdit = async (tableName, recordId) => {
+    //alert("working")
+    const requestBody = {
+      tableName: tableName,
+      recordId: recordId.id,
+      clientId: clientId,
+      menuId: search,
     };
+    const data = await disableEdit(requestBody);
+    if (data.success === false) {
+      setParaText(data.message);
+      //setIsError(true);
+      setOpenModal((prev) => !prev);
+      return;
+    } else {
+      addEditController(recordId);
+    }
+  };
   const validateAdd = async (tableName) => {
     const requestBody = {
       tableName: tableName,
@@ -648,7 +821,6 @@ export default function StickyHeadTable() {
     }
   };
 
-
   useEffect(() => {
     const fetchData = async () => {
       const storedUserData = localStorage.getItem("userData");
@@ -972,7 +1144,7 @@ export default function StickyHeadTable() {
   useEffect(() => {
     const storedRowsPerPage = sessionStorage.getItem("rowsPerPage");
     setRowsPerPage(storedRowsPerPage ? parseInt(storedRowsPerPage) : 17);
-  }, [sessionStorage.getItem("rowsPerPage"),search]);
+  }, [sessionStorage.getItem("rowsPerPage"), search]);
   function pageSelected(selectedValue) {
     setSelectedPage(selectedValue);
     setPage(selectedValue);
@@ -1197,17 +1369,17 @@ export default function StickyHeadTable() {
         prev.map((item, i) =>
           i === index
             ? {
-              ...item,
-              fromDate: formattedDate,
-              advanceSearch: {
-                ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
-                [name]: {
-                  // Update or add the new key within advanceSearch
-                  ...item.advanceSearch?.[name], // Spread existing values under this key, if any
-                  $gte: formattedDate, // Update or add the $lte key under the specified name
+                ...item,
+                fromDate: formattedDate,
+                advanceSearch: {
+                  ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
+                  [name]: {
+                    // Update or add the new key within advanceSearch
+                    ...item.advanceSearch?.[name], // Spread existing values under this key, if any
+                    $gte: formattedDate, // Update or add the $lte key under the specified name
+                  },
                 },
-              },
-            }
+              }
             : item
         )
       );
@@ -1222,17 +1394,17 @@ export default function StickyHeadTable() {
         prev.map((item, i) =>
           i === index
             ? {
-              ...item,
-              toDate: formattedDate,
-              advanceSearch: {
-                ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
-                [name]: {
-                  // Update or add the new key within advanceSearch
-                  ...item.advanceSearch?.[name], // Spread existing values under this key, if any
-                  $lte: formattedDate, // Update or add the $lte key under the specified name
+                ...item,
+                toDate: formattedDate,
+                advanceSearch: {
+                  ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
+                  [name]: {
+                    // Update or add the new key within advanceSearch
+                    ...item.advanceSearch?.[name], // Spread existing values under this key, if any
+                    $lte: formattedDate, // Update or add the $lte key under the specified name
+                  },
                 },
-              },
-            }
+              }
             : item
         )
       );
@@ -1302,9 +1474,9 @@ export default function StickyHeadTable() {
       Object.assign(tempObj, d.advanceSearch);
     });
     setadvanceSearch(tempObj);
-    sessionStorage.setItem('dynamic', JSON.stringify(dynamic));
+    sessionStorage.setItem("dynamic", JSON.stringify(dynamic));
     sessionStorage.setItem("advanceSearch", JSON.stringify(tempObj));
-    sessionStorage.setItem('menuId', JSON.stringify(search));
+    sessionStorage.setItem("menuId", JSON.stringify(search));
     setSearchOpen(false);
   };
 
@@ -1356,23 +1528,21 @@ export default function StickyHeadTable() {
   }, []);
   useEffect(() => {
     // console.log('checkMenuId', sessionStorage.getItem('menuId') == search);
-    if (sessionStorage?.getItem('menuId') == search) {
-      const menuId = JSON.parse(sessionStorage.getItem('advanceSearch'));
-      const dynamic = JSON.parse(sessionStorage.getItem('dynamic'));
-      console.log("dynamic", dynamic)
+    if (sessionStorage?.getItem("menuId") == search) {
+      const menuId = JSON.parse(sessionStorage.getItem("advanceSearch"));
+      const dynamic = JSON.parse(sessionStorage.getItem("dynamic"));
+      console.log("dynamic", dynamic);
       setadvanceSearch(menuId);
       setDynamic(dynamic);
       // setIsAdvanceSearchOpen(true);
-    }
-    else {
-      sessionStorage.removeItem('advanceSearch');
-      sessionStorage.removeItem('menuId');
-      sessionStorage.removeItem('dynamic');
+    } else {
+      sessionStorage.removeItem("advanceSearch");
+      sessionStorage.removeItem("menuId");
+      sessionStorage.removeItem("dynamic");
       setadvanceSearch({});
       setDynamic([]);
     }
-  }, [search])
-
+  }, [search]);
 
   let PaperId = null;
   if (typeof window !== "undefined") {
@@ -1584,794 +1754,1333 @@ export default function StickyHeadTable() {
   return (
     <div className="relative">
       <CustomeBreadCrumb />
-      <div className="flex mb-3 justify-end -mt-[10px] ">
-        <div className="flex justify-between h-[27px] border border-gray-100 rounded-[7px] shadow-md">
-          <Stack direction="row" className="">
-            {isAddVisible && (
-              <LightTooltip title="Add Form">
-                <Button
-                  onMouseEnter={() => setHoveredIcon("addForm")}
-                  onMouseLeave={() => setHoveredIcon(null)}
-                  onClick={() => validateAdd(tableName)}
-                >
-                  <Image
-                    src={
-                      hoveredIcon === "addForm" ? addDocIconHover : addDocIcon
-                    }
-                    alt="Add Icon"
-                    priority={false}
-                    className="cursor-pointer gridIcons2"
-                  />
-                </Button>
-              </LightTooltip>
-            )}
-            <LightTooltip title="share Form">
-              <Button
-                onMouseEnter={() => setHoveredIcon("shareForm")}
-                onMouseLeave={() => setHoveredIcon(null)}
-              >
-                <Image
-                  src={hoveredIcon === "shareForm" ? ShareIconHover : shareIcon}
-                  alt="Share Icon"
-                  priority={false}
-                  className="cursor-pointer gridIcons2"
-                />
-              </Button>
-            </LightTooltip>
-            <LightTooltip title="Advanced Search">
-              <Button
-                onClick={() => {
-                  setSearchOpen(!searchOpen);
-                }}
-                onMouseEnter={() => setHoveredIcon("advanceSearch")}
-                onMouseLeave={() => setHoveredIcon(null)}
-              >
-                <Image
-                  src={
-                    hoveredIcon === "advanceSearch"
-                      ? magnifyIconHover
-                      : searchImage
-                  }
-                  alt="Search Icon"
-                  priority={false}
-                  className="cursor-pointer gridIcons2"
-                />
-              </Button>
-            </LightTooltip>
-          </Stack>
-        </div>
-      </div>
 
-      {/* serach modal */}
-      {searchOpen && (
-        <Paper
-          className={`absolute top-[8%] right-0 z-50 ${styles.searchDispalyBg} border border-[#B2BAC2]  rounded-[7px] shadow-md`}
-          sx={{ width: "90%", height: "auto" }}
-        >
-          <div className=" mx-[20px] ">
-            <div className="flex items-center  relative mt-[6px]">
-              <Paper
-                sx={{
-                  ...advanceSearchPaperStyles,
-                }}
-              >
-                <InputBase
-                  autoFocus={true}
-                  autoComplete="off"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Search..."
-                  inputProps={{ "aria-label": "search..." }}
-                  sx={{
-                    ...searchInputStyling,
-                  }}
-                />
-                <GridHoverIcon
-                  defaultIcon={magnifyIcon}
-                  hoverIcon={magnifyIconHover}
-                  altText={"search"}
-                  title={"search"}
-                  onClick={() => handleInitailSearch()}
-                />
-              </Paper>
-              <GridHoverIcon
-                defaultIcon={closeIcon}
-                hoverIcon={crossIconHover}
-                altText={"close"}
-                title={"close"}
-                className={"relative left-2 cursor-pointer "}
-                onClick={() => setSearchOpen(false)}
-              />
-            </div>
-            <button
-              className={`${styles.txtColorDark} mt-[6px] block text-[12px]`}
-              onClick={() => {
-                setIsAdvanceSearchOpen(!isAdvanceSearchOpen);
-                setSearchInput("");
-              }}
-            >
-              Advanced Search
-            </button>
+      {/* ========================================================= */}
+      {/* ✅ MOBILE/TAB ONLY ( < lg )  -> updated layout (no overlap) */}
+      {/* ✅ DESKTOP/WEB ONLY ( >= lg ) -> KEEP YOUR OLD UI AS-IS     */}
+      {/* ========================================================= */}
 
-            {isAdvanceSearchOpen && (
-              <>
-                {dynamic?.map((elem, index) => {
-                  return (
-                    <div
-                      className="mt-[6px] gap-10 my-3  flex  items-center"
-                      key={index}
+      {!isLgUp ? (
+        <>
+          {/* ✅ Mobile/Tab toolbar (2nd row) - right aligned, no overlap */}
+          <div className="mt-2 mb-3 flex justify-end">
+            <div className="flex justify-between h-[30px] border border-gray-100 rounded-[10px] shadow-md px-1">
+              <Stack direction="row">
+                {isAddVisible && (
+                  <LightTooltip title="Add Form">
+                    <Button
+                      onMouseEnter={() => setHoveredIcon("addForm")}
+                      onMouseLeave={() => setHoveredIcon(null)}
+                      onClick={() => validateAdd(tableName)}
+                      sx={{ minWidth: 0, padding: "2px 6px" }}
                     >
-                      <Select
-                        key={index}
-                        menuPortalTarget={document.body}
-                        backspaceRemovesValue={true}
-                        isClearable={true}
-                        styles={customStyles}
-                        options={dropHeaderOptions}
-                        className={`w-[12rem] ${styles.inputField}  `}
-                        value={
-                          initialHeaderFields?.find(
-                            (option) => option.label === elem.value?.label
-                          ) || null
+                      <Image
+                        src={
+                          hoveredIcon === "addForm"
+                            ? addDocIconHover
+                            : addDocIcon
                         }
-                        noOptionsMessage={() => "No records found"}
-                        onMenuOpen={() => {
-                          setScrollPosition(0);
-                        }}
-                        onMenuClose={() => { }}
-                        onFocus={() => { }}
-                        onChange={(newValue) => {
-                          callInputChangeFunc = false;
-                          if (newValue) {
-                            // Handle the selection
-                            handleHeaderChange(index, newValue, dropPageNo, "");
-                          } else {
-                            // Handle the clear event
-                            handleRevert(index, elem);
-                          }
-                          callInputChangeFunc = true;
-                        }}
+                        alt="Add Icon"
+                        priority={false}
+                        className="cursor-pointer gridIcons2"
                       />
+                    </Button>
+                  </LightTooltip>
+                )}
 
-                      {elem.isDropDown == true && (
-                        <Select
-                          key={index}
-                          className={styles.advanceFilterInputs}
-                          backspaceRemovesValue={true}
-                          isClearable={true}
-                          styles={customStyles}
-                          options={elem.dropDownValues}
-                          components={{
-                            MenuList: (props) => (
-                              <CustomMenuList
-                                {...props}
-                                dropPageNo={dropPageNo}
-                                setDropPageNo={setDropPageNo}
-                                setScrollPosition={setScrollPosition}
-                                scrollPosition={scrollPosition}
-                                index={index}
-                              />
-                            ),
-                          }}
-                          value={elem.dropDownValues?.find(
-                            (option) =>
-                              option.value ===
-                              elem.advanceSearch?.[elem.value?.fieldname]
-                          )}
-                          noOptionsMessage={() =>
-                            dropHeaderOptions.length === 0
-                              ? "No records found"
-                              : "Searching..."
-                          }
-                          onMenuOpen={() => {
-                            console.log("open");
-                            setDropPageNo(1);
-                          }}
-                          onMenuClose={() => {
-                            console.log("Close");
-                            setDropPageNo(1);
-                          }}
-                          onFocus={() => {
-                            setDropPageNo(1);
-                          }}
-                          onChange={(newValue, data) => {
-                            console.log("onChange", newValue, data);
-                            setValues(index, newValue?.value);
-                          }}
-                          onBlur={() => {
-                            setDropPageNo(1);
-                          }}
-                          onInputChange={(value, e) => {
-                            console.log("callInputChangeFunc", e);
-                            if (
-                              callInputChangeFunc &&
-                              e.action === "input-change"
-                            ) {
-                              handleInputChange(index, value, dropPageNo);
-                            }
-                          }}
-                        />
-                      )}
+                <LightTooltip title="share Form">
+                  <Button
+                    onMouseEnter={() => setHoveredIcon("shareForm")}
+                    onMouseLeave={() => setHoveredIcon(null)}
+                    sx={{ minWidth: 0, padding: "2px 6px" }}
+                  >
+                    <Image
+                      src={
+                        hoveredIcon === "shareForm" ? ShareIconHover : shareIcon
+                      }
+                      alt="Share Icon"
+                      priority={false}
+                      className="cursor-pointer gridIcons2"
+                    />
+                  </Button>
+                </LightTooltip>
 
-                      {elem.isDropDown == false &&
-                        elem.controlname == "text" && (
-                          <TextField
-                            key={index}
-                            onFocus={() => {
-                              setIsFocused2(true);
-                            }}
-                            onBlur={() => {
-                              setIsFocused2(false);
-                            }}
-                            sx={{
-                              ...textInputStyle2({
-                                fieldname: "",
-                                isFocused2,
-                              }),
-                            }}
-                            size="small"
-                            id="outlined-basic"
-                            label="Search Text"
-                            variant="outlined"
-                            value={
-                              elem?.advanceSearch?.[elem?.value?.fieldname]
-                            }
-                            onChange={(e) =>
-                              setValues(index, e.target.value, "headersData")
-                            }
-                          />
-                        )}
-
-                      {elem.isDropDown == false &&
-                        elem.controlname == "number" && (
-                          <TextField
-                            key={index}
-                            onFocus={() => {
-                              setIsFocused2(true);
-                            }}
-                            onBlur={() => {
-                              setIsFocused2(true);
-                            }}
-                            sx={{
-                              ...textInputStyle2({
-                                fieldname: "",
-                                isFocused2,
-                                index: 1,
-                              }),
-                            }}
-                            size="small"
-                            id="outlined-basic"
-                            label="Search Text"
-                            variant="outlined"
-                            value={
-                              elem?.advanceSearch?.[elem?.value?.fieldname]
-                            }
-                            onChange={(e) =>
-                              setValues(index, e.target.value, "headersData")
-                            }
-                          />
-                        )}
-
-                      {elem.isDropDown === false &&
-                        elem.controlname === "date" && (
-                          <>
-                            <div
-                              onFocus={() => setIsFocused(true)}
-                              onBlur={() => setIsFocused(false)}
-                              key={index}
-                            >
-                              <DateTimePicker
-                                slotProps={{
-                                  field: { clearable: true },
-                                  actionBar: {
-                                    // The actions will be the same between desktop and mobile
-                                    actions: ["cancel"],
-                                  },
-                                  switchViewIcon: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-                                  day: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-
-                                  layout: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      borderRadius: "2px",
-                                      borderWidth: "1px",
-                                      borderColor:
-                                        "var(--accordion-summary-bg)",
-                                      border: "1px solid",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-                                  leftArrowIcon: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-                                  rightArrowIcon: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-                                  calendarHeader: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-                                  weekDayLabel: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-                                }}
-                                key={index}
-                                value={
-                                  elem.fromDate ? dayjs(elem.fromDate) : null
-                                }
-                                onChange={(newValue) => {
-                                  console.log("newValue", newValue, elem);
-                                  handleFromDateChange(
-                                    newValue,
-                                    index,
-                                    elem.value.fieldname
-                                  );
-                                }}
-                                slots={{
-                                  openPickerIcon: ExpandMoreIcon,
-                                }}
-                                onOpen={() => {
-                                  setIsFocused(true);
-                                }}
-                                onClose={() => {
-                                  setIsFocused(false);
-                                }}
-                                sx={{
-                                  ...customDatePickerStyleCss22({
-                                    fieldname: "FromDate",
-                                    isFocused: isFocused,
-                                    value: elem.fromDate,
-                                  }),
-                                }}
-                                label="From Date"
-                                name="FromDate"
-                                renderInput={(params) => (
-                                  <TextField
-                                    {...params}
-                                    key={index}
-                                    onFocus={() => {
-                                      setIsFocused(true); // Update the state when the input field is focused
-                                    }}
-                                    // If you need to handle onBlur as well
-                                    onBlur={() => {
-                                      setIsFocused(false);
-                                    }}
-                                  />
-                                )}
-                              />
-                            </div>
-
-                            <div
-                              onFocus={() => setIsFocused5(true)}
-                              onBlur={() => setIsFocused5(false)}
-                              key={index}
-                            >
-                              <DateTimePicker
-                                slotProps={{
-                                  field: { clearable: true },
-                                  actionBar: {
-                                    // The actions will be the same between desktop and mobile
-                                    actions: ["cancel"],
-                                  },
-                                  switchViewIcon: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-                                  day: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-
-                                  layout: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      borderRadius: "2px",
-                                      borderWidth: "1px",
-                                      borderColor:
-                                        "var(--accordion-summary-bg)",
-                                      border: "1px solid",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-                                  leftArrowIcon: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-                                  rightArrowIcon: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-                                  calendarHeader: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-                                  weekDayLabel: {
-                                    sx: {
-                                      color: "var(--table-text-color)",
-                                      backgroundColor:
-                                        "var(--accordion-summary-bg)",
-                                    },
-                                  },
-                                }}
-                                key={index}
-                                value={elem.toDate ? dayjs(elem.toDate) : null}
-                                onChange={(newValue) => {
-                                  handleToDateChange(
-                                    newValue,
-                                    index,
-                                    elem.value.fieldname
-                                  );
-                                }}
-                                slots={{
-                                  openPickerIcon: ExpandMoreIcon,
-                                }}
-                                onOpen={() => {
-                                  setIsFocused5(true);
-                                }}
-                                onClose={() => {
-                                  setIsFocused5(false);
-                                }}
-                                sx={{
-                                  ...customDatePickerStyleCss23({
-                                    fieldname: "ToDate",
-                                    isFocused5: isFocused5,
-                                    value: elem.toDate,
-                                  }),
-                                }}
-                                className={styles.advanceFilterInputs}
-                                label="To Date"
-                                name="ToDate"
-                                renderInput={(params) => (
-                                  <TextField
-                                    {...params}
-                                    key={index}
-                                    InputProps={{
-                                      ...params.InputProps,
-                                      onFocus: () => {
-                                        setIsFocused5(true);
-                                      },
-                                      onBlur: () => {
-                                        setIsFocused5(false);
-                                      },
-                                    }}
-                                  />
-                                )}
-                              />
-                            </div>
-                          </>
-                        )}
-
-                      {elem.isDropDown == false &&
-                        (elem.controlname.toLowerCase() == "radio" ||
-                          elem.controlname.toLowerCase() == "checkbox") && (
-                          <TextField
-                            key={index}
-                            onFocus={() => {
-                              setIsFocused2(true);
-                            }}
-                            onBlur={() => {
-                              setIsFocused2(false);
-                            }}
-                            sx={{
-                              ...textInputStyle2({
-                                fieldname: "",
-                                isFocused2,
-                              }),
-                            }}
-                            size="small"
-                            id="outlined-basic"
-                            label="Search Text"
-                            variant="outlined"
-                            value={
-                              elem?.advanceSearch?.[elem?.value?.fieldname]
-                            }
-                            onChange={(e) =>
-                              setValues(index, e.target.value, "headersData")
-                            }
-                          />
-                        )}
-
-                      {elem.isDropDown == false &&
-                        elem.controlname.toLowerCase() == "time" && (
-                          <TextField
-                            key={index}
-                            onFocus={() => {
-                              setIsFocused2(true);
-                            }}
-                            onBlur={() => {
-                              setIsFocused2(false);
-                            }}
-                            sx={{
-                              ...textInputStyle2({
-                                fieldname: "",
-                                isFocused2,
-                              }),
-                            }}
-                            size="small"
-                            id="outlined-basic"
-                            label="Search Text"
-                            variant="outlined"
-                            value={
-                              elem?.advanceSearch?.[elem?.value?.fieldname]
-                            }
-                            onChange={(e) =>
-                              setValues(index, e.target.value, "headersData")
-                            }
-                          />
-                        )}
-
-                      <div className="flex gap-3 items-center absolute right-5">
-                        {isAddVisible && (
-                          <GridHoverIcon
-                            defaultIcon={addLogo} // Your default icon source
-                            hoverIcon={plusIconHover} // Your hover icon source
-                            altText="Add"
-                            title={"Add"}
-                            onClick={() => {
-                              handleAdd();
-                            }}
-                          />
-                        )}
-
-                        <GridHoverIcon
-                          defaultIcon={DeleteIcon2} // Your default icon source
-                          hoverIcon={DeleteHover} // Your hover icon source
-                          altText="Delete"
-                          title={"Delete"}
-                          onClick={() => {
-                            dynamic.length > 1 && handleDelete(index);
-                          }}
-                        />
-                        <GridHoverIcon
-                          defaultIcon={refreshIcon} // Your default icon source
-                          hoverIcon={revertHover} // Your hover icon source
-                          title={"Revert"}
-                          altText={"Revert"}
-                          onClick={() => {
-                            handleRevert(index, elem);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </>
-            )}
-
-            <div className="flex gap-3 mt-1">
-              <button
-                className={` my-[6px] ${styles.commonBtn}`}
-                onClick={() => {
-                  handleSearch();
-                }}
-              >
-                Search
-              </button>
-              <button
-                className={` my-[6px] ${styles.commonBtn}`}
-                onClick={() => {
-                  handleRemoveSearch();
-                }}
-              >
-                Remove filter
-              </button>
+                <LightTooltip title="Advanced Search">
+                  <Button
+                    onClick={() => setSearchOpen(!searchOpen)}
+                    onMouseEnter={() => setHoveredIcon("advanceSearch")}
+                    onMouseLeave={() => setHoveredIcon(null)}
+                    sx={{ minWidth: 0, padding: "2px 6px" }}
+                  >
+                    <Image
+                      src={
+                        hoveredIcon === "advanceSearch"
+                          ? magnifyIconHover
+                          : searchImage
+                      }
+                      alt="Search Icon"
+                      priority={false}
+                      className="cursor-pointer gridIcons2"
+                    />
+                  </Button>
+                </LightTooltip>
+              </Stack>
             </div>
           </div>
-        </Paper>
+
+          {/* ✅ Mobile/Tab Search Modal (normal flow, NOT absolute, so no overlap) */}
+          {searchOpen && (
+            <Paper
+              className={`z-50 ${styles.searchDispalyBg} border border-[#B2BAC2] rounded-[10px] shadow-md w-full`}
+              sx={{ height: "auto" }}
+            >
+              <div className="mx-[12px]">
+                <div className="flex items-center relative mt-[8px]">
+                  <Paper sx={{ ...advanceSearchPaperStyles, width: "100%" }}>
+                    <InputBase
+                      autoFocus={true}
+                      autoComplete="off"
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      placeholder="Search..."
+                      inputProps={{ "aria-label": "search..." }}
+                      sx={{ ...searchInputStyling, width: "100%" }}
+                    />
+                    <GridHoverIcon
+                      defaultIcon={magnifyIcon}
+                      hoverIcon={magnifyIconHover}
+                      altText={"search"}
+                      title={"search"}
+                      onClick={() => handleInitailSearch()}
+                    />
+                  </Paper>
+
+                  <GridHoverIcon
+                    defaultIcon={closeIcon}
+                    hoverIcon={crossIconHover}
+                    altText={"close"}
+                    title={"close"}
+                    className={"relative left-2 cursor-pointer "}
+                    onClick={() => setSearchOpen(false)}
+                  />
+                </div>
+
+                <button
+                  className={`${styles.txtColorDark} mt-[8px] block text-[12px]`}
+                  onClick={() => {
+                    setIsAdvanceSearchOpen(!isAdvanceSearchOpen);
+                    setSearchInput("");
+                  }}
+                >
+                  Advanced Search
+                </button>
+
+                {isAdvanceSearchOpen && (
+                  <>
+                    {dynamic?.map((elem, index) => {
+                      return (
+                        <div
+                          key={index}
+                          className="mt-[8px] my-3 flex flex-col gap-2"
+                        >
+                          {/* ✅ First Select full width */}
+                          <Select
+                            menuPortalTarget={document.body}
+                            backspaceRemovesValue={true}
+                            isClearable={true}
+                            styles={customStyles}
+                            options={dropHeaderOptions}
+                            className={`w-full ${styles.inputField}`}
+                            value={
+                              initialHeaderFields?.find(
+                                (option) => option.label === elem.value?.label
+                              ) || null
+                            }
+                            noOptionsMessage={() => "No records found"}
+                            onMenuOpen={() => setScrollPosition(0)}
+                            onChange={(newValue) => {
+                              callInputChangeFunc = false;
+                              if (newValue) {
+                                handleHeaderChange(
+                                  index,
+                                  newValue,
+                                  dropPageNo,
+                                  ""
+                                );
+                              } else {
+                                handleRevert(index, elem);
+                              }
+                              callInputChangeFunc = true;
+                            }}
+                          />
+
+                          {/* ✅ Second control full width */}
+                          {elem.isDropDown == true && (
+                            <Select
+                              className={`w-full ${styles.advanceFilterInputs}`}
+                              backspaceRemovesValue={true}
+                              isClearable={true}
+                              styles={customStyles}
+                              options={elem.dropDownValues}
+                              components={{
+                                MenuList: (props) => (
+                                  <CustomMenuList
+                                    {...props}
+                                    dropPageNo={dropPageNo}
+                                    setDropPageNo={setDropPageNo}
+                                    setScrollPosition={setScrollPosition}
+                                    scrollPosition={scrollPosition}
+                                    index={index}
+                                  />
+                                ),
+                              }}
+                              value={elem.dropDownValues?.find(
+                                (option) =>
+                                  option.value ===
+                                  elem.advanceSearch?.[elem.value?.fieldname]
+                              )}
+                              noOptionsMessage={() =>
+                                dropHeaderOptions.length === 0
+                                  ? "No records found"
+                                  : "Searching..."
+                              }
+                              onMenuOpen={() => setDropPageNo(1)}
+                              onMenuClose={() => setDropPageNo(1)}
+                              onFocus={() => setDropPageNo(1)}
+                              onChange={(newValue) =>
+                                setValues(index, newValue?.value)
+                              }
+                              onBlur={() => setDropPageNo(1)}
+                              onInputChange={(value, e) => {
+                                if (
+                                  callInputChangeFunc &&
+                                  e.action === "input-change"
+                                ) {
+                                  handleInputChange(index, value, dropPageNo);
+                                }
+                              }}
+                            />
+                          )}
+
+                          {/* ✅ Action icons row in mobile (NOT absolute) */}
+                          <div className="flex justify-end gap-3 items-center">
+                            {isAddVisible && (
+                              <GridHoverIcon
+                                defaultIcon={addLogo}
+                                hoverIcon={plusIconHover}
+                                altText="Add"
+                                title={"Add"}
+                                onClick={() => handleAdd()}
+                              />
+                            )}
+
+                            <GridHoverIcon
+                              defaultIcon={DeleteIcon2}
+                              hoverIcon={DeleteHover}
+                              altText="Delete"
+                              title={"Delete"}
+                              onClick={() => {
+                                dynamic.length > 1 && handleDelete(index);
+                              }}
+                            />
+
+                            <GridHoverIcon
+                              defaultIcon={refreshIcon}
+                              hoverIcon={revertHover}
+                              title={"Revert"}
+                              altText={"Revert"}
+                              onClick={() => handleRevert(index, elem)}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+
+                <div className="flex gap-3 mt-1 pb-2">
+                  <button
+                    className={`my-[6px] ${styles.commonBtn}`}
+                    onClick={handleSearch}
+                  >
+                    Search
+                  </button>
+                  <button
+                    className={`my-[6px] ${styles.commonBtn}`}
+                    onClick={handleRemoveSearch}
+                  >
+                    Remove filter
+                  </button>
+                </div>
+              </div>
+            </Paper>
+          )}
+        </>
+      ) : (
+        <>
+          {/* ✅ DESKTOP/WEB: KEEP YOUR OLD DESIGN AS IT IS (paste your original block here) */}
+          <div className="flex mb-3 justify-end -mt-[10px] ">
+            <div className="flex justify-between h-[27px] border border-gray-100 rounded-[7px] shadow-md">
+              <Stack direction="row" className="">
+                {isAddVisible && (
+                  <LightTooltip title="Add Form">
+                    <Button
+                      onMouseEnter={() => setHoveredIcon("addForm")}
+                      onMouseLeave={() => setHoveredIcon(null)}
+                      onClick={() => validateAdd(tableName)}
+                    >
+                      <Image
+                        src={
+                          hoveredIcon === "addForm"
+                            ? addDocIconHover
+                            : addDocIcon
+                        }
+                        alt="Add Icon"
+                        priority={false}
+                        className="cursor-pointer gridIcons2"
+                      />
+                    </Button>
+                  </LightTooltip>
+                )}
+                <LightTooltip title="share Form">
+                  <Button
+                    onMouseEnter={() => setHoveredIcon("shareForm")}
+                    onMouseLeave={() => setHoveredIcon(null)}
+                  >
+                    <Image
+                      src={
+                        hoveredIcon === "shareForm" ? ShareIconHover : shareIcon
+                      }
+                      alt="Share Icon"
+                      priority={false}
+                      className="cursor-pointer gridIcons2"
+                    />
+                  </Button>
+                </LightTooltip>
+                <LightTooltip title="Advanced Search">
+                  <Button
+                    onClick={() => {
+                      setSearchOpen(!searchOpen);
+                    }}
+                    onMouseEnter={() => setHoveredIcon("advanceSearch")}
+                    onMouseLeave={() => setHoveredIcon(null)}
+                  >
+                    <Image
+                      src={
+                        hoveredIcon === "advanceSearch"
+                          ? magnifyIconHover
+                          : searchImage
+                      }
+                      alt="Search Icon"
+                      priority={false}
+                      className="cursor-pointer gridIcons2"
+                    />
+                  </Button>
+                </LightTooltip>
+              </Stack>
+            </div>
+          </div>
+
+          {/* ✅ DESKTOP: keep your existing absolute modal exactly same */}
+          {searchOpen && (
+            <Paper
+              className={`absolute top-[8%] right-0 z-50 ${styles.searchDispalyBg} border border-[#B2BAC2]  rounded-[7px] shadow-md`}
+              sx={{ width: "90%", height: "auto" }}
+            >
+              <div className="mx-[14px] sm:mx-[20px]">
+                <div className="flex items-center relative mt-[10px]">
+                  <Paper sx={{ ...advanceSearchPaperStyles, width: "100%" }}>
+                    <InputBase
+                      autoFocus={true}
+                      autoComplete="off"
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      placeholder="Search..."
+                      inputProps={{ "aria-label": "search..." }}
+                      sx={{ ...searchInputStyling, width: "100%" }}
+                    />
+                    <GridHoverIcon
+                      defaultIcon={magnifyIcon}
+                      hoverIcon={magnifyIconHover}
+                      altText={"search"}
+                      title={"search"}
+                      onClick={() => handleInitailSearch()}
+                    />
+                  </Paper>
+
+                  <GridHoverIcon
+                    defaultIcon={closeIcon}
+                    hoverIcon={crossIconHover}
+                    altText={"close"}
+                    title={"close"}
+                    className={"relative left-2 cursor-pointer "}
+                    onClick={() => setSearchOpen(false)}
+                  />
+                </div>
+
+                <button
+                  className={`${styles.txtColorDark} mt-[8px] block text-[12px]`}
+                  onClick={() => {
+                    setIsAdvanceSearchOpen(!isAdvanceSearchOpen);
+                    setSearchInput("");
+                  }}
+                >
+                  Advanced Search
+                </button>
+
+                {isAdvanceSearchOpen && (
+                  <>
+                    {dynamic?.map((elem, index) => {
+                      return (
+                        <div
+                          className="
+                    my-3 mt-[10px]
+                    flex flex-col gap-2
+                    lg:relative lg:flex-row lg:items-center lg:gap-10
+                  "
+                          key={index}
+                        >
+                          {/* ✅ Header Select */}
+                          <Select
+                            key={index}
+                            menuPortalTarget={document.body}
+                            backspaceRemovesValue={true}
+                            isClearable={true}
+                            styles={customStyles}
+                            options={dropHeaderOptions}
+                            className={`w-full lg:w-[12rem] ${styles.inputField}`}
+                            value={
+                              initialHeaderFields?.find(
+                                (option) => option.label === elem.value?.label
+                              ) || null
+                            }
+                            noOptionsMessage={() => "No records found"}
+                            onMenuOpen={() => setScrollPosition(0)}
+                            onChange={(newValue) => {
+                              callInputChangeFunc = false;
+                              if (newValue) {
+                                handleHeaderChange(
+                                  index,
+                                  newValue,
+                                  dropPageNo,
+                                  ""
+                                );
+                              } else {
+                                handleRevert(index, elem);
+                              }
+                              callInputChangeFunc = true;
+                            }}
+                          />
+
+                          {/* ✅ dropdown / input blocks stay same */}
+                          {elem.isDropDown == true && (
+                            <Select
+                              key={index}
+                              className={`w-full lg:flex-1 ${styles.advanceFilterInputs}`}
+                              backspaceRemovesValue={true}
+                              isClearable={true}
+                              styles={customStyles}
+                              options={elem.dropDownValues}
+                              components={{
+                                MenuList: (props) => (
+                                  <CustomMenuList
+                                    {...props}
+                                    dropPageNo={dropPageNo}
+                                    setDropPageNo={setDropPageNo}
+                                    setScrollPosition={setScrollPosition}
+                                    scrollPosition={scrollPosition}
+                                    index={index}
+                                  />
+                                ),
+                              }}
+                              value={elem.dropDownValues?.find(
+                                (option) =>
+                                  option.value ===
+                                  elem.advanceSearch?.[elem.value?.fieldname]
+                              )}
+                              noOptionsMessage={() =>
+                                dropHeaderOptions.length === 0
+                                  ? "No records found"
+                                  : "Searching..."
+                              }
+                              onMenuOpen={() => setDropPageNo(1)}
+                              onMenuClose={() => setDropPageNo(1)}
+                              onFocus={() => setDropPageNo(1)}
+                              onChange={(newValue) =>
+                                setValues(index, newValue?.value)
+                              }
+                              onBlur={() => setDropPageNo(1)}
+                              onInputChange={(value, e) => {
+                                if (
+                                  callInputChangeFunc &&
+                                  e.action === "input-change"
+                                ) {
+                                  handleInputChange(index, value, dropPageNo);
+                                }
+                              }}
+                            />
+                          )}
+
+                          {/* ✅ Action icons:
+                      - Mobile/Tab: stays in flow (below)
+                      - Desktop: right aligned inside row */}
+                          <div className="flex justify-end gap-3 items-center lg:absolute lg:right-2 lg:top-1/2 lg:-translate-y-1/2">
+                            {isAddVisible && (
+                              <GridHoverIcon
+                                defaultIcon={addLogo}
+                                hoverIcon={plusIconHover}
+                                altText="Add"
+                                title={"Add"}
+                                onClick={() => handleAdd()}
+                              />
+                            )}
+
+                            <GridHoverIcon
+                              defaultIcon={DeleteIcon2}
+                              hoverIcon={DeleteHover}
+                              altText="Delete"
+                              title={"Delete"}
+                              onClick={() => {
+                                dynamic.length > 1 && handleDelete(index);
+                              }}
+                            />
+
+                            <GridHoverIcon
+                              defaultIcon={refreshIcon}
+                              hoverIcon={revertHover}
+                              title={"Revert"}
+                              altText={"Revert"}
+                              onClick={() => handleRevert(index, elem)}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-2 pb-3">
+                  <button
+                    className={`my-[6px] ${styles.commonBtn} w-full sm:w-auto`}
+                    onClick={handleSearch}
+                  >
+                    Search
+                  </button>
+                  <button
+                    className={`my-[6px] ${styles.commonBtn} w-full sm:w-auto`}
+                    onClick={handleRemoveSearch}
+                  >
+                    Remove filter
+                  </button>
+                </div>
+              </div>
+            </Paper>
+          )}
+        </>
       )}
 
       {tableheading?.length > 0 ? (
         <>
-          <Paper
-            sx={{
-              ...displayTablePaperStyles,
-            }}
-          >
-            <TableContainer
-              id={"paper"}
-              className={` ${styles.thinScrollBar}`}
-              sx={{
-                ...displayTableContainerStyles,
-                position: "relative !important",
+          {/* ========================================================= */}
+          {/* ✅ SMALL DEVICES (mobile + tab)  < 1024px */}
+          {/* ========================================================= */}
+
+          {!isLgUp && (
+            <div
+              className={`${styles.pageBackground} flex flex-col flex-1 min-h-0`}
+              style={{
+                height: "calc(100dvh - 140px)",
+                maxHeight: "calc(100dvh - 140px)",
+                overflow: "hidden",
               }}
-              ref={tableRef}
             >
-              <Table
-                stickyHeader
-                aria-label="sticky table"
-                className={` overflow-auto   ${styles.hideScrollbar} ${styles.thinScrollBar}`}
+              {/* Scroll area */}
+              <div
+                className={`flex-1 min-h-0 overflow-y-auto ${styles.thinScrollBar}`}
+                style={{
+                  WebkitOverflowScrolling: "touch",
+                  padding: 8,
+                  paddingBottom: 78,
+                }}
+                // ✅ close ONLY when clicking empty area, not icons/tray
+                onPointerDown={(e) => {
+                  // if there is an open swipe, and user taps outside any tray/button => close
+                  if (!swipeOpenId) return;
+
+                  const tag = (e.target?.tagName || "").toLowerCase();
+                  if (
+                    tag === "button" ||
+                    tag === "img" ||
+                    tag === "svg" ||
+                    tag === "path"
+                  )
+                    return;
+
+                  // ✅ If tap happens inside an action tray, don’t close
+                  if (e.target?.closest?.("[data-swipe-tray='1']")) return;
+
+                  closeSwipe(swipeOpenId);
+                }}
               >
-                {/* Table Heading */}
-                <TableHead
-                  sx={{
-                    ...displaytableHeadStyles,
-                  }}
-                >
-                  <TableRow
-                    style={{
-                      cursor: "context-menu",
-                    }}
-                  >
-                    {tableheading.map((elem, index) => (
-                      <TableCell
-                        key={index}
-                        align={elem.align}
-                        style={{ minWidth: elem.minWidth }}
-                        width={"auto"}
-                        className={`${styles.cellHeading} cursor-pointer `}
-                        onContextMenu={(event) =>
-                          handleRightClick(event, elem.id)
-                        } // Add the right-click handler here
-                      >
-                        <span
-                          className={`${styles.labelText}`}
-                          onClick={() => {
-                            handleSortBy(elem);
+                {gridData?.length > 0 ? (
+                  <div className="space-y-2">
+                    {gridData.map((row, rowIndex) => {
+                      const isExpanded = !!expandedRows?.[row?.id];
+
+                      const getValue = (field) => {
+                        if (!field?.id) return "";
+                        if (field?.isDummy) {
+                          return field?.dummyField === "comma"
+                            ? getCommaSeparatedValuesCountFromNestedKeys(
+                                row?.[field?.id],
+                                field?.refkey
+                              )?.values
+                            : getCommaSeparatedValuesCountFromNestedKeys(
+                                row?.[field?.id],
+                                field?.refkey
+                              )?.count;
+                        }
+                        if (
+                          typeof row?.[field?.id] === "object" &&
+                          row?.[field?.id] !== null
+                        ) {
+                          return getNestedValue(
+                            row?.[field?.id],
+                            field?.refkey
+                          );
+                        }
+                        return isDateFormat(row?.[field?.id]);
+                      };
+
+                      // Header fields
+                      const titleField = tableheading?.[0];
+                      const subField = tableheading?.[1];
+                      const titleValue = getValue(titleField) || "—";
+                      const subValue = getValue(subField) || "";
+
+                      const compactFields = (tableheading || [])
+                        .filter(
+                          (f) =>
+                            f?.id &&
+                            f?.id !== titleField?.id &&
+                            f?.id !== subField?.id
+                        )
+                        .slice(0, 4);
+
+                      const expandedFields = (tableheading || []).filter(
+                        (f) => {
+                          if (!f?.id) return false;
+                          if (f.id === titleField?.id || f.id === subField?.id)
+                            return false;
+                          if (compactFields.some((cf) => cf?.id === f.id))
+                            return false;
+                          return true;
+                        }
+                      );
+
+                      const translateX =
+                        dragX?.[row?.id] ??
+                        (swipeOpenId === row?.id ? -SWIPE_REVEAL_PX : 0);
+
+                      const trayVisible =
+                        swipeOpenId === row?.id || Math.abs(translateX) > 2;
+
+                      return (
+                        <Paper
+                          key={row?.id ?? rowIndex}
+                          className={`${styles.pageBackground}`}
+                          sx={{
+                            borderRadius: "12px",
+                            overflow: "hidden",
+                            border: "1px solid rgba(148,163,184,0.18)",
+                            background: "rgba(255,255,255,0.04)",
+                            backdropFilter: "blur(10px)",
+                            WebkitBackdropFilter: "blur(10px)",
+                            boxShadow: "0 6px 16px rgba(2,6,23,0.08)",
+                            position: "relative",
                           }}
                         >
-                          {elem.label}
-                        </span>
-                        <span>
-                          {isInputVisible &&
-                            activeColumn === elem.id && ( // Conditionally render the input
-                              <CustomizedInputBase
-                                columnData={elem}
-                                setPrevSearchInput={setPrevSearchInput}
-                                prevSearchInput={prevSearchInput}
-                                setInputVisible={setInputVisible}
-                                setColumnSearchKeyName={setColumnSearchKeyName}
-                                setColumnSearchKeyValue={
-                                  setColumnSearchKeyValue
-                                }
-                                isInputVisible={isInputVisible}
-                                setSearchInput={setSearchInput}
-                                setIsNewSearch={setIsNewSearch}
-                                setRowsPerPage={setRowsPerPage}
-                                setPage={setPage}
+                          {/* ✅ SWIPE WRAP */}
+                          <div
+                            style={{
+                              position: "relative",
+                              overflow: "hidden",
+                              touchAction: "pan-y",
+                            }}
+                            onPointerDown={(e) => onSwipeStart(row?.id, e)}
+                            onPointerMove={onSwipeMove}
+                            onPointerUp={onSwipeEnd}
+                            onPointerCancel={onSwipeEnd}
+                            onTouchStart={(e) => onSwipeStart(row?.id, e)}
+                            onTouchMove={onSwipeMove}
+                            onTouchEnd={onSwipeEnd}
+                          >
+                            {/* ✅ TRAY (behind) */}
+                            <div
+                              data-swipe-tray="1"
+                              style={{
+                                position: "absolute",
+                                top: 0,
+                                right: 0,
+                                bottom: 0,
+                                width: SWIPE_REVEAL_PX,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                padding: 6,
+
+                                opacity: trayVisible ? 1 : 0,
+                                transform: trayVisible
+                                  ? "translateX(0)"
+                                  : "translateX(10px)",
+                                transition:
+                                  draggingId === row?.id
+                                    ? "none"
+                                    : "opacity 180ms ease, transform 180ms ease",
+                                pointerEvents: trayVisible ? "auto" : "none",
+
+                                background:
+                                  "linear-gradient(180deg, rgba(2,6,23,0.10) 0%, rgba(2,6,23,0.18) 100%)",
+                                borderLeft: "1px solid rgba(148,163,184,0.12)",
+                                backdropFilter: "blur(10px)",
+                                WebkitBackdropFilter: "blur(10px)",
+                                zIndex: 0,
+                              }}
+                              // ✅ IMPORTANT: do not let tray clicks bubble to list close handler
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex flex-col items-center gap-2">
+                                {isEditVisible && (
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <GridHoverIcon
+                                      defaultIcon={edit}
+                                      hoverIcon={EditHover}
+                                      altText="Edit"
+                                      title={"Edit"}
+                                      onClick={async () =>
+                                        validateEdit(tableName, row)
+                                      }
+                                    />
+                                  </div>
+                                )}
+
+                                {isViewVisible && (
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <GridHoverIcon
+                                      defaultIcon={viewIcon}
+                                      hoverIcon={viewIconHover}
+                                      altText={"view"}
+                                      title={"view"}
+                                      onClick={() =>
+                                        addEditController(row, false, true)
+                                      }
+                                    />
+                                  </div>
+                                )}
+
+                                {isCopyVisible && (
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <GridHoverIcon
+                                      defaultIcon={copyDoc}
+                                      hoverIcon={CopyHover}
+                                      altText="Copy"
+                                      title={"Copy Record"}
+                                      onClick={() =>
+                                        addEditController(row, true)
+                                      }
+                                    />
+                                  </div>
+                                )}
+
+                                {isPrintVisible && (
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <GridHoverIcon
+                                      defaultIcon={printer}
+                                      hoverIcon={PrintHover}
+                                      altText="Print"
+                                      title={"Print"}
+                                      onClick={async () => {
+                                        handlePrint(row);
+                                        setModalVisible(true);
+                                      }}
+                                    />
+                                  </div>
+                                )}
+
+                                {isDeleteVisible && (
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <GridHoverIcon
+                                      defaultIcon={DeleteIcon2}
+                                      hoverIcon={DeleteHover}
+                                      altText="Delete"
+                                      title="Delete Record"
+                                      onClick={() => deleteController(row)}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* ✅ FRONT (slides) */}
+                            <div
+                              style={{
+                                width: "100%",
+                                background: "rgba(255,255,255,0.04)",
+                                backdropFilter: "blur(10px)",
+                                WebkitBackdropFilter: "blur(10px)",
+
+                                transform: `translateX(${translateX}px)`,
+                                transition:
+                                  draggingId === row?.id
+                                    ? "none"
+                                    : "transform 260ms cubic-bezier(0.22,1,0.36,1)",
+                                willChange: "transform",
+                                zIndex: 1,
+                              }}
+                              // ✅ prevent list close when tapping card content
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {/* Accent */}
+                              <div
+                                style={{
+                                  height: 1.5,
+                                  background:
+                                    "linear-gradient(90deg, rgba(14,165,233,0.55) 0%, rgba(99,102,241,0.52) 50%, rgba(236,72,153,0.45) 100%)",
+                                }}
                               />
-                            )}
-                        </span>
-                        <span className="ml-1">{renderSortIcon(elem.id)}</span>
-                      </TableCell>
-                    ))}
-                    <TableCell align="left" width={"auto"}></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody
+
+                              {/* Header */}
+                              <div
+                                style={{
+                                  padding: "8px 8px 6px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: 8,
+                                }}
+                              >
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div
+                                    className={`${styles.txtColorDark}`}
+                                    style={{
+                                      fontSize: 12.5,
+                                      fontWeight: 900,
+                                      lineHeight: "15px",
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      letterSpacing: "0.15px",
+                                    }}
+                                    title={String(titleValue || "")}
+                                  >
+                                    {titleValue}
+                                  </div>
+
+                                  {!!subValue && (
+                                    <div
+                                      className={`${styles.txtColorDark}`}
+                                      style={{
+                                        marginTop: 2,
+                                        fontSize: 10,
+                                        fontWeight: 700,
+                                        opacity: 0.62,
+                                        whiteSpace: "nowrap",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                      }}
+                                      title={String(subValue || "")}
+                                    >
+                                      {subValue}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Expand icon */}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedRows((prev) => ({
+                                      ...(prev || {}),
+                                      [row?.id]: !prev?.[row?.id],
+                                    }))
+                                  }
+                                  className="active:scale-[0.98] transition"
+                                  style={{
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius: 10,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "1px solid rgba(148,163,184,0.14)",
+                                    background: "rgba(255,255,255,0.05)",
+                                    boxShadow:
+                                      "inset 0 1px 0 rgba(255,255,255,0.08)",
+                                    flexShrink: 0,
+                                  }}
+                                  aria-label={
+                                    isExpanded ? "Collapse" : "Expand"
+                                  }
+                                  title={isExpanded ? "Collapse" : "Expand"}
+                                >
+                                  <span
+                                    className={`${styles.txtColorDark}`}
+                                    style={{
+                                      fontSize: 14,
+                                      fontWeight: 900,
+                                      opacity: 0.85,
+                                      transform: isExpanded
+                                        ? "rotate(180deg)"
+                                        : "rotate(0deg)",
+                                      transition: "transform 200ms ease",
+                                      lineHeight: 1,
+                                    }}
+                                  >
+                                    ▾
+                                  </span>
+                                </button>
+                              </div>
+
+                              {/* Divider */}
+                              <div
+                                style={{
+                                  borderTop: "1px solid rgba(148,163,184,0.10)",
+                                }}
+                              />
+
+                              {/* Body */}
+                              <div style={{ padding: 6 }}>
+                                {/* Compact fields */}
+                                <div
+                                  style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "1fr 1fr",
+                                    gap: 6,
+                                  }}
+                                >
+                                  {compactFields.map((field, i) => (
+                                    <div
+                                      key={field?.id ?? i}
+                                      style={{
+                                        minWidth: 0,
+                                        padding: "4px 2px",
+                                      }}
+                                    >
+                                      <div
+                                        className={`${styles.txtColorDark}`}
+                                        style={{
+                                          fontSize: 9,
+                                          fontWeight: 800,
+                                          opacity: 0.55,
+                                          letterSpacing: "0.2px",
+                                          textTransform: "uppercase",
+                                          whiteSpace: "nowrap",
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                        }}
+                                        title={field?.label}
+                                      >
+                                        {field?.label}
+                                      </div>
+                                      <div
+                                        className={`${styles.txtColorDark}`}
+                                        style={{
+                                          marginTop: 2,
+                                          fontSize: 11,
+                                          fontWeight: 850,
+                                          lineHeight: "14px",
+                                          wordBreak: "break-word",
+                                          opacity: 0.95,
+                                        }}
+                                      >
+                                        {getValue(field) ?? ""}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* Animated Expanded Section */}
+                                <div
+                                  style={{
+                                    marginTop: 8,
+                                    overflow: "hidden",
+                                    maxHeight: isExpanded ? 520 : 0,
+                                    opacity: isExpanded ? 1 : 0,
+                                    transform: isExpanded
+                                      ? "translateY(0px)"
+                                      : "translateY(-4px)",
+                                    transition:
+                                      "max-height 320ms ease, opacity 220ms ease, transform 220ms ease",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      borderRadius: 12,
+                                      border:
+                                        "1px solid rgba(148,163,184,0.10)",
+                                      background: "rgba(255,255,255,0.03)",
+                                      padding: 6,
+                                    }}
+                                  >
+                                    <div className="space-y-1.5">
+                                      {expandedFields.map((field, i) => (
+                                        <div
+                                          key={field?.id ?? i}
+                                          style={{
+                                            display: "flex",
+                                            gap: 8,
+                                            alignItems: "flex-start",
+                                            padding: "6px 7px",
+                                            borderRadius: 10,
+                                            border:
+                                              "1px solid rgba(148,163,184,0.08)",
+                                            background:
+                                              "rgba(255,255,255,0.04)",
+                                          }}
+                                        >
+                                          <div
+                                            className={`${styles.txtColorDark}`}
+                                            style={{
+                                              minWidth:
+                                                "clamp(78px, 32vw, 130px)",
+                                              fontSize: 9.5,
+                                              fontWeight: 800,
+                                              opacity: 0.55,
+                                              letterSpacing: "0.2px",
+                                              textTransform: "uppercase",
+                                            }}
+                                          >
+                                            {field?.label}
+                                          </div>
+                                          <div
+                                            className={`${styles.txtColorDark}`}
+                                            style={{
+                                              fontSize: 11,
+                                              fontWeight: 800,
+                                              opacity: 0.95,
+                                              lineHeight: "14px",
+                                              wordBreak: "break-word",
+                                              flex: 1,
+                                            }}
+                                          >
+                                            {getValue(field) ?? ""}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </Paper>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div
+                    className={`${styles.pageBackground} flex items-center justify-center`}
+                    style={{ minHeight: "100%" }}
+                  >
+                    <div className="container mx-auto text-center">
+                      {loader ? (
+                        <p className="text-gray-500 text-lg mt-4">Loading...</p>
+                      ) : (
+                        <p className="text-gray-500 text-lg mt-4">
+                          No Records Found.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {/* Footer pagination sticky (side-by-side only, no overlap) */}
+              <div
+                className={`flex items-center ${styles.txtColorDark} ${styles.pageBackground}`}
+                style={{
+                  flexShrink: 0,
+                  position: "sticky",
+                  bottom: 0,
+                  zIndex: 100,
+                  minWidth: 0,
+
+                  // ✅ premium glass footer
+                  background:
+                    "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.06) 100%)",
+                  backdropFilter: "blur(14px)",
+                  WebkitBackdropFilter: "blur(14px)",
+
+                  // ✅ subtle border + glow
+                  borderTop: "1px solid rgba(148,163,184,0.18)",
+                  boxShadow: "0 -10px 24px rgba(2,6,23,0.12)",
+
+                  paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)",
+                  paddingLeft: 12,
+                  paddingRight: 86, // ✅ keep space for floating button
+                  paddingTop: 10,
+
+                  gap: 12,
+                }}
+              >
+                {/* ✅ small top highlight line */}
+                <div
                   style={{
-                    overflow: "auto",
-                    marginTop: "30px",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 1,
+                    background:
+                      "linear-gradient(90deg, rgba(14,165,233,0.45) 0%, rgba(99,102,241,0.38) 50%, rgba(236,72,153,0.32) 100%)",
+                    opacity: 0.9,
                   }}
-                  key={"body"}
+                />
+
+                {/* LEFT: pagination (scrolls horizontally if needed) */}
+                <div
+                  style={{
+                    flex: "1 1 auto",
+                    minWidth: 0,
+                    overflowX: "auto",
+                    overflowY: "hidden",
+                    WebkitOverflowScrolling: "touch",
+                    paddingBottom: 2,
+                    paddingTop: 2,
+                  }}
+                  className={styles.thinScrollBar}
                 >
-                  {gridData?.length > 0 &&
-                    gridData?.map((row, rowIndex) => (
+                  <div
+                    style={{ display: "inline-flex", minWidth: "max-content" }}
+                  >
+                    <PaginationButtons
+                      totalPages={totalPages}
+                      pageSelected={pageSelected}
+                      selectedPageNumber={selectedPageNumber}
+                    />
+                  </div>
+                </div>
+
+                {/* RIGHT: rowsPerPage + page text */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flex: "0 0 auto",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {/* ✅ premium pill input */}
+                  <input
+                    type="number"
+                    value={rowsPerPage}
+                    onChange={handleCustomRowsPerPageChange}
+                    className={`${styles.txtColorDark}`}
+                    style={{
+                      height: 22,
+                      width: 56,
+                      fontSize: 10,
+                      padding: "0 10px",
+                      borderRadius: 999,
+                      border: "1px solid rgba(148,163,184,0.24)",
+                      background: "rgba(255,255,255,0.07)",
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10)",
+                      outline: "none",
+                    }}
+                  />
+
+                  {/* ✅ premium chip text */}
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 800,
+                      padding: "3px 10px",
+                      borderRadius: 999,
+                      border: "1px solid rgba(148,163,184,0.18)",
+                      background: "rgba(255,255,255,0.06)",
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.10)",
+                      opacity: 0.95,
+                    }}
+                    className={styles.txtColorDark}
+                  >
+                    {selectedPage} / {totalPages}
+                    <span
+                      style={{ opacity: 0.6, fontWeight: 700, marginLeft: 6 }}
+                    >
+                      pages
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* ✅ BIG DEVICES (laptop/desktop and above) >= 1024px */}
+          {/* ========================================================= */}
+          {isLgUp && (
+            <>
+              <Paper
+                sx={{
+                  ...displayTablePaperStyles,
+                }}
+              >
+                <TableContainer
+                  id={"paper"}
+                  className={` ${styles.thinScrollBar}`}
+                  sx={{
+                    ...displayTableContainerStyles,
+                    position: "relative !important",
+                  }}
+                >
+                  <Table
+                    stickyHeader
+                    aria-label="sticky table"
+                    className={` overflow-auto   ${styles.hideScrollbar} ${styles.thinScrollBar}`}
+                  >
+                    {/* Table Heading */}
+                    <TableHead
+                      sx={{
+                        ...displaytableHeadStyles,
+                      }}
+                    >
                       <TableRow
-                        hover={true}
-                        role="checkbox"
-                        key={rowIndex}
-                        className={`${styles.tableCellHoverEffect} ${styles.hh} rounded-lg p-0 opacity-1 z-0`}
-                        sx={{
-                          ...displaytableRowStyles_two(),
-                          "&.MuiTableRow-root": {
-                            backgroundColor: operatorsBg[row.id],
-                          },
-                        }}
-                        onMouseEnter={() => setMoveToRow(0)}
-                        onMouseLeave={() => {
-                          setMoveToRow(0);
+                        style={{
+                          cursor: "context-menu",
                         }}
                       >
-                        {tableheading.map((fieldName, index) => (
-                          <>
-                            {fieldName.id !== "" &&
-                              fieldName.isDummy === false && (
-                                <TableCell
-                                  align="left"
-                                  className={`
+                        {tableheading.map((elem) => (
+                          <TableCell
+                            key={elem.id}
+                            align={elem.align}
+                            style={{ minWidth: elem.minWidth }}
+                            width={"auto"}
+                            className={`${styles.cellHeading} cursor-pointer `}
+                            onContextMenu={(event) =>
+                              handleRightClick(event, elem.id)
+                            } // Add the right-click handler here
+                          >
+                            <span
+                              className={`${styles.labelText}`}
+                              onClick={() => {
+                                handleSortBy(elem);
+                              }}
+                            >
+                              {elem.label}
+                            </span>
+                            <span>
+                              {isInputVisible &&
+                                activeColumn === elem.id && ( // Conditionally render the input
+                                  <CustomizedInputBase
+                                    columnData={elem}
+                                    setPrevSearchInput={setPrevSearchInput}
+                                    prevSearchInput={prevSearchInput}
+                                    setInputVisible={setInputVisible}
+                                    setColumnSearchKeyName={
+                                      setColumnSearchKeyName
+                                    }
+                                    setColumnSearchKeyValue={
+                                      setColumnSearchKeyValue
+                                    }
+                                    isInputVisible={isInputVisible}
+                                    setSearchInput={setSearchInput}
+                                    setIsNewSearch={setIsNewSearch}
+                                    setRowsPerPage={setRowsPerPage}
+                                    setPage={setPage}
+                                  />
+                                )}
+                            </span>
+                            <span className="ml-1">
+                              {renderSortIcon(elem.id)}
+                            </span>
+                          </TableCell>
+                        ))}
+                        <TableCell align="left" width={"auto"}></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody
+                      style={{
+                        overflow: "auto",
+                        marginTop: "30px",
+                      }}
+                      key={"body"}
+                    >
+                      {gridData?.length > 0 &&
+                        gridData?.map((row, rowIndex) => (
+                          <TableRow
+                            hover={true}
+                            role="checkbox"
+                            key={rowIndex}
+                            className={`${styles.tableCellHoverEffect} ${styles.hh} rounded-lg p-0 opacity-1 z-0`}
+                            sx={{
+                              ...displaytableRowStyles_two(),
+                            }}
+                          >
+                            {tableheading.map((fieldName, index) => (
+                              <>
+                                {fieldName.id !== "" &&
+                                  (fieldName.isDummy === false ||
+                                    fieldName.isDummy === null) && (
+                                    <TableCell
+                                      key={index}
+                                      align="left"
+                                      className={`
                           ${index === 0 && styles.tableCellHoverEffect}
                           `}
-                                >
-                                  {typeof row[fieldName.id] === "object" &&
-                                    row[fieldName.id] !== null
-                                    ? getNestedValue(
-                                      row[fieldName.id],
-                                      fieldName.refkey
-                                    )
-                                    : isDateFormat(row[fieldName.id])}
-                                </TableCell>
-                              )}
+                                    >
+                                      {typeof row[fieldName.id] === "object" &&
+                                      row[fieldName.id] !== null
+                                        ? getNestedValue(
+                                            row[fieldName.id],
+                                            fieldName.refkey
+                                          )
+                                        : isDateFormat(row[fieldName.id])}
+                                    </TableCell>
+                                  )}
 
-                            {typeof row[fieldName.id] ===
-                              ("object" || "Array") &&
-                              fieldName.isDummy === true && (
-                                <TableCell align="left" className="">
-                                  {fieldName.dummyField == "comma"
-                                    ? getCommaSeparatedValuesCountFromNestedKeys(
-                                      row[fieldName.id],
-                                      fieldName.refkey
-                                    ).values
-                                    : getCommaSeparatedValuesCountFromNestedKeys(
-                                      row[fieldName.id],
-                                      fieldName.refkey
-                                    ).count}
-                                </TableCell>
-                              )}
-                            {typeof row[fieldName.id] !==
-                              ("object" || "Array") &&
-                              fieldName.isDummy === true && (
-                                <TableCell align="left"></TableCell>
-                              )}
-                          </>
-                        ))}
-
-                        {/* Aakash-Y code for to get hover functionality on KeyUp/Down */}
-                        {rowIndex + 1 !== moveToRow ? (
-                          <>
+                                {typeof row[fieldName.id] ===
+                                  ("object" || "Array") &&
+                                  fieldName.isDummy === true && (
+                                    <TableCell
+                                      key={index}
+                                      align="left"
+                                      className=""
+                                    >
+                                      {fieldName.dummyField == "comma"
+                                        ? getCommaSeparatedValuesCountFromNestedKeys(
+                                            row[fieldName.id],
+                                            fieldName.refkey
+                                          ).values
+                                        : getCommaSeparatedValuesCountFromNestedKeys(
+                                            row[fieldName.id],
+                                            fieldName.refkey
+                                          ).count}
+                                    </TableCell>
+                                  )}
+                                {typeof row[fieldName.id] !==
+                                  ("object" || "Array") &&
+                                  fieldName.isDummy === true && (
+                                    <TableCell
+                                      key={index}
+                                      align="left"
+                                    ></TableCell>
+                                  )}
+                              </>
+                            ))}
                             <TableCell
-                              className={
-                                moveToRow > 0
-                                  ? ""
-                                  : `${styles.tableCellHoverEffect}`
-                              }
+                              className={styles.tableCellHoverEffect}
                               style={{ width: "auto" }}
+                              key={rowIndex}
                             >
-                              <div className="w-full">
+                              <div className="w-full  ">
                                 <div
                                   id={"iconsRow"}
-                                  className={
-                                    moveToRow > 0
-                                      ? ""
-                                      : `${styles.iconContainer2} flex items-center w-full -mt-[11px] `
-                                  }
+                                  className={` ${styles.iconContainer2} flex items-center w-full -mt-[11px]  `}
                                   style={{
-                                    height: "20px",
                                     right: `-${scrollLeft}px`,
-                                    display: moveToRow > 0 ? "none" : "flex",
+                                    height: "20px",
                                   }}
                                 >
                                   {isEditVisible && (
@@ -2380,76 +3089,7 @@ export default function StickyHeadTable() {
                                       hoverIcon={EditHover} // Your hovered icon source
                                       altText="Edit"
                                       title={"Edit"}
-                                      onClick={async () =>
-                                        validateEdit(tableName, row)
-                                      }
-                                    />
-                                  )}
-                                  {isViewVisible && (
-                                    <GridHoverIcon
-                                      defaultIcon={viewIcon} // Your default icon source
-                                      hoverIcon={viewIconHover} // Your hovered icon source
-                                      altText={"view"}
-                                      title={"view"}
-                                      onClick={() =>
-                                        addEditController(row, false, true)
-                                      }
-                                    />
-                                  )}
-
-                                  <GridHoverIcon
-                                    defaultIcon={copyDoc} // Your default icon source
-                                    hoverIcon={CopyHover} // Your hovered icon source
-                                    altText="Attachment Icon"
-                                    title={"Copy Record"}
-                                    onClick={() => addEditController(row, true)}
-                                  />
-                                  <GridHoverIcon
-                                    defaultIcon={attach} // Your default icon source
-                                    hoverIcon={attachmentIcon} // Your hovered icon source
-                                    altText="Attachment"
-                                    title={"Attachment"}
-                                  // style={{ visibility:'hidden'}}
-                                  />
-
-                                  <GridHoverIcon
-                                    defaultIcon={printer} // Your default icon source
-                                    hoverIcon={PrintHover} // Your hovered icon source
-                                    altText="Print"
-                                    title={"Print"}
-                                    onClick={async () => {
-                                      handlePrint(row);
-                                      setModalVisible(true);
-                                    }}
-                                  />
-                                  {isDeleteVisible && (
-                                    <GridHoverIcon
-                                      defaultIcon={DeleteIcon2}
-                                      hoverIcon={DeleteHover}
-                                      altText="Delete"
-                                      title="Delete Record"
-                                      onClick={() => deleteController(row)}
-                                    />
-                                  )}
-                                </div>
-                              </div>
-                            </TableCell>
-                          </>
-                        ) : (
-                          <>
-                            <TableCell style={{ width: "auto" }}>
-                              <div className="w-full">
-                                <div
-                                  id={"iconsRow"}
-                                  className={`flex items-center w-fit`}
-                                  style={pageTableCellInlineStyle(scrollLeft)}
-                                >
-                                  {isEditVisible && (
-                                    <GridHoverIcon
-                                      defaultIcon={edit} // Your default icon source
-                                      hoverIcon={EditHover} // Your hovered icon source
-                                      altText="Edit"
-                                      title={"Edit"}
+                                      // onClick={() => addEditController(row)}
                                       onClick={async () =>
                                         validateEdit(tableName, row)
                                       }
@@ -2468,100 +3108,100 @@ export default function StickyHeadTable() {
                                   )}
                                   {isCopyVisible && (
                                     <GridHoverIcon
-                                      defaultIcon={copyDoc} // Your default icon source
+                                      defaultIcon={copy} // Your default icon source
                                       hoverIcon={CopyHover} // Your hovered icon source
-                                      altText="Attachment Icon"
-                                      title={"Copy Record"}
+                                      altText="Copy"
+                                      title={"Copy"}
                                       onClick={() =>
                                         addEditController(row, true)
                                       }
                                     />
                                   )}
-                                  {isAttachmentVisible && (
+                                  {isRequiredAttachment && (
                                     <GridHoverIcon
                                       defaultIcon={attach} // Your default icon source
                                       hoverIcon={attachmentIcon} // Your hovered icon source
                                       altText="Attachment"
                                       title={"Attachment"}
-                                    // style={{ visibility:'hidden'}}
                                     />
                                   )}
-                                  {isPrintVisible && (
-                                    <GridHoverIcon
-                                      defaultIcon={printer} // Your default icon source
-                                      hoverIcon={PrintHover} // Your hovered icon source
-                                      altText="Print"
-                                      title={"Print"}
-                                      onClick={async () => {
-                                        handlePrint(row);
-                                        setModalVisible(true);
-                                      }}
-                                    />
-                                  )}
-
+                                  {/* {isPrintVisible && ( */}
                                   <GridHoverIcon
                                     defaultIcon={printer} // Your default icon source
                                     hoverIcon={PrintHover} // Your hovered icon source
-                                    altText="Template"
-                                    title={"Template"}
-                                    onClick={() => {
-                                      setNewModalVisible(true); // Then set modal visibility
-                                      handlePrint(row); // Then set modal visibility
+                                    altText="Print"
+                                    title={"Print"}
+                                    onClick={async () => {
+                                      handlePrint(row);
+                                      setModalVisible(true);
+                                      //validateEditPrint(tableName, row)
                                     }}
                                   />
+                                  {/* )} */}
                                   {isDeleteVisible && (
                                     <GridHoverIcon
-                                      defaultIcon={DeleteIcon2}
-                                      hoverIcon={DeleteHover}
+                                      defaultIcon={DeleteIcon2} // Your default icon source
+                                      hoverIcon={DeleteHover} // Your hovered icon source
                                       altText="Delete"
-                                      title="Delete Record"
+                                      title={"Delete Record"}
                                       onClick={() => deleteController(row)}
                                     />
                                   )}
                                 </div>
                               </div>
                             </TableCell>
-                          </>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                  {gridData.length === 0 && (
+                    <div
+                      className={`${styles.pageBackground} flex items-center justify-center h-[calc(100vh-168px)]`}
+                    >
+                      <div
+                        className={`${styles.pageBackground} container mx-auto text-center`}
+                      >
+                        {!loader && (
+                          <p className="text-gray-500 text-lg mt-4">
+                            {"No Records Found."}
+                          </p>
                         )}
-
-                        {/* code ends here */}
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-              {gridData.length === 0 && (
-                <div
-                  className={`${styles.pageBackground} flex items-center justify-center h-[calc(100vh-168px)]`}
-                >
-                  <div
-                    className={`${styles.pageBackground} container mx-auto text-center`}
-                  >
-                    {!loader && (
-                      <p className="text-gray-500 text-lg mt-4">
-                        {"No Records Found."}
-                      </p>
+                      </div>
+                    </div>
+                  )}
+                  {/* new model Akash */}
+                  <div>
+                    {openPrintModal && (
+                      <PrintModal
+                        setOpenPrintModal={setOpenPrintModal}
+                        submittedRecordId={submittedRecordId}
+                        submittedMenuId={submittedMenuId}
+                        openPrintModal={openPrintModal}
+                        tableName={tableName}
+                        pageType={"searchPage"}
+                      />
                     )}
                   </div>
-                </div>
-              )}
-            </TableContainer>
-          </Paper>
-          <div className="flex items-center justify-end pt-2 px-4 text-black">
-            <PaginationButtons
-              totalPages={totalPages}
-              pageSelected={pageSelected}
-              selectedPageNumber={selectedPageNumber}
-            />
-            <input
-              type="number"
-              value={rowsPerPage}
-              onChange={handleCustomRowsPerPageChange}
-              className={`border ${styles.txtColorDark} ${styles.pageBackground} border-gray-300 rounded-md p-2 h-[17px] w-14 text-[10px] mr-[15px] outline-gray-300 outline-0`}
-            />
-            <p className={`text-[10px] ${styles.txtColorDark}`}>
-              {selectedPage} of {totalPages} Pages
-            </p>
-          </div>
+                </TableContainer>
+              </Paper>
+              <div className="flex items-center justify-end pt-2 px-4 text-black">
+                <PaginationButtons
+                  totalPages={totalPages}
+                  pageSelected={pageSelected}
+                  selectedPageNumber={selectedPageNumber}
+                />
+                <input
+                  type="number"
+                  value={rowsPerPage}
+                  onChange={handleCustomRowsPerPageChange}
+                  className={`border ${styles.txtColorDark} ${styles.pageBackground} border-gray-300 rounded-md p-2 h-[17px] w-14 text-[10px] mr-[15px] outline-gray-300 outline-0`}
+                />
+                <p className={`text-[10px] ${styles.txtColorDark}`}>
+                  {selectedPage} of {totalPages} Pages
+                </p>
+              </div>
+            </>
+          )}
         </>
       ) : (
         <div
@@ -2578,6 +3218,7 @@ export default function StickyHeadTable() {
           </div>
         </div>
       )}
+
       {/* new model Akash */}
       <div>
         {openPrintModal && (

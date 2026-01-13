@@ -22,6 +22,43 @@ const FONT_L1 = "11px";
 const FONT_L2 = "10px";
 const FONT_L3 = "9px";
 
+// ✅ SORTING ORDERS
+const LEVEL1_ORDER = ["Liability", "Assets", "Income", "Expense"];
+const INCOME_L2_ORDER = ["Direct Incomes", "Indirect Incomes"];
+const EXPENSE_L2_ORDER = ["Direct Expenses", "Indirect Expenses"];
+
+// ✅ key ordering helper (applies only where needed)
+const getOrderedKeys = (obj, { level, rootKey }) => {
+  const keys = Object.keys(obj || {});
+
+  // Level-1 (top) ordering
+  if (level === 0) {
+    return [
+      ...LEVEL1_ORDER.filter((k) => obj?.[k]),
+      ...keys.filter((k) => !LEVEL1_ORDER.includes(k)),
+    ];
+  }
+
+  // Level-2 ordering ONLY under Income
+  if (level === 1 && rootKey === "Income") {
+    return [
+      ...INCOME_L2_ORDER.filter((k) => obj?.[k]),
+      ...keys.filter((k) => !INCOME_L2_ORDER.includes(k)),
+    ];
+  }
+
+  // Level-2 ordering ONLY under Expense
+  if (level === 1 && rootKey === "Expense") {
+    return [
+      ...EXPENSE_L2_ORDER.filter((k) => obj?.[k]),
+      ...keys.filter((k) => !EXPENSE_L2_ORDER.includes(k)),
+    ];
+  }
+
+  // default (insertion order)
+  return keys;
+};
+
 // Format number
 const fmt = (num) => Number(num || 0).toFixed(2);
 
@@ -149,7 +186,7 @@ const getColumnLabel = (key) => {
 // ⭐ COMPONENT WITH FORWARD REF
 // ============================================================
 const TrialBalanceGrid = forwardRef(
-  ({ balanceSheetData, selectedRadio, selectedRadioType }, ref) => {
+  ({ balanceSheetData, selectedRadio, selectedRadioType, toggle }, ref) => {
     if (!balanceSheetData || balanceSheetData.length === 0)
       return <div>No Data Found</div>;
 
@@ -158,7 +195,7 @@ const TrialBalanceGrid = forwardRef(
     // 🔹 build tree using 6 or 2 levels
     const tree = buildTree(balanceSheetData, isDetailMode);
 
-    const LEVEL1_ORDER = ["Assets", "Liability", "Income", "Expense"];
+    const LEVEL1_ORDER = ["Liability", "Assets", "Income", "Expense"];
     const orderedLevel1 = LEVEL1_ORDER.filter((k) => tree[k]);
 
     const columns = getColumns(selectedRadio, selectedRadioType);
@@ -232,7 +269,7 @@ const TrialBalanceGrid = forwardRef(
       const isDetailMode = selectedRadio === "D";
       const tree = buildTree(balanceSheetData, isDetailMode);
 
-      const LEVEL1_ORDER = ["Assets", "Liability", "Income", "Expense"];
+      const LEVEL1_ORDER = ["Liability", "Assets", "Income", "Expense"];
       const orderedLevel1 = LEVEL1_ORDER.filter((k) => tree[k]);
       const columns = getColumns(selectedRadio, selectedRadioType);
 
@@ -303,8 +340,11 @@ const TrialBalanceGrid = forwardRef(
       // ==============================
       // 🔹 RECURSIVE EXCEL RENDER (MATCHES UI)
       // ==============================
-      const renderExcelTree = (node, level = 0) => {
-        Object.entries(node).forEach(([key, value]) => {
+      const renderExcelTree = (node, level = 0, rootKey = null) => {
+        const orderedKeys = getOrderedKeys(node, { level, rootKey });
+
+        orderedKeys.forEach((key) => {
+          const value = node[key];
           const totals = sumNodeTotals(value);
 
           // ✅ SUMMARY: ONLY 2 LEVELS
@@ -337,7 +377,8 @@ const TrialBalanceGrid = forwardRef(
 
           applyBorderless(row);
 
-          renderExcelTree(value.__children || {}, level + 1);
+          // ✅ PASS ROOTKEY DOWN
+          renderExcelTree(value.__children || {}, level + 1, rootKey || key);
         });
       };
 
@@ -446,7 +487,7 @@ const TrialBalanceGrid = forwardRef(
       // 🔹 BUILD TREE
       // ===============================
       const tree = buildTree(balanceSheetData, isDetailMode);
-      const LEVEL1_ORDER = ["Assets", "Liability", "Income", "Expense"];
+      const LEVEL1_ORDER = ["Liability", "Assets", "Income", "Expense"];
       const orderedLevel1 = LEVEL1_ORDER.filter((k) => tree[k]);
       const columns = getColumns(selectedRadio, selectedRadioType);
 
@@ -455,8 +496,11 @@ const TrialBalanceGrid = forwardRef(
       // ===============================
       // 🔹 RECURSIVE PDF ROW BUILDER
       // ===============================
-      const buildPdfRows = (node, level = 0) => {
-        Object.entries(node).forEach(([key, value]) => {
+      const buildPdfRows = (node, level = 0, rootKey = null) => {
+        const orderedKeys = getOrderedKeys(node, { level, rootKey });
+
+        orderedKeys.forEach((key) => {
+          const value = node[key];
           const totals = sumNodeTotals(value);
 
           // ✅ SUMMARY MODE → ONLY 2 LEVELS
@@ -474,7 +518,8 @@ const TrialBalanceGrid = forwardRef(
             "__BOLD__:" + (shouldBold ? "1" : "0"), // marker
           ]);
 
-          buildPdfRows(value.__children || {}, level + 1);
+          // ✅ PASS ROOTKEY DOWN
+          buildPdfRows(value.__children || {}, level + 1, rootKey || key);
         });
       };
 
@@ -557,7 +602,7 @@ const TrialBalanceGrid = forwardRef(
       >
         <div
           className={`${styles.thinScrollBar}`}
-          style={{ maxHeight: "80vh", overflowY: "auto" }}
+          style={{ maxHeight: toggle ? "60vh" : "80vh", overflowY: "auto" }}
         >
           <Table
             size="small"
@@ -598,19 +643,20 @@ const TrialBalanceGrid = forwardRef(
 
             <TableBody>
               {(() => {
-                const renderTree = (node, level = 0) => {
-                  return Object.entries(node).map(([key, value]) => {
+                // ✅ UI RENDER WITH SORTING
+                const renderTree = (node, level = 0, rootKey = null) => {
+                  const orderedKeys = getOrderedKeys(node, { level, rootKey });
+
+                  return orderedKeys.map((key) => {
+                    const value = node[key];
                     const totals = sumNodeTotals(value);
 
-                    // ✅ SUMMARY MODE → ONLY 2 LEVELS
                     if (!isDetailMode && level > 1) return null;
 
-                    // ✅ LEAF DETECTION
                     const isLeaf =
                       !value.__children ||
                       Object.keys(value.__children).length === 0;
 
-                    // ✅ BOLD RULES (MATCH UI + EXCEL)
                     const isBold = isDetailMode ? !isLeaf : level === 0;
 
                     return (
@@ -664,13 +710,26 @@ const TrialBalanceGrid = forwardRef(
                           ))}
                         </TableRow>
 
-                        {renderTree(value.__children || {}, level + 1)}
+                        {renderTree(
+                          value.__children || {},
+                          level + 1,
+                          rootKey || key
+                        )}
                       </React.Fragment>
                     );
                   });
                 };
 
-                return renderTree(tree);
+                // ✅ render in fixed order, then render any remaining top-level groups (if any)
+                const topKeys = Object.keys(tree);
+                const fixedKeys = ["Liability", "Assets", "Income", "Expense"];
+
+                const orderedKeys = [
+                  ...fixedKeys.filter((k) => tree[k]),
+                  ...topKeys.filter((k) => !fixedKeys.includes(k)), // keep others after
+                ];
+
+                return orderedKeys.map((k) => renderTree({ [k]: tree[k] }, 0));
               })()}
 
               {/* ✅ GRAND TOTAL */}

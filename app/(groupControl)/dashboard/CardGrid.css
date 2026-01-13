@@ -664,3 +664,180 @@
 .card_grid .card:nth-child(10) {
   grid-area: ten;
 }
+
+/* =========================================================
+   ✅ MOBILE + TABLET RESPONSIVE OVERRIDES (DESKTOP UNCHANGED)
+   ========================================================= */
+
+/* Tablet: 2-column grid, better spacing, better scrollbars */
+@media (max-width: 1024px) {
+  .card_grid {
+    /* use available height on mobile browsers better */
+    height: calc(100dvh - 80px);
+    padding: 10px;
+    gap: 10px;
+  }
+
+  /* ✅ STOP using named areas on small screens (auto grid placement) */
+  .card_grid {
+    grid-template-areas: none !important;
+    grid-template-rows: auto !important;
+    grid-auto-flow: row;
+  }
+
+  /* 2 columns on tablet */
+  .card_grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* IMPORTANT: override fixed grid-area mapping */
+  .card_grid .card {
+    grid-area: auto !important;
+    border-radius: 10px;
+  }
+
+  /* smoother scroll + nicer scrollbar */
+  .card_grid .card .content {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .card_grid .card .content::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .card_grid .card .content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+  }
+
+  .card_grid .card .content::-webkit-scrollbar-thumb {
+    background: rgba(126, 155, 207, 0.35);
+    border-radius: 10px;
+  }
+
+  .card_grid .card .content::-webkit-scrollbar-thumb:hover {
+    background: rgba(126, 155, 207, 0.55);
+  }
+
+  /* ---------- Expanded card as overlay on tablet/mobile ---------- */
+  .card_grid.active_bg {
+    position: relative;
+  }
+
+  .card_grid.active_bg::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(4px);
+    z-index: 90;
+  }
+
+  .card_grid.active_bg .card {
+    z-index: 1;
+  }
+
+  /* make selected card fullscreen based on animation_N */
+  .card_grid.active_bg.animation_1 .card:first-child,
+  .card_grid.active_bg.animation_2 .card:nth-child(2),
+  .card_grid.active_bg.animation_3 .card:nth-child(3),
+  .card_grid.active_bg.animation_4 .card:nth-child(4),
+  .card_grid.active_bg.animation_5 .card:nth-child(5),
+  .card_grid.active_bg.animation_6 .card:nth-child(6),
+  .card_grid.active_bg.animation_7 .card:nth-child(7),
+  .card_grid.active_bg.animation_8 .card:nth-child(8),
+  .card_grid.active_bg.animation_9 .card:nth-child(9),
+  .card_grid.active_bg.animation_10 .card:nth-child(10) {
+    position: fixed;
+    inset: 12px;
+    height: auto;
+    width: auto;
+    z-index: 100;
+    border-radius: 14px;
+    box-shadow: rgba(0, 0, 0, 0.25) 0px 18px 40px;
+  }
+
+  /* icon looks better on overlay */
+  .card_grid.active_bg .card .icon {
+    width: 42px;
+    height: 34px;
+    border-bottom-left-radius: 10px;
+    box-shadow: rgba(0, 0, 0, 0.12) 0px 6px 14px;
+  }
+}
+
+/* Mobile: 1-column grid + tighter overlay insets */
+@media (max-width: 640px) {
+  .card_grid {
+    padding: 10px;
+    gap: 10px;
+    grid-template-columns: 1fr !important;
+  }
+
+  .card_grid.active_bg.animation_1 .card:first-child,
+  .card_grid.active_bg.animation_2 .card:nth-child(2),
+  .card_grid.active_bg.animation_3 .card:nth-child(3),
+  .card_grid.active_bg.animation_4 .card:nth-child(4),
+  .card_grid.active_bg.animation_5 .card:nth-child(5),
+  .card_grid.active_bg.animation_6 .card:nth-child(6),
+  .card_grid.active_bg.animation_7 .card:nth-child(7),
+  .card_grid.active_bg.animation_8 .card:nth-child(8),
+  .card_grid.active_bg.animation_9 .card:nth-child(9),
+  .card_grid.active_bg.animation_10 .card:nth-child(10) {
+    inset: 8px;
+    border-radius: 12px;
+  }
+}
+
+/* ==========================
+   ✅ CHART RESPONSIVE FIXES
+   ========================== */
+
+/* allow children to shrink properly inside grid */
+.card_grid .card,
+.card_grid .card .content {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* very common: canvases/svg inside cards get “zoomed” because they overflow */
+.card_grid .card .content canvas,
+.card_grid .card .content svg,
+.card_grid .card .content img {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block;
+}
+
+/* if chart is rendered inside an iframe (some libs do this) */
+.card_grid .card .content iframe {
+  width: 100% !important;
+  max-width: 100% !important;
+  border: 0;
+}
+
+/* ApexCharts / Highcharts / ECharts / Recharts common wrappers */
+.card_grid .card .content .apexcharts-canvas,
+.card_grid .card .content .apexcharts-svg,
+.card_grid .card .content .highcharts-container,
+.card_grid .card .content .highcharts-root,
+.card_grid .card .content .echarts-for-react,
+.card_grid .card .content .recharts-wrapper,
+.card_grid .card .content .recharts-responsive-container {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* In some cases the library sets inline height; keep it responsive */
+.card_grid .card .content .recharts-responsive-container {
+  height: 100% !important;
+}
+
+/* prevent any accidental scaling from parent transforms */
+.card_grid .card .content * {
+  transform-origin: top left;
+}
+

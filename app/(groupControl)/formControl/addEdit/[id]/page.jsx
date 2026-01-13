@@ -2692,7 +2692,8 @@ function ChildAccordianComponent({
   const [inputFieldsVisible, setInputFieldsVisible] = useState(
     newState[section.tableName] !== null ? false : true
   );
-
+  const params = useParams();
+  const search = JSON.parse(decodeURIComponent(params.id));
   console.log("copyChildValueObj page", copyChildValueObj);
   console.log("childObject", childObject);
 
@@ -3094,7 +3095,8 @@ const calculateTotalNoOfPackages = () => {
   }, [newState.tblJobContainer]);
 
   const calculateTotalGrossWeight = () => {
-    if (!newState || !Array.isArray(newState.tblJobContainer)) {
+    if(search?.menuName !="1279"){
+ if (!newState || !Array.isArray(newState.tblJobContainer)) {
       return newState;
     }
 
@@ -3109,6 +3111,8 @@ const calculateTotalNoOfPackages = () => {
       ...prevState,
       cargoWt: totalGrossWt,
     }));
+    }
+   
   };
 
   useEffect(() => {
@@ -3146,6 +3150,89 @@ const calculateTotalNoOfPackages = () => {
       [section?.tableName]: newState[section?.tableName],
     });
   }, [newState]);
+
+const didInitCopyRef = useRef(false);
+const prevFirstRowRef = useRef("");
+
+// ✅ stable stringify (sorted keys) + date normalization
+const stableSignature = (obj) => {
+  const normalize = (v) => {
+    if (v instanceof Date) return v.toISOString();
+
+    // if your date picker stores like dayjs/moment object
+    if (v && typeof v === "object") {
+      if (typeof v.toDate === "function") return v.toDate().toISOString();
+      if (v.$d instanceof Date) return v.$d.toISOString();
+    }
+
+    return v;
+  };
+
+  const keys = Object.keys(obj || {}).sort();
+  const out = {};
+  for (const k of keys) out[k] = normalize(obj[k]);
+  return JSON.stringify(out);
+};
+
+const copyFirstRowToAllRowsExceptContainer = () => {
+  const rows = newState?.tblContainerTransactionDetails;
+  if (!Array.isArray(rows) || rows.length < 2) return;
+
+  const firstRow = rows[0] || {};
+
+  const PROTECT_KEYS = new Set([
+    "id",
+    "containerTransactionId",
+    "indexValue",
+    "createdDate",
+    "createdBy",
+    "updatedDate",
+    "updatedBy",
+    "deletedNo",
+    "clientId",
+    "status",
+    "containerNo",
+    "containerId",
+    "containerIdDropdown",
+  ]);
+
+  // ✅ patch = everything from row 1 except protected keys
+  const patch = {};
+  Object.keys(firstRow).forEach((k) => {
+    if (!PROTECT_KEYS.has(k)) patch[k] = firstRow[k];
+  });
+
+  // ✅ signature only from the patch (copyable) keys, stable + normalized
+  const firstRowSignature = stableSignature(patch);
+
+  // ✅ 1) DON’T COPY on initial load
+  if (!didInitCopyRef.current) {
+    didInitCopyRef.current = true;
+    prevFirstRowRef.current = firstRowSignature;
+    return;
+  }
+
+  // ✅ 2) copy ONLY when first row actually changed
+  if (prevFirstRowRef.current === firstRowSignature) return;
+  prevFirstRowRef.current = firstRowSignature;
+
+  const updatedRows = rows.map((r, i) => {
+    if (i === 0 || !r) return r;
+    return { ...r, ...patch };
+  });
+ 
+  setNewState((prev) => ({
+    ...prev,
+    tblContainerTransactionDetails: updatedRows,
+  }));
+};
+ 
+useEffect(() => {
+  copyFirstRowToAllRowsExceptContainer();
+}, [newState?.tblContainerTransactionDetails]);
+
+
+
 
   const renderMoreData = () => {
     // Calculate the index range to render

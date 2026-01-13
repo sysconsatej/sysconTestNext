@@ -86,6 +86,7 @@ import {
 import { parse } from "dotenv";
 import { decrypt } from "@/helper/security";
 import { data } from "autoprefixer";
+const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
 
 export default function AddEditFormControll({ reportData }) {
   const searchParams = useSearchParams();
@@ -178,6 +179,10 @@ export default function AddEditFormControll({ reportData }) {
   const [fullRowJson, setFullRowJson] = useState([]); // use this state to get all selected row ids
   const [editableErrors, setEditableErrors] = useState(false);
   const [editableErrorsData, setEditableErrorsData] = useState([]);
+  const [selectedControlsData, setSelectedControlsData] = useState([]);
+
+  console.log("selectedControlsData =>", selectedControlsData);
+
   useEffect(() => {
     if (menuType == "C") {
       setToggle(false);
@@ -259,6 +264,57 @@ export default function AddEditFormControll({ reportData }) {
       }
     };
   }, []);
+
+  useEffect(() => {
+    const fields = parentsFields?.default || [];
+    const displayArr = [];
+
+    for (const f of fields) {
+      if (!f?.isControlShow) continue;
+
+      const fieldname = f.fieldname;
+      const controlname = (f.controlname || "").toLowerCase();
+
+      // ✅ DROPDOWN
+      if (controlname === "dropdown") {
+        const ddKey = `${fieldname}dropdown`;
+        const dd = newState?.[ddKey];
+
+        let display = "";
+
+        if (Array.isArray(dd) && dd.length > 0) {
+          const first = dd[0];
+
+          // Case A: [{ value, label }]
+          if (first && typeof first === "object" && "label" in first) {
+            display = first.label ?? "";
+          } else if (first && typeof first === "object" && fieldname in first) {
+            display = first[fieldname] ?? "";
+          } else {
+            display = String(first ?? "");
+          }
+        } else {
+          display = newState?.[fieldname] ?? "";
+        }
+
+        displayArr.push({ [fieldname]: display });
+        continue;
+      }
+
+      // ✅ TEXT
+      if (controlname === "text") {
+        const v = newState?.[fieldname];
+        displayArr.push({ [fieldname]: v ?? "" });
+        continue;
+      }
+
+      // ✅ OTHER CONTROLS (textarea/date/number/etc.) - safe fallback
+      displayArr.push({ [fieldname]: newState?.[fieldname] ?? "" });
+    }
+    if (displayArr?.length > 0) {
+      setSelectedControlsData(displayArr);
+    }
+  }, [newState, parentsFields]);
 
   if (typeof window !== "undefined") {
     // Safe to use localStorage
@@ -1712,6 +1768,15 @@ export default function AddEditFormControll({ reportData }) {
       setChartData(filterData);
     },
     handleSaveEditedData: async () => {
+      const storedUserData = localStorage.getItem("userData");
+      let imageHeader = null;
+      if (storedUserData) {
+        const decryptedData = decrypt(storedUserData);
+        const userData = JSON.parse(decryptedData);
+        imageHeader = userData[0]?.headerLogoPath
+          ? baseUrlNext + userData[0]?.headerLogoPath
+          : "";
+      }
       const removeDropdownFields = (obj) => {
         const newObj = { ...obj };
         Object.keys(newObj).forEach((key) => {
@@ -1755,48 +1820,242 @@ export default function AddEditFormControll({ reportData }) {
             return toast.error(response?.message);
           }
         }
+        if (menuName === "Bank Reconciliation" && selectedIds?.length > 0) {
+          const selectedIdsSet = new Set(selectedIds.map((obj) => obj.id));
+          const selectedRows = finalPaginatedData.filter((row) =>
+            selectedIdsSet.has(row?.id)
+          );
+          console.log("Selected Rows:", selectedRows);
+          let response = await saveEditedReport({
+            json: selectedRows,
+            spName: saveSpName,
+          });
+          console.log("selectedRows", selectedRows);
+          if (response?.success) {
+            console.log("response", response);
+            return toast.success(response?.message);
+          } else {
+            return toast.error(response?.message);
+          }
+        }
         const json = {
           ...updatedCondition,
           data: selectedIds,
         };
         if (reportEditableType === "Excel") {
-          let response = await saveEditedReport({
-            json,
-            spName: saveSpName,
-          });
-          if (response.success) {
-            console.log("response", response);
+          // ------------------ helpers ------------------
+
+          const buildCriteriaArrayFromFilterCondition = (
+            filterCondition = {}
+          ) => {
+            const fc = filterCondition || {};
+            const out = [];
+
+            Object.keys(fc).forEach((key) => {
+              if (key.endsWith("dropdown")) return;
+
+              const dd = fc[`${key}dropdown`];
+
+              // Prefer dropdown label if present
+              if (Array.isArray(dd) && dd.length > 0) {
+                const first = dd[0];
+
+                if (first && typeof first === "object" && "label" in first) {
+                  out.push({ [key]: first.label ?? "" });
+                  return;
+                }
+                if (first && typeof first === "object" && key in first) {
+                  out.push({ [key]: first[key] ?? "" });
+                  return;
+                }
+                out.push({ [key]: String(first ?? "") });
+                return;
+              }
+
+              // Text/date/number values
+              const v = fc[key];
+              if (v !== undefined && v !== null && String(v).trim() !== "") {
+                out.push({ [key]: v });
+              }
+            });
+
+            return out;
+          };
+
+          // ✅ Criteria from FIRST CELL (A1...) — no image now
+          const addCriteriaRowToSheet = (sheet, criteriaArr = []) => {
+            if (!Array.isArray(criteriaArr) || criteriaArr.length === 0) return;
+
+            // Row 1 = criteria
+            if (sheet.rowCount === 0) sheet.addRow([]);
+
+            const rowNo = 1; // ✅ A1 row
+            const startCol = 1; // ✅ A
+            const gapCols = 1; // one blank col between each pair
+
+            let col = startCol;
+
+            criteriaArr.forEach((obj) => {
+              const k =
+                obj && typeof obj === "object" ? Object.keys(obj)[0] : "";
+              const v = k ? obj[k] : "";
+
+              const keyCell = sheet.getRow(rowNo).getCell(col);
+              keyCell.value = k || "";
+              keyCell.font = { bold: true };
+
+              const valCell = sheet.getRow(rowNo).getCell(col + 1);
+              valCell.value = v ?? "";
+
+              col += 2 + gapCols;
+            });
+
+            // Keep a blank row after criteria
+            if (sheet.rowCount < 2) sheet.addRow([]); // row 2 blank
+          };
+
+          // ✅ Header: blue fill + WHITE text
+          const styleHeaderRow = (sheet, headerRowNumber) => {
+            const row = sheet.getRow(headerRowNumber);
+            row.eachCell({ includeEmpty: false }, (cell) => {
+              cell.font = { bold: true, color: { argb: "FFFFFFFF" } }; // ✅ white
+              cell.alignment = {
+                vertical: "middle",
+                horizontal: "center",
+                wrapText: true,
+              };
+              cell.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: "FF7E9BCF" }, // #7E9BCF
+              };
+            });
+            row.height = 20;
+          };
+
+          // ✅ Borders only from header down (criteria row stays borderless)
+          const applyBordersFromRow = (sheet, fromRowNo) => {
+            const border = {
+              top: { style: "thin", color: { argb: "FF000000" } },
+              left: { style: "thin", color: { argb: "FF000000" } },
+              bottom: { style: "thin", color: { argb: "FF000000" } },
+              right: { style: "thin", color: { argb: "FF000000" } },
+            };
+
+            sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+              if (rowNumber < fromRowNo) return;
+              row.eachCell({ includeEmpty: false }, (cell) => {
+                cell.border = border;
+              });
+            });
+          };
+
+          // ✅ Auto-fit column widths (increase width nicely)
+          const autoFitColumns = (
+            sheet,
+            { min = 12, max = 55, padding = 2 } = {}
+          ) => {
+            const colCount = sheet.actualColumnCount || sheet.columnCount || 1;
+
+            for (let c = 1; c <= colCount; c++) {
+              let best = min;
+
+              sheet.eachRow({ includeEmpty: false }, (row) => {
+                const cell = row.getCell(c);
+                const v = cell?.value;
+                if (v === null || v === undefined) return;
+
+                let text = "";
+                if (
+                  typeof v === "string" ||
+                  typeof v === "number" ||
+                  typeof v === "boolean"
+                ) {
+                  text = String(v);
+                } else if (typeof v === "object") {
+                  if (v.richText) text = v.richText.map((t) => t.text).join("");
+                  else if (v.text) text = String(v.text);
+                  else if (v.result) text = String(v.result);
+                }
+
+                if (!text) return;
+
+                const len = text.length + padding;
+                if (len > best) best = len;
+              });
+
+              if (best > max) best = max;
+              sheet.getColumn(c).width = best;
+            }
+          };
+
+          // ------------------ main ------------------
+          let response = await saveEditedReport({ json, spName: saveSpName });
+
+          if (response?.success) {
             const workbook = new ExcelJS.Workbook();
             const { data } = response;
 
             if (Array.isArray(data) && data.length > 0) {
               const isNested = Array.isArray(data[0]);
 
+              const criteriaArr =
+                buildCriteriaArrayFromFilterCondition(filterCondition);
+              const hasCriteria =
+                Array.isArray(criteriaArr) && criteriaArr.length > 0;
+
+              const buildSheet = async (sheet, rows) => {
+                // 1) Criteria at A1
+                if (hasCriteria) addCriteriaRowToSheet(sheet, criteriaArr);
+                else {
+                  // still keep one blank row (row1)
+                  if (sheet.rowCount === 0) sheet.addRow([]);
+                  if (sheet.rowCount < 2) sheet.addRow([]); // row2 blank
+                }
+
+                // 2) Keep one more blank line before header
+                if (sheet.rowCount < 3) sheet.addRow([]); // row3 blank
+
+                // 3) Header row ALWAYS row 4
+                const headerRowNo = 4;
+
+                if (Array.isArray(rows) && rows.length > 0) {
+                  const headers = Object.keys(rows[0]);
+
+                  // Ensure we are at row 3 already, then add header -> row 4
+                  while (sheet.rowCount < headerRowNo - 1) sheet.addRow([]);
+
+                  sheet.addRow(headers); // row 4
+                  styleHeaderRow(sheet, headerRowNo);
+
+                  // Data rows start row 5
+                  rows.forEach((item) => {
+                    sheet.addRow(headers.map((h) => item?.[h] ?? ""));
+                  });
+
+                  // Freeze at header
+                  sheet.views = [{ state: "frozen", ySplit: headerRowNo }];
+
+                  // Borders from header row down only
+                  applyBordersFromRow(sheet, headerRowNo);
+
+                  // Increase column widths
+                  autoFitColumns(sheet, { min: 12, max: 55, padding: 2 });
+                }
+              };
+
               if (isNested) {
-                // “Doubly-nested”: data = [ [ { sheet1: […] }, { sheet2: […] } ], … ]
-                data.forEach((outerArray, idx) => {
-                  outerArray.forEach((dataset) => {
+                for (const outerArray of data) {
+                  for (const dataset of outerArray) {
                     const key = Object.keys(dataset)[0];
                     const rows = dataset[key];
                     const sheet = workbook.addWorksheet(key);
-
-                    if (Array.isArray(rows) && rows.length > 0) {
-                      const headers = Object.keys(rows[0]);
-                      sheet.addRow(headers);
-                      rows.forEach((item) =>
-                        sheet.addRow(headers.map((h) => item[h] ?? ""))
-                      );
-                    }
-                  });
-                });
+                    await buildSheet(sheet, rows);
+                  }
+                }
               } else {
-                // Flat array: data = [ { col1:…, col2:… }, … ]
                 const sheet = workbook.addWorksheet(spName);
-                const headers = Object.keys(data[0]);
-                sheet.addRow(headers);
-                data.forEach((item) =>
-                  sheet.addRow(headers.map((h) => item[h] ?? ""))
-                );
+                await buildSheet(sheet, data);
               }
 
               // Write & download
@@ -1804,6 +2063,7 @@ export default function AddEditFormControll({ reportData }) {
               const blob = new Blob([buffer], {
                 type: "application/octet-stream",
               });
+
               const link = document.createElement("a");
               link.href = URL.createObjectURL(blob);
               const generatedFileName = await fetchGeneratedFileName();
@@ -1812,7 +2072,6 @@ export default function AddEditFormControll({ reportData }) {
 
               toast.success(response.message);
             } else {
-              console.log("No data available to export.");
               toast.error("No data to export");
             }
           }
@@ -3212,6 +3471,7 @@ export default function AddEditFormControll({ reportData }) {
     const getRowId = (row) => row?.Id ?? row?.id ?? row?.ID;
     const getSelectedRows = (rowIndex) => {
       const selectedRowId = getRowId(finalPaginatedData[rowIndex]);
+      console.log("finalPaginatedData", finalPaginatedData);
       if (menuName === "Update Nominated Area") {
         const { nominatedAreaCodedropdown, dpdCodedropdown, thirdCfsdropdown } =
           filterCondition || {};
@@ -3273,6 +3533,45 @@ export default function AddEditFormControll({ reportData }) {
               return updatedData;
             });
             console.log("enrichedRow", enrichedRow);
+            return [...prevSelectedRows, enrichedRow];
+          }
+        });
+      } else if (menuName === "Bank Reconciliation") {
+        setselectedRows((prevSelectedRows) => {
+          const isAlreadySelected = prevSelectedRows.some(
+            (row) => getRowId(row) === selectedRowId
+          );
+
+          if (isAlreadySelected) {
+            // ✅ DO NOT clear reconciledDate from finalPaginatedData
+            return prevSelectedRows.filter(
+              (row) => getRowId(row) !== selectedRowId
+            );
+          } else {
+            const latestRow = finalPaginatedData[rowIndex];
+
+            // previous row reconciledDate (same page list)
+            const prevRow =
+              rowIndex > 0 ? finalPaginatedData[rowIndex - 1] : null;
+            const prevReconciledDate = prevRow?.reconciledDate ?? "";
+
+            const isEmptyReconciled =
+              latestRow?.reconciledDate == null ||
+              String(latestRow?.reconciledDate).trim() === "";
+
+            const enrichedRow = {
+              ...latestRow,
+              ...(isEmptyReconciled
+                ? { reconciledDate: prevReconciledDate }
+                : {}),
+            };
+
+            setFinalPaginatedData((prev) => {
+              const updated = [...prev];
+              updated[rowIndex] = enrichedRow;
+              return updated;
+            });
+
             return [...prevSelectedRows, enrichedRow];
           }
         });

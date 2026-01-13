@@ -1,230 +1,231 @@
-import React, { useEffect, useState } from "react";
+"use client";
+/* eslint-disable */
+import React, { useEffect, useMemo, useState } from "react";
 import ClearIcon from "@mui/icons-material/Clear";
+import CampaignIcon from "@mui/icons-material/Campaign";
+import NewspaperIcon from "@mui/icons-material/Newspaper";
 import { fetchNews } from "@/services/auth/Auth.services";
 import { Carousel } from "@material-tailwind/react";
 
 const NewsSlider = () => {
-  const [news, setNews] = useState([]);
+  const [news, setNews] = useState({
+    importantAnnouncementNews: [],
+    industryNews: [],
+  });
   const [readMoreItem, setReadMoreItem] = useState(null);
-  const [isAnnouncementPaused, setIsAnnouncementPaused] = useState(false);
-  const [isIndustryPaused, setIsIndustryPaused] = useState(false);
-
-  const handleAnnouncementMouseEnter = () => {
-    setIsAnnouncementPaused(true);
-  };
-
-  const handleAnnouncementMouseLeave = () => {
-    setIsAnnouncementPaused(false);
-  };
-
-  const handleIndustryMouseEnter = () => {
-    setIsIndustryPaused(true);
-  };
-
-  const handleIndustryMouseLeave = () => {
-    setIsIndustryPaused(false);
-  };
+  const [pause, setPause] = useState({ ann: false, ind: false });
 
   useEffect(() => {
-    const fetchRandomNews = async () => {
+    const run = async () => {
       try {
         const result = await fetchNews({ clientId: 4 });
         if (Array.isArray(result)) {
           const importantAnnouncementNews = result.filter(
-            (item) => item.flag.toLowerCase() === "t" // replace "t" into "i"
+            (x) => String(x?.flag || "").toLowerCase() === "t" // change to "i" if needed
           );
           const industryNews = result.filter(
-            (item) => item.flag.toLowerCase() === "n"
+            (x) => String(x?.flag || "").toLowerCase() === "n"
           );
-          setNews({
-            importantAnnouncementNews: importantAnnouncementNews,
-            industryNews: industryNews,
-          });
-        } else {
-          console.error("Invalid data format received from API");
+          setNews({ importantAnnouncementNews, industryNews });
         }
-      } catch (error) {
-        console.error("API call error:", error);
+      } catch (e) {
+        console.error("fetchNews error:", e);
       }
     };
-    fetchRandomNews();
+    run();
   }, []);
 
-  function truncateContent(content, maxLength) {
-    // Check if content is defined and is a string
-    if (!content || typeof content !== "string") {
-      return ""; // Return an empty string or a default message if content is not valid
-    }
+  const truncate = (content, maxWords) => {
+    if (!content || typeof content !== "string") return "";
     const words = content.split(" ");
-    if (words.length > maxLength) {
-      return words.slice(0, maxLength).join(" ") + "...";
-    } else {
-      return content;
-    }
-  }
+    return words.length > maxWords
+      ? words.slice(0, maxWords).join(" ") + "..."
+      : content;
+  };
 
-  function handleReadMore(item) {
-    setReadMoreItem(item); // Set the item to display
-  }
+  const cards = useMemo(
+    () => [
+      {
+        key: "ann",
+        title: "Important Announcements",
+        icon: <CampaignIcon fontSize="small" />,
+        items: news.importantAnnouncementNews || [],
+        paused: pause.ann,
+        empty: "No announcements available.",
+        badgeBg: "bg-blue-600",
+        headerLine: "bg-blue-600/20",
+      },
+      {
+        key: "ind",
+        title: "Industry News",
+        icon: <NewspaperIcon fontSize="small" />,
+        items: news.industryNews || [],
+        paused: pause.ind,
+        empty: "No industry news available.",
+        badgeBg: "bg-emerald-600",
+        headerLine: "bg-emerald-600/20",
+      },
+    ],
+    [news, pause]
+  );
 
   return (
-    <div
-      className={`flex  w-[100%] justify-center space-x-5 absolute mt-auto top-[60%] px-12 pb-12`}
-    >
-      <div
-        className={`mb-10 w-[50%] hideScrollbar overflow-y-auto bg-white w-full mt-2 screen-md:w-772px screen-lg:w-9/12  h-[150px] screen-sm:h-[110px] screen-md:h-[160px] pt-4 pb-4 p-8 rounded-lg shadow-md border border-gray-300 `}
-      >
-        <p className="text-black font-bold text-[14px] mb-2">
-          Important Announcement
-        </p>
-        <div className="h-[100px] screen-sm:h-[60px] screen-md:h-[110px] hideScrollbar overflow-y-auto ">
-          {news?.importantAnnouncementNews?.length === 0 ? (
-            <div>No Data</div>
-          ) : (
+    <>
+      {/* ✅ Readable design: solid white cards + subtle blur + strong text contrast */}
+      <div className="w-full flex justify-center px-6">
+        <div className="w-full max-w-6xl grid grid-cols-2 gap-5">
+          {cards.map((c) => (
             <div
-              onMouseEnter={handleAnnouncementMouseEnter}
-              onMouseLeave={handleAnnouncementMouseLeave}
+              key={c.key}
+              onMouseEnter={() => setPause((p) => ({ ...p, [c.key]: true }))}
+              onMouseLeave={() => setPause((p) => ({ ...p, [c.key]: false }))}
+              className="
+                rounded-2xl overflow-hidden
+                border border-black/10
+                bg-white/90
+                shadow-[0_14px_40px_rgba(0,0,0,0.18)]
+              "
             >
-              <Carousel
-                autoplay={!isAnnouncementPaused}
-                loop={true}
-                number={4000}
-                transition={{ duration: 0.5 }}
-                prevArrow={false}
-                nextArrow={false}
-                navigation={false}
-                className="overflow-hidden h-full w-full"
-              >
-                {news?.importantAnnouncementNews?.map((item) => (
-                  <div key={item.id} className="w-[100%]">
-                    <p
-                      className="text-[12px] font-bold mb-1 mt-1"
-                      style={{ color: item.nameColor }}
+              {/* header (high contrast) */}
+              <div className="px-5 py-4 bg-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="
+                        h-9 w-9 rounded-xl
+                        bg-gray-100 border border-gray-200
+                        flex items-center justify-center
+                        text-gray-800
+                      "
                     >
-                      {item.name}
-                    </p>
+                      {c.icon}
+                    </div>
                     <div>
-                      <p className="text-black text-[12px]">
-                        {truncateContent(item.content, 50)}
-                        {item.content.length > 50 && (
-                          <span
-                            className="text-blue-900 underline text-[12px] cursor-pointer"
-                            onClick={() => handleReadMore(item)}
-                          >
-                            Read More
-                          </span>
-                        )}
+                      <p className="text-[14px] font-semibold text-gray-900">
+                        {c.title}
                       </p>
+                      <div className={`h-[3px] w-24 rounded-full ${c.headerLine}`} />
                     </div>
                   </div>
-                ))}
-              </Carousel>
-            </div>
-          )}
-        </div>
-      </div>
 
-      <div
-        className={`bg-white w-[50%] hideScrollbar overflow-y-auto w-full mt-2 screen-md:w-772px screen-lg:w-9/12  h-[150px] screen-sm:h-[110px] screen-md:h-[160px] pt-4 pb-4 p-8 rounded-lg shadow-md border border-gray-300 `}
-      >
-        <p className="text-black font-bold text-[14px] mb-2">Industry News</p>
-        <div className="h-[100px] screen-sm:h-[60px] screen-md:h-[110px] hideScrollbar overflow-y-auto ">
-          {news?.industryNews?.length === 0 ? (
-            <div>No Data</div>
-          ) : (
-            <div
-              onMouseEnter={handleIndustryMouseEnter}
-              onMouseLeave={handleIndustryMouseLeave}
-            >
-              <Carousel
-                autoplay={!isIndustryPaused}
-                loop={true}
-                number={4000}
-                transition={{ duration: 0.5 }}
-                prevArrow={false}
-                nextArrow={false}
-                navigation={false}
-                className="overflow-hidden h-full w-full"
-              >
-                {news?.industryNews?.map((item) => (
-                  <div key={item.id} className="w-[100%]">
-                    <p
-                      className="text-[12px] font-bold mb-1 mt-1"
-                      style={{ color: item.nameColor }}
+                  {!!c.items?.length && (
+                    <span
+                      className={`
+                        text-[11px] text-white
+                        px-2.5 py-1 rounded-full
+                        ${c.badgeBg}
+                      `}
                     >
-                      {item.name}
-                    </p>
-                    <div>
-                      <p className="text-black text-[12px]">
-                        {truncateContent(item.content, 50)}
-                        {item.content.length > 50 && (
-                          <span
-                            className="text-blue-900 underline text-[12px] cursor-pointer"
-                            onClick={() => handleReadMore(item)}
-                          >
-                            Read More
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </Carousel>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {readMoreItem ? (
-        <pre
-          className="relative z-10"
-          aria-labelledby="modal-title"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-            onClick={() => setReadMoreItem(null)}
-          >
-            <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
-              <div className="flex min-h-full  items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                <div
-                  className="  relative h-[500px] flex hideScrollbar overflow-y-auto transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-xl whitespace-pre-wrap custom-width-for-small-screens "
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-                    <div className="sm:flex sm:items-start">
-                      <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                        <div className="flex justify-between items-start">
-                          <h3
-                            className="text-base font-semibold leading-6 pb-1"
-                            style={{ color: readMoreItem.nameColor }}
-                            id="modal-title"
-                          >
-                            {readMoreItem.name}
-                          </h3>
-                        </div>
-                        <div className="mt-2">
-                          <p className="text-black text-[12px]">
-                            {readMoreItem.content}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    className="cursor-pointer mr-2 mt-2 "
-                    onClick={() => setReadMoreItem(null)}
-                  >
-                    <ClearIcon />
-                  </div>
+                      {c.items.length} item(s)
+                    </span>
+                  )}
                 </div>
               </div>
+
+              {/* body */}
+              <div className="px-5 pb-5">
+                {!c.items?.length ? (
+                  <div className="text-[12px] text-gray-700 pt-3">
+                    {c.empty}
+                  </div>
+                ) : (
+                  <Carousel
+                    autoplay={!c.paused}
+                    loop
+                    number={4500}
+                    transition={{ duration: 0.6 }}
+                    prevArrow={false}
+                    nextArrow={false}
+                    navigation={false}
+                    className="overflow-hidden h-[120px]"
+                  >
+                    {c.items.map((item) => {
+                      const content = item?.content || "";
+                      const long = content.split(" ").length > 40;
+
+                      return (
+                        <div key={item?.id} className="h-full w-full pt-3">
+                          {/* title */}
+                          <p
+                            className="text-[12px] font-semibold mb-1"
+                            style={{ color: item?.nameColor || "#111827" }}
+                          >
+                            {item?.name || ""}
+                          </p>
+
+                          {/* text */}
+                          <p className="text-gray-800 text-[12px] leading-5">
+                            {truncate(content, 40)}{" "}
+                            {long && (
+                              <button
+                                type="button"
+                                className="text-blue-700 underline underline-offset-2 text-[12px] hover:text-blue-900"
+                                onClick={() => setReadMoreItem(item)}
+                              >
+                                Read more
+                              </button>
+                            )}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </Carousel>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ✅ Modal */}
+      {readMoreItem ? (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setReadMoreItem(null)}
+        >
+          <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px]" />
+
+          <div
+            className="
+              relative w-full max-w-xl
+              rounded-2xl bg-white
+              shadow-[0_20px_60px_rgba(0,0,0,0.35)]
+              border border-gray-200 overflow-hidden
+            "
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-200">
+              <div className="min-w-0">
+                <p
+                  className="text-[14px] font-semibold truncate"
+                  style={{ color: readMoreItem?.nameColor || "#111827" }}
+                >
+                  {readMoreItem?.name || ""}
+                </p>
+                <p className="text-[11px] text-gray-600">Details</p>
+              </div>
+
+              <button
+                type="button"
+                className="h-9 w-9 rounded-xl border border-gray-200 hover:bg-gray-50 flex items-center justify-center"
+                onClick={() => setReadMoreItem(null)}
+                aria-label="Close"
+              >
+                <ClearIcon fontSize="small" />
+              </button>
+            </div>
+
+            <div className="px-5 py-4 max-h-[60vh] overflow-y-auto">
+              <p className="text-gray-900 text-[12px] leading-5 whitespace-pre-wrap">
+                {readMoreItem?.content || ""}
+              </p>
             </div>
           </div>
-        </pre>
+        </div>
       ) : null}
-    </div>
+    </>
   );
 };
 

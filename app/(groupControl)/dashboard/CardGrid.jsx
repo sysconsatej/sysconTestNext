@@ -35,6 +35,19 @@ const CardGrid = () => {
     fetchUserDashboardFunc();
   }, []);
 
+  // ✅ KEY FIX: force charts to recalc size after grid/layout animation changes
+  useEffect(() => {
+    const t = setTimeout(() => {
+      // 1) normal resize event (many chart libs listen to it)
+      window.dispatchEvent(new Event("resize"));
+
+      // 2) extra: sometimes needs 1 more frame after resize
+      requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
+    }, 80); // small delay so grid animation/layout settles
+
+    return () => clearTimeout(t);
+  }, [toggle, num, dashboardReports?.length]);
+
   return (
     <div
       className={`card_grid grid_format_${dashboardReports?.length} ${
@@ -49,6 +62,7 @@ const CardGrid = () => {
         ) : (
           <AspectRatioIcon style={{ color: "#7e9bcf" }} />
         );
+
         return (
           <div
             className="card"

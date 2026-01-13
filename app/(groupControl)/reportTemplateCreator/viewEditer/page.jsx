@@ -160,7 +160,7 @@ export default function ViewEditer() {
       const fetchData = async () => {
         try {
           let allCleanedContent = [];
-
+          const search = searchParams.get("menuName");
           for (let i = 0; i < templateIds.length; i++) {
             const templateId = templateIds[i];
 
@@ -600,7 +600,7 @@ export default function ViewEditer() {
                 style={{ width: "100%", height: "80%", overflow: "auto" }}
               >
                 <div
-                  className="prose"
+                  className="prose" style={{color:'black'}}
                   dangerouslySetInnerHTML={{ __html: editorContent }}
                 />
               </div>

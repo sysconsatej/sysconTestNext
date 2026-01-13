@@ -1,0 +1,85 @@
+/* ✅ Page wrapper (optional) */
+.pageWrap {
+  width: 100%;
+}
+
+/* ✅ Tabs bar (responsive) */
+.tabsBar {
+  margin-top: 8px;
+  padding-left: 2px;
+
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+
+  flex-wrap: wrap;              /* ✅ wraps on smaller width */
+  border-bottom: 1px solid var(--inputBorderColor);
+}
+
+/* ✅ Tab button base */
+.tabBtn {
+  font-size: 13px;
+  padding: 3px 12px;
+  height: 28px;
+  text-transform: none;
+
+  height: 26px;
+  line-height: 22px;
+
+  border: 1px solid var(--inputBorderColor);
+  border-radius: 4px 4px 0 0;
+
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+
+  background: var(--buttonBg);
+  color: var(--buttonTextColor);
+}
+
+/* ✅ Hover */
+.tabBtn:hover {
+  background: var(--buttonHoverBg);
+  color: var(--buttonTextHoverColor);
+}
+
+
+.tabBtnActive {
+  background: var(--tableHeaderBg);
+  color: var(--tableHeaderTextColor);
+  font-weight: 700;
+
+  /* connect active tab with body */
+  border-bottom: 1px solid var(--page-bg-color);
+}
+
+
+
+/* ✅ Optional press feel */
+.tabBtn:active {
+  transform: scale(0.98);
+}
+
+/* ✅ Tab content box */
+.tabBody {
+  border: 1px solid var(--inputBorderColor);
+  border-top: 0;
+  background: var(--page-bg-color);
+  color: var(--table-text-color);
+  padding: 13px; 
+  padding: 11px;
+  min-height: 120px;
+  overflow: auto;
+}
+
+
+/* ✅ Optional: keep tabs in one line but scroll horizontally instead of wrapping */
+/*
+.tabsBar {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+*/
+
+

@@ -3,18 +3,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { parentAccordionSection, accordianDetailsStyle } from "@/app/globalCss";
 import {
-  Box,
-  FormControl,
-  InputLabel,
-  OutlinedInput,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  FormLabel,
-  MenuItem,
-  Select,
-  TextField,
-  Button,
   Typography,
   Accordion,
   AccordionSummary,
@@ -501,6 +489,7 @@ const TrialBalance = () => {
           balanceSheetData={balanceSheetData}
           selectedRadio={selectedRadio}
           selectedRadioType={selectedRadioType}
+          toggle={toggle}
         />
       </div>
     </>

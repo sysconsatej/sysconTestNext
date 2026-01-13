@@ -15,11 +15,13 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import {
   eInvoicing,
   fetchThirdLevelDetailsFromApi,
+  fetchSecondThirdLevelDetails,
   formControlMenuList,
   getCopyData,
   handleSubmitApi,
   validateSubmit,
   tallyDebitCredit,
+  insertVoucherData
 } from "@/services/auth/FormControl.services.js";
 import { ButtonPanel } from "@/components/Buttons/customeButton.jsx";
 import CustomeInputFields from "@/components/Inputs/customeInputFields";
@@ -538,6 +540,7 @@ export default function AddEditFormControll() {
       }
     });
   });
+  
 
   // Define your button click handlers
   const handleButtonClick = {
@@ -893,42 +896,188 @@ export default function AddEditFormControll() {
         toast.error("No changes made");
       }
     },
+    handleVoucherSubmit: async () => {
+      console.log("newState", newState);
+
+      if (isFormSaved)
+        return toast.error(
+          "This form has already been saved. Please refresh the screen to save one more record"
+        );
+
+      const isEqual = areObjectsEqual(newState, initialState);
+      if (isEqual) return toast.error("No changes made");
+
+      // ✅ required fields validation
+      for (const [section, fields] of Object.entries(parentsFields)) {
+        const missingField = Object.entries(fields).find(
+          ([, { isRequired, fieldname, yourlabel }]) =>
+            isRequired && !newState[fieldname]
+        );
+        if (missingField) {
+          const [, { yourlabel }] = missingField;
+          toast.error(`Value for ${yourlabel} is missing.`);
+          return;
+        }
+      }
+
+      // ✅ functionOnSubmit hook
+      try {
+        if (formControlData.functionOnSubmit && formControlData.functionOnSubmit !== null) {
+          formControlData?.functionOnSubmit
+            .split(";")
+            .forEach((e) =>
+              onSubmitFunctionCall(
+                e,
+                newState,
+                formControlData,
+                newState,
+                setNewState
+              )
+            );
+        }
+      } catch (error) {
+        return toast.error(error.message);
+      }
+
+      try {
+        const cleanData = replaceNullStrings(
+          { ...newState, menuId: selectedMenuId },
+          ChildTableName
+        );
+
+        setIsFormSaved(true);
+
+        if (
+          uriDecodedMenu?.menuName === "Journal Voucher" ||
+          uriDecodedMenu?.menuName === "Contra Voucher" ||
+          tableName === "tblVoucher"
+        ) {
+          if (!cleanData || typeof cleanData !== "object") {
+            console.log("cleanData is not a valid object:", cleanData);
+          } else {
+            if (!Array.isArray(cleanData.tblVoucherLedger)) {
+              cleanData.tblVoucherLedger = [];
+            } else {
+              cleanData.tblVoucherLedger = cleanData.tblVoucherLedger.map((ledger) => {
+                if (!ledger || typeof ledger !== "object") return ledger;
+
+                const details = Array.isArray(ledger.tblVoucherLedgerDetails)
+                  ? ledger.tblVoucherLedgerDetails
+                  : [];
+
+                const filteredDetails = details.filter(
+                  (row) => row && row.isChecked === true
+                );
+
+                return {
+                  ...ledger,
+                  tblVoucherLedgerDetails: filteredDetails,
+                };
+              });
+            }
+          }
+        }
+
+        console.log("cleanData new =>", cleanData);
+
+        const user = getUserDetails?.() || {};
+        const loginCompanyId = user.companyId ?? cleanData.companyId ?? 0;
+        const loginBranchId = user.branchId ?? cleanData.companyBranchId ?? 0;
+        const loginClientId = user.clientId ?? cleanData.clientId ?? 0;
+
+        const loginFinYearId =
+          user.financialYear ??
+          user.finYearId ??
+          user.loginfinYear ??
+          cleanData.financialYearId ??
+          0;
+
+        // ✅ payload as Node expects
+        const payload = {
+          recordId: Number(cleanData?.id ?? cleanData?.recordId ?? 0) || 0,
+          clientId: Number(cleanData?.clientId ?? loginClientId ?? 0) || 0,
+          companyId: Number(cleanData?.companyId ?? loginCompanyId ?? 0) || 0,
+          companyBranchId:
+            Number(cleanData?.companyBranchId ?? loginBranchId ?? 0) || 0,
+          financialYearId:
+            Number(cleanData?.financialYearId ?? loginFinYearId ?? 0) || 0,
+          userId: Number(user.userId ?? user.id ?? cleanData?.userId ?? 0) || 0,
+          json: cleanData,
+        };
+
+        const data = await insertVoucherData(payload);
+
+        if (data?.success === true) {
+          toast.success(data.message);
+
+          if (isReportPresent) {
+            const lastRow = Array.isArray(data?.data) ? data.data.at(-1) : null;
+            const id =
+              lastRow?.id ?? lastRow?.ParentId ?? lastRow?.recordId ?? null;
+
+            if (id) {
+              setOpenPrintModal((prev) => !prev);
+              setSubmittedMenuId(uriDecodedMenu?.id);
+              setSubmittedRecordId(id);
+            }
+          }
+
+          dispatch(updateFlag({ flag: "isRedirection", value: true }));
+
+          const requestBody = { tableName: tableName, recordId: uriDecodedMenu.id };
+          const validateSubmitData = await validateSubmit(requestBody);
+
+          if (validateSubmitData.success === true) {
+            setParaText(validateSubmitData.message);
+            setIsError(false);
+            setOpenModal((prev) => !prev);
+          }
+
+          // eInvoicing block unchanged
+          let invoiceType = "n";
+          if (invoiceType === "y") {
+            if (newState.tableName == "tblInvoice") {
+              let insertData = {
+                invoiceId: Array.isArray(data?.data)
+                  ? data?.data?.[0]?.ParentId || 0
+                  : 0,
+                billingPartyId: newState.billingPartyId,
+                companyId: newState.companyId,
+              };
+              let invoiceRes = await eInvoicing(insertData);
+              if (invoiceRes.success == true) {
+                toast.success(invoiceRes.message);
+              } else {
+                setNewState((per) => ({
+                  ...per,
+                  id: Array.isArray(data?.data)
+                    ? data?.data?.[0]?.ParentId || 0
+                    : per.id,
+                }));
+                setIsFormSaved(false);
+                return toast.error(invoiceRes?.message);
+              }
+            }
+          }
+
+          return;
+        } else {
+          toast.error(data?.message || "Failed to save.");
+          setIsFormSaved(false);
+          return;
+        }
+      } catch (error) {
+        toast.error(error.message);
+        setIsFormSaved(false);
+      }
+    },
+
     getThirdLevelDetails: getThirdLevelDetails,
   };
 
   async function getThirdLevelDetails(obj) {
-    // const {
-    //   args,
-    //   newState,
-    //   formControlData,
-    //   setFormControlData,
-    //   values,
-    //   fieldName,
-    //   tableName,
-    //   setStateVariable,
-    //   onChangeHandler,
-    // } = obj;
-
     const values = newState;
-    const { companyId, clientId, branchId, userId, financialYear } =
-      getUserDetails();
-
-    // Parse args
-    // let argNames;
-    // let splitArgs = [];
-    // if (
-    //   args === undefined ||
-    //   args === null ||
-    //   args === "" ||
-    //   (typeof args === "object" && Object.keys(args).length === 0)
-    // ) {
-    //   argNames = args;
-    // } else {
-    //   argNames = args.split(",").map((arg) => arg.trim());
-    //   for (const iterator of argNames) {
-    //     splitArgs.push(iterator.split("."));
-    //   }
-    // }
+    const { companyId, clientId, branchId } = getUserDetails();
 
     const {
       businessSegmentId,
@@ -944,6 +1093,7 @@ export default function AddEditFormControll() {
       fromDate,
       toDate,
       exchangeRate,
+      includeMNR,
     } = newState;
 
     const {
@@ -957,41 +1107,60 @@ export default function AddEditFormControll() {
     } = values;
 
     const requestData = {
-      billingPartyId: billingPartyId,
-      clientId: clientId,
-      jobId: jobId,
-      chargeId: chargeId,
-      companyId: companyId,
+      billingPartyId,
+      clientId,
+      jobId,
+      chargeId,
+      companyId,
       companyBranchId: branchId,
-      fromDate: fromDate,
-      toDate: toDate,
-      clientId: clientId,
-      businessSegmentId: businessSegmentId,
-      voucherTypeId: voucherTypeId,
-      blId: blId,
-      plrId: plrId,
-      podId: podId,
-      fpdId: fpdId,
-      polId: polId,
-      depotId: depotId,
-      containerStatusId: containerStatusId,
-      cargoTypeId: cargoTypeId,
-      sizeId: sizeId,
-      typeId: typeId,
-      containerRepairId: containerRepairId,
-      containerTransactionId: containerTransactionId,
+      fromDate,
+      toDate,
+      businessSegmentId,
+      voucherTypeId,
+      blId,
+      plrId,
+      podId,
+      fpdId,
+      polId,
+      depotId,
+      containerStatusId,
+      cargoTypeId,
+      sizeId,
+      typeId,
+      containerRepairId,
+      containerTransactionId,
       invoiceExchageRate: exchangeRate,
+      includeMNR,
     };
 
-    const fetchChargeDetails = await fetchThirdLevelDetailsFromApi(requestData);
+    const fetchChargeDetails = await fetchSecondThirdLevelDetails(requestData);
+    if (!fetchChargeDetails) return;
 
-    if (fetchChargeDetails) {
-      const { Chargers = [] } = fetchChargeDetails;
+    const apiCharges = Array.isArray(fetchChargeDetails)
+      ? fetchChargeDetails
+      : Array.isArray(fetchChargeDetails?.Chargers)
+        ? fetchChargeDetails.Chargers
+        : [];
 
-      const toNum = (v) =>
-        v === null || v === undefined || v === "" ? null : Number(v);
+    const toNum = (v) =>
+      v === null || v === undefined || v === "" ? null : Number(v);
 
-      const updatedChargers = Chargers.map((item, i) => {
+    const mkDD = (value, label) => {
+      const n = toNum(value);
+      if (n === null) return [];
+      return [{ value: n, label: label ?? String(n) }];
+    };
+
+    const pickValidDD = (arr) => {
+      const a = Array.isArray(arr) ? arr : [];
+      return a.filter((x) => x && x.value != null && x.label != null);
+    };
+
+    // ✅ thirdlevel rows + dropdowns (including chargeId & currencyId)
+    const buildChargeDetailsRows = (thirdlevelArr) => {
+      const src = Array.isArray(thirdlevelArr) ? thirdlevelArr : [];
+
+      return src.map((item, i) => {
         const _containerId = toNum(item.containerId);
         const _sizeId = toNum(item.sizeId);
         const _typeId = toNum(item.typeId);
@@ -999,17 +1168,27 @@ export default function AddEditFormControll() {
         const _containerTransactionId = toNum(item.containerTransactionId);
         const _containerRepairId = toNum(item.containerRepairId);
         const _blId = toNum(item.blId);
+
+        const _chargeId = toNum(item.chargeId);
+        const _currencyId = toNum(item.currencyId);
+
         return {
           ...item,
+
+          // ✅ EXACT requirement: array index only
           indexValue: i,
+
+          // ✅ FIX: chargeId label + currencyId label for detail rows
+          chargeIddropdown: pickValidDD(item.chargeIddropdown).length
+            ? pickValidDD(item.chargeIddropdown)
+            : mkDD(_chargeId, item.chargeName ?? item.description),
+          currencyIddropdown: pickValidDD(item.currencyIddropdown).length
+            ? pickValidDD(item.currencyIddropdown)
+            : mkDD(_currencyId, item.currencyName),
+
           containerIddropdown:
             _containerId !== null
-              ? [
-                  {
-                    value: _containerId,
-                    label: item.containerNo ?? String(_containerId),
-                  },
-                ]
+              ? [{ value: _containerId, label: item.containerNo ?? String(_containerId) }]
               : [],
           sizeIddropdown:
             _sizeId !== null
@@ -1025,75 +1204,243 @@ export default function AddEditFormControll() {
               : [],
           containerTransactionIddropdown:
             _containerTransactionId !== null
-              ? [
-                  {
-                    value: _containerTransactionId,
-                    label:
-                      item.containerTransactionName ??
-                      String(_containerTransactionId),
-                  },
-                ]
+              ? [{
+                value: _containerTransactionId,
+                label: item.containerTransactionName ?? String(_containerTransactionId),
+              }]
               : [],
           containerRepairIddropdown:
             _containerRepairId !== null
-              ? [
-                  {
-                    value: _containerRepairId,
-                    label:
-                      item.containerRepairName ?? String(_containerRepairId),
-                  },
-                ]
+              ? [{
+                value: _containerRepairId,
+                label: item.containerRepairName ?? String(_containerRepairId),
+              }]
               : [],
           blIddropdown:
-            _blId !== null
-              ? [{ value: _blId, label: item.blNo ?? String(_blId) }]
-              : [],
-          // optional: keep per-row calculated amount for clarity
-          calculatedAmount:
-            (Number(item.noOfDays) || 0) * (Number(item.rate) || 0),
+            _blId !== null ? [{ value: _blId, label: item.blNo ?? String(_blId) }] : [],
+
+          calculatedAmount: (Number(item.noOfDays) || 0) * (Number(item.rate) || 0),
+        };
+      });
+    };
+
+    // ✅ totals for charge header (kept your logic; noOfDays in header forced to 1 later)
+    const computeTotalsFromDetails = (detailsRows, stateExchangeRate) => {
+      const qty = detailsRows.reduce((acc, r) => acc + (Number(r.qty) || 0), 0);
+
+      const totalWeighted = detailsRows.reduce(
+        (acc, r) => acc + (Number(r.noOfDays) || 0) * (Number(r.rate) || 0),
+        0
+      );
+
+      const avgRate = qty > 0 ? totalWeighted / qty : 0;
+
+      const totalAmountHc = totalWeighted;
+      const exRate = Number(stateExchangeRate || 1);
+      const totalAmountFc = totalWeighted * exRate;
+
+      return { qty, avgRate, totalAmountHc, totalAmountFc };
+    };
+
+    const buildThirdLevelForSave = (detailsRows, fallbackChargeId) => {
+      return detailsRows.map((r, i) => ({
+        chargeId: toNum(r.chargeId ?? fallbackChargeId),
+        vesselId: toNum(r.vesselId),
+        indexValue: i,
+        voyageId: toNum(r.voyageId ?? r.voyageid),
+        jobId: toNum(r.jobId),
+        blId: toNum(r.blId),
+        containerId: toNum(r.containerId),
+        sizeId: toNum(r.sizeId),
+        typeId: toNum(r.typeId),
+        freeDays: toNum(r.freeDays),
+        noOfDays: toNum(r.noOfDays),
+        fromDate: r.fromDate ?? null,
+        toDate: r.toDate ?? null,
+        qty: toNum(r.qty),
+        currencyId: toNum(r.currencyId),
+        exchangeRate: toNum(r.exchangeRate),
+        rate: toNum(r.rate),
+        amountHc: toNum(r.amountHc),
+        amountFc: toNum(r.amountFc),
+        containerRepairId: toNum(r.containerRepairId),
+        containerTransactionId: toNum(r.containerTransactionId),
+      }));
+    };
+
+    setNewState((prev) => {
+      const prevCharges = Array.isArray(prev.tblInvoiceCharge) ? prev.tblInvoiceCharge : [];
+
+      // ✅ add indexValue to each CHARGE from API (0,1,2...) before mapping by id
+      const apiChargesWithIndex = apiCharges.map((c, i) => ({
+        ...(c || {}),
+        indexValue: i,
+      }));
+
+      const apiMap = new Map(
+        apiChargesWithIndex
+          .filter((x) => x && x.chargeId != null)
+          .map((x) => [Number(x.chargeId), x])
+      );
+
+      const updatedExisting = prevCharges.map((ch) => {
+        const id = Number(ch.chargeId);
+        const apiRow = apiMap.get(id);
+        if (!apiRow) {
+          // ✅ ensure charge always has noOfDays = 1 even if API didn't return this charge
+          return { ...ch, noOfDays: 1 };
+        }
+
+        const detailsRows = buildChargeDetailsRows(apiRow.thirdlevel);
+        const totals = computeTotalsFromDetails(detailsRows, prev.exchangeRate);
+        const thirdlevel = buildThirdLevelForSave(detailsRows, id);
+
+        // ✅ FIX: currency dropdown (prefer apiRow.currencyIddropdown else derive from first detail row)
+        const derivedCurrencyDD =
+          pickValidDD(apiRow.currencyIddropdown).length
+            ? pickValidDD(apiRow.currencyIddropdown)
+            : pickValidDD(ch.currencyIddropdown).length
+              ? pickValidDD(ch.currencyIddropdown)
+              : mkDD(
+                ch.currencyId ?? apiRow.currencyId ?? prev.currencyId,
+                detailsRows?.[0]?.currencyName ?? detailsRows?.[0]?.currencyIddropdown?.[0]?.label
+              );
+
+        // ✅ FIX: charge dropdown (prefer apiRow.chargeIddropdown else derive)
+        const derivedChargeDD =
+          pickValidDD(apiRow.chargeIddropdown).length
+            ? pickValidDD(apiRow.chargeIddropdown)
+            : pickValidDD(ch.chargeIddropdown).length
+              ? pickValidDD(ch.chargeIddropdown)
+              : mkDD(id, apiRow.description ?? ch.description);
+
+        return {
+          ...ch,
+
+          description: apiRow.description ?? ch.description,
+          cargoTypeId: apiRow.cargoTypeId ?? ch.cargoTypeId,
+          expImp: apiRow.expImp ?? ch.expImp,
+          icd: apiRow.icd ?? ch.icd,
+          jobId: apiRow.jobId ?? ch.jobId,
+          blId: apiRow.blId ?? ch.blId,
+          typeId: apiRow.typeId ?? ch.typeId,
+          sizeId: apiRow.sizeId ?? ch.sizeId,
+          rateBasisId: apiRow.rateBasisId ?? ch.rateBasisId,
+
+          // ✅ add indexValue on charge object too
+          indexValue: apiRow.indexValue,
+
+          // ✅ FIX: ensure labels are present
+          chargeIddropdown: derivedChargeDD,
+          currencyIddropdown: derivedCurrencyDD,
+
+          thirdlevel,
+          tblInvoiceChargeDetails: detailsRows,
+
+          // ✅ YOUR REQUIREMENT: always 1 at charge/header level
+          noOfDays: 1,
+
+          qty: totals.qty || 0,
+          rate: Number(totals.avgRate || 0).toFixed(2),
+          totalAmountHc: Number(totals.totalAmountHc || 0).toFixed(2),
+          totalAmountFc: Number(totals.totalAmountFc || 0).toFixed(2),
+
+          currencyId: ch.currencyId ?? apiRow.currencyId ?? prev.currencyId,
+          exchangeRate: prev.exchangeRate ?? 1,
+
+          containerTransactionId: apiRow.containerTransactionId ?? ch.containerTransactionId ?? null,
+          containerRepairId: apiRow.containerRepairId ?? ch.containerRepairId ?? null,
         };
       });
 
-      // ✅ total qty
-      const qty = updatedChargers.reduce(
-        (acc, item) => acc + (Number(item["qty"]) || 0),
+      const existingIds = new Set(updatedExisting.map((x) => Number(x.chargeId)));
+
+      const newOnes = apiChargesWithIndex
+        .filter((x) => x && x.chargeId != null && !existingIds.has(Number(x.chargeId)))
+        .map((apiRow) => {
+          const id = Number(apiRow.chargeId);
+
+          const detailsRows = buildChargeDetailsRows(apiRow.thirdlevel);
+          const totals = computeTotalsFromDetails(detailsRows, prev.exchangeRate);
+          const thirdlevel = buildThirdLevelForSave(detailsRows, id);
+
+          const derivedCurrencyDD =
+            pickValidDD(apiRow.currencyIddropdown).length
+              ? pickValidDD(apiRow.currencyIddropdown)
+              : mkDD(
+                apiRow.currencyId ?? prev.currencyId,
+                detailsRows?.[0]?.currencyName ?? detailsRows?.[0]?.currencyIddropdown?.[0]?.label
+              );
+
+          const derivedChargeDD =
+            pickValidDD(apiRow.chargeIddropdown).length
+              ? pickValidDD(apiRow.chargeIddropdown)
+              : mkDD(id, apiRow.description ?? "");
+
+          return {
+            chargeId: id,
+            description: apiRow.description ?? "",
+            cargoTypeId: apiRow.cargoTypeId ?? null,
+            expImp: apiRow.expImp ?? null,
+            icd: apiRow.icd ?? null,
+            jobId: apiRow.jobId ?? null,
+            blId: apiRow.blId ?? null,
+            typeId: apiRow.typeId ?? null,
+            sizeId: apiRow.sizeId ?? null,
+            rateBasisId: apiRow.rateBasisId ?? null,
+
+            indexValue: apiRow.indexValue,
+
+            // ✅ FIX: ensure labels are present for new rows too
+            chargeIddropdown: derivedChargeDD,
+            currencyIddropdown: derivedCurrencyDD,
+
+            thirdlevel,
+            tblInvoiceChargeDetails: detailsRows,
+
+            // ✅ YOUR REQUIREMENT: always 1 at charge/header level
+            noOfDays: 1,
+
+            qty: totals.qty || 0,
+            rate: Number(totals.avgRate || 0).toFixed(2),
+            totalAmountHc: Number(totals.totalAmountHc || 0).toFixed(2),
+            totalAmountFc: Number(totals.totalAmountFc || 0).toFixed(2),
+
+            currencyId: apiRow.currencyId ?? prev.currencyId ?? null,
+            exchangeRate: prev.exchangeRate ?? 1,
+
+            containerTransactionId: apiRow.containerTransactionId ?? null,
+            containerRepairId: apiRow.containerRepairId ?? null,
+          };
+        });
+
+      const updatedCharges = [...updatedExisting, ...newOnes];
+
+      const invAmount = updatedCharges.reduce(
+        (sum, ch) => sum + (Number(ch.totalAmountHc) || 0),
+        0
+      );
+      const invAmountFc = updatedCharges.reduce(
+        (sum, ch) => sum + (Number(ch.totalAmountFc) || 0),
         0
       );
 
-      // ✅ total of (noOfDays * rate)
-      const totalWeighted = updatedChargers.reduce(
-        (acc, item) =>
-          acc + (Number(item["noOfDays"]) || 0) * (Number(item["rate"]) || 0),
-        0
-      );
+      const taxHc = Number(prev.taxAmount || 0);
+      const taxFc = Number(prev.taxAmountFc || 0);
 
-      // ✅ average rate
-      const avgRate = qty > 0 ? totalWeighted / qty : 0;
-
-      values.tblInvoiceChargeDetails = updatedChargers;
-      values["qty"] = qty;
-      values["rate"] = avgRate.toFixed(2);
-      values["totalAmountHc"] = (qty * avgRate * 1).toFixed(2);
-      values["totalAmountFc"] = (
-        qty *
-        avgRate *
-        Number(newState.exchangeRate || 1)
-      ).toFixed(2);
-
-      setNewState((prev) => ({
+      return {
         ...prev,
-        tblInvoiceChargeDetails: updatedChargers,
-        qty: qty,
-        rate: avgRate.toFixed(2),
-        totalAmountHc: (qty * avgRate).toFixed(2),
-        totalAmountFc: (
-          qty *
-          avgRate *
-          Number(newState.exchangeRate || 1)
-        ).toFixed(2),
-      }));
-    }
+        tblInvoiceCharge: updatedCharges,
+
+        invoiceAmount: Number(invAmount.toFixed(2)),
+        invoiceAmountFc: Number(invAmountFc.toFixed(2)),
+
+        totalInvoiceAmount: Number((invAmount + taxHc).toFixed(2)),
+        totalInvoiceAmountFc: Number((invAmountFc + taxFc).toFixed(2)),
+      };
+    });
   }
+
 
   const onConfirm = async (conformData) => {
     if (
@@ -1443,6 +1790,443 @@ export default function AddEditFormControll() {
       }
     }
   }, [isDataLoaded, formControlData]);
+
+  // const allocPrevRef = useRef({ amtHC: "", amtFC: "", checks: [] });
+
+  // useEffect(() => {
+  //   const toNum = (v) => {
+  //     if (v === null || v === undefined || v === "") return 0;
+  //     const n = Number(String(v).replace(/,/g, ""));
+  //     return Number.isFinite(n) ? n : 0;
+  //   };
+
+  //   const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+  //   // string with 2 decimals for UI fields (debit/credit)
+  //   const asStr2 = (n) =>
+  //     n === null || n === undefined || n === "" ? "" : round2(n).toFixed(2);
+
+  //   // numeric-ish for balance fields (you can keep as number, or also toFixed if you want)
+  //   const asNum2 = (n) => round2(n);
+
+  //   // ✅ pick details from either flat or nested place
+  //   const details = Array.isArray(newState?.tblVoucherLedgerDetails)
+  //     ? newState.tblVoucherLedgerDetails
+  //     : Array.isArray(newState?.tblVoucherLedger?.[0]?.tblVoucherLedgerDetails)
+  //     ? newState.tblVoucherLedger[0].tblVoucherLedgerDetails
+  //     : [];
+
+  //   if (!details.length) {
+  //     allocPrevRef.current = { amtHC: "", amtFC: "", checks: [] };
+  //     return;
+  //   }
+
+  //   // ✅ Total payable (your "pay amount")
+  //   const totalHC = toNum(newState?.amtRec ?? newState?.balanceAmtHc ?? 0);
+  //   const totalFC = toNum(newState?.amtRecFC ?? newState?.balanceAmtFc ?? 0);
+
+  //   // ✅ snapshot keys (avoid rerender loops)
+  //   const checksNow = details.map((r) => !!r?.isChecked);
+  //   const prev = allocPrevRef.current || { amtHC: "", amtFC: "", checks: [] };
+
+  //   const amtHCKey = String(newState?.amtRec ?? newState?.balanceAmtHc ?? "");
+  //   const amtFCKey = String(newState?.amtRecFC ?? newState?.balanceAmtFc ?? "");
+
+  //   const sameChecks =
+  //     prev.checks.length === checksNow.length &&
+  //     prev.checks.every((v, i) => v === checksNow[i]);
+
+  //   if (prev.amtHC === amtHCKey && prev.amtFC === amtFCKey && sameChecks) return;
+
+  //   allocPrevRef.current = { amtHC: amtHCKey, amtFC: amtFCKey, checks: checksNow };
+
+  //   // ✅ allocate sequentially
+  //   let remHC = totalHC;
+  //   let remFC = totalFC;
+
+  //   const SECOND_ROW_INDEX = 1;
+  //   const stopAfterSecondIfChecked = !!details?.[SECOND_ROW_INDEX]?.isChecked;
+
+  //   const working = details.map((row, idx) => {
+  //     const isChecked = !!row?.isChecked;
+
+  //     // ✅ keep original balances stable (important!)
+  //     const origBalHC =
+  //       row?.__origBalHC != null ? toNum(row.__origBalHC) : toNum(row?.balanceAmount);
+  //     const origBalFC =
+  //       row?.__origBalFC != null ? toNum(row.__origBalFC) : toNum(row?.balanceAmountFc);
+
+  //     // unchecked → clear allocations, keep balances = original
+  //     if (!isChecked) {
+  //       return {
+  //         ...row,
+  //         __origBalHC: origBalHC,
+  //         __origBalFC: origBalFC,
+  //         debitAmount: "",
+  //         debitAmountFc: "",
+  //         creditAmount: row?.creditAmount ?? "",
+  //         creditAmountFc: row?.creditAmountFc ?? "",
+  //         balanceAmount: asNum2(origBalHC),
+  //         balanceAmountFc: asNum2(origBalFC),
+  //       };
+  //     }
+
+  //     // if stopping after 2nd row AND we're past it → force 0 allocation, keep balances = original
+  //     if (stopAfterSecondIfChecked && idx > SECOND_ROW_INDEX) {
+  //       return {
+  //         ...row,
+  //         __origBalHC: origBalHC,
+  //         __origBalFC: origBalFC,
+  //         debitAmount: "",
+  //         debitAmountFc: "",
+  //         creditAmount: row?.creditAmount ?? "",
+  //         creditAmountFc: row?.creditAmountFc ?? "",
+  //         balanceAmount: asNum2(origBalHC),
+  //         balanceAmountFc: asNum2(origBalFC),
+  //       };
+  //     }
+
+  //     // ✅ allocate from remaining (limit by original balance)
+  //     const allocHC = Math.min(remHC, origBalHC);
+  //     const allocFC = Math.min(remFC, origBalFC);
+
+  //     remHC = round2(remHC - allocHC);
+  //     remFC = round2(remFC - allocFC);
+
+  //     // 🔥 SPECIAL: after allocating 2nd row, dump ALL remaining to 0
+  //     if (stopAfterSecondIfChecked && idx === SECOND_ROW_INDEX) {
+  //       remHC = 0;
+  //       remFC = 0;
+  //     }
+
+  //     // ✅ NEW: updated balances after allocation
+  //     const newBalHC = round2(origBalHC - allocHC);
+  //     const newBalFC = round2(origBalFC - allocFC);
+
+  //     return {
+  //       ...row,
+  //       __origBalHC: origBalHC,
+  //       __origBalFC: origBalFC,
+  //       debitAmount: allocHC ? asStr2(allocHC) : "",
+  //       debitAmountFc: allocFC ? asStr2(allocFC) : "",
+  //       creditAmount: row?.creditAmount ?? "",
+  //       creditAmountFc: row?.creditAmountFc ?? "",
+  //       balanceAmount: asNum2(newBalHC),
+  //       balanceAmountFc: asNum2(newBalFC),
+  //     };
+  //   });
+
+  //   // ✅ commit without mutating
+  //   setNewState((prevState) => {
+  //     // nested under tblVoucherLedger[0]
+  //     if (Array.isArray(prevState?.tblVoucherLedger?.[0]?.tblVoucherLedgerDetails)) {
+  //       const ledgers = (prevState.tblVoucherLedger || []).map((l, i) =>
+  //         i === 0 ? { ...l, tblVoucherLedgerDetails: working } : l
+  //       );
+
+  //       return {
+  //         ...prevState,
+  //         tblVoucherLedger: ledgers,
+  //         // remaining in state
+  //         balanceAmtHc: asStr2(remHC),
+  //         balanceAmtFc: asStr2(remFC),
+  //       };
+  //     }
+
+  //     // flat case
+  //     return {
+  //       ...prevState,
+  //       tblVoucherLedgerDetails: working,
+  //       balanceAmtHc: asStr2(remHC),
+  //       balanceAmtFc: asStr2(remFC),
+  //     };
+  //   });
+  // }, [
+  //   newState?.amtRec,
+  //   newState?.amtRecFC,
+  //   newState?.balanceAmtHc,
+  //   newState?.balanceAmtFc,
+  //   newState?.tblVoucherLedgerDetails,
+  //   newState?.tblVoucherLedger,
+  // ]);
+
+  // put this near your other refs
+  // ✅ UPDATED: guard also tracks debit values (so uncheck + "0.00" forces recalculation)
+  // ✅ UPDATED: prevents unnecessary setNewState loops by skipping if nothing changed
+
+  const allocPrevRef = useRef({ amtHC: "", amtFC: "", checks: [] });
+
+  useEffect(() => {
+    const DBG = true;
+    const tag = "[ALLOC_EFFECT]";
+
+    const toNum = (v) => {
+      if (v === null || v === undefined || v === "") return 0;
+      const n = Number(String(v).replace(/,/g, ""));
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+    const asStr2 = (n) =>
+      n === null || n === undefined || n === "" ? "" : round2(n).toFixed(2);
+
+    const asNum2 = (n) => round2(n);
+
+    // ✅ pay amounts
+    const payHC = toNum(newState?.amtRec ?? 0);
+    const payFC = toNum(newState?.amtRecFC ?? 0);
+
+    const hasLedgers =
+      Array.isArray(newState?.tblVoucherLedger) && newState.tblVoucherLedger.length > 0;
+
+    const ledgers = hasLedgers
+      ? newState.tblVoucherLedger
+      : [
+        {
+          __virtual: true,
+          tblVoucherLedgerDetails: Array.isArray(newState?.tblVoucherLedgerDetails)
+            ? newState.tblVoucherLedgerDetails
+            : [],
+        },
+      ];
+
+    const allDetails = ledgers.flatMap((l) =>
+      Array.isArray(l?.tblVoucherLedgerDetails) ? l.tblVoucherLedgerDetails : []
+    );
+
+    if (DBG) {
+      console.log(`${tag} RUN`, {
+        payHC,
+        payFC,
+        hasLedgers,
+        ledgersLen: ledgers.length,
+        allDetailsLen: allDetails.length,
+        snapshot: allDetails.map((r, i) => ({
+          i,
+          checked: !!r?.isChecked,
+          debit: r?.debitAmount,
+          debitFC: r?.debitAmountFc,
+          origHC: r?.__origBalHC,
+          origFC: r?.__origBalFC,
+          balHC: r?.balanceAmount,
+          balFC: r?.balanceAmountFc,
+        })),
+      });
+    }
+
+    if (!allDetails.length) {
+      allocPrevRef.current = { amtHC: "", amtFC: "", checks: [] };
+      return;
+    }
+
+    // ✅ guard keys
+    const prev = allocPrevRef.current || { amtHC: "", amtFC: "", checks: [] };
+
+    const amtHCKey = String(newState?.amtRec ?? "");
+    const amtFCKey = String(newState?.amtRecFC ?? "");
+
+    // ✅ IMPORTANT: track both checked + debit strings (so uncheck recalculates)
+    const checksNow = allDetails.map((r) => ({
+      c: !!r?.isChecked,
+      d: String(r?.debitAmount ?? ""),
+      df: String(r?.debitAmountFc ?? ""),
+    }));
+
+    const sameChecks =
+      prev.checks.length === checksNow.length &&
+      prev.checks.every((v, i) => {
+        const cur = checksNow[i] || {};
+        return v?.c === cur?.c && v?.d === cur?.d && v?.df === cur?.df;
+      });
+
+    const willReturn = prev.amtHC === amtHCKey && prev.amtFC === amtFCKey && sameChecks;
+
+    if (DBG) {
+      console.log(`${tag} GUARD`, {
+        prev,
+        amtHCKey,
+        amtFCKey,
+        checksNow,
+        sameChecks,
+        willReturn,
+      });
+    }
+
+    if (willReturn) return;
+
+    allocPrevRef.current = { amtHC: amtHCKey, amtFC: amtFCKey, checks: checksNow };
+
+    // PASS 1: build rows, set unchecked debit to "0.00", keep checked debits
+    let sumCheckedHC = 0;
+    let sumCheckedFC = 0;
+
+    const nextLedgers = ledgers.map((ledger) => {
+      const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+        ? ledger.tblVoucherLedgerDetails
+        : [];
+      if (!details.length) return ledger;
+
+      const nextDetails = details.map((row) => {
+        const isChecked = !!row?.isChecked;
+
+        const origBalHC =
+          row?.__origBalHC != null ? toNum(row.__origBalHC) : toNum(row?.balanceAmount);
+        const origBalFC =
+          row?.__origBalFC != null ? toNum(row.__origBalFC) : toNum(row?.balanceAmountFc);
+
+        // ✅ unchecked → set debit "0.00" + restore balances
+        if (!isChecked) {
+          return {
+            ...row,
+            __origBalHC: origBalHC,
+            __origBalFC: origBalFC,
+            debitAmount: "0.00",
+            debitAmountFc: "0.00",
+            creditAmount: row?.creditAmount ?? "",
+            creditAmountFc: row?.creditAmountFc ?? "",
+            balanceAmount: asNum2(origBalHC),
+            balanceAmountFc: asNum2(origBalFC),
+          };
+        }
+
+        // ✅ checked → keep existing debit if present (do not auto-increase)
+        const existingHC = toNum(row?.debitAmount);
+        const existingFC = toNum(row?.debitAmountFc);
+
+        const keepHC = existingHC > 0 ? Math.min(existingHC, origBalHC) : 0;
+        const keepFC = existingFC > 0 ? Math.min(existingFC, origBalFC) : 0;
+
+        sumCheckedHC = round2(sumCheckedHC + keepHC);
+        sumCheckedFC = round2(sumCheckedFC + keepFC);
+
+        return {
+          ...row,
+          __origBalHC: origBalHC,
+          __origBalFC: origBalFC,
+          debitAmount: keepHC > 0 ? asStr2(keepHC) : "",     // blank means "auto-fill later"
+          debitAmountFc: keepFC > 0 ? asStr2(keepFC) : "",
+          creditAmount: row?.creditAmount ?? "",
+          creditAmountFc: row?.creditAmountFc ?? "",
+          balanceAmount: asNum2(round2(origBalHC - keepHC)),
+          balanceAmountFc: asNum2(round2(origBalFC - keepFC)),
+        };
+      });
+
+      return { ...ledger, tblVoucherLedgerDetails: nextDetails };
+    });
+
+    // remaining after keeping explicit checked debits
+    let remHC = round2(payHC - sumCheckedHC);
+    let remFC = round2(payFC - sumCheckedFC);
+
+    if (DBG) {
+      console.log(`${tag} PASS1`, { sumCheckedHC, sumCheckedFC, remHC, remFC });
+    }
+
+    // PASS 2: fill blank checked debits sequentially from remaining
+    const filledLedgers = nextLedgers.map((ledger) => {
+      const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+        ? ledger.tblVoucherLedgerDetails
+        : [];
+      if (!details.length) return ledger;
+
+      const nextDetails = details.map((row) => {
+        if (!row?.isChecked) return row;
+
+        const existingHC = toNum(row?.debitAmount);
+        const existingFC = toNum(row?.debitAmountFc);
+        if (existingHC > 0 || existingFC > 0) return row;
+
+        const origBalHC =
+          row?.__origBalHC != null ? toNum(row.__origBalHC) : toNum(row?.balanceAmount);
+        const origBalFC =
+          row?.__origBalFC != null ? toNum(row.__origBalFC) : toNum(row?.balanceAmountFc);
+
+        const allocHC = Math.min(remHC, origBalHC);
+        const allocFC = Math.min(remFC, origBalFC);
+
+        remHC = round2(remHC - allocHC);
+        remFC = round2(remFC - allocFC);
+
+        return {
+          ...row,
+          debitAmount: allocHC > 0 ? asStr2(allocHC) : "0.00",
+          debitAmountFc: allocFC > 0 ? asStr2(allocFC) : "0.00",
+          balanceAmount: asNum2(round2(origBalHC - allocHC)),
+          balanceAmountFc: asNum2(round2(origBalFC - allocFC)),
+        };
+      });
+
+      return { ...ledger, tblVoucherLedgerDetails: nextDetails };
+    });
+
+    // ✅ Prevent setNewState loop if nothing actually changed
+    const computeSig = (stateObj) => {
+      const sLedgers = Array.isArray(stateObj?.tblVoucherLedger) && stateObj.tblVoucherLedger.length
+        ? stateObj.tblVoucherLedger
+        : [
+          { tblVoucherLedgerDetails: Array.isArray(stateObj?.tblVoucherLedgerDetails) ? stateObj.tblVoucherLedgerDetails : [] },
+        ];
+
+      const sAll = sLedgers.flatMap((l) =>
+        Array.isArray(l?.tblVoucherLedgerDetails) ? l.tblVoucherLedgerDetails : []
+      );
+
+      return JSON.stringify({
+        balHc: String(stateObj?.balanceAmtHc ?? ""),
+        balFc: String(stateObj?.balanceAmtFc ?? ""),
+        rows: sAll.map((r) => ({
+          c: !!r?.isChecked,
+          d: String(r?.debitAmount ?? ""),
+          df: String(r?.debitAmountFc ?? ""),
+          b: String(r?.balanceAmount ?? ""),
+          bf: String(r?.balanceAmountFc ?? ""),
+          o: String(r?.__origBalHC ?? ""),
+          of: String(r?.__origBalFC ?? ""),
+        })),
+      });
+    };
+
+    setNewState((prevState) => {
+      const out = Array.isArray(prevState?.tblVoucherLedger)
+        ? {
+          ...prevState,
+          tblVoucherLedger: filledLedgers.filter((l) => !l?.__virtual),
+          balanceAmtHc: asStr2(remHC),
+          balanceAmtFc: asStr2(remFC),
+        }
+        : {
+          ...prevState,
+          tblVoucherLedgerDetails: filledLedgers[0]?.tblVoucherLedgerDetails || [],
+          balanceAmtHc: asStr2(remHC),
+          balanceAmtFc: asStr2(remFC),
+        };
+
+      if (computeSig(prevState) === computeSig(out)) {
+        if (DBG) console.log(`${tag} setNewState skipped (no diff)`);
+        return prevState;
+      }
+
+      if (DBG) {
+        console.log(`${tag} FINAL`, {
+          remHC,
+          remFC,
+          balanceAmtHc: out.balanceAmtHc,
+          balanceAmtFc: out.balanceAmtFc,
+        });
+      }
+
+      return out;
+    });
+
+    if (DBG) console.log("====================================================================");
+  }, [
+    newState?.amtRec,
+    newState?.amtRecFC,
+    newState?.tblVoucherLedger,
+    newState?.tblVoucherLedgerDetails,
+  ]);
 
   return (
     <div className={`h-screen relative`}>
@@ -2169,13 +2953,13 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-                // const parsedValue = parseFloat(row[item.fieldname] || 0);
-                const parsedValue =
-                  typeof row[item.fieldname] === "number"
-                    ? row[item.fieldname]
-                    : parseFloat(row[item.fieldname] || 0);
-                return isNaN(parsedValue) ? sum : sum + parsedValue;
-              }, 0) // Calculate sum for 's' type
+              // const parsedValue = parseFloat(row[item.fieldname] || 0);
+              const parsedValue =
+                typeof row[item.fieldname] === "number"
+                  ? row[item.fieldname]
+                  : parseFloat(row[item.fieldname] || 0);
+              return isNaN(parsedValue) ? sum : sum + parsedValue;
+            }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -2647,6 +3431,8 @@ function ChildAccordianComponent({
       }
     }
   }, [inputFieldsVisible]);
+
+
   return (
     <>
       <Accordion
@@ -3001,7 +3787,7 @@ function ChildAccordianComponent({
                                             {(field.type === "number" ||
                                               field.type === "decimal" ||
                                               field.type === "string") &&
-                                            field.gridTotal
+                                              field.gridTotal
                                               ? columnTotals[field.fieldname]
                                               : ""}
                                           </div>

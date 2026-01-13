@@ -235,14 +235,72 @@ export default function EditSubChildComponent(props) {
   }
 
 
-  const handleChange = (event, row, index) => {
-    if (event.target.checked === false) {
-      removeSubChildRecordFromInsert(row._id);
+  const handleChange = (event, row, ledgerIndex) => {
+    const checked = event.target.checked;
+
+    // 1) keep your existing side-effects
+    if (checked === false) {
+      removeSubChildRecordFromInsert(row?.indexValue || row?._id, ledgerIndex);
     } else {
-      addChildRecordToInsert(row, index);
+      addChildRecordToInsert(row, ledgerIndex);
     }
-    // setIsChecked(event.target.checked);
+
+    // 2) ✅ IMPORTANT: update newState immutably so useEffect triggers
+    setNewState((prev) => {
+      // ---------- NESTED ledgers case ----------
+      if (Array.isArray(prev?.tblVoucherLedger) && prev.tblVoucherLedger.length) {
+        const nextLedgers = prev.tblVoucherLedger.map((ledger, li) => {
+          if (li !== ledgerIndex) return ledger;
+
+          const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+            ? ledger.tblVoucherLedgerDetails
+            : [];
+
+          const nextDetails = details.map((d) => {
+            const sameRow =
+              (row?._id != null && d?._id === row._id) ||
+              (row?.indexValue != null && d?.indexValue === row.indexValue) ||
+              (row?.voucherOutstandingId != null &&
+                d?.voucherOutstandingId === row.voucherOutstandingId);
+
+            if (!sameRow) return d;
+
+            return {
+              ...d,
+              isChecked: checked,
+            };
+          });
+
+          return { ...ledger, tblVoucherLedgerDetails: nextDetails };
+        });
+
+        return { ...prev, tblVoucherLedger: nextLedgers };
+      }
+
+      // ---------- FLAT details case ----------
+      const details = Array.isArray(prev?.tblVoucherLedgerDetails)
+        ? prev.tblVoucherLedgerDetails
+        : [];
+
+      const nextDetails = details.map((d) => {
+        const sameRow =
+          (row?._id != null && d?._id === row._id) ||
+          (row?.indexValue != null && d?.indexValue === row.indexValue) ||
+          (row?.voucherOutstandingId != null &&
+            d?.voucherOutstandingId === row.voucherOutstandingId);
+
+        if (!sameRow) return d;
+
+        return {
+          ...d,
+          isChecked: checked,
+        };
+      });
+
+      return { ...prev, tblVoucherLedgerDetails: nextDetails };
+    });
   };
+
 
   return (
     <React.Fragment>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import CardGrid from "./CardGrid";
 
 export default function Dashboard() {
@@ -8,4 +8,3 @@ export default function Dashboard() {
     </div>
   );
 }
-

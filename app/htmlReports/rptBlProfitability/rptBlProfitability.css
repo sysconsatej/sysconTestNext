@@ -1,0 +1,44 @@
+/* =======================
+   PRINT PAGINATION RULES
+======================= */
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Remove shadows */
+  * {
+    box-shadow: none !important;
+  }
+
+  /* Page container */
+  .print-page {
+    width: 297mm !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    page-break-after: always;
+  }
+}
+
+@media print {
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+}

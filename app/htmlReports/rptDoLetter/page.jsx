@@ -2,6 +2,7 @@
 /* eslint-disable */
 import React, { useEffect, useState, useMemo, useRef } from "react";
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL; // kept as-is per your original code
+const baseUrlSql = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports; // kept as-is per your original code
 import { useSearchParams, usePathname } from "next/navigation";
 import QRCode from "qrcode";
 import { decrypt } from "@/helper/security";
@@ -47,7 +48,7 @@ export default function rptDoLetter() {
   const BondLetterSize = 12;
   const CMCLetterSize = 7;
   const EmptyContainerOffLoadingLetterSize = 22;
-  const EmptyContainerReturnNotification = 21;
+  const EmptyContainerReturnNotification = 20;
   const SaudiDeliveryOrderSize = 6;
   const [qrUrl, setQrUrl] = useState("");
 
@@ -66,7 +67,7 @@ export default function rptDoLetter() {
       {
         clientId === 15 && localStorage.setItem("token", JSON.stringify(token));
       }
-    } catch {}
+    } catch { }
   }, []);
 
   // Hide print if hb=cfm (kept your original rule)
@@ -134,7 +135,7 @@ export default function rptDoLetter() {
           try {
             const tk = localStorage.getItem("token");
             if (tk) headers["x-access-token"] = JSON.parse(tk);
-          } catch {}
+          } catch { }
         }
 
         const body = { id: resolvedRecordId }; // minimal for public route
@@ -157,8 +158,8 @@ export default function rptDoLetter() {
             flag === "HBL"
               ? [`${(row.hblNo ?? "").toString().trim() || ""}-Letters`]
               : flag === "MBL"
-              ? [`${(row.mblNo ?? "").toString().trim() || ""}-Letters`]
-              : toArray(reportIds);
+                ? [`${(row.mblNo ?? "").toString().trim() || ""}-Letters`]
+                : toArray(reportIds);
 
           setDoReportName(nameArr);
         }
@@ -344,6 +345,25 @@ export default function rptDoLetter() {
     return finalDate;
   };
 
+  const getValidTillDateNew = (jobDate, croValidDays) => {
+    if (!jobDate || croValidDays == null) {
+      console.warn("Missing jobDate or croValidDays");
+      return "";
+    }
+
+    const days = parseInt(croValidDays, 10);
+    const m = moment(jobDate);
+
+    if (!m.isValid()) return "";
+
+    // If days is invalid or 0, return same date in required format
+    if (isNaN(days) || days === 0) {
+      return m.format("DD-MMM-YYYY"); // e.g., 12-Nov-2025
+    }
+
+    return m.add(days - 1, "days").format("DD-MMM-YYYY");
+  };
+
   const CompanyImgModule = () => {
     const storedUserData = localStorage.getItem("userData");
     let imageHeader = null;
@@ -378,7 +398,11 @@ export default function rptDoLetter() {
     );
   };
 
-  const containers = data[0]?.tblBlContainer || [];
+  const containers =
+    data[0]?.tblBlContainer.map((item, i) => ({
+      ...item,
+      containerNoIndex: i,
+    })) || [];
   const chunkArray = (arr, size) => {
     if (!Array.isArray(arr) || size <= 0) return [arr || []];
     const out = [];
@@ -437,16 +461,10 @@ export default function rptDoLetter() {
   const packageUnit = containers[0]?.packageCode || "";
 
   const ImgSign = () => {
-    const storedUserData = localStorage.getItem("userData");
-    let imageHeader = null;
-    if (storedUserData) {
-      const decryptedData = decrypt(storedUserData);
-      const userData = JSON.parse(decryptedData);
-      imageHeader = userData[0]?.headerLogoPath;
-    }
+
     return (
       <img
-        src="https://expresswayshipping.com/sql-api/uploads/sign1.jpg"
+        src={baseUrlNext + "/uploads/sign1.jpg"}
         width="20%"
         height="15%"
       ></img>
@@ -457,8 +475,8 @@ export default function rptDoLetter() {
     const containers = Array.isArray(input)
       ? input
       : Array.isArray(input?.containers)
-      ? input.containers
-      : []; // 👈 safe fallback
+        ? input.containers
+        : []; // 👈 safe fallback
 
     return (
       <div>
@@ -512,7 +530,7 @@ export default function rptDoLetter() {
                 className="text-black"
                 style={{ fontSize: "10px", minWidth: "100px" }}
               >
-                {formatDateToYMD(data[0]?.doDate)}
+                {formatDateToYMDMonths(data[0]?.doDate)}
               </p>
             </div>
           </div>
@@ -538,7 +556,7 @@ export default function rptDoLetter() {
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
                 <p className="text-black" style={{ fontSize: "9px" }}>
-                  {formatDateToYMD(data[0]?.arrivalDate)}
+                  {formatDateToYMDMonths(data[0]?.arrivalDate)}
                 </p>
               </td>
             </tr>
@@ -604,7 +622,7 @@ export default function rptDoLetter() {
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
                 <p className="text-black" style={{ fontSize: "9px" }}>
-                  {formatDateToYMD(data[0]?.blDate)}
+                  {formatDateToYMDMonths(data[0]?.blDate)}
                 </p>
               </td>
             </tr>
@@ -626,7 +644,7 @@ export default function rptDoLetter() {
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
                 <p className="text-black" style={{ fontSize: "9px" }}>
-                  {formatDateToYMD(data[0]?.igmDate)}
+                  {formatDateToYMDMonths(data[0]?.igmDate)}
                 </p>
               </td>
             </tr>
@@ -802,7 +820,7 @@ export default function rptDoLetter() {
                         data?.[0]?.arrivalDate,
                         data?.[0]?.destinationFreeDays
                       )} */}
-                      {formatDateToYMD(data?.[0]?.doValidDate)}
+                      {formatDateToYMDMonths(data?.[0]?.doValidDate)}
                     </p>
                   </td>
                 </tr>
@@ -856,7 +874,7 @@ export default function rptDoLetter() {
           </div>
           <div style={{ width: "85%" }}>
             <p className="text-black" style={{ fontSize: "10px" }}>
-              {formatDateToYMD(data[0]?.freeDaysUpto)}
+              {formatDateToYMDMonths(data[0]?.freeDaysUpto)}
             </p>
           </div>
         </div>
@@ -931,8 +949,8 @@ export default function rptDoLetter() {
     const containers = Array.isArray(input)
       ? input
       : Array.isArray(input?.containers)
-      ? input.containers
-      : []; // 👈 safe fallback
+        ? input.containers
+        : []; // 👈 safe fallback
 
     return (
       <div>
@@ -978,7 +996,7 @@ export default function rptDoLetter() {
                 className="text-black"
                 style={{ fontSize: "10px", minWidth: "100px" }}
               >
-                {formatDateToYMD(data[0]?.doDate)}
+                {formatDateToYMDMonths(data[0]?.doDate)}
               </p>
             </div>
           </div>
@@ -1004,7 +1022,7 @@ export default function rptDoLetter() {
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
                 <p className="text-black" style={{ fontSize: "9px" }}>
-                  {formatDateToYMD(data[0]?.arrivalDate)}
+                  {formatDateToYMDMonths(data[0]?.arrivalDate)}
                 </p>
               </td>
             </tr>
@@ -1070,7 +1088,7 @@ export default function rptDoLetter() {
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
                 <p className="text-black" style={{ fontSize: "9px" }}>
-                  {formatDateToYMD(data[0]?.blDate)}
+                  {formatDateToYMDMonths(data[0]?.blDate)}
                 </p>
               </td>
             </tr>
@@ -1092,7 +1110,7 @@ export default function rptDoLetter() {
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
                 <p className="text-black" style={{ fontSize: "9px" }}>
-                  {formatDateToYMD(data[0]?.igmDate)}
+                  {formatDateToYMDMonths(data[0]?.igmDate)}
                 </p>
               </td>
             </tr>
@@ -1351,7 +1369,7 @@ export default function rptDoLetter() {
               className="text-black"
               style={{ fontSize: "10px", minWidth: "100px" }}
             >
-              {formatDateToYMD(data[0]?.doDate)}
+              {formatDateToYMDMonths(data[0]?.doDate)}
             </p>
           </div>
         </div>
@@ -1392,7 +1410,7 @@ export default function rptDoLetter() {
             </td>
             <td className="w-2/6 border-t border-b border-r border-black p-1">
               <p className="text-black" style={{ fontSize: "9px" }}>
-                {formatDateToYMD(data[0]?.arrivalDate)}
+                {formatDateToYMDMonths(data[0]?.arrivalDate)}
               </p>
             </td>
           </tr>
@@ -1458,7 +1476,7 @@ export default function rptDoLetter() {
             </td>
             <td className="w-2/6 border-t border-b border-r border-black p-1">
               <p className="text-black" style={{ fontSize: "9px" }}>
-                {formatDateToYMD(data[0]?.blDate)}
+                {formatDateToYMDMonths(data[0]?.blDate)}
               </p>
             </td>
           </tr>
@@ -1480,7 +1498,7 @@ export default function rptDoLetter() {
             </td>
             <td className="w-2/6 border-t border-b border-r border-black p-1">
               <p className="text-black" style={{ fontSize: "9px" }}>
-                {formatDateToYMD(data[0]?.igmDate)}
+                {formatDateToYMDMonths(data[0]?.igmDate)}
               </p>
             </td>
           </tr>
@@ -1722,7 +1740,7 @@ export default function rptDoLetter() {
               className="text-black"
               style={{ fontSize: "10px", minWidth: "100px" }}
             >
-              {formatDateToYMD(data[0]?.doDate)}
+              {formatDateToYMDMonths(data[0]?.doDate)}
             </p>
           </div>
         </div>
@@ -1814,7 +1832,7 @@ export default function rptDoLetter() {
             </td>
             <td className="w-2/6 border-t border-b border-r border-black p-1">
               <p className="text-black" style={{ fontSize: "9px" }}>
-                {formatDateToYMD(data[0]?.blDate)}
+                {formatDateToYMDMonths(data[0]?.blDate)}
               </p>
             </td>
           </tr>
@@ -1836,7 +1854,7 @@ export default function rptDoLetter() {
             </td>
             <td className="w-2/6 border-t border-b border-r border-black p-1">
               <p className="text-black" style={{ fontSize: "9px" }}>
-                {formatDateToYMD(data[0]?.igmDate)}
+                {formatDateToYMDMonths(data[0]?.igmDate)}
               </p>
             </td>
           </tr>
@@ -1998,7 +2016,7 @@ export default function rptDoLetter() {
                     className="text-black font-normal text-center"
                     style={{ fontSize: "9px" }}
                   >
-                    {formatDateToYMD(data?.[0]?.doValidDate)}
+                    {formatDateToYMDMonths(data?.[0]?.doValidDate)}
                   </p>
                 </th>
               </tr>
@@ -2060,8 +2078,8 @@ export default function rptDoLetter() {
     const containers = Array.isArray(container)
       ? container
       : Array.isArray(container)
-      ? container
-      : [];
+        ? container
+        : [];
     return (
       <div>
         <div className="mx-auto">
@@ -2766,8 +2784,8 @@ export default function rptDoLetter() {
     const containers = Array.isArray(container)
       ? container
       : Array.isArray(container)
-      ? container
-      : [];
+        ? container
+        : [];
 
     return (
       <div>
@@ -3096,8 +3114,8 @@ export default function rptDoLetter() {
     const containers = Array.isArray(container)
       ? container
       : Array.isArray(container)
-      ? container
-      : [];
+        ? container
+        : [];
     return (
       <div>
         <div className="mx-auto">
@@ -3560,8 +3578,8 @@ export default function rptDoLetter() {
     const containers = Array.isArray(input)
       ? input
       : Array.isArray(input?.containers)
-      ? input.containers
-      : [];
+        ? input.containers
+        : [];
 
     return (
       <div>
@@ -3930,8 +3948,8 @@ export default function rptDoLetter() {
     const containers = Array.isArray(container)
       ? container
       : Array.isArray(container)
-      ? container
-      : [];
+        ? container
+        : [];
     return (
       <div>
         <div className="mx-auto">
@@ -4053,7 +4071,7 @@ export default function rptDoLetter() {
                 </td>
                 <td className="w-2/6 border-t border-b border-r border-black p-1">
                   <p className="text-black" style={{ fontSize: "9px" }}>
-                    {formatDateToYMD(data[0]?.doDate)}
+                    {formatDateToYMDMonths(data[0]?.doDate)}
                   </p>
                 </td>
               </tr>
@@ -4098,7 +4116,7 @@ export default function rptDoLetter() {
                 </td>
                 <td className="w-2/6 border-t border-b border-r border-black p-1">
                   <p className="text-black" style={{ fontSize: "9px" }}>
-                    {formatDateToYMD(data[0]?.arrivalDate)}
+                    {formatDateToYMDMonths(data[0]?.arrivalDate)}
                   </p>
                 </td>
                 <td className="w-1/6 border-t border-b border-l border-black p-1">
@@ -4293,7 +4311,7 @@ export default function rptDoLetter() {
                         style={{ fontSize: "9px" }}
                       >
                         {/* //{formatDateToYMD(data[0]?.arrivalDate)} */}
-                        {formatDateToYMD(item.dischargeDate)}
+                        {formatDateToYMDMonths(item.dischargeDate)}
                       </p>
                     </th>
 
@@ -4302,13 +4320,17 @@ export default function rptDoLetter() {
                         className="text-black font-normal"
                         style={{ fontSize: "9px" }}
                       >
+                        {/* {getValidTillDateNew(
+                          item?.dischargeDate,
+                          item?.destinationFreeDays
+                        )} */}
                         {item?.doValidityDate != null &&
-                        String(item.doValidityDate).trim() !== ""
-                          ? formatDateToYMD(item.doValidityDate)
-                          : getValidTillDate(
-                              item?.dischargeDate,
-                              item?.destinationFreeDays
-                            )}
+                          String(item.doValidityDate).trim() !== ""
+                          ? formatDateToYMDMonths(item?.doValidityDate)
+                          : getValidTillDateNew(
+                            item?.dischargeDate,
+                            item?.destinationFreeDays
+                          )}
                       </p>
                     </th>
                   </tr>
@@ -4326,8 +4348,8 @@ export default function rptDoLetter() {
     const containers = Array.isArray(container)
       ? container
       : Array.isArray(container)
-      ? container
-      : [];
+        ? container
+        : [];
     return (
       <div>
         <div className="mx-auto">
@@ -4409,7 +4431,7 @@ export default function rptDoLetter() {
             <div style={{ width: "5%" }} className="border-r pr-1 text-center">
               SIZE
             </div>
-            <div style={{ width: "35%" }} className="pr-1 text-center">
+            <div style={{ width: "35%" }} className="pr-1 text-left">
               EXTENDED DATE / REMARKS
             </div>
           </div>
@@ -4422,42 +4444,28 @@ export default function rptDoLetter() {
                 style={{ width: "100%" }}
                 className="flex border-b border-gray-200 py-1 font-medium"
               >
-                <div
-                  style={{ width: "7%" }}
-                  className="border-r pr-1 text-center"
-                >
-                  {index + 1}
+                <div style={{ width: "7%" }} className="border-r  text-center">
+                  {item?.containerNoIndex + 1}
                 </div>
-                <div style={{ width: "13%" }} className="border-r pr-1">
+                <div style={{ width: "13%" }} className="border-r ">
                   {item.containerNo || ""}
                 </div>
-                <div
-                  style={{ width: "15%" }}
-                  className="border-r pr-1 text-right"
-                >
+                <div style={{ width: "15%" }} className="border-r  text-right">
                   {item.destinationFreeDays || ""}
                 </div>
-                <div
-                  style={{ width: "15%" }}
-                  className="border-r pr-1 text-center"
-                >
-                  {formatDateToYMD(data[0]?.doValidDate)}
+                <div style={{ width: "15%" }} className="border-r  text-center">
+                  {getValidTillDateNew(
+                    data[0]?.arrivalDate,
+                    item?.destinationFreeDays
+                  )}
                 </div>
-                <div
-                  style={{ width: "10%" }}
-                  className="border-r pr-1 text-center"
-                >
+                <div style={{ width: "10%" }} className="border-r  text-center">
                   {item.type || ""}
                 </div>
-                <div
-                  style={{ width: "5%" }}
-                  className="border-r pr-1 text-center"
-                >
+                <div style={{ width: "5%" }} className="border-r  text-center">
                   {item.size || ""}
                 </div>
-                <div style={{ width: "35%" }} className="pr-1">
-                  {item.remarks || ""}
-                </div>
+                <div style={{ width: "35%" }}>{formatDateToYMDMonths(data[0]?.doValidDate)}{" "}{item.remarks || ""}</div>
               </div>
             ))}
         </div>
@@ -4667,9 +4675,8 @@ export default function rptDoLetter() {
 
     const vesselVoy =
       row.vesselVoy ||
-      `${row.vesselName || ""}${
-        row.voyageNo ? ` / ${row.voyageNo}` : ""
-      }`.trim();
+      `${row.vesselName || ""}${row.voyageNo ? ` / ${row.voyageNo}` : ""
+        }`.trim();
 
     // shared classes
     const tblBase = "w-full table-auto text-[11px] text-black border-collapse";
@@ -4881,9 +4888,8 @@ export default function rptDoLetter() {
                           key={reportId}
                           ref={(el) => enquiryModuleRefs.current.push(el)}
                           id="Delivery Order"
-                          className={`relative bg-white shadow-lg black-text ${
-                            i < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                          className={`relative bg-white shadow-lg black-text ${i < reportIds.length - 1 ? "report-spacing" : ""
+                            }`}
                           style={{
                             width: "210mm",
                             minHeight: "297mm",
@@ -4899,7 +4905,7 @@ export default function rptDoLetter() {
                           {/* Printable Content */}
                           <div
                             className="flex-grow p-4"
-                            style={{ maxHeight: "275mm", minHeight: "275mm" }}
+                            style={{ maxHeight: "260mm", minHeight: "260mm" }}
                           >
                             {DoLetter(container, i)}{" "}
                             {/* container may be undefined here */}
@@ -4943,9 +4949,8 @@ export default function rptDoLetter() {
                           key={reportId}
                           ref={(el) => enquiryModuleRefs.current.push(el)}
                           id="Survey Letter"
-                          className={`relative bg-white shadow-lg black-text ${
-                            i < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                          className={`relative bg-white shadow-lg black-text ${i < reportIds.length - 1 ? "report-spacing" : ""
+                            }`}
                           style={{
                             width: "210mm",
                             minHeight: "297mm",
@@ -5010,9 +5015,8 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="EMPTY OFF LOADING LETTER"
-                        className={`relative bg-white shadow-lg black-text ${
-                          index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5030,7 +5034,7 @@ export default function rptDoLetter() {
                         {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
-                          style={{ maxHeight: "275mm", minHeight: "275mm" }}
+                          style={{ maxHeight: "260mm", minHeight: "260mm" }}
                         >
                           {EmptyOffLoadingLetter(container)}
                         </div>
@@ -5065,9 +5069,8 @@ export default function rptDoLetter() {
                     key={reportId}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id="Destuffing letter"
-                    className={`relative bg-white shadow-lg black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    }`}
+                    className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       minHeight: "297mm",
@@ -5118,9 +5121,8 @@ export default function rptDoLetter() {
                           key={reportId}
                           ref={(el) => enquiryModuleRefs.current.push(el)}
                           id="CMC Letter"
-                          className={`relative bg-white shadow-lg black-text ${
-                            index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                          className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                            }`}
                           style={{
                             width: "210mm",
                             minHeight: "297mm",
@@ -5174,9 +5176,8 @@ export default function rptDoLetter() {
                     key={reportId}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id="Customs Examination Order"
-                    className={`relative bg-white shadow-lg black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    }`}
+                    className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       minHeight: "297mm",
@@ -5229,9 +5230,8 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => (enquiryModuleRefs.current[index] = el)}
                         id="Bond Letter"
-                        className={`relative bg-white shadow-lg black-text ${
-                          index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5294,9 +5294,8 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="SEAL CUTTING LETTER"
-                        className={`relative bg-white shadow-lg black-text ${
-                          index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5348,9 +5347,8 @@ export default function rptDoLetter() {
                     key={reportId}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id="NOC For Console Party"
-                    className={`relative bg-white shadow-lg black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    }`}
+                    className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       minHeight: "297mm",
@@ -5393,7 +5391,7 @@ export default function rptDoLetter() {
               return (
                 <>
                   {(Array.isArray(deliveryOrderKenyaChunks) &&
-                  deliveryOrderKenyaChunks.length
+                    deliveryOrderKenyaChunks.length
                     ? deliveryOrderKenyaChunks
                     : [undefined]
                   ).map((container, index) => (
@@ -5402,9 +5400,8 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="Delivery Order"
-                        className={`relative bg-white shadow-lg black-text ${
-                          index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                         style={{
                           width: "210mm",
                           minHeight: "295mm",
@@ -5502,9 +5499,8 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="EMPTY CONTAINER OFF LOADING LETTER"
-                        className={`relative bg-white shadow-lg black-text ${
-                          index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5584,9 +5580,8 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="Empty Container Return Notification"
-                        className={`relative bg-white shadow-lg black-text ${
-                          index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5705,9 +5700,8 @@ export default function rptDoLetter() {
                       key={reportId}
                       ref={(el) => enquiryModuleRefs.current.push(el)}
                       id="SAUDI DELIVERY ORDER"
-                      className={`relative bg-white shadow-lg black-text ${
-                        index < reportIds.length - 1 ? "report-spacing" : ""
-                      }`}
+                      className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                       style={{
                         width: "210mm",
                         minHeight: "297mm",
@@ -5805,7 +5799,6 @@ export default function rptDoLetter() {
                   </React.Fragment>
                 </>
               );
-
             default:
               return null;
           }

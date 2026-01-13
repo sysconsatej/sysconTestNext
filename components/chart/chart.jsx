@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable */
 import React, { useState, useEffect, useRef } from "react";
 import Chart from "chart.js/auto";
 import { Box } from "@mui/material";
@@ -8,107 +9,204 @@ import jsPDF from "jspdf";
 import PropTypes from "prop-types";
 import { dynamicReportFilter } from "@/services/auth/FormControl.services";
 
-const ChartReports = ({ newState, chartExpand, formControlData, chartData, clientId }) => {
-  const chartRef = useRef(null);
+const ChartReports = ({
+  newState,
+  chartExpand,
+  formControlData,
+  chartData,
+  clientId,
+}) => {
+  const chartRef = useRef(null); // canvas
+  const wrapRef = useRef(null); // wrapper for ResizeObserver
   const chartInstanceRef = useRef(null);
+
   const [loading, setLoading] = useState(true);
   const [chartDataState, setChartDataState] = useState(null);
   const [jobData, setJobData] = useState([]);
-  const [formValues, setFormValues] = useState({
-    exampleDropdown: "",
-  });
+  const [formValues, setFormValues] = useState({ exampleDropdown: "" });
   const [chartType, setChartType] = useState("bar");
 
+  // ✅ sync canvas pixel size to wrapper (fixes height mismatch)
+  const syncCanvasToWrap = () => {
+    const wrapEl = wrapRef.current;
+    const canvas = chartRef.current;
+    if (!wrapEl || !canvas) return;
+
+    const rect = wrapEl.getBoundingClientRect();
+    const w = Math.max(0, Math.floor(rect.width));
+    const h = Math.max(0, Math.floor(rect.height));
+
+    if (w > 0 && h > 0) {
+      // ✅ set actual canvas attributes (not only CSS)
+      if (canvas.width !== w) canvas.width = w;
+      if (canvas.height !== h) canvas.height = h;
+    }
+  };
+
+  // chart type from dropdown state
   useEffect(() => {
-    if (newState["chartTypedropdown"]) {
-      setChartType(newState["chartTypedropdown"][0]?.label);
+    if (newState?.["chartTypedropdown"]?.[0]?.label) {
+      setChartType(newState["chartTypedropdown"][0].label);
     } else {
       setChartType("bar");
     }
   }, [newState]);
 
+  // fetch chart data
   useEffect(() => {
     const fetchJobData = async () => {
       setLoading(true);
-      let { data } = await dynamicReportFilter(
-        chartData,
-        clientId,
-        formControlData.spName
-      );
-      if (data?.length === 0) {
-        // alert(
-        //   "It looks like there might be a mistake in the date or year you entered. Could you please double-check and provide the accurate date?"
-        // );
-        setJobData(jobData);
-      } else {
-        setJobData(data);
+      try {
+        const { data } = await dynamicReportFilter(
+          chartData,
+          clientId,
+          formControlData?.spName
+        );
+
+        if (Array.isArray(data) && data.length > 0) {
+          setJobData(data);
+        } else {
+          setJobData([]); // ✅ avoid stale old data
+        }
+      } catch (e) {
+        setJobData([]);
       }
       setLoading(false);
     };
 
     fetchJobData();
-  }, [formControlData, chartData]);
+  }, [formControlData, chartData, clientId]);
 
+  // build chartDataState
   useEffect(() => {
-    const loadData = async () => {
-      if (jobData?.length === 0) return;
-      setLoading(true);
-      const bgColor = [
-        "#9999FF",
-        "#993366",
-        "#FFFFCC",
-        "#CCFFFF",
-        "#660066",
-        "#FF8080",
-        "#0066CC",
-        "#CCCCFF",
-        "#000080",
-        "#FF00FF",
-      ];
+    if (!Array.isArray(jobData) || jobData.length === 0) {
+      setChartDataState(null);
+      return;
+    }
 
-      const chart = jobData.map((item) => item["measure"]);
+    setLoading(true);
 
-      const dataVal = {
-        label: '',
-        backgroundColor: bgColor,
-        borderColor: "#0766AD",
-        data: chart,
-      };
+    const bgColor = [
+      "#9999FF",
+      "#993366",
+      "#FFFFCC",
+      "#CCFFFF",
+      "#660066",
+      "#FF8080",
+      "#0066CC",
+      "#CCCCFF",
+      "#000080",
+      "#FF00FF",
+    ];
 
-      const labels = jobData.map((item) => item["dimension"]);
+    const values = jobData.map((item) => Number(item?.measure ?? 0));
+    const labels = jobData.map((item) => String(item?.dimension ?? ""));
 
-      const chartDataObj = {
-        labels: labels,
-        datasets: [dataVal],
-      };
-      setChartDataState(chartDataObj);
-      setLoading(false);
-    };
+    setChartDataState({
+      labels,
+      datasets: [
+        {
+          label: "",
+          backgroundColor: bgColor,
+          borderColor: "#0766AD",
+          borderWidth: 1,
+          data: values,
+        },
+      ],
+    });
 
-    loadData();
+    setLoading(false);
   }, [jobData]);
 
+  // create / recreate chart
   useEffect(() => {
-    const initializeChart = () => {
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.destroy();
-      }
+    if (loading || !chartDataState || !chartRef.current) return;
 
-      Chart.defaults.font.family = "Roboto, Helvetica, Arial, sans-serif";
-      chartInstanceRef.current = new Chart(chartRef.current, {
-        type: chartType,
-        data: chartDataState,
-        options: {
-          maintainAspectRatio: false,
-          responsive: true,
-        },
-      });
-    };
-
-    if (!loading && chartDataState) {
-      initializeChart();
+    // destroy existing chart
+    if (chartInstanceRef.current) {
+      chartInstanceRef.current.destroy();
+      chartInstanceRef.current = null;
     }
+
+    // ✅ make sure wrapper/canvas sizes are in sync BEFORE chart init
+    syncCanvasToWrap();
+
+    Chart.defaults.font.family = "Roboto, Helvetica, Arial, sans-serif";
+
+    chartInstanceRef.current = new Chart(chartRef.current, {
+      type: chartType,
+      data: chartDataState,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false, // ✅ critical for wrapper height
+        animation: false, // ✅ helps avoid “zoom” on mobile
+        resizeDelay: 80,
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: true },
+        },
+        layout: {
+          padding: { top: 8, left: 8, right: 8, bottom: 8 },
+        },
+        scales: {
+          x: {
+            ticks: {
+              autoSkip: true,
+              maxRotation: 0,
+              minRotation: 0,
+            },
+          },
+          y: {
+            beginAtZero: true,
+          },
+        },
+      },
+    });
+
+    // ✅ force another sync + resize after layout settles (grid animation, etc.)
+    const t = setTimeout(() => {
+      syncCanvasToWrap();
+      try {
+        chartInstanceRef.current?.resize();
+        chartInstanceRef.current?.update("none");
+      } catch {}
+    }, 120);
+
+    return () => clearTimeout(t);
   }, [loading, chartDataState, chartType]);
+
+  // ✅ ResizeObserver: when wrapper changes, resize chart perfectly
+  useEffect(() => {
+    const wrapEl = wrapRef.current;
+    if (!wrapEl) return;
+
+    const ro = new ResizeObserver(() => {
+      syncCanvasToWrap();
+      const chart = chartInstanceRef.current;
+      if (!chart) return;
+
+      try {
+        chart.resize();
+        chart.update("none");
+      } catch {}
+    });
+
+    ro.observe(wrapEl);
+    return () => ro.disconnect();
+  }, []);
+
+  // ✅ if chartExpand changes, wrapper height changes => force resize
+  useEffect(() => {
+    const t = setTimeout(() => {
+      syncCanvasToWrap();
+      try {
+        chartInstanceRef.current?.resize();
+        chartInstanceRef.current?.update("none");
+      } catch {}
+    }, 120);
+
+    return () => clearTimeout(t);
+  }, [chartExpand]);
 
   const dropdownFieldData = [
     {
@@ -130,32 +228,39 @@ const ChartReports = ({ newState, chartExpand, formControlData, chartData, clien
   ];
 
   const handleValuesChange = (updatedValues) => {
+    setFormValues((prev) => ({ ...prev, ...updatedValues }));
+
+    const label = updatedValues?.exportdropdown?.[0]?.label;
     const chart = chartInstanceRef.current;
-    setFormValues((prevValues) => ({
-      ...prevValues,
-      ...updatedValues,
-    }));
-    if (updatedValues.exportdropdown[0].label === "image") {
-      if (chart) {
-        const a = document.createElement("a");
-        a.href = chart.toBase64Image();
-        a.download = "my_chart.png";
-        a.click();
-      }
+    if (!label || !chart) return;
+
+    if (label === "image") {
+      const a = document.createElement("a");
+      a.href = chart.toBase64Image();
+      a.download = "my_chart.png";
+      a.click();
     } else {
-      if (chart) {
-        const imgData = chart.toBase64Image();
-        const pdf = new jsPDF();
-        pdf.addImage(imgData, "PNG", 10, 10, 190, 100);
-        pdf.save("chart.pdf");
-      }
+      const imgData = chart.toBase64Image();
+
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+
+      const margin = 10;
+      const imgW = pageW - margin * 2;
+      const imgH = Math.min(90, pageH - margin * 2);
+
+      pdf.addImage(imgData, "PNG", margin, margin, imgW, imgH);
+      pdf.save("chart.pdf");
     }
   };
 
   return (
     <div className="chart_container">
       {loading ? (
-        <p>Loading...</p>
+        <p style={{ padding: 10 }}>Loading...</p>
+      ) : !jobData || jobData.length === 0 ? (
+        <p style={{ padding: 10 }}>No data found.</p>
       ) : (
         <div>
           <Box className="btn_dropdown">
@@ -165,12 +270,16 @@ const ChartReports = ({ newState, chartExpand, formControlData, chartData, clien
               values={formValues}
             />
           </Box>
+
+          {/* ✅ wrapper controls height; canvas syncs perfectly */}
           <div
-            style={{
-              position: "relative",
-              height: chartExpand ? "calc(65vh - 30px)" : "calc(80vh - 40px)",
-              width: "100%",
-            }}
+            ref={wrapRef}
+            className="chart_canvas_wrap"
+            style={
+              chartExpand
+                ? { height: "70vh" } // expand mode (desktop big)
+                : undefined
+            }
           >
             <canvas ref={chartRef} />
           </div>

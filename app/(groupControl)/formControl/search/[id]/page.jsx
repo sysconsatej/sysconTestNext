@@ -2790,7 +2790,7 @@ function ParentAccordianComponent({
             {section}
           </Typography>
         </AccordionSummary>
-
+ 
         <AccordionDetails
           className={` overflow-hidden p-0 ${styles.thinScrollBar}`}
           sx={{

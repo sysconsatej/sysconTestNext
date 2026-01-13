@@ -354,7 +354,7 @@ const LedgerReport = () => {
 
   //Fetch Ledger Report Data Function
   async function fetchLedgerReportData() {
-    console.log('data', newState)
+    console.log("data", newState);
     const filterCondition = {
       fromDate: formatDate(newState?.fromDate),
       toDate: formatDate(newState?.toDate),
@@ -373,7 +373,7 @@ const LedgerReport = () => {
     console.log("ledgerReportRequestBody =>", payload);
     const ledger = await ledgerData(payload);
 
-    const rows = Array.isArray(ledger?.data) ? ledger.data : [];
+    const rows = Array.isArray(ledger?.data) ? ledger?.data : [];
     setLedgerReportData(rows);
 
     if (
@@ -410,9 +410,9 @@ const LedgerReport = () => {
     const num = Number(n);
     return Number.isFinite(num)
       ? num.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
       : "";
   };
   // --- helpers Ends ---
@@ -754,7 +754,7 @@ const LedgerReport = () => {
                             position: "sticky",
                           }}
                           className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
-                        //sx={{ minWidth: 110 }}
+                          //sx={{ minWidth: 110 }}
                         >
                           Date
                         </TableCell>
@@ -984,7 +984,7 @@ const LedgerReport = () => {
                             position: "sticky",
                           }}
                           className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
-                        //sx={{ minWidth: 110 }}
+                          //sx={{ minWidth: 110 }}
                         >
                           Date
                         </TableCell>

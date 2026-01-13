@@ -598,26 +598,32 @@ export const listboxStyles = {
 
 export const customDataPickerStyleCss = ({ fieldname, isFocused }) => {
   return {
-    width: "12rem",
+    // ✅ responsive width: mobile full, tablet half, desktop fixed 12rem
+    width: { xs: "100%", sm: "100%", md: "50%", lg: "12rem" },
+
     "& .MuiFormLabel-root": {
       fontSize: "var(--inputFontSize)",
       fontWeight: "var(--inputFontWeight)",
     },
+
     "& label": {
-      // color: "#A0AAB4",
       color: "var(--table-text-color) !important",
     },
     "& label.Mui-focused": {
-      // color: "#A0AAB4",
       color: "var(--table-text-color) !important",
     },
+
     "& .MuiInput-underline:after": {
       borderBottomColor: "#B2BAC2",
     },
+
     "& .MuiOutlinedInput-root": {
       backgroundColor: "var(--inputBg)",
       height: "27px",
-      width: "12rem",
+
+      // ✅ same responsive width inside input
+      width: { xs: "100%", sm: "100%", md: "100%", lg: "12rem" },
+
       "& fieldset": {
         borderColor: "var(--inputBorderColor)",
       },
@@ -628,6 +634,7 @@ export const customDataPickerStyleCss = ({ fieldname, isFocused }) => {
         borderColor: "var(--inputBorderHoverColor)",
       },
     },
+
     "& .MuiInputBase-input": {
       display: "flex",
       alignItems: "center",
@@ -637,43 +644,53 @@ export const customDataPickerStyleCss = ({ fieldname, isFocused }) => {
       fontSize: "var(--inputFontSize)",
       fontWeight: "var(--inputFontWeight)",
     },
+
     "& .MuiInputLabel-root": {
       fontSize: "var(--inputFontSize)",
       fontWeight: "var(--inputFontWeight)",
       position: "absolute",
       top: isFocused || fieldname ? "3px" : "-10px",
     },
-    "& .MuiInputLabel-root.MuiInputLabel-shrink":{
-      transform: 'translate(14px, -9px) scale(1)',
+
+    "& .MuiInputLabel-root.MuiInputLabel-shrink": {
+      transform: "translate(14px, -9px) scale(1)",
     },
+
     "& .MuiSvgIcon-root": {
       color: "var(--table-text-color) !important",
     },
   };
 };
+
 
 export const customDataPickerStyleCssForStaticPage = ({ fieldname, isFocused }) => {
   return {
-    width: "10rem",
+    // ✅ responsive width: mobile full, tablet half, desktop fixed 10rem
+    width: { xs: "100%", sm: "100%", md: "50%", lg: "10rem" },
+
     "& .MuiFormLabel-root": {
       fontSize: "var(--inputFontSize)",
       fontWeight: "var(--inputFontWeight)",
     },
+
     "& label": {
-      // color: "#A0AAB4",
       color: "var(--table-text-color) !important",
     },
     "& label.Mui-focused": {
-      // color: "#A0AAB4",
       color: "var(--table-text-color) !important",
     },
+
     "& .MuiInput-underline:after": {
       borderBottomColor: "#B2BAC2",
     },
+
     "& .MuiOutlinedInput-root": {
       backgroundColor: "var(--inputBg)",
       height: "27px",
-      width: "10rem",
+
+      // ✅ inner width should also follow parent
+      width: { xs: "100%", sm: "100%", md: "100%", lg: "10rem" },
+
       "& fieldset": {
         borderColor: "var(--inputBorderColor)",
       },
@@ -684,6 +701,7 @@ export const customDataPickerStyleCssForStaticPage = ({ fieldname, isFocused }) 
         borderColor: "var(--inputBorderHoverColor)",
       },
     },
+
     "& .MuiInputBase-input": {
       display: "flex",
       alignItems: "center",
@@ -693,33 +711,43 @@ export const customDataPickerStyleCssForStaticPage = ({ fieldname, isFocused }) 
       fontSize: "var(--inputFontSize)",
       fontWeight: "var(--inputFontWeight)",
     },
+
     "& .MuiInputLabel-root": {
       fontSize: "var(--inputFontSize)",
       fontWeight: "var(--inputFontWeight)",
       position: "absolute",
       top: isFocused || fieldname ? "3px" : "-10px",
     },
-    "& .MuiInputLabel-root.MuiInputLabel-shrink":{
-      transform: 'translate(14px, -9px) scale(1)',
+
+    "& .MuiInputLabel-root.MuiInputLabel-shrink": {
+      transform: "translate(14px, -9px) scale(1)",
     },
+
     "& .MuiSvgIcon-root": {
       color: "var(--table-text-color) !important",
     },
   };
 };
 
+
 export const customTimePickerStyleCss = ({ fieldname, isFocused }) => {
   return {
-    width: "12rem",
+    // ✅ responsive width: mobile full, tablet half, desktop fixed 12rem
+    width: { xs: "100%", sm: "100%", md: "50%", lg: "12rem" },
+
     "& .MuiInputBase-input": {
       fontSize: "10px",
       marginTop: fieldname ? "3px" : "0px",
       color: "var(--text-color-500)",
     },
+
     "& .MuiOutlinedInput-root": {
       backgroundColor: "var(--inputBg)",
       height: "27px",
-      width: "12rem",
+
+      // ✅ inner width follows parent
+      width: { xs: "100%", sm: "100%", md: "100%", lg: "12rem" },
+
       "& fieldset": {
         borderColor: "var(--inputBorderColor)",
       },
@@ -730,40 +758,49 @@ export const customTimePickerStyleCss = ({ fieldname, isFocused }) => {
         borderColor: "var(--inputBorderHoverColor)",
       },
     },
+
     "& .MuiInputLabel-root": {
       lineHeight: "20px",
       fontSize: "10px",
       position: "absolute",
       top: isFocused || fieldname ? "5px" : "-12px",
     },
+
     "& .MuiSvgIcon-root": {
       color: "var(--text-color-500)",
     },
   };
 };
 
+
 export const customDateTimePickerStyleCss = ({ fieldname, isFocused }) => {
   return {
-    width: "12rem",
+    // ✅ responsive width: mobile full, tablet half, desktop fixed 12rem
+    width: { xs: "100%", sm: "100%", md: "50%", lg: "12rem" },
+
     "& .MuiFormLabel-root": {
       fontSize: "var(--inputFontSize) !important",
       fontWeight: "var(--inputFontWeight)",
     },
+
     "& label": {
-      // color: "#A0AAB4",
       color: "var(--table-text-color) !important",
     },
     "& label.Mui-focused": {
-      // color: "#A0AAB4",
       color: "var(--table-text-color) !important",
     },
+
     "& .MuiInput-underline:after": {
       borderBottomColor: "#B2BAC2",
     },
+
     "& .MuiOutlinedInput-root": {
       backgroundColor: "var(--inputBg)",
       height: "27px",
-      width: "12rem",
+
+      // ✅ inner width follows parent
+      width: { xs: "100%", sm: "100%", md: "100%", lg: "12rem" },
+
       "& fieldset": {
         borderColor: "var(--inputBorderColor)",
       },
@@ -774,6 +811,7 @@ export const customDateTimePickerStyleCss = ({ fieldname, isFocused }) => {
         borderColor: "var(--inputBorderHoverColor)",
       },
     },
+
     "& .MuiInputBase-input": {
       display: "flex",
       alignItems: "center",
@@ -782,12 +820,14 @@ export const customDateTimePickerStyleCss = ({ fieldname, isFocused }) => {
       fontSize: "10px !important",
       color: "var(--table-text-color) !important",
     },
+
     "& .MuiInputLabel-root": {
       lineHeight: "20px",
       fontSize: "0.8rem",
       position: "absolute",
       top: isFocused || fieldname ? "5px" : "-10px",
     },
+
     "& .MuiSvgIcon-root": {
       color: "var(--table-text-color) !important",
     },
@@ -795,33 +835,30 @@ export const customDateTimePickerStyleCss = ({ fieldname, isFocused }) => {
 };
 
 export const customDatePickerStyleCss2 = {
-  width: "12rem",
+  // ✅ responsive width: mobile full, tablet half, desktop fixed 12rem
+  width: { xs: "100%", sm: "100%", md: "50%", lg: "12rem" },
   height: "27px",
 
   "& .MuiInputBase-input": {
     fontSize: "10px",
   },
+
   "& .MuiOutlinedInput-root": {
     height: "27px",
-    width: "12rem",
+    // ✅ inner width follows parent
+    width: { xs: "100%", sm: "100%", md: "100%", lg: "12rem" },
   },
-  "& .MuiInputLabel-root": {
-    // marginBottom:'8px'
-    // lineHeight: "20px",
-    // fontSize: "0.8rem",
 
-    // marginTop: "-6px",
+  "& .MuiInputLabel-root": {
     fontSize: "10px",
     position: "absolute",
-
-    // top: isFocused || fieldname ? "0px" : "-10px",
   },
 };
 
 export const textAreaStyle = {
-  // "& .MuiInputBase-input": { color: "black" },
-  // height: "40px",
-  width: "12rem",
+  // ✅ responsive width: mobile full, tablet half, desktop fixed 12rem
+  width: { xs: "100%", sm: "100%", md: "50%", lg: "12rem" },
+
   fontSize: "10px",
   color: "#A0AAB4",
 
@@ -829,12 +866,15 @@ export const textAreaStyle = {
     fontSize: "var(--inputFontSize)",
     fontWeight: "var(--inputFontWeight)",
   },
+
   "& label.Mui-focused": {
     color: "#A0AAB4",
   },
+
   "& .MuiInput-underline:after": {
     borderBottomColor: "#B2BAC2",
   },
+
   "& .MuiOutlinedInput-root": {
     "& fieldset": {
       borderColor: "var(--inputBorderColor)",
@@ -846,14 +886,18 @@ export const textAreaStyle = {
       borderColor: "var(--inputBorderHoverColor)",
     },
   },
+
   "& .MuiInputBase-input": {
     fontSize: "10px",
     marginLeft: "15px",
   },
+
   "& .MuiOutlinedInput-input": {
     padding: 0,
     height: "27px",
-    width: "12rem",
+
+    // ✅ inner width follows parent
+    width: { xs: "100%", sm: "100%", md: "100%", lg: "12rem" },
   },
 };
 
@@ -863,28 +907,34 @@ export const fileInputStyle = {
   color: "#00000099",
   "& .MuiInputBase-input": { color: "black" },
   height: "27px",
-  width: "12rem",
+
+  // ✅ responsive width: mobile full, tablet half, desktop fixed 12rem
+  width: { xs: "100%", sm: "100%", md: "50%", lg: "12rem" },
+
   ".MuiButtonBase-root-MuiButton-root": {
     justifyContent: "flex-start",
   },
 };
 
 export const textInputStyle = ({ fieldname, isFocused }) => {
-  // console.log("fieldname", fieldname, "check", isFocused || fieldname || fieldname?.length > 0 ? "5px" : "-2px");
   return {
-    width: "12rem",
+    // ✅ responsive width: mobile full, tablet half, desktop fixed 12rem
+    width: { xs: "100%", sm: "100%", md: "50%", lg: "12rem" },
+
     "& .MuiFormLabel-root": {
       fontWeight: "var(--inputFontWeight)",
       fontSize: "var(--inputFontSize)",
       color: "var(--table-text-color)",
     },
+
     "& label.Mui-focused": {
-      // color: "var(--text-color-500)",
       color: "var(--table-text-color)",
     },
+
     "& .MuiInput-underline:after": {
       borderBottomColor: "#B2BAC2",
     },
+
     "& .MuiOutlinedInput-root": {
       backgroundColor: "var(--inputBg)",
       "& fieldset": {
@@ -897,6 +947,7 @@ export const textInputStyle = ({ fieldname, isFocused }) => {
         borderColor: "var(--inputBorderHoverColor)",
       },
     },
+
     "& .MuiInputBase-input": {
       fontSize: "10px",
       marginLeft: "15px",
@@ -904,10 +955,13 @@ export const textInputStyle = ({ fieldname, isFocused }) => {
       color: "var(--table-text-color)",
       backgroundColor: "var(--inputBg)",
     },
+
     "& .MuiOutlinedInput-input": {
       padding: 0,
       height: "27px",
-      width: "12rem",
+
+      // ✅ inner width follows parent
+      width: { xs: "100%", sm: "100%", md: "100%", lg: "12rem" },
       // width: "calc(100% - 30px)"
     },
 
@@ -917,29 +971,33 @@ export const textInputStyle = ({ fieldname, isFocused }) => {
       fontWeight: "var(--inputFontWeight)",
       top: isFocused || (fieldname && fieldname?.length > 0) ? "3px" : "-2px",
     },
-    "& .MuiInputLabel-root.MuiInputLabel-shrink":{
+
+    "& .MuiInputLabel-root.MuiInputLabel-shrink": {
       top: "4px",
-      transform: 'translate(14px, -9px) scale(1)',
-    }
+      transform: "translate(14px, -9px) scale(1)",
+    },
   };
 };
 
 export const textInputStyleForStaticPage = ({ fieldname, isFocused }) => {
-  // console.log("fieldname", fieldname, "check", isFocused || fieldname || fieldname?.length > 0 ? "5px" : "-2px");
   return {
-    width: "10rem",
+    // ✅ responsive width: mobile full, tablet half, desktop fixed 10rem
+    width: { xs: "100%", sm: "100%", md: "50%", lg: "10rem" },
+
     "& .MuiFormLabel-root": {
       fontWeight: "var(--inputFontWeight)",
       fontSize: "var(--inputFontSize)",
       color: "var(--table-text-color)",
     },
+
     "& label.Mui-focused": {
-      // color: "var(--text-color-500)",
       color: "var(--table-text-color)",
     },
+
     "& .MuiInput-underline:after": {
       borderBottomColor: "#B2BAC2",
     },
+
     "& .MuiOutlinedInput-root": {
       backgroundColor: "var(--inputBg)",
       "& fieldset": {
@@ -952,6 +1010,7 @@ export const textInputStyleForStaticPage = ({ fieldname, isFocused }) => {
         borderColor: "var(--inputBorderHoverColor)",
       },
     },
+
     "& .MuiInputBase-input": {
       fontSize: "10px",
       marginLeft: "15px",
@@ -959,10 +1018,13 @@ export const textInputStyleForStaticPage = ({ fieldname, isFocused }) => {
       color: "var(--table-text-color)",
       backgroundColor: "var(--inputBg)",
     },
+
     "& .MuiOutlinedInput-input": {
       padding: 0,
       height: "27px",
-      width: "10rem",
+
+      // ✅ inner width follows parent
+      width: { xs: "100%", sm: "100%", md: "100%", lg: "10rem" },
       // width: "calc(100% - 30px)"
     },
 
@@ -972,91 +1034,108 @@ export const textInputStyleForStaticPage = ({ fieldname, isFocused }) => {
       fontWeight: "var(--inputFontWeight)",
       top: isFocused || (fieldname && fieldname?.length > 0) ? "3px" : "-2px",
     },
-    "& .MuiInputLabel-root.MuiInputLabel-shrink":{
+
+    "& .MuiInputLabel-root.MuiInputLabel-shrink": {
       top: "4px",
-      transform: 'translate(14px, -9px) scale(1)',
-    }
+      transform: "translate(14px, -9px) scale(1)",
+    },
   };
 };
 
 export const numberInputStyle = ({ fieldname, isFocused }) => {
   return {
-    width: "12rem",
-    // "& .MuiInputBase-input": { fontSize: "0.9rem" },
+    // ✅ responsive width: mobile full, tablet half, desktop fixed 12rem
+    width: { xs: "100%", sm: "100%", md: "50%", lg: "12rem" },
+
     "& .MuiInputBase-input": {
       fontSize: "var(--inputFontSize)",
       marginX: "15px",
       color: "var(--inputTextColor)",
       backgroundColor: "var(--inputBg)",
     },
+
     "& .MuiOutlinedInput-root": {
       backgroundColor: "var(--inputBg)",
     },
+
     "& .MuiOutlinedInput-input": {
       backgroundColor: "var(--inputBg)",
       padding: 0,
       height: "27px",
-      width: "12rem",
+
+      // ✅ inner width follows parent
+      width: { xs: "100%", sm: "100%", md: "100%", lg: "12rem" },
     },
+
     "& .MuiInputLabel-root": {
       position: "absolute",
       top: isFocused || fieldname ? "3px" : "-2px",
       paddingLeft: "4px",
     },
-    "& .MuiInputLabel-root.MuiInputLabel-shrink":{
-      transform: 'translate(14px, -9px) scale(1)',
-    }
+
+    "& .MuiInputLabel-root.MuiInputLabel-shrink": {
+      transform: "translate(14px, -9px) scale(1)",
+    },
   };
 };
 
 export const numberInputStyleForStaticPage = ({ fieldname, isFocused }) => {
   return {
-    width: "10rem",
-    // "& .MuiInputBase-input": { fontSize: "0.9rem" },
+    // ✅ responsive width: mobile full, tablet half, desktop fixed 10rem
+    width: { xs: "100%", sm: "100%", md: "50%", lg: "10rem" },
+
     "& .MuiInputBase-input": {
       fontSize: "var(--inputFontSize)",
       marginX: "15px",
       color: "var(--inputTextColor)",
       backgroundColor: "var(--inputBg)",
     },
+
     "& .MuiOutlinedInput-root": {
       backgroundColor: "var(--inputBg)",
     },
+
     "& .MuiOutlinedInput-input": {
       backgroundColor: "var(--inputBg)",
       padding: 0,
       height: "27px",
-      width: "10rem",
+
+      // ✅ inner width follows parent
+      width: { xs: "100%", sm: "100%", md: "100%", lg: "10rem" },
     },
+
     "& .MuiInputLabel-root": {
       position: "absolute",
       top: isFocused || fieldname ? "3px" : "-2px",
       paddingLeft: "4px",
     },
-    "& .MuiInputLabel-root.MuiInputLabel-shrink":{
-      transform: 'translate(14px, -9px) scale(1)',
-    }
+
+    "& .MuiInputLabel-root.MuiInputLabel-shrink": {
+      transform: "translate(14px, -9px) scale(1)",
+    },
   };
 };
 
 export const customRadioCheckBoxStyle =
-  "relative flex items-center  border-gray-300  w-[12rem] text-[10px] border";
-  export const customRadioCheckBoxStyleForStaticPage =
-  "relative flex items-center  border-gray-300  w-[10rem] text-[10px] border";
+  "relative flex items-center border-gray-300 w-full md:w-1/2 lg:w-[12rem] text-[10px] border";
+
+export const customRadioCheckBoxStyleForStaticPage =
+  "relative flex items-center border-gray-300 w-full md:w-1/2 lg:w-[10rem] text-[10px] border";
 
 export const checkBoxStyle = {
   height: "27px",
 
   "&.MuiCheckbox-root": {
-    color: "var(--table-text-color)", // This sets the color of the border (which is the unchecked state icon color)
+    color: "var(--table-text-color)", // unchecked border/icon color
+    padding: "0 6px",                 // ✅ keeps checkbox centered in 27px height
     "&:hover": {
-      backgroundColor: "transparent", // Optional: handle hover state background
+      backgroundColor: "transparent",
     },
   },
-  // Style when checked
+
   "&.Mui-checked": {
     color: "#0766AD",
-    borderColor: "white", // If you want to retain or change the border color when checked
+    borderColor: "white",
   },
 
   "& .MuiSvgIcon-root": {
@@ -1067,19 +1146,20 @@ export const checkBoxStyle = {
 
 export const multiCheckBoxStyle = {
   height: "27px",
-  // width: "12rem",
 
   "&.MuiCheckbox-root": {
-    color: "var(--table-text-color)", // This sets the color of the border (which is the unchecked state icon color)
+    color: "var(--table-text-color)",
+    padding: "0 6px", // ✅ keeps checkbox aligned nicely in 27px height
     "&:hover": {
-      backgroundColor: "transparent", // Optional: handle hover state background
+      backgroundColor: "transparent",
     },
   },
-  // Style when checked
+
   "&.Mui-checked": {
     color: "#0766AD",
-    borderColor: "white", // If you want to retain or change the border color when checked
+    borderColor: "white",
   },
+
   "& .MuiSvgIcon-root": {
     height: "14px",
     width: "14px",
@@ -1087,58 +1167,73 @@ export const multiCheckBoxStyle = {
 };
 
 export const radioGroupStyle = {
-  //   height: "27px",
-  width: "12rem",
+  // ✅ responsive width: mobile full, tablet half, desktop fixed 12rem
+  width: { xs: "100%", sm: "100%", md: "50%", lg: "12rem" },
+
   "& .MuiFormLabel-root": {
     fontWeight: "var(--inputFontWeight)",
     fontSize: "var(--inputFontSize) !important",
   },
-  "& .MuiFormControlLabel-label": { fontSize: "20px" },
+
+  // ✅ keep label same as your input size (remove 20px which breaks design)
+  "& .MuiFormControlLabel-label": {
+    fontSize: "var(--inputFontSize) !important",
+    fontWeight: "var(--inputFontWeight)",
+    color: "var(--inputTextColor)",
+  },
 
   "& .MuiSvgIcon-root": {
     height: "14px",
     width: "14px",
   },
+
   "& .MuiTypography-root": {
     fontSize: "var(--inputFontSize) !important",
   },
 
   "& .MuiRadioGroup-root": {
-    color: "var(--table-text-color)", // This sets the color of the border (which is the unchecked state icon color)
+    color: "var(--table-text-color)",
     "&:hover": {
-      backgroundColor: "transparent", // Optional: handle hover state background
+      backgroundColor: "transparent",
     },
   },
 };
+
 export const radioControlStyle = {
-  //   height: "27px",
   height: "24px",
   color: "var(--inputTextColor)",
 
   "&.Mui-checked": {
     color: "var(--inputTextColor)",
-    borderColor: "white", // If you want to retain or change the border color when checked
+    borderColor: "white",
   },
+
   "&.MuiRadio-root": {
+    padding: "0 6px", // ✅ align inside 24px height nicely
     "&:hover": {
-      backgroundColor: "transparent", // Optional: handle hover state background
+      backgroundColor: "transparent",
     },
   },
 };
 
 export const multiSelectStyle = {
-  // width: "306px",
+  // ✅ responsive width
+  width: { xs: "100%", sm: "100%", md: "50%", lg: "12rem" },
+
   "& .MuiOutlinedInput-root": {
     height: "27px",
-    width: "12rem",
+    width: { xs: "100%", sm: "100%", md: "100%", lg: "12rem" },
   },
-  "& .MuiAutocomplete-input ": {
+
+  "& .MuiAutocomplete-input": {
     minWidth: "100% !important",
-    // width:'auto',
     fontSize: "0.7rem",
     position: "absolute",
     top: "2px",
+    left: 0,
+    right: 0,
   },
+
   "& .MuiInputLabel-root": {
     fontSize: "10px",
     lineHeight: "auto",
@@ -1147,7 +1242,7 @@ export const multiSelectStyle = {
   },
 };
 
-// Acordion styles
+// Accordion styles
 export const parentAccordionSection = {
   // backgroundColor: "#f9f9f9 !important",
   backgroundColor: "var(--accordionParentHeaderBg) !important",
@@ -1361,20 +1456,24 @@ export const gridSubChildIconStyles = {
 };
 
 //forgot password style
-export const textInputStyle3 = () => {
+export const textInputStyle3 = ({ fieldname, isFocused } = {}) => {
   return {
     width: "100%",
+
     "& .MuiFormLabel-root": {
       fontWeight: "var(--inputFontWeight)",
       fontSize: "var(--inputFontSize)",
+      color: "var(--table-text-color)",
     },
+
     "& label.Mui-focused": {
-      color: "#A0AAB4",
+      color: "var(--table-text-color)",
     },
-    "& .MuiInput-underline:after": {
-      borderBottomColor: "#B2BAC2",
-    },
+
     "& .MuiOutlinedInput-root": {
+      backgroundColor: "var(--inputBg)",
+      height: "27px",
+
       "& fieldset": {
         borderColor: "var(--inputBorderColor)",
       },
@@ -1384,25 +1483,49 @@ export const textInputStyle3 = () => {
       "&.Mui-focused fieldset": {
         borderColor: "var(--inputBorderHoverColor)",
       },
-      "& .MuiInputBase-input": {
-        fontSize: "10px",
-        marginLeft: "15px", // Ensure this does not push the input too far, causing alignment issues.
-      },
+
+      // ✅ IMPORTANT: don’t fight with width calc here
       "& .MuiOutlinedInput-input": {
         padding: 0,
         height: "27px",
-        width: "calc(100% - 24px)", // Adjust width to compensate for icon space
+        width: "100%",
+        boxSizing: "border-box",
       },
+
+      // ✅ keep your spacing but don’t break small screens
+      "& .MuiInputBase-input": {
+        fontSize: "10px",
+        marginLeft: "15px",
+        marginRight: "15px",
+        color: "var(--inputTextColor)",
+        backgroundColor: "var(--inputBg)",
+      },
+
+      // ✅ icon/end-adornment alignment (no negative margin hacks)
       "& .MuiInputAdornment-positionEnd": {
-        marginRight: "-12px", // Adjust this value to better align the icon
+        marginRight: 0,
+      },
+
+      "& .MuiIconButton-root": {
+        padding: "2px",
       },
     },
+
     "& .MuiInputLabel-root": {
       position: "absolute",
-      top: "0px",
+      top: isFocused || (fieldname && `${fieldname}`.length > 0) ? "3px" : "-2px",
+      fontWeight: "var(--inputFontWeight)",
+      fontSize: "var(--inputFontSize)",
+      color: "var(--inputTextColor)",
+    },
+
+    "& .MuiInputLabel-root.MuiInputLabel-shrink": {
+      top: "4px",
+      transform: "translate(14px, -9px) scale(1)",
     },
   };
 };
+
 //  display table and createform styles
 export const displayReportTablePaperStyles = {
   width: "100%",

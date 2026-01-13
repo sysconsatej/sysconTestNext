@@ -42,6 +42,7 @@ import { ActionButton } from "@/components/ActionsButtons/VoucherActionButton.js
 ("");
 import { useDispatch } from "react-redux";
 import { updateFlag } from "@/app/counterSlice";
+import { set } from "lodash";
 
 const icons = [PlayIcon1, PlayIcon2, PlayIcon3, PlayIcon4];
 
@@ -121,6 +122,8 @@ RowComponent.propTypes = {
   formControlData: PropTypes.any,
   setFormControlData: PropTypes.any,
   tableBodyWidhth: PropTypes.string,
+  // setIsChangesInAutoSetAllocatedAmount: PropTypes.any,
+  // setRowIndexOfVoucherGrid: PropTypes.any,
 };
 export default function RowComponent({
   row,
@@ -155,6 +158,8 @@ export default function RowComponent({
   formControlData,
   setFormControlData,
   tableBodyWidhth,
+  // setIsChangesInAutoSetAllocatedAmount,
+  // setRowIndexOfVoucherGrid,
 }) {
   const dispatch = useDispatch();
   const [childValuseObj, setChildValuseObj] = useState({ ...row });
@@ -426,9 +431,17 @@ export default function RowComponent({
     });
   };
 
-  const handleValuesChangeForTblVoucherLedgerDetailsGrid = (e, index) => {
-    console.log("Incoming event object (e):", e);
-    console.log("Index:", index);
+  const handleValuesChangeForTblVoucherLedgerDetailsGrid = (
+    e,
+    index,
+    childIndex
+  ) => {
+    // if (e && typeof e === "object" && "autoSetAllocatedAmount" in e) {
+    //   setIsChangesInAutoSetAllocatedAmount(Boolean(e?.autoSetAllocatedAmount));
+    // }
+    // setRowIndexOfVoucherGrid(childIndex);
+    // console.log("Incoming event object (e):", e);
+    // console.log("Index:", index);
 
     let tempData = {};
 
@@ -714,7 +727,8 @@ export default function RowComponent({
                         childName === "tblVoucherLedgerDetails"
                           ? handleValuesChangeForTblVoucherLedgerDetailsGrid(
                               e,
-                              index
+                              index,
+                              row?.indexValue
                             )
                           : handleValuesChangeOfChildGrid(e, index)
                       }

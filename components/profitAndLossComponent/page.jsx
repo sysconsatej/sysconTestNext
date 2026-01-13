@@ -50,9 +50,6 @@ function ProfitAndLossComponent({ data1, data2, reportTypeData, setLoader }) {
     setReportType(reportTypeData);
   }, [reportTypeData]);
 
-  //   console.log("reportType", reportType);
-  //   console.log("reportData", reportData);
-
   useEffect(() => {
     if (!data1 && !data2) return;
 
@@ -258,7 +255,6 @@ function ProfitAndLossComponent({ data1, data2, reportTypeData, setLoader }) {
               </td>
             ) : null}
             {/* Sub_Group_3 column */}
-            {/* Sub_Group_3 column */}
             <td
               className="text-black"
               style={{
@@ -325,179 +321,6 @@ function ProfitAndLossComponent({ data1, data2, reportTypeData, setLoader }) {
       return groupedRows;
     };
   }, [reportData]);
-
-  // Table for Summary view
-  // const SummaryTable = ({
-  //   data,
-  //   total,
-  //   title,
-  //   totalAssets,
-  //   totalLiabilities,
-  //   maxRowCount,
-  // }) => {
-  //   const isProfit = totalAssets >= totalLiabilities;
-  //   const netValue = Math.abs(totalAssets - totalLiabilities).toLocaleString(
-  //     undefined,
-  //     {
-  //       minimumFractionDigits: 2,
-  //       maximumFractionDigits: 2,
-  //     }
-  //   );
-
-  //   // Separate the "Net Loss" object from the rest
-  //   const netLossObject = data.find(
-  //     (item) => item.tbGroupName?.toLowerCase() === "net loss"
-  //   );
-  //   const filteredData = data.filter(
-  //     (item) =>
-  //       item.Amount !== 0 && item.tbGroupName?.toLowerCase() !== "net loss"
-  //   );
-  //   const filledData = (() => {
-  //     // Filter out "Net Profit" and find it as a separate object
-  //     const netProfitObject = filteredData.find(
-  //       (item) => item.tbGroupName?.toLowerCase() === "net profit"
-  //     );
-  //     const filteredWithoutNetProfit = filteredData.filter(
-  //       (item) => item.tbGroupName?.toLowerCase() !== "net profit"
-  //     );
-
-  //     // Calculate row difference, excluding "Net Profit" and "Net Loss" if they exist
-  //     const rowDiff =
-  //       maxRowCount -
-  //       filteredWithoutNetProfit.length -
-  //       (netLossObject ? 1 : 0) -
-  //       (netProfitObject ? 1 : 0);
-
-  //     return [
-  //       ...filteredWithoutNetProfit,
-  //       ...Array(rowDiff).fill({ tbGroupName: "\u00A0", Amount: "\u00A0" }),
-  //       ...(netLossObject ? [netLossObject] : []), // Append "Net Loss" at the end if it exists
-  //       ...(netProfitObject ? [netProfitObject] : []), // Append "Net Profit" at the very end if it exists
-  //     ];
-  //   })();
-  //   return (
-  //     <table className="table">
-  //       <thead>
-  //         <tr>
-  //           <th className="sticky-header">{title}</th>
-  //           <th className="sticky-header"></th>
-  //         </tr>
-  //       </thead>
-  //       <tbody>
-  //         {filledData.map((item, index) => (
-  //           <tr key={index}>
-  //             <td
-  //               className={`text-black  ${
-  //                 item?.tbGroupName?.toLowerCase().includes("net loss") ||
-  //                 item?.tbGroupName?.toLowerCase().includes("net profit")
-  //                   ? "bold-text bg-gray-200"
-  //                   : ""
-  //               }`}
-  //             >
-  //               {item?.tbGroupName || ""}
-  //             </td>
-  //             <td
-  //               className={`text-right text-black ${
-  //                 item?.tbGroupName?.toLowerCase().includes("net loss") ||
-  //                 item?.tbGroupName?.toLowerCase().includes("net profit")
-  //                   ? "bg-gray-200"
-  //                   : ""
-  //               }`}
-  //             >
-  //               {item?.Amount !== null && item.Amount !== "\u00A0"
-  //                 ? item.Amount < 0
-  //                   ? `(-${Math.abs(item.Amount).toLocaleString(undefined, {
-  //                       useGrouping: false, // Disable commas
-  //                       minimumFractionDigits: 2,
-  //                       maximumFractionDigits: 2,
-  //                     })})`
-  //                   : item.Amount.toLocaleString(undefined, {
-  //                       useGrouping: false, // Disable commas
-  //                       minimumFractionDigits: 2,
-  //                       maximumFractionDigits: 2,
-  //                     })
-  //                 : ""}
-  //             </td>
-  //           </tr>
-  //         ))}
-  //       </tbody>
-  //     </table>
-  //   );
-  // };
-
-  // const SummaryTable = ({ data, total, title, maxRowCount }) => {
-  //   const rows = Array.isArray(data) ? data : [];
-  //   const fillerCount = Math.max(
-  //     0,
-  //     (Number.isFinite(maxRowCount) ? maxRowCount : 0) - rows.length
-  //   );
-
-  //   const formatAmount = (val) => {
-  //     if (val === null || val === undefined || val === "\u00A0") return "";
-  //     const num = Number(val);
-  //     if (isNaN(num)) return "";
-  //     return num < 0
-  //       ? `(-${Math.abs(num).toLocaleString(undefined, {
-  //           useGrouping: false,
-  //           minimumFractionDigits: 2,
-  //           maximumFractionDigits: 2,
-  //         })})`
-  //       : num.toLocaleString(undefined, {
-  //           useGrouping: false,
-  //           minimumFractionDigits: 2,
-  //           maximumFractionDigits: 2,
-  //         });
-  //   };
-
-  //   return (
-  //     <table className="table">
-  //       <thead>
-  //         <tr>
-  //           <th className="sticky-header">{title}</th>
-  //           <th className="sticky-header"></th>
-  //         </tr>
-  //       </thead>
-
-  //       <tbody>
-  //         {rows.map((item, index) => (
-  //           <tr key={index}>
-  //             <td className="text-black">{item?.tbGroupName || ""}</td>
-  //             <td className="text-black text-right">
-  //               {formatAmount(item?.Amount)}
-  //             </td>
-  //           </tr>
-  //         ))}
-
-  //         {/* filler rows so both tables align */}
-  //         {fillerCount > 0 &&
-  //           Array.from({ length: fillerCount }).map((_, i) => (
-  //             <tr key={`pad-${i}`} className="empty-row">
-  //               <td>&nbsp;</td>
-  //               <td className="text-right">&nbsp;</td>
-  //             </tr>
-  //           ))}
-
-  //         {/* total row always last */}
-  //         {/* {typeof total === "number" && (
-  //           <tr className="border-t font-semibold">
-  //             <td className="text-black">
-  //               {title?.toLowerCase().includes("expense")
-  //                 ? "Total Expense"
-  //                 : title?.toLowerCase().includes("income")
-  //                 ? "Total Income"
-  //                 : title?.toLowerCase().includes("liabilit")
-  //                 ? "Total Liabilities"
-  //                 : title?.toLowerCase().includes("asset")
-  //                 ? "Total Assets"
-  //                 : "Total"}
-  //             </td>
-  //             <td className="text-black text-right">{formatAmount(total)}</td>
-  //           </tr>
-  //         )} */}
-  //       </tbody>
-  //     </table>
-  //   );
-  // };
 
   const SummaryTable = ({
     data,

@@ -23,6 +23,7 @@ function rptQuotation() {
   const searchParams = useSearchParams();
   const [reportIds, setReportIds] = useState([]);
   const [data, setData] = useState([]);
+  const [printReportName, setPrintReportName] = useState([]);
   const [CompanyHeader, setCompanyHeader] = useState("");
   const [ImageUrl, setImageUrl] = useState("");
   const [userName, setUserName] = useState(null);
@@ -89,8 +90,21 @@ function rptQuotation() {
           );
           if (!response.ok) throw new Error("Failed to fetch job data");
           const data = await response.json();
-          setData(data.data);
-          setCompanyHeader(data.data[0].brachId);
+          setData(data?.data);
+          if (clientId == 13) {
+            if (Array.isArray(data?.data) && data?.data?.length > 0) {
+              console.log(
+                "data for print report name:",
+                data?.data[0]?.rateRequestNo
+              );
+              setPrintReportName(
+                data?.data[0]?.rateRequestNo !== ""
+                  ? [data?.data[0]?.rateRequestNo]
+                  : []
+              );
+            }
+          }
+          setCompanyHeader(data?.data[0]?.brachId);
         } catch (error) {
           console.error("Error fetching job data:", error);
         }
@@ -10571,8 +10585,9 @@ Operator/ Airport Authority or any other third party.
         <Print
           enquiryModuleRefs={enquiryModuleRefs}
           printOrientation={printOrientation || "landscape"}
-          reportIds={reportIds}
+          reportIds={printReportName?.length > 0 ? printReportName : reportIds}
         />
+
         {reportIds.map((reportId, index) => {
           switch (reportId) {
             case "Quotation Sea Report":

@@ -1,30 +1,32 @@
 "use client";
 
 import React from "react";
-import NavbarPage from "@/components/Navbar/navbar"; // Navbar import
-import SideBarMenu from "@/components/Sidebar/sidebarTree"; // Sidebar import
+import NavbarPage from "@/components/Navbar/navbar";
+import SideBarMenu from "@/components/Sidebar/sidebarTree";
 import styles from "@/app/app.module.css";
 import PropTypes from "prop-types";
 
 RootLayout.propTypes = {
   children: PropTypes.node.isRequired,
 };
-export default function RootLayout({ children }) {
 
+export default function RootLayout({ children }) {
   return (
-    <div className="flex overflow-hidden">
+    <div className="flex h-screen w-full overflow-hidden">
       {/* Sidebar */}
-      <SideBarMenu  />
+      <div className="shrink-0">
+        <SideBarMenu />
+      </div>
 
       {/* Main content area */}
-      <div className={`flex flex-col flex-grow  flex-container w-80 mr-0 `}>
+      <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
         {/* Navbar */}
-        <NavbarPage />
+        <div className="shrink-0">
+          <NavbarPage />
+        </div>
 
-        {/* Children */}
-        <div
-          className={`flex-grow overflow-y-hidden pl-2  mt-1 ${styles.hideScrollbar}  ${styles.childrenHeight}`}
-        >
+        {/* ✅ Children scroll area */}
+        <div className={`flex-1 min-h-0 overflow-auto pl-2 mt-1 ${styles.hideScrollbar}`}>
           <div className="pr-[10px]">{children}</div>
         </div>
       </div>

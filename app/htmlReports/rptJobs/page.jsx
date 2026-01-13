@@ -124,8 +124,8 @@ const rptJobs = () => {
           });
           if (!response.ok) throw new Error("Failed to fetch job data");
           const data = await response.json();
-          setJobData(data.data);
-          setCompanyHeader(data.data[0].brachId);
+          setJobData(data?.data);
+          setCompanyHeader(data?.data[0]?.brachId);
         } catch (error) {
           console.error("Error fetching job data:", error);
         }
@@ -6701,22 +6701,34 @@ const rptJobs = () => {
       <div className="a4-landscape print-area">
         <CompanyImgModule />
         <div className="flex justify-center">
-          <div className=" mt-5 w-[25%] text-center font-bold text-black text-sm ">
-            <h1 className="py-0.1">Job Cost Sheet</h1>
+          <div
+            className=" mt-2 w-[25%] text-center font-bold text-black"
+            style={{ fontSize: "10px", color: "black", width: "25%" }}
+          >
+            <h1>Job Cost Sheet</h1>
           </div>
         </div>
-        <div className=" mt-5 w-[25%] text-left font-bold text-black text-sm ">
-          <h2 className="py-0.1">Job Details :</h2>
+        <div
+          className="mt-2 w-[25%] text-left font-bold text-black"
+          style={{ fontSize: "10px", color: "black", width: "25%" }}
+        >
+          <h2>Job Details :</h2>
         </div>
         <JobDetailsProvisionalModule jobData={jobData} />
 
-        <div className="mt-5 w-[25%] text-left font-bold text-black text-sm ">
-          <h3 className="py-0.1">Container Details :</h3>
+        <div
+          className="mt-2 w-[25%] text-left font-bold text-black"
+          style={{ fontSize: "10px", color: "black", width: "25%" }}
+        >
+          <h3>Container Details :</h3>
         </div>
         <JobContainerProvisionalModule jobData={jobData} />
 
-        <div className="mt-5 w-[25%] text-left font-bold text-black text-sm ">
-          <h3 className="py-0.1">Charge Details :</h3>
+        <div
+          className="mt-2 w-[25%] text-left font-bold text-black"
+          style={{ fontSize: "10px", color: "black", width: "25%" }}
+        >
+          <h3>Charge Details :</h3>
         </div>
         <JobChargeProvisionalModule jobData={jobData} />
       </div>
@@ -7264,19 +7276,22 @@ const rptJobs = () => {
 
     const thStyle = {
       border: "1px solid black",
-      padding: "4px",
+      padding: "2px",
       fontWeight: "bold",
       textAlign: "left",
       verticalAlign: "top",
       width: "10%",
+      fontSize: "9px",
+      lineHeight: "12px",
     };
 
     const tdStyle = {
       border: "1px solid black",
-      padding: "4px",
+      padding: "2px",
       textAlign: "left",
       verticalAlign: "top",
       width: "23%",
+      fontSize: "9px",
     };
 
     const tableStyle = {
@@ -7285,99 +7300,119 @@ const rptJobs = () => {
     };
 
     return (
-      <div className="text-xs mt-4 ">
+      <div className="mt-2">
         <div className="headerTable">
           <table
             style={tableStyle}
-            className="table-fixed text-sm tblhead mt-1"
+            className="table-fixed text-sm tblhead mt-1 w-full"
           >
+            <colgroup>
+              {/* Group 1 */}
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "23.33%" }} />
+              {/* Group 2 */}
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "23.33%" }} />
+              {/* Group 3 */}
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "23.34%" }} />
+            </colgroup>
+
             <tbody>
               <tr>
                 <th style={thStyle}>Job no:</th>
-                <td style={tdStyle} colSpan="3">
-                  {job.jobNo || ""}
-                </td>
+                <td style={tdStyle}>{job.jobNo || ""}</td>
+
                 <th style={thStyle}>Job Date:</th>
-                <td style={tdStyle} colSpan="3">
+                <td style={tdStyle}>
                   {job.jobDate
                     ? new Date(job.jobDate).toLocaleDateString("en-GB")
                     : ""}
                 </td>
+
                 <th style={thStyle}>Commodity:</th>
-                <td style={tdStyle} colSpan="3">
-                  {job.commodityTypeName || ""}
-                </td>
+                <td style={tdStyle}>{job.commodityTypeName || ""}</td>
               </tr>
 
               <tr>
                 <th style={thStyle}>Customer:</th>
-                <td style={tdStyle} colSpan="3">
+                <td
+                  style={{
+                    ...tdStyle,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
                   {job.customerAddress || ""}
                 </td>
+
                 <th style={thStyle}>Shipper:</th>
-                <td style={tdStyle} colSpan="3">
+                <td
+                  style={{
+                    ...tdStyle,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
                   {job.shipperAddress || ""}
                 </td>
+
                 <th style={thStyle}>Consignee:</th>
-                <td style={tdStyle} colSpan="3">
+                <td
+                  style={{
+                    ...tdStyle,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
                   {job.consigneeAddress || ""}
                 </td>
               </tr>
 
               <tr>
                 <th style={thStyle}>PLR:</th>
-                <td style={tdStyle} colSpan="3">
-                  {job.plrName || ""}
-                </td>
+                <td style={tdStyle}>{job.plrName || ""}</td>
+
                 <th style={thStyle}>POL:</th>
-                <td style={tdStyle} colSpan="3">
-                  {job.polName || ""}
-                </td>
+                <td style={tdStyle}>{job.polName || ""}</td>
+
                 <th style={thStyle}>POD:</th>
-                <td style={tdStyle} colSpan="3">
-                  {job.podName || ""}
-                </td>
+                <td style={tdStyle}>{job.podName || ""}</td>
               </tr>
 
               <tr>
-                <th style={thStyle}>FPO:</th>
-                <td style={tdStyle} colSpan="3">
-                  {job.fpdName || ""}
-                </td>
+                <th style={thStyle}>FPD:</th>
+                <td style={tdStyle}>{job.fpdName || ""}</td>
+
                 <th style={thStyle}>Departure Vessel:</th>
-                <td style={tdStyle} colSpan="3">
-                  /
-                </td>
+                <td style={tdStyle}>/</td>
+
                 <th style={thStyle}>Arrival Vessel:</th>
-                <td style={tdStyle} colSpan="3">
-                  /
-                </td>
+                <td style={tdStyle}>/</td>
               </tr>
 
               <tr>
                 <th style={thStyle}>No of Packages:</th>
-                <td style={tdStyle} colSpan="3">
-                  {job.noOfPackages || ""}
-                </td>
+                <td style={tdStyle}>{job.noOfPackages || ""}</td>
+
                 <th style={thStyle}>Gross weight:</th>
-                <td style={tdStyle} colSpan="3">
-                  {job.cargoWt || ""}
-                </td>
+                <td style={tdStyle}>{job.cargoWt || ""}</td>
+
                 <th style={thStyle}>Volume:</th>
-                <td style={tdStyle} colSpan="3">{`${job.volume || ""} ${
-                  job.volumeUnitName || ""
-                }`}</td>
+                <td style={tdStyle}>
+                  {`${job.volume || ""} ${job.volumeUnitName || ""}`}
+                </td>
               </tr>
 
               <tr>
                 <th style={thStyle}>Sales Person:</th>
-                <td style={tdStyle} colSpan="3">
-                  {job.salesPersonName || ""}
-                </td>
+                <td style={tdStyle}>{job.salesPersonName || ""}</td>
+
                 <th style={thStyle}></th>
-                <td style={tdStyle} colSpan="3"></td>
+                <td style={tdStyle}></td>
+
                 <th style={thStyle}></th>
-                <td style={tdStyle} colSpan="3"></td>
+                <td style={tdStyle}></td>
               </tr>
             </tbody>
           </table>
@@ -7387,18 +7422,20 @@ const rptJobs = () => {
   };
   const JobContainerProvisionalModule = ({ jobData }) => {
     const thStyle = {
-      padding: "5px",
+      padding: "2px",
       verticalAlign: "top",
       fontWeight: "bold",
       border: "1px solid black",
       textAlign: "center",
+      fontSize: "9px",
     };
 
     const tdStyle = {
-      padding: "5px",
+      padding: "2px",
       verticalAlign: "top",
       border: "1px solid black",
       textAlign: "left",
+      fontSize: "9px",
     };
 
     const tableStyle = {
@@ -7407,8 +7444,8 @@ const rptJobs = () => {
     };
 
     return (
-      <div className="headerTable mt-4">
-        <table style={tableStyle} className="text-xs">
+      <div className="headerTable mt-2">
+        <table style={tableStyle}>
           <thead>
             <tr>
               <th style={thStyle}>Container No</th>
@@ -7457,21 +7494,23 @@ const rptJobs = () => {
       width: "100%",
       borderCollapse: "collapse",
       marginTop: "10px",
-      fontSize: "12px",
+      fontSize: "9px",
     };
 
     const headerStyle = {
       border: "1px solid black",
-      padding: "6px",
+      padding: "2px",
       backgroundColor: "#f0f0f0",
       fontWeight: "bold",
       textAlign: "center",
+      fontSize: "9px",
     };
 
     const cellStyle = {
       border: "1px solid black",
-      padding: "6px",
+      padding: "2px",
       textAlign: "right",
+      fontSize: "9px",
     };
 
     const leftCellStyle = {
@@ -7480,6 +7519,7 @@ const rptJobs = () => {
       whiteSpace: "normal",
       wordWrap: "break-word",
       maxWidth: "150px",
+      fontSize: "9px",
     };
 
     let totalRevenueProvisional = 0;
@@ -7499,7 +7539,7 @@ const rptJobs = () => {
 
     jobData?.forEach((job) => {
       job.tblJobCharge?.forEach((charge, index) => {
-        const key = charge.charge || "UNKNOWN";
+        const key = charge.charge || " ";
 
         const sellAmount = parseFloat(charge.sellTotalAmountHc) || 0;
         const buyAmount = parseFloat(charge.buyTotalAmountHc) || 0;
@@ -7690,6 +7730,136 @@ const rptJobs = () => {
             className="uppercase text-center font-bold underline"
             style={{ fontSize: "14px" }}
           >
+            Container Release Order 
+          </h1>
+        </div>
+
+        {/* Heading Grid */}
+        <div className="flex mt-2 w-full gap-4" style={{ width: "100%" }}>
+          {/* Left */}
+          <div className="flex w-[60%] " style={{ width: "60%" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                <tr>
+                  <td
+                    style={{
+                      width: "30%",
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Booking No :
+                  </td>
+                  <td style={{ width: "70%", fontSize: "10px" }}>
+                    {jobData && jobData.length > 0 ? jobData[0].jobNo : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    style={{
+                      width: "30%",
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Release Reference No. :
+                  </td>
+                  <td style={{ width: "70%", fontSize: "10px" }}>
+                    {/* {releaseRefNo} */}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Right */}
+          <div className="flex w-[40%]" style={{ width: "40%" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                <tr>
+                  <td
+                    style={{
+                      width: "30%",
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Date :
+                  </td>
+                  <td style={{ width: "70%", fontSize: "10px" }}>
+                    {jobData && jobData.length > 0
+                      ? formatDateToYMD(jobData[0].jobDate)
+                      : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    style={{
+                      width: "30%",
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    DO Validity Date :
+                  </td>
+                  <td style={{ width: "70%", fontSize: "10px" }}>
+                    {getValidTillDatePlane(
+                      jobData?.[0]?.jobDate,
+                      jobData?.[0]?.croValidDays
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* To block */}
+        <div className="mt-2">
+          <p className="text-[10px]">To,</p>
+          <p className="text-[11px] font-bold">THE MANAGER</p>
+          <p className="text-[11px] font-bold">{depot ?? ""}</p>
+          <p className="mt-1 text-[9px]">
+            Kindly release container(s) as per below details to{" "}
+            {jobData && jobData.length > 0 ? jobData[0].shipperName : ""} or to
+            the transporter.
+          </p>
+        </div>
+
+        {/* Depot-wise Quantity Grid */}
+        <ContainerReleaseOrderQuantityGrid rows={rows} />
+
+        {/* Common Grid */}
+        <ContainerReleaseOrderCommonGrid />
+
+        {/* Common Grid */}
+        <ContainerReleaseOrderContainerGrid rows={rows?.rows?.containers} />
+
+        {/* Remarks */}
+        <ContainerReleaseOrderContainerRemarks />
+
+        {/* Notes */}
+        <ContainerReleaseOrderNotes />
+      </div>
+    );
+  };
+
+  const ContainerReleaseOrderEmpty = (rows) => {
+    console.log("rows", rows);
+    const depot = rows?.rows?.depot || null;
+    return (
+      <div
+        className="p-6 text-black"
+        style={{ width: "210mm", minHeight: "297mm" }}
+      >
+        <CompanyImgModule />
+
+        {/* Heading */}
+        <div className="mt-2">
+          <h1
+            className="uppercase text-center font-bold underline"
+            style={{ fontSize: "14px" }}
+          >
             Container Release Order
           </h1>
         </div>
@@ -7793,7 +7963,7 @@ const rptJobs = () => {
         <ContainerReleaseOrderCommonGrid />
 
         {/* Common Grid */}
-        <ContainerReleaseOrderContainerGrid rows={rows.rows.containers} />
+        <ContainerReleaseOrderContainerGrid rows={rows?.rows?.containers} />
 
         {/* Remarks */}
         <ContainerReleaseOrderContainerRemarks />
@@ -7880,30 +8050,54 @@ const rptJobs = () => {
         <table style={{ width: "50%", borderCollapse: "collapse" }}>
           <tr>
             <th style={thStyle}>Shipper Name</th>
-            <td style={tdStyle}>{jobData[0].shipperName}</td>
+            <td style={tdStyle}>
+              {jobData && jobData.length > 0 ? jobData[0].shipperName : ""}
+            </td>
           </tr>
           <tr>
             <th style={thStyle}>Port Of Receipt</th>
-            <td style={tdStyle}>{jobData[0].plrName}</td>
+            <td style={tdStyle}>
+              {jobData && jobData.length > 0 ? jobData[0].plrName : ""}
+            </td>
           </tr>
           <tr>
             <th style={thStyle}>Port Of Discharge</th>
-            <td style={tdStyle}>{jobData[0].podName}</td>
+            <td style={tdStyle}>
+              {jobData && jobData.length > 0 ? jobData[0].podName : ""}
+            </td>
           </tr>
           <tr>
             <th style={thStyle}>Issued Vessel / Voyage</th>
             <td style={tdStyle}>
               {/* {jobData[0].podVessel} {" / "} {jobData[0].podVoyage} */}
-              {jobData[0].podVesselName} {" / "} {jobData[0].podVoyage}
+              {jobData && jobData.length > 0 ? jobData[0].polVessel : ""}{" "}
+              {" / "}{" "}
+              {jobData && jobData.length > 0 ? jobData[0].podVoyage : ""}
             </td>
           </tr>
           <tr>
             <th style={thStyle}>Vessel ETA</th>
-            <td style={tdStyle}>{formatDateToYMD(jobData[0]?.etaAtPod)}</td>
+            <td style={tdStyle}>
+              {formatDateToYMD(
+                jobData && jobData.length > 0 ? jobData[0]?.etaAtPod : ""
+              )}
+            </td>
           </tr>
+           <tr>
+                <th align="left" style={thStyle}>
+                  Commodity :
+                </th>
+                <td align="left" style={tdStyle}>
+                  {jobData && jobData.length > 0
+                    ? jobData[0].commodityTypeName
+                    : ""}
+                </td>
+              </tr>
           <tr>
             <th style={thStyle}>Cargo</th>
-            <td style={tdStyle}>{jobData[0].natureOfCargo}</td>
+            <td style={tdStyle}>
+              {jobData && jobData.length > 0 ? jobData[0].natureOfCargo : ""}
+            </td>
           </tr>
           <tr>
             <th style={thStyle}>CRO Validity</th>
@@ -7918,31 +8112,45 @@ const rptJobs = () => {
         <table style={{ width: "50%", borderCollapse: "collapse" }}>
           <tr>
             <th style={thStyle}>Port Of Loading</th>
-            <td style={tdStyle}>{jobData[0].polName}</td>
+            <td style={tdStyle}>
+              {jobData && jobData.length > 0 ? jobData[0].polName : ""}
+            </td>
           </tr>
           <tr>
             <th style={thStyle}>Final Port Of Delivery</th>
-            <td style={tdStyle}>{jobData[0].fpdName}</td>
+            <td style={tdStyle}>
+              {jobData && jobData.length > 0 ? jobData[0].fpdName : ""}
+            </td>
           </tr>
           <tr>
             <th style={thStyle}>Gate Cut Off</th>
-            <td style={tdStyle}>{jobData[0].gateCutOff}</td>
+            <td style={tdStyle}>
+              {jobData && jobData.length > 0 ? jobData[0].gateCutOff : ""}
+            </td>
           </tr>
           <tr>
             <th style={thStyle}>Vessel ETD</th>
-            <td style={tdStyle}>{jobData[0].etd}</td>
+            <td style={tdStyle}>
+              {jobData && jobData.length > 0 ? jobData[0].etd : ""}
+            </td>
           </tr>
           <tr>
             <th style={thStyle}>HAZ Details</th>
-            <td style={tdStyle}>{jobData[0].imo}</td>
+            <td style={tdStyle}>
+              {jobData && jobData.length > 0 ? jobData[0].imo : ""}
+            </td>
           </tr>
           <tr>
             <th style={thStyle}>Terminal</th>
-            <td style={tdStyle}>{jobData[0].podTerminal}</td>
+            <td style={tdStyle}>
+              {jobData && jobData.length > 0 ? jobData[0].podTerminal : ""}
+            </td>
           </tr>
           <tr>
             <th style={thStyle}>Surveyor Name</th>
-            <td style={tdStyle}>{jobData[0].surveyorName}</td>
+            <td style={tdStyle}>
+              {jobData && jobData.length > 0 ? jobData[0].surveyorName : ""}
+            </td>
           </tr>
         </table>
       </div>
@@ -8023,7 +8231,7 @@ const rptJobs = () => {
             Remarks
           </p>
           <p style={{ fontSize: "8px", color: "black" }}>
-            {jobData[0].remarks}
+            {jobData && jobData.length > 0 ? jobData[0].remarks : ""}
           </p>
         </div>
         <div className="mt-1">
@@ -8040,6 +8248,12 @@ const rptJobs = () => {
             detention charges will be levied as per tariff. If the container is
             unutilised NO FREE days will be given, detention will be charged
             from day one.
+          </p>
+          <p style={{ fontSize: "8px", color: "black" }}>
+            3.In case there is arrival / berthing delay of the subject vessel,
+            Change of Terminal…etc.. VOA/LINER/SMG will not accept any
+            additional ground rent charges that may incur for export
+            containers..
           </p>
         </div>
         <div
@@ -9418,30 +9632,35 @@ const rptJobs = () => {
             case "Job sheet provisional Actual":
               // Job Sheet provisional Actual
               return (
-                <div
-                  key={index}
-                  //ref={enquiryModuleRef}
-                  ref={(el) => (enquiryModuleRefs.current[index] = el)}
-                  id={`report-${reportId}`}
-                  className={`black-text ${
-                    index < reportIds.length - 1 ? "report-spacing" : ""
-                  } shadow-2xl`}
-                  style={{
-                    width: "210mm",
-                    height: "297mm",
-                    margin: "auto",
-                    boxSizing: "border-box", // space between page edge and inner border
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <div className="p-4 bgTheme">{JobSheetProvisional()}</div>
-                  <style jsx>{`
-                    .black-text {
-                      color: black !important;
-                    }
-                  `}</style>
-                </div>
+                <>
+                  <div
+                    key={index}
+                    //ref={enquiryModuleRef}
+                    ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                    id={`report-${reportId}`}
+                    className={`black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    } shadow-2xl`}
+                    style={{
+                      width: "210mm",
+                      height: "297mm",
+                      margin: "auto",
+                      boxSizing: "border-box", // space between page edge and inner border
+                      display: "flex",
+                      flexDirection: "column",
+                      backgroundColor: "#ffffff",
+                    }}
+                  >
+                    <div className="p-4">{JobSheetProvisional()}</div>
+                    <style jsx>{`
+                      .black-text {
+                        color: black !important;
+                      }
+                    `}</style>
+                  </div>
+                  {/* spacer between pages (hidden in print) */}
+                  <div className="bg-gray-300 h-2 no-print" />
+                </>
               );
             case "BL Draft": {
               if (reportIds.indexOf("BL Draft") !== index) return null; // Only run once
@@ -9865,32 +10084,57 @@ const rptJobs = () => {
             case "CONTAINER RELEASE ORDER":
               return (
                 <>
-                  {rows.map((row, index) => (
-                    <React.Fragment key={index}>
-                      <div
-                        ref={(el) => (enquiryModuleRefs.current[index] = el)}
-                        id={`report-${index}`}
-                        className={`black-text ${
-                          index < rows.length - 1 ? "report-spacing" : ""
-                        } shadow-2xl`}
-                        style={{
-                          width: "210mm",
-                          minHeight: "297mm", // use minHeight for safer flow
-                          margin: "auto",
-                          boxSizing: "border-box",
-                          display: "flex",
-                          flexDirection: "column",
-                        }}
-                      >
-                        <div className="bgTheme">
-                          <ContainerReleaseOrder rows={row} />
-                        </div>
-                      </div>
+                  {rows?.length > 0 ? (
+                    <>
+                      {rows.map((row, index) => (
+                        <React.Fragment key={index}>
+                          <div
+                            ref={(el) =>
+                              (enquiryModuleRefs.current[index] = el)
+                            }
+                            id={`report-${index}`}
+                            className={`black-text ${
+                              index < rows.length - 1 ? "report-spacing" : ""
+                            } shadow-2xl`}
+                            style={{
+                              width: "210mm",
+                              minHeight: "297mm", // use minHeight for safer flow
+                              margin: "auto",
+                              boxSizing: "border-box",
+                              display: "flex",
+                              flexDirection: "column",
+                            }}
+                          >
+                            <div className="bgTheme">
+                              <ContainerReleaseOrder rows={row} />
+                            </div>
+                          </div>
 
-                      {/* spacer between pages (hidden in print) */}
-                      <div className="bg-gray-300 h-2 no-print" />
-                    </React.Fragment>
-                  ))}
+                          {/* spacer between pages (hidden in print) */}
+                          <div className="bg-gray-300 h-2 no-print" />
+                        </React.Fragment>
+                      ))}
+                    </>
+                  ) : (
+                    // ✅ ELSE BLOCK (when rows is empty / 0)
+                    <div
+                      ref={(el) => (enquiryModuleRefs.current[0] = el)}
+                      id="report-0"
+                      className="black-text shadow-2xl"
+                      style={{
+                        width: "210mm",
+                        minHeight: "297mm",
+                        margin: "auto",
+                        boxSizing: "border-box",
+                        display: "flex",
+                        flexDirection: "column",
+                      }}
+                    >
+                      <div className="bgTheme">
+                        <ContainerReleaseOrderEmpty />
+                      </div>
+                    </div>
+                  )}
 
                   <style jsx>{`
                     .black-text {
@@ -9907,6 +10151,7 @@ const rptJobs = () => {
                   `}</style>
                 </>
               );
+
             default:
               return null;
           }

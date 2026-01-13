@@ -2216,3 +2216,48 @@ export async function disablePrint(data) {
     return false;
   }
 }
+
+export async function fetchSecondThirdLevelDetails(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${baseUrl}/Sql/api/sp/getSecondThirdLevelData`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": JSON.parse(token),
+      },
+      body: JSON.stringify(data),
+    }).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+export async function fetchVoucherDataDynamic(data) {
+  // masterTableList
+  try {
+    let insertedData = {
+      ...data,
+      companyId: sessionStorage.getItem("companyId"),
+      companyBranchId: sessionStorage.getItem("branchId"),
+      financialYearId: sessionStorage.getItem("financialYear"),
+    };
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${baseUrlSQl}/api/master/fetchVoucherDataDynamic`, {
+      method: "POST",
+      // credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": JSON.parse(token),
+      },
+      body: JSON.stringify(insertedData),
+    }).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}

@@ -2,7 +2,7 @@
 /* eslint-disable */
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import styles from "@/app/app.module.css";
 import Accordion from "@mui/material/Accordion";
 import AccordionSummary from "@mui/material/AccordionSummary";
@@ -16,6 +16,7 @@ import {
   tallyDebitCredit,
   validateSubmit,
   fetchThirdLevelDetailsFromApi,
+  fetchVoucherDataDynamic
 } from "@/services/auth/FormControl.services.js";
 import { ButtonPanel } from "@/components/Buttons/customeButton.jsx";
 import CustomeInputFields from "@/components/Inputs/customeInputFields";
@@ -226,10 +227,13 @@ export default function AddEditFormControll() {
   const [submittedRecordId, setSubmittedRecordId] = useState(null);
   const [submittedMenuId, setSubmittedMenuId] = useState(null);
   const [isFormSaved, setIsFormSaved] = useState(false);
-
+  const { userId, clientId } = getUserDetails();
+  const searchParams = useSearchParams();
+  const id = JSON.parse(decodeURIComponent(params.id));
   const getLabelValue = (label) => {
     setLabelName(label);
   };
+  const [fetchCount, setFetchCount] = useState(1);
 
   // async function checkReportPresent(menuId) {
   //   const { clientId } = getUserDetails();
@@ -339,113 +343,116 @@ export default function AddEditFormControll() {
 
   async function fetchData() {
     const { clientId } = getUserDetails();
-    try {
-      // Call api for table grid data
-      const tableViewApiResponse = await formControlMenuList(search.menuName);
-      if (tableViewApiResponse.success) {
-        setFetchedApiResponse(tableViewApiResponse.data[0]);
-        setFormControlData(tableViewApiResponse.data[0]);
-        setTableName(tableViewApiResponse.data[0].tableName);
-        setIsRequiredAttachment(
-          tableViewApiResponse.data[0]?.isRequiredAttachment
-        );
-        const groupAllFieldsData = groupAndSortAllFields(
-          tableViewApiResponse.data[0].fields
-        );
-        setParentsFields(groupAllFieldsData);
-        const resData = groupAndSortFields(tableViewApiResponse.data[0].fields);
-        setTopParentsFields(resData.top); // Set parents fields.
-        setBottomParentsFields(resData.bottom); // Set parents fields.
+    if (search?.menuName != "1560") {
+      try {
+        // Call api for table grid data
+        const tableViewApiResponse = await formControlMenuList(search.menuName);
+        if (tableViewApiResponse.success) {
+          setFetchedApiResponse(tableViewApiResponse.data[0]);
+          setFormControlData(tableViewApiResponse.data[0]);
+          setTableName(tableViewApiResponse.data[0].tableName);
+          setIsRequiredAttachment(
+            tableViewApiResponse.data[0]?.isRequiredAttachment
+          );
+          const groupAllFieldsData = groupAndSortAllFields(
+            tableViewApiResponse.data[0].fields
+          );
+          setParentsFields(groupAllFieldsData);
+          const resData = groupAndSortFields(tableViewApiResponse.data[0].fields);
+          setTopParentsFields(resData.top); // Set parents fields.
+          setBottomParentsFields(resData.bottom); // Set parents fields.
 
-        setChildsFields(
-          tableViewApiResponse.data[0].child ||
+          setChildsFields(
+            tableViewApiResponse.data[0].child ||
             tableViewApiResponse.data[0].children
-        );
-        setButtonsData(tableViewApiResponse.data[0].buttons);
-      }
-
-      const apiResponse = await masterTableInfo({
-        clientID: parseInt(clientId),
-        recordID: parseInt(search.id),
-        menuID: parseInt(search.menuName),
-      });
-      if (apiResponse) {
-        let data = apiResponse[0];
-        console.log(data);
-
-        let finalData = {};
-        search.isCopy ? (data.id = "") : null;
-        if (search.isCopy) {
-          tableViewApiResponse.data[0].fields.forEach((iterator) => {
-            if (iterator.isCopy) {
-              finalData[iterator.fieldname] = data[iterator.fieldname];
-            }
-          });
-
-          tableViewApiResponse.data[0].child.forEach((child) => {
-            if (child.isChildCopy) {
-              finalData[child.tableName] = data[child.tableName];
-            }
-          });
-        } else {
-          finalData = data;
+          );
+          setButtonsData(tableViewApiResponse.data[0].buttons);
         }
 
-        for (let item of tableViewApiResponse.data[0].child) {
-          for (
-            let index = 0;
-            index < (finalData[item.tableName] || []).length;
-            index++
-          ) {
-            finalData[item.tableName][index].indexValue = index;
-            for (const subchildItem of item.subChild) {
-              for (
-                let idx = 0;
-                idx <
-                (finalData[item.tableName][index][subchildItem.tableName] || [])
-                  .length;
-                idx++
-              ) {
-                finalData[item.tableName][index][subchildItem.tableName][
-                  idx
-                ].indexValue = idx;
+        const apiResponse = await masterTableInfo({
+          clientID: parseInt(clientId),
+          recordID: parseInt(search.id),
+          menuID: parseInt(search.menuName),
+        });
+        if (apiResponse) {
+          let data = apiResponse[0];
+          console.log(data);
+
+          let finalData = {};
+          search.isCopy ? (data.id = "") : null;
+          if (search.isCopy) {
+            tableViewApiResponse.data[0].fields.forEach((iterator) => {
+              if (iterator.isCopy) {
+                finalData[iterator.fieldname] = data[iterator.fieldname];
+              }
+            });
+
+            tableViewApiResponse.data[0].child.forEach((child) => {
+              if (child.isChildCopy) {
+                finalData[child.tableName] = data[child.tableName];
+              }
+            });
+          } else {
+            finalData = data;
+          }
+
+          for (let item of tableViewApiResponse.data[0].child) {
+            for (
+              let index = 0;
+              index < (finalData[item.tableName] || []).length;
+              index++
+            ) {
+              finalData[item.tableName][index].indexValue = index;
+              for (const subchildItem of item.subChild) {
+                for (
+                  let idx = 0;
+                  idx <
+                  (finalData[item.tableName][index][subchildItem.tableName] || [])
+                    .length;
+                  idx++
+                ) {
+                  finalData[item.tableName][index][subchildItem.tableName][
+                    idx
+                  ].indexValue = idx;
+                }
               }
             }
           }
-        }
 
-        setNewState((prev) => {
-          return {
-            ...prev,
-            ...finalData,
-            tableName: tableViewApiResponse.data[0].tableName,
-            attachment: data.attachment,
-            menuID: search.menuName,
-          };
-        });
-        setSubmitNewState((prev) => {
-          return {
-            ...prev,
-            ...finalData,
-            tableName: tableViewApiResponse.data[0].tableName,
-            attachment: data.attachment,
-            menuID: search.menuName,
-          };
-        });
-        setInitialState((prev) => {
-          return {
-            ...prev,
-            ...finalData,
-            tableName: tableViewApiResponse.data[0].tableName,
-          };
-        });
-        setTimeout(() => {
-          setIsDataLoaded(true);
-        }, 500);
+          setNewState((prev) => {
+            return {
+              ...prev,
+              ...finalData,
+              tableName: tableViewApiResponse.data[0].tableName,
+              attachment: data.attachment,
+              menuID: search.menuName,
+            };
+          });
+          setSubmitNewState((prev) => {
+            return {
+              ...prev,
+              ...finalData,
+              tableName: tableViewApiResponse.data[0].tableName,
+              attachment: data.attachment,
+              menuID: search.menuName,
+            };
+          });
+          setInitialState((prev) => {
+            return {
+              ...prev,
+              ...finalData,
+              tableName: tableViewApiResponse.data[0].tableName,
+            };
+          });
+          setTimeout(() => {
+            setIsDataLoaded(true);
+          }, 500);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
       }
-    } catch (error) {
-      console.error("Error fetching data:", error);
     }
+
   }
   useEffect(() => {
     fetchData();
@@ -484,10 +491,8 @@ export default function AddEditFormControll() {
           setStateVariable,
         });
         if (updatedValues) {
-          // toast.success("Function called successfully");
         }
         console.log("updatedValues", updatedValues);
-        // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
       }
     }
   }
@@ -1007,11 +1012,11 @@ export default function AddEditFormControll() {
           containerIddropdown:
             _containerId !== null
               ? [
-                  {
-                    value: _containerId,
-                    label: item.containerNo ?? String(_containerId),
-                  },
-                ]
+                {
+                  value: _containerId,
+                  label: item.containerNo ?? String(_containerId),
+                },
+              ]
               : [],
           sizeIddropdown:
             _sizeId !== null
@@ -1028,23 +1033,23 @@ export default function AddEditFormControll() {
           containerTransactionIddropdown:
             _containerTransactionId !== null
               ? [
-                  {
-                    value: _containerTransactionId,
-                    label:
-                      item.containerTransactionName ??
-                      String(_containerTransactionId),
-                  },
-                ]
+                {
+                  value: _containerTransactionId,
+                  label:
+                    item.containerTransactionName ??
+                    String(_containerTransactionId),
+                },
+              ]
               : [],
           containerRepairIddropdown:
             _containerRepairId !== null
               ? [
-                  {
-                    value: _containerRepairId,
-                    label:
-                      item.containerRepairName ?? String(_containerRepairId),
-                  },
-                ]
+                {
+                  value: _containerRepairId,
+                  label:
+                    item.containerRepairName ?? String(_containerRepairId),
+                },
+              ]
               : [],
           blIddropdown:
             _blId !== null
@@ -1124,6 +1129,534 @@ export default function AddEditFormControll() {
       }
     }
   };
+
+  const allocPrevRef = useRef({ amtHC: "", amtFC: "", checks: [] });
+
+  useEffect(() => {
+    const DBG = true;
+    const tag = "[ALLOC_EFFECT]";
+
+    const toNum = (v) => {
+      if (v === null || v === undefined || v === "") return 0;
+      const n = Number(String(v).replace(/,/g, ""));
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+    const asStr2 = (n) =>
+      n === null || n === undefined || n === "" ? "" : round2(n).toFixed(2);
+
+    const asNum2 = (n) => round2(n);
+
+    // ✅ pay amounts
+    const payHC = toNum(newState?.amtRec ?? 0);
+    const payFC = toNum(newState?.amtRecFC ?? 0);
+
+    const hasLedgers =
+      Array.isArray(newState?.tblVoucherLedger) && newState.tblVoucherLedger.length > 0;
+
+    const ledgers = hasLedgers
+      ? newState.tblVoucherLedger
+      : [
+        {
+          __virtual: true,
+          tblVoucherLedgerDetails: Array.isArray(newState?.tblVoucherLedgerDetails)
+            ? newState.tblVoucherLedgerDetails
+            : [],
+        },
+      ];
+
+    const allDetails = ledgers.flatMap((l) =>
+      Array.isArray(l?.tblVoucherLedgerDetails) ? l.tblVoucherLedgerDetails : []
+    );
+
+    if (DBG) {
+      console.log(`${tag} RUN`, {
+        payHC,
+        payFC,
+        hasLedgers,
+        ledgersLen: ledgers.length,
+        allDetailsLen: allDetails.length,
+        snapshot: allDetails.map((r, i) => ({
+          i,
+          checked: !!r?.isChecked,
+          debit: r?.debitAmount,
+          debitFC: r?.debitAmountFc,
+          origHC: r?.__origBalHC,
+          origFC: r?.__origBalFC,
+          balHC: r?.balanceAmount,
+          balFC: r?.balanceAmountFc,
+        })),
+      });
+    }
+
+    if (!allDetails.length) {
+      allocPrevRef.current = { amtHC: "", amtFC: "", checks: [] };
+      return;
+    }
+
+    // ✅ guard keys
+    const prev = allocPrevRef.current || { amtHC: "", amtFC: "", checks: [] };
+
+    const amtHCKey = String(newState?.amtRec ?? "");
+    const amtFCKey = String(newState?.amtRecFC ?? "");
+
+    // ✅ IMPORTANT: track both checked + debit strings (so uncheck recalculates)
+    const checksNow = allDetails.map((r) => ({
+      c: !!r?.isChecked,
+      d: String(r?.debitAmount ?? ""),
+      df: String(r?.debitAmountFc ?? ""),
+    }));
+
+    const sameChecks =
+      prev.checks.length === checksNow.length &&
+      prev.checks.every((v, i) => {
+        const cur = checksNow[i] || {};
+        return v?.c === cur?.c && v?.d === cur?.d && v?.df === cur?.df;
+      });
+
+    const willReturn = prev.amtHC === amtHCKey && prev.amtFC === amtFCKey && sameChecks;
+
+    if (DBG) {
+      console.log(`${tag} GUARD`, {
+        prev,
+        amtHCKey,
+        amtFCKey,
+        checksNow,
+        sameChecks,
+        willReturn,
+      });
+    }
+
+    if (willReturn) return;
+
+    allocPrevRef.current = { amtHC: amtHCKey, amtFC: amtFCKey, checks: checksNow };
+
+    // PASS 1: build rows, set unchecked debit to "0.00", keep checked debits
+    let sumCheckedHC = 0;
+    let sumCheckedFC = 0;
+
+    const nextLedgers = ledgers.map((ledger) => {
+      const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+        ? ledger.tblVoucherLedgerDetails
+        : [];
+      if (!details.length) return ledger;
+
+      const nextDetails = details.map((row) => {
+        const isChecked = !!row?.isChecked;
+
+        const origBalHC =
+          row?.__origBalHC != null ? toNum(row.__origBalHC) : toNum(row?.balanceAmount);
+        const origBalFC =
+          row?.__origBalFC != null ? toNum(row.__origBalFC) : toNum(row?.balanceAmountFc);
+
+        // ✅ unchecked → set debit "0.00" + restore balances
+        if (!isChecked) {
+          return {
+            ...row,
+            __origBalHC: origBalHC,
+            __origBalFC: origBalFC,
+            debitAmount: "0.00",
+            debitAmountFc: "0.00",
+            creditAmount: row?.creditAmount ?? "",
+            creditAmountFc: row?.creditAmountFc ?? "",
+            balanceAmount: asNum2(origBalHC),
+            balanceAmountFc: asNum2(origBalFC),
+          };
+        }
+
+        // ✅ checked → keep existing debit if present (do not auto-increase)
+        const existingHC = toNum(row?.debitAmount);
+        const existingFC = toNum(row?.debitAmountFc);
+
+        const keepHC = existingHC > 0 ? Math.min(existingHC, origBalHC) : 0;
+        const keepFC = existingFC > 0 ? Math.min(existingFC, origBalFC) : 0;
+
+        sumCheckedHC = round2(sumCheckedHC + keepHC);
+        sumCheckedFC = round2(sumCheckedFC + keepFC);
+
+        return {
+          ...row,
+          __origBalHC: origBalHC,
+          __origBalFC: origBalFC,
+          debitAmount: keepHC > 0 ? asStr2(keepHC) : "",     // blank means "auto-fill later"
+          debitAmountFc: keepFC > 0 ? asStr2(keepFC) : "",
+          creditAmount: row?.creditAmount ?? "",
+          creditAmountFc: row?.creditAmountFc ?? "",
+          balanceAmount: asNum2(round2(origBalHC - keepHC)),
+          balanceAmountFc: asNum2(round2(origBalFC - keepFC)),
+        };
+      });
+
+      return { ...ledger, tblVoucherLedgerDetails: nextDetails };
+    });
+
+    // remaining after keeping explicit checked debits
+    let remHC = round2(payHC - sumCheckedHC);
+    let remFC = round2(payFC - sumCheckedFC);
+
+    if (DBG) {
+      console.log(`${tag} PASS1`, { sumCheckedHC, sumCheckedFC, remHC, remFC });
+    }
+
+    // PASS 2: fill blank checked debits sequentially from remaining
+    const filledLedgers = nextLedgers.map((ledger) => {
+      const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+        ? ledger.tblVoucherLedgerDetails
+        : [];
+      if (!details.length) return ledger;
+
+      const nextDetails = details.map((row) => {
+        if (!row?.isChecked) return row;
+
+        const existingHC = toNum(row?.debitAmount);
+        const existingFC = toNum(row?.debitAmountFc);
+        if (existingHC > 0 || existingFC > 0) return row;
+
+        const origBalHC =
+          row?.__origBalHC != null ? toNum(row.__origBalHC) : toNum(row?.balanceAmount);
+        const origBalFC =
+          row?.__origBalFC != null ? toNum(row.__origBalFC) : toNum(row?.balanceAmountFc);
+
+        const allocHC = Math.min(remHC, origBalHC);
+        const allocFC = Math.min(remFC, origBalFC);
+
+        remHC = round2(remHC - allocHC);
+        remFC = round2(remFC - allocFC);
+
+        return {
+          ...row,
+          debitAmount: allocHC > 0 ? asStr2(allocHC) : "0.00",
+          debitAmountFc: allocFC > 0 ? asStr2(allocFC) : "0.00",
+          balanceAmount: asNum2(round2(origBalHC - allocHC)),
+          balanceAmountFc: asNum2(round2(origBalFC - allocFC)),
+        };
+      });
+
+      return { ...ledger, tblVoucherLedgerDetails: nextDetails };
+    });
+
+    // ✅ Prevent setNewState loop if nothing actually changed
+    const computeSig = (stateObj) => {
+      const sLedgers = Array.isArray(stateObj?.tblVoucherLedger) && stateObj.tblVoucherLedger.length
+        ? stateObj.tblVoucherLedger
+        : [
+          { tblVoucherLedgerDetails: Array.isArray(stateObj?.tblVoucherLedgerDetails) ? stateObj.tblVoucherLedgerDetails : [] },
+        ];
+
+      const sAll = sLedgers.flatMap((l) =>
+        Array.isArray(l?.tblVoucherLedgerDetails) ? l.tblVoucherLedgerDetails : []
+      );
+
+      return JSON.stringify({
+        balHc: String(stateObj?.balanceAmtHc ?? ""),
+        balFc: String(stateObj?.balanceAmtFc ?? ""),
+        rows: sAll.map((r) => ({
+          c: !!r?.isChecked,
+          d: String(r?.debitAmount ?? ""),
+          df: String(r?.debitAmountFc ?? ""),
+          b: String(r?.balanceAmount ?? ""),
+          bf: String(r?.balanceAmountFc ?? ""),
+          o: String(r?.__origBalHC ?? ""),
+          of: String(r?.__origBalFC ?? ""),
+        })),
+      });
+    };
+
+    setNewState((prevState) => {
+      const out = Array.isArray(prevState?.tblVoucherLedger)
+        ? {
+          ...prevState,
+          tblVoucherLedger: filledLedgers.filter((l) => !l?.__virtual),
+          balanceAmtHc: asStr2(remHC),
+          balanceAmtFc: asStr2(remFC),
+        }
+        : {
+          ...prevState,
+          tblVoucherLedgerDetails: filledLedgers[0]?.tblVoucherLedgerDetails || [],
+          balanceAmtHc: asStr2(remHC),
+          balanceAmtFc: asStr2(remFC),
+        };
+
+      if (computeSig(prevState) === computeSig(out)) {
+        if (DBG) console.log(`${tag} setNewState skipped (no diff)`);
+        return prevState;
+      }
+
+      if (DBG) {
+        console.log(`${tag} FINAL`, {
+          remHC,
+          remFC,
+          balanceAmtHc: out.balanceAmtHc,
+          balanceAmtFc: out.balanceAmtFc,
+        });
+      }
+
+      return out;
+    });
+
+    if (DBG) console.log("====================================================================");
+  }, [
+    newState?.amtRec,
+    newState?.amtRecFC,
+    newState?.tblVoucherLedger,
+    newState?.tblVoucherLedgerDetails,
+  ]);
+
+
+  // const didFetchKeyRef = useRef(new Set());
+
+  // useEffect(() => {
+  //   if (!id?.id) return;
+
+  //   // ✅ FIXED key (must be id, not !id)
+  //   const key = `${id?.id}::${userId}::${clientId}`;
+
+  //   if (didFetchKeyRef.current.has(key)) return;
+  //   didFetchKeyRef.current.add(key);
+
+  //   let isCancelled = false;
+
+  //   (async () => {
+  //     try {
+  //       const resp = await fetchVoucherDataDynamic({
+  //         recordId: id?.id,
+  //         userId,
+  //         clientId,
+  //       });
+
+  //       // ✅ keep your existing logic
+  //       // if (fetchCount === 1) {
+  //       //   setParentsFields(parentFieldIsTdsNotAppliedOnFetchFunction);
+  //       // }
+
+  //       if (isCancelled) return;
+
+  //       if (resp?.success && Array.isArray(resp?.data) && resp.data.length) {
+  //         skipNextPaymentByPartyEffect.current = true;
+
+  //         const raw = resp.data[0] ?? {};
+
+  //         // ✅ 1) Transform details (your same logic)
+  //         const updatedDetails = Array.isArray(raw.tblVoucherLedgerDetails)
+  //           ? raw.tblVoucherLedgerDetails.map((row, index) => {
+  //               if (!row) return row;
+
+  //               // ✅ ensure indexValue like your reference
+  //               const indexValue =
+  //                 row.indexValue !== null && row.indexValue !== undefined
+  //                   ? row.indexValue
+  //                   : index;
+
+  //               // Convert OsAmt values to string
+  //               const osAmtFCString = String(row.OsAmtFC ?? "");
+  //               const osAmtHCString = String(row.OsAmtHC ?? "");
+
+  //               // Auto-set allocated flag
+  //               const hasHC =
+  //                 row.allocatedAmtHC !== null &&
+  //                 row.allocatedAmtHC !== undefined &&
+  //                 row.allocatedAmtHC !== 0;
+
+  //               const hasFC =
+  //                 row.allocatedAmtFC !== null &&
+  //                 row.allocatedAmtFC !== undefined &&
+  //                 row.allocatedAmtFC !== 0;
+
+  //               // ------------------------ FC ------------------------
+  //               let balanceAmtFC = row.balanceAmtFC;
+
+  //               const osFc = Number(row.OsAmtFC);
+  //               const allocFc =
+  //                 row.allocatedAmtFC === null || row.allocatedAmtFC === undefined
+  //                   ? null
+  //                   : Number(row.allocatedAmtFC);
+
+  //               if (!Number.isNaN(osFc)) {
+  //                 balanceAmtFC =
+  //                   allocFc === null || Number.isNaN(allocFc)
+  //                     ? osFc
+  //                     : osFc - allocFc;
+  //               }
+
+  //               // ------------------------ HC ------------------------
+  //               let balanceAmtHC = row.balanceAmtHC;
+
+  //               const osHc = Number(row.OsAmtHC);
+  //               const allocHc =
+  //                 row.allocatedAmtHC === null || row.allocatedAmtHC === undefined
+  //                   ? null
+  //                   : Number(row.allocatedAmtHC);
+
+  //               if (!Number.isNaN(osHc)) {
+  //                 balanceAmtHC =
+  //                   allocHc === null || Number.isNaN(allocHc)
+  //                     ? osHc
+  //                     : osHc - allocHc;
+  //               }
+
+  //               return {
+  //                 ...row,
+  //                 indexValue, // ✅ like your reference
+  //                 autoSetAllocatedAmount: hasHC || hasFC ? true : null,
+  //                 balanceAmtFC,
+  //                 balanceAmtHC,
+  //                 OsAmtFC: osAmtFCString,
+  //                 OsAmtHC: osAmtHCString,
+  //               };
+  //             })
+  //           : raw.tblVoucherLedgerDetails;
+
+  //         // ✅ 2) finalData pattern (same as your reference)
+  //         const finalData = {
+  //           ...raw,
+  //           tblVoucherLedgerDetails: updatedDetails,
+  //         };
+
+  //         // ✅ 3) Apply totals (your existing helper)
+  //         const updatedData = calculateHcFcTotals(finalData);
+
+  //         // ✅ 4) Set ALL states like reference
+  //         if (!isCancelled) {
+  //           setNewState((prev) => ({ ...prev, ...updatedData }));
+  //           setSubmitNewState((prev) => ({ ...prev, ...updatedData }));
+  //           setInitialState((prev) => ({ ...prev, ...updatedData }));
+
+  //           setFetchCount((pre) => pre + 1);
+
+  //           // if you have this flag in your page (like reference)
+  //           // setTimeout(() => setIsDataLoaded(true), 500);
+  //         }
+  //       }
+  //     } catch (e) {
+  //       if (!isCancelled) console.error(e);
+  //     }
+  //   })();
+
+  //   return () => {
+  //     isCancelled = true;
+  //   };
+  // }, [id?.id, userId, clientId]); // ✅ better dependency
+
+  async function fetchDataDymaic() {
+    const { clientId, companyId, branchId, financialYear, userId } = getUserDetails();
+    try {
+      // Call api for table grid data
+      const tableViewApiResponse = await formControlMenuList(search.menuName);
+      if (tableViewApiResponse.success) {
+        setFetchedApiResponse(tableViewApiResponse.data[0]);
+        setFormControlData(tableViewApiResponse.data[0]);
+        setTableName(tableViewApiResponse.data[0].tableName);
+        setIsRequiredAttachment(
+          tableViewApiResponse.data[0]?.isRequiredAttachment
+        );
+        const groupAllFieldsData = groupAndSortAllFields(
+          tableViewApiResponse.data[0].fields
+        );
+        setParentsFields(groupAllFieldsData);
+        const resData = groupAndSortFields(tableViewApiResponse.data[0].fields);
+        setTopParentsFields(resData.top);
+        setBottomParentsFields(resData.bottom);
+
+        setChildsFields(
+          tableViewApiResponse.data[0].child ||
+          tableViewApiResponse.data[0].children
+        );
+        setButtonsData(tableViewApiResponse.data[0].buttons);
+      }
+
+      const apiResponse = await fetchVoucherDataDynamic({
+        clientID: parseInt(clientId),
+        recordID: parseInt(search.id),
+        menuID: parseInt(search.menuName),
+        companyId: companyId,
+        companyBranchId: branchId,
+        financialYearId: financialYear,
+        userId: userId
+      });
+      if (apiResponse) {
+        let data = apiResponse?.data[0];
+        console.log(data);
+
+        let finalData = {};
+        search.isCopy ? (data.id = "") : null;
+        if (search.isCopy) {
+          tableViewApiResponse.data[0].fields.forEach((iterator) => {
+            if (iterator.isCopy) {
+              finalData[iterator.fieldname] = data[iterator.fieldname];
+            }
+          });
+
+          tableViewApiResponse.data[0].child.forEach((child) => {
+            if (child.isChildCopy) {
+              finalData[child.tableName] = data[child.tableName];
+            }
+          });
+        } else {
+          finalData = data;
+        }
+
+        for (let item of tableViewApiResponse.data[0].child) {
+          for (
+            let index = 0;
+            index < (finalData[item.tableName] || []).length;
+            index++
+          ) {
+            finalData[item.tableName][index].indexValue = index;
+            for (const subchildItem of item.subChild) {
+              for (
+                let idx = 0;
+                idx <
+                (finalData[item.tableName][index][subchildItem.tableName] || [])
+                  .length;
+                idx++
+              ) {
+                finalData[item.tableName][index][subchildItem.tableName][
+                  idx
+                ].indexValue = idx;
+              }
+            }
+          }
+        }
+
+        setNewState((prev) => {
+          return {
+            ...prev,
+            ...finalData,
+            tableName: tableViewApiResponse.data[0].tableName,
+            attachment: data.attachment,
+            menuID: search.menuName,
+          };
+        });
+        setSubmitNewState((prev) => {
+          return {
+            ...prev,
+            ...finalData,
+            tableName: tableViewApiResponse.data[0].tableName,
+            attachment: data.attachment,
+            menuID: search.menuName,
+          };
+        });
+        setInitialState((prev) => {
+          return {
+            ...prev,
+            ...finalData,
+            tableName: tableViewApiResponse.data[0].tableName,
+          };
+        });
+        setTimeout(() => {
+          setIsDataLoaded(true);
+        }, 500);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  }
+  useEffect(() => {
+    fetchDataDymaic();
+  }, []);
+
 
   return (
     <div className={`h-screen relative`}>
@@ -1731,12 +2264,12 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-                const parsedValue =
-                  typeof row[item.fieldname] === "number"
-                    ? row[item.fieldname]
-                    : parseFloat(row[item.fieldname] || 0);
-                return isNaN(parsedValue) ? sum : sum + parsedValue;
-              }, 0) // Calculate sum for 's' type
+              const parsedValue =
+                typeof row[item.fieldname] === "number"
+                  ? row[item.fieldname]
+                  : parseFloat(row[item.fieldname] || 0);
+              return isNaN(parsedValue) ? sum : sum + parsedValue;
+            }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -2403,7 +2936,7 @@ function ChildAccordianComponent({
                                       hoverIcon={plusIconHover}
                                       disabled={
                                         typeof section.isAddFunctionality !==
-                                        "undefined"
+                                          "undefined"
                                           ? !section.isAddFunctionality
                                           : false
                                       }
@@ -2525,10 +3058,10 @@ function ChildAccordianComponent({
                                             {(field.type === "number" ||
                                               field.type === "decimal" ||
                                               field.type === "string") &&
-                                            field.gridTotal
+                                              field.gridTotal
                                               ? columnTotals[
-                                                  field.fieldname
-                                                ].toString()
+                                                field.fieldname
+                                              ].toString()
                                               : ""}
                                           </div>
                                         </div>
