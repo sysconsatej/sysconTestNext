@@ -1,836 +1,679 @@
 "use client";
 /* eslint-disable */
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+import React, { useMemo, useState, useCallback, useEffect } from "react";
+import { toast } from "react-toastify";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
-
-// MUI
-import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
-import Button from "@mui/material/Button";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import IconButton from "@mui/material/IconButton";
-import Divider from "@mui/material/Divider";
-import InputBase from "@mui/material/InputBase";
-import TextField from "@mui/material/TextField";
-
-// Icons
-import CloseIcon from "@mui/icons-material/Close";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import SearchIcon from "@mui/icons-material/Search";
-import ClearIcon from "@mui/icons-material/Clear";
-
-// Date
-import dayjs from "dayjs";
-import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-
-// Styles
 import styles from "@/app/app.module.css";
-import {
-    searchInputStyling,
-    createAddEditPaperStyles,
-    advanceSearchPaperStyles,
-    displaytableRowStyles_two,
-    displayTableContainerStyles,
-    displayTablePaperStyles,
-    displaytableHeadStyles,
-    pageTableCellInlineStyle,
-} from "@/app/globalCss";
+import { fontFamilyStyles } from "@/app/globalCss";
 
-// Components
-import LightTooltip from "@/components/Tooltip/customToolTip";
-import CustomeBreadCrumb from "@/components/VoucherBreadCrumbs/breadCrumb.jsx";
-import CustomeModal from "@/components/Modal/customModal.jsx";
-import PaginationButtons from "@/components/Pagination/index.jsx";
-import GridHoverIcon from "@/components/HoveredIcons/GridHoverIcon";
-
-// Services / Helpers
-import { fetchSearchPageData, fetchReportData } from "@/services/auth/FormControl.services.js";
+import CustomeInputFields from "@/components/Inputs/customeInputFields";
+import { getContainerData } from "@/services/auth/FormControl.services";
 import { getUserDetails } from "@/helper/userDetails";
-import { isDateFormat } from "@/helper/dateFormat";
+import GeneralSheet from "@/components/sheets/GeneralSheet";
+import EntitySheet from "@/components/sheets/EntitySheet";
+import "./exportChaJob.css";
+import JobSheet from "@/components/sheets/GeneralSheet";
+import ShipmentSheet from "@/components/sheets/ShipmentSheet";
+import InvoiceSheet from "@/components/sheets/InvoiceSheet";
+import ItemSheet from "@/components/sheets/ProductSheet";
+import ContainerSheet from "@/components/sheets/ContainerSheet";
 
-// Assets (same pattern as your Voucher search page)
-import {
-    searchImage,
-    magnifyIcon,
-    magnifyIconHover,
-    closeIcon,
-    crossIconHover,
-    refreshIcon,
-    revertHover,
-    addDocIcon,
-    addDocIconHover,
-} from "@/assets/index.jsx";
+const TABS = ["Job", "Entity", "Shipment", "Invoice", "Item", "Container"];
 
-// ✅ change if needed
-const TABLE_NAME = "tblJob";
-
-// ✅ grid columns
-const JOB_GRID_CONFIG = [
-    { fieldname: "jobNo", controlname: "text", yourlabel: "Job No" },
-    { fieldname: "jobDate", controlname: "date", yourlabel: "Job Date" },
-    { fieldname: "rateRequestId", controlname: "text", yourlabel: "Quotation No" },
-    { fieldname: "customerId", controlname: "text", yourlabel: "Customer" },
-    { fieldname: "polId", controlname: "text", yourlabel: "POL" },
-    { fieldname: "podId", controlname: "text", yourlabel: "POD" },
-    { fieldname: "commodityText", controlname: "text", yourlabel: "Commodity" },
-    { fieldname: "createdBy", controlname: "text", yourlabel: "Created By" },
-    { fieldname: "createdDate", controlname: "date", yourlabel: "Created Date/Time" },
+const PARENT_FIELDS = [
+    {
+        "Job Details": [
+            {
+                id: 123531,
+                fieldname: "businessSegmentId",
+                yourlabel: "Department",
+                controlname: "dropdown",
+                isControlShow: true,
+                isGridView: false,
+                isDataFlow: true,
+                isAuditLog: true,
+                referenceTable: "tblBusinessSegment",
+                referenceColumn: "name",
+                type: 6653,
+                typeValue: "number",
+                size: "100",
+                ordering: 1,
+                isRequired: true,
+                isEditable: false,
+                isEditableMode: "e",
+                position: "top",
+                sectionHeader: "Job Details",
+                sectionOrder: 1,
+                isCopy: false,
+                isCopyEditable: false,
+                isHideGrid: false,
+                isHideGridHeader: false,
+                isGridExpandOnLoad: false,
+                clientId: 1,
+                columnsToBeVisible: true,
+            },
+            {
+                id: 123526,
+                fieldname: "jobNo",
+                yourlabel: "Job No",
+                controlname: "text",
+                isControlShow: true,
+                isGridView: true,
+                isDataFlow: true,
+                isAuditLog: true,
+                type: 6902,
+                typeValue: "string",
+                size: "100",
+                ordering: 2,
+                isRequired: false,
+                isEditable: false,
+                isEditableMode: "e",
+                position: "top",
+                sectionHeader: "Job Details",
+                sectionOrder: 1,
+                isCopy: false,
+                isCopyEditable: false,
+                isHideGrid: false,
+                isHideGridHeader: false,
+                isGridExpandOnLoad: false,
+                clientId: 1,
+                columnsToBeVisible: true,
+            },
+            {
+                id: 123527,
+                fieldname: "jobDate",
+                yourlabel: "Job Date",
+                controlname: "date",
+                isControlShow: true,
+                isGridView: true,
+                isDataFlow: true,
+                isAuditLog: true,
+                type: 6783,
+                typeValue: "date",
+                size: "100",
+                ordering: 3,
+                isRequired: true,
+                isEditable: false,
+                isEditableMode: "e",
+                position: "top",
+                controlDefaultValue: "2026-01-05",
+                sectionHeader: "Job Details",
+                sectionOrder: 1,
+                isCopy: false,
+                isCopyEditable: false,
+                isHideGrid: false,
+                isHideGridHeader: false,
+                isGridExpandOnLoad: false,
+                clientId: 1,
+                columnsToBeVisible: true,
+            },
+            {
+                id: 123532,
+                fieldname: "createdBy",
+                yourlabel: "Created By",
+                controlname: "dropdown",
+                isControlShow: true,
+                isGridView: false,
+                isDataFlow: true,
+                isAuditLog: true,
+                referenceTable: "tblUser",
+                referenceColumn: "name",
+                type: 6653,
+                typeValue: "number",
+                size: "100",
+                ordering: 1,
+                isRequired: true,
+                isEditable: false,
+                isEditableMode: "e",
+                position: "top",
+                sectionHeader: "Job Details",
+                sectionOrder: 1,
+                isCopy: false,
+                isCopyEditable: false,
+                isHideGrid: false,
+                isHideGridHeader: false,
+                isGridExpandOnLoad: false,
+                clientId: 1,
+                columnsToBeVisible: true,
+            },
+        ],
+    },
 ];
 
-export default function JobSearchLikeVoucherPage() {
-    const router = useRouter();
-    const searchParams = useSearchParams();
+const DEFAULT_STATE = {
+    routeName: "mastervalue",
+    businessSegmentId: null,
+    jobNo: "",
+    jobDate: "2026-01-05",
+    createdBy: null,
+    tblContainerMovement: [],
+};
 
-    const tableRef = useRef(null);
+const initialJobState = {
+    exporterName: null,
+    exporterAddress: null,
+    branchSNo: null,
+    exporterStateId: null,
+    ieCodeNo: null,
+    registrationNo: null,
+    dbkBankName: null,
+    dbkAccountNo: null,
+    dbkEdiAccountNo: null,
 
-    const {
-        clientId,
-        companyId,
-        branchId,
-        financialYearId,
-        defaultCompanyId,
-        defaultBranchId,
-        defaultFinYearId,
-    } = getUserDetails();
+    consigneeName: null,
+    consigneeAddress: null,
+    consigneeCountryName: null,
 
-    // -------- UI / Paging ----------
-    const [page, setPage] = useState(1);
-    const [selectedPageNumber, setSelectedPageNumber] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(17);
-    const [totalPages, setTotalPages] = useState(0);
-    const [pageCount, setPageCount] = useState(0);
+    isBuyerDifferent: false,
+    isHandCarry: false,
 
-    const [gridData, setGridData] = useState([]);
-    const [loader, setLoader] = useState(true);
+    exporterRefNo: null,
+    exporterRefDate: null,
+    exporterTypeId: null,
 
-    // Top icons hover
-    const [hoveredIcon, setHoveredIcon] = useState(null);
+    sbNumber: null,
+    sbDate: null,
 
-    // Advanced search (same UX as voucher page)
-    const [searchOpen, setSearchOpen] = useState(false);
-    const [isAdvanceSearchOpen, setIsAdvanceSearchOpen] = useState(false);
-    const [searchInput, setSearchInput] = useState("");
+    rbiApprovalNo: null,
+    rbiApprovalDate: null,
 
-    // Simple “advanced” filters (kept stable + production friendly)
-    const [filters, setFilters] = useState({
-        jobNo: "",
-        createdBy: "",
-        status: "",
-        jobDateFrom: null,
-        jobDateTo: null,
-    });
+    isGrWaived: false,
+    grNo: null,
+    grDate: null,
 
-    // Right click column search
-    const [isInputVisible, setInputVisible] = useState(false);
-    const [activeColumn, setActiveColumn] = useState(null);
-    const [prevSearchInput, setPrevSearchInput] = useState("");
-    const [columnSearchKeyName, setColumnSearchKeyName] = useState("");
-    const [columnSearchKeyValue, setColumnSearchKeyValue] = useState("");
+    rbiWaiverNo: null,
+    rbiWaiverDate: null,
 
-    // Sorting (client-side on current page data)
-    const [sortedColumn, setSortedColumn] = useState(null);
-    const [isAscending, setIsAscending] = useState(true);
+    bankDealerName: null,
+    bankAccountNo: null,
+    adCode: null,
+    epzCode: null,
 
-    // Modal
-    const [openModal, setOpenModal] = useState(false);
-    const [paraText, setParaText] = useState("");
-    const [isError, setIsError] = useState(false);
+    notifyName: null,
+    notifyAddress: null,
 
-    // Scroll sync for right-side icon bar
-    const [scrollLeft, setScrollLeft] = useState(0);
+    docUserId: null,
+    quotationNo: null,
+};
 
-    // ✅ Table headings same structure as voucher page
-    const tableheading = useMemo(() => {
-        return JOB_GRID_CONFIG.map((h) => ({
-            id: h.fieldname,
-            label: h.yourlabel,
-            refkey: h.keyToShowOnGrid || null,
-            isDummy: false,
-            dummyField: null,
-            align: "left",
-            minWidth: 200,
-        }));
-    }, []);
+const initialEntityDetailsState = {
+    exporterStateId: null,
+    exporterTypeId: null,
+    consigneeCountryName: null,
+    branchSNo: null,
+    ieCodeNo: null,
+    exporterAddress: null,
+    dbkBankName: null,
+    dbkAccountNo: null,
+    dbkEdiAccountNo: null,
+    consigneeName: null,
+    consigneeAddress: null,
+};
 
-    // -------- helpers ----------
-    const escapeSqlLike = (v) => String(v ?? "").trim().replace(/'/g, "''");
+const shipment = {
+    // ===== Main =====
+    dischargePortId: null,
+    dischargeCountryId: null,
+    destinationPortId: null,
+    destinationCountryId: null,
+    airlineId: null,
+    flightNoDate: null,
+    egmNoDate: null,
+    mawbNoDate: null,
+    hawbNoDate: null,
+    preCarriageBy: null,
+    placeOfReceipt: null,
+    transhipperCode: null,
+    gatewayPortId: null,
+    stateOfOriginId: null,
+    isAnnexureCFiledWithAnnexureA: false,
+    natureOfCargoId: null,
+    totalNoOfPkgs: null,
+    loosePkgs: null,
+    pktsInMawb: null,
+    grossWeight: null,
+    netWeight: null,
+    volume: null,
+    chargeableWeight: null,
+    marksAndNos: null,
 
-    const buildFilterCondition = () => {
-        const parts = [];
+    // ===== Stuffing Details =====
+    goodsStuffedAtId: null,
+    isSampleAccompanied: false,
+    cfsId: null,
+    factoryAddress: null,
+    warehouseCode: null,
+    sealTypeId: null,
+    sealNo: null,
+    agencyName: null,
 
-        // ✅ your standard company/client/branch/year conditions
-        if (clientId) parts.push(`clientId=${clientId}`);
-        if (companyId || defaultCompanyId) parts.push(`companyId=${companyId || defaultCompanyId}`);
-        if (branchId || defaultBranchId) parts.push(`companyBranchId=${branchId || defaultBranchId}`);
-        if (financialYearId || defaultFinYearId)
-            parts.push(`financialYearId=${financialYearId || defaultFinYearId}`);
+    // ===== Invoice Printing =====
+    buyersOrderNo: null,
+    otherReferences: null,
+    termsOfDeliveryAndPayment: null,
+    originCountryId: null,
+    invoiceHeader: null,
 
-        // ✅ if your table uses status=1 for active rows (common in your project)
-        parts.push(`status = 1`);
+    // ===== Shipping Bill Printing =====
+    qCertNoDate: null,
+    exportTradeControl: null,
+    typeOfShipmentId: null,
+    shipmentTypeOther: null,
+    permissionNoDate: null,
+    exportUnderId: null,
+    sbHeading: null,
+    sbBottomText: null,
 
-        // Global search (top Search... input)
-        if (searchInput?.trim()) {
-            const q = escapeSqlLike(searchInput);
-            parts.push(`(
-                            jobNo like '%${q}%'
-                            OR rateRequestId like '%${q}%'
-                            OR customerId like '%${q}%'
-                            OR polId like '%${q}%'
-                            OR podId like '%${q}%'
-                            OR commodityText like '%${q}%'
-                            OR createdBy like '%${q}%'
-                        )`);
-        }
+    // ===== Ex-Bond Details =====
+    voyage: null,
+    igmNo: null,
+    igmDate: null,
+    noOfPkg: null,
+    bondNo: null,
+    bondDate: null,
+    warehouse: null,
+
+    // ===== Annex C1 Details =====
+    ieCodeOfEou: null,
+    branchSlNo: null,
+    examinationDate: null,
+    examiningOfficer: null,
+    examiningOfficerDesignation: null,
+    supervisingOfficer: null,
+    supervisingOfficerDesignation: null,
+    commissionerate: null,
+    division: null,
+    range: null,
+    verifiedByExaminingOfficer: false,
+    sampleForwarded: false,
+    sealNumber: null,
+};
+
+const invoice = {
+    // ===== Buyer / Third Party Information =====
+    exporterNameOne: null,
+    exporterAddressOne: null,
+    consigneeCountryNameOne: null,
+    ieCodeNo: null,
+    consigneeCountryName: null,
+    exporterStateIdOne: null,
+
+    exporterName: null,
+    exporterAddress: null,
+    exporterStateId: null,
+
+    // ===== Other Info =====
+    exportContractNoDate: null,
+    natureOfPaymentId: null,
+    paymentPeriodDays: null,
+    aeoCode: null,
+    aeoCountryId: null,
+    aeoRole: null,
+};
+
+const container = {
+    containerNo: null,
+    type: null,
+    pkgsStuffed: null,
+    grossWeight: null,
+    sealNo: null,
+    sealDate: null,
+    sealType: null,
+    location: null,
+};
+
+const item = {
+    // ========= Main (Item) =========
+    itemDescription: null,
+    ritcHsnCode: null,
+    quantity: null,
+    sqcQuantity: null,
+    unitPrice: null,
+    pricePer: null,
+    amount: null,
+
+    // ========= General =========
+    // NOTE: in your formdata one field has fieldname: "" (Exim Code) -> can't map.
+    // If you want, rename that fieldname in formdata to "eximCodeId" and then keep below:
+    eximCodeId: null,
+
+    endUse: null,
+    ptaFtaInfoId: null,
+    medicinalPlantId: null,
+    labGrownDiamondId: null,
+    nfeiCategoryId: null,
+    originDistrictId: null,
+
+    alternateQty: null,
+    alternateQtyUnit: null, // you had duplicate alternateQty in formdata, keep separate key here
+
+    formulation: null,
+    rewardItem: null,
+    isStrCode: false,
+    originStateId: null,
+    materialCode: null,
+    surfaceMaterialInContact: null,
+
+    // ========= PMV =========
+    pmvCurrencyId: null,
+    pmvCalcMethod: "Manual",
+    pmvPerUnit: null,
+    pmvCurrency: null, // your formdata duplicated fieldname pmvPerUnit for "Pmv Currency" -> keep separate key here
+    totalPmv: null,
+    totalPmvCurrency: "INR",
+
+    // ========= GST =========
+    gstPaymentStatus: null,
+    gstTaxableValue: null,
+    gstRate: null,
+    igstAmount: null,
+    compCessRate: null,
+    compCessAmount: null,
+
+    // ========= RODTEP =========
+    rodtepClaim: null,
+    rodtepQuantity: null,
+    rodtepRate: null,
+    rodtepCapValue: null,
+    rodtepCapValuePerUnit: null,
+    rodtepAmount: null,
+
+    // ========= TABLE SECTIONS (SearchEditGrid) =========
+    tblDucInfo: [],
+    tblDocInfo: [],
+    tblAreDetails: [],
+
+    // ========= CESS / CENVAT accordion =========
+    cessLeviable: false,
+
+    exportDuty: "",
+    exportDutyRate1: "0.00",
+    exportDutyRateType: "%",
+    exportDutyRate2: "0.00",
+    exportDutyTV: "0.00",
+    exportDutyQty: "0.000",
+    exportDutyUnit: "",
+    exportDutyDesc: "",
+
+    cess: "",
+    cessRate1: "0.00",
+    cessRateType: "%",
+    cessRate2: "0.00",
+    cessTV: "0.00",
+    cessQty: "0.000",
+    cessUnit: "",
+    cessDesc: "",
+
+    othDuty: "",
+    othDutyRate1: "0.00",
+    othDutyRateType: "%",
+    othDutyRate2: "0.00",
+    othDutyTV: "0.00",
+    othDutyQty: "0.000",
+    othDutyUnit: "",
+    othDutyDesc: "",
+
+    thirdCess: "",
+    thirdCessRate1: "0.00",
+    thirdCessRateType: "%",
+    thirdCessRate2: "0.00",
+    thirdCessTV: "0.00",
+    thirdCessQty: "0.000",
+    thirdCessUnit: "",
+    thirdCessDesc: "",
+
+    cenvatCertNo: "",
+    cenvatDate: "",
+    cenvatValidUpto: "",
+    cenvatCexOfficeCode: "",
+    cenvatAssesseeCode: "",
+};
 
 
-        // Advanced filters (simple, stable)
-        if (filters.jobNo?.trim()) parts.push(`jobNo like '%${escapeSqlLike(filters.jobNo)}%'`);
-        if (filters.createdBy?.trim())
-            parts.push(`createdBy like '%${escapeSqlLike(filters.createdBy)}%'`);
-        if (filters.status?.trim()) parts.push(`status like '%${escapeSqlLike(filters.status)}%'`);
-
-        if (filters.jobDateFrom) {
-            parts.push(`jobDate >= '${dayjs(filters.jobDateFrom).format("YYYY-MM-DD")}'`);
-        }
-        if (filters.jobDateTo) {
-            parts.push(`jobDate <= '${dayjs(filters.jobDateTo).format("YYYY-MM-DD")}'`);
-        }
-
-        // Column right-click search (like voucher page)
-        if (columnSearchKeyName && String(columnSearchKeyValue ?? "").trim() !== "") {
-            const v = escapeSqlLike(columnSearchKeyValue);
-            parts.push(`${columnSearchKeyName} like '%${v}%'`);
-        }
-
-        return parts.join(" and ");
-    };
-
-    function pageSelected(p) {
-        setPage(p);
-        setSelectedPageNumber(p);
-    }
-
-    const handleCustomRowsPerPageChange = (event) => {
-        const value = parseInt(event.target.value || "0", 10);
-        if (!isNaN(value) && value > 0) {
-            sessionStorage?.setItem("rowsPerPage", value);
-            setRowsPerPage(value);
-            setPage(1);
-            setSelectedPageNumber(1);
-        }
-    };
+export default function JobDetailsSectionPage() {
+    const { clientId, userId } = getUserDetails();
+    const [activeTab, setActiveTab] = useState("Job");
+    const [newState, setNewState] = useState(DEFAULT_STATE);
+    const [clearFlag, setClearFlag] = useState({ isClear: false, fieldName: "" });
+    const [jobState, setJobState] = useState(initialJobState)
+    const [entityState, setEntityState] = useState(initialEntityDetailsState)
+    const [shipmentState, setShipmentState] = useState(shipment);
+    const [invoiceState, setInvoiceState] = useState(invoice);
+    const [containerState, setContainerState] = useState(container);
+    const [itemState, setItemState] = useState(item);
+    const [finalState, setFinalState] = useState(null);
 
     useEffect(() => {
-        const storedRowsPerPage = sessionStorage.getItem("rowsPerPage");
-        setRowsPerPage(storedRowsPerPage ? parseInt(storedRowsPerPage, 10) : 17);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    // Right click input
-    const handleRightClick = (event, columnId) => {
-        event.preventDefault();
-        setInputVisible(true);
-        setActiveColumn(columnId);
-    };
-
-    // Sorting (client-side)
-    const handleSortBy = (col) => {
-        setSortedColumn(col.id);
-        setIsAscending((p) => !p);
-    };
-
-    const renderSortIcon = (columnId) => {
-        const active = sortedColumn === columnId;
-        const visibleOpacity = active ? 1 : 0;
-        return (
-            <>
-                {!isAscending ? (
-                    <LightTooltip title={active ? "Ascending" : ""}>
-                        <ArrowUpwardIcon
-                            fontSize="small"
-                            className={styles.ArrowDropUpIcon}
-                            sx={{ opacity: visibleOpacity, color: "white" }}
-                        />
-                    </LightTooltip>
-                ) : (
-                    <LightTooltip title={active ? "Descending" : ""}>
-                        <ArrowDownwardIcon
-                            fontSize="small"
-                            className={styles.ArrowDropUpIcon}
-                            sx={{ opacity: visibleOpacity, color: "white" }}
-                        />
-                    </LightTooltip>
-                )}
-            </>
-        );
-    };
-
-    const applyClientSort = (data) => {
-        if (!sortedColumn) return data;
-        const dir = isAscending ? 1 : -1;
-        const copy = [...(data || [])];
-        copy.sort((a, b) => {
-            const av = a?.[sortedColumn];
-            const bv = b?.[sortedColumn];
-
-            // date-safe compare
-            const ad = dayjs(av);
-            const bd = dayjs(bv);
-            if (ad.isValid() && bd.isValid() && String(sortedColumn).toLowerCase().includes("date")) {
-                return (ad.valueOf() - bd.valueOf()) * dir;
-            }
-
-            const as = String(av ?? "").toLowerCase();
-            const bs = String(bv ?? "").toLowerCase();
-            if (as < bs) return -1 * dir;
-            if (as > bs) return 1 * dir;
-            return 0;
+        setFinalState({
+            ...jobState,
+            tblJobEntity: entityState,
+            tblJobShipment: shipmentState,
+            tblJobInvoice: invoiceState,
+            tblJobContainer: containerState,
+            tblJobItem: itemState,
         });
-        return copy;
-    };
+    }, [jobState, entityState, shipmentState, invoiceState, containerState, itemState]);
 
-    // Fetch
-    async function fetchData() {
+    console.log('finalState=>', finalState)
+
+    const handleFieldValuesChange = useCallback(
+        (updatedValues) => {
+            setNewState((prev) => ({ ...prev, ...updatedValues }));
+            if (clearFlag.isClear) setClearFlag({ isClear: false, fieldName: "" });
+        },
+        [clearFlag.isClear],
+    );
+    const handleFieldValuesChange2 = async (
+        updatedValues,
+        field,
+        formControlData
+    ) => {
         try {
-            setLoader(true);
-
-            const filterCondition = buildFilterCondition();
-
+            console.log("field", field);
             const requestData = {
-                tableName: TABLE_NAME,
-                fieldName: JOB_GRID_CONFIG,
-                clientId: clientId,
-                filterCondition,
-                pageNo: page,
-                pageSize: rowsPerPage,
-                // keyName/keyValue are already merged into filterCondition above,
-                // but keeping these is harmless if your API expects it:
-                keyName: columnSearchKeyName,
-                keyValue: columnSearchKeyValue,
+                id: updatedValues.copyMappingName,
+                filterValue: field[field.length - 1],
+                menuID: uriDecodedMenu.id,
+            };
+            const getCopyDetails = await getCopyData(requestData);
+            if (!getCopyDetails.success) {
+                toast.error(getCopyDetails.Message);
+                return;
+            }
+            let dataToCopy = {};
+            getCopyDetails.keyToValidate.fieldsMaping
+                .filter((data) => !data.isChild)
+                .forEach((data) => {
+                    if (
+                        Array.isArray(getCopyDetails.data[0][data.toColmunName]) &&
+                        formControlData?.controlname.toLowerCase() == "multiselect"
+                    ) {
+                        dataToCopy[data.toColmunName] = newState[data.toColmunName].concat(
+                            getCopyDetails.data[0][data.toColmunName]
+                        );
+                    } else {
+                        dataToCopy[data.toColmunName] =
+                            getCopyDetails.data[0][data.toColmunName];
+                    }
+                });
+            getCopyDetails.keyToValidate.fieldsMaping
+                .filter((data) => data.isChild)
+                .forEach((data) => {
+                    // dataToCopy[data.tableName] = getCopyDetails.data[0][data?.toTableName];
+                    dataToCopy[data?.toTableName] = formControlData?.controlname.toLowerCase() == "multiselect" ? [...newState[data?.toTableName], ...getCopyDetails.data[0][data?.toTableName]] : getCopyDetails.data[0][data?.toTableName]
+                        ;
+                });
+
+            //      console.log("dataToCopy", dataToCopy);
+            let childData = getCopyDetails.keyToValidate.fieldsMaping.filter(
+                (data) => data.isChild == "true"
+            );
+            setChildsFields((prev) => {
+                let updatedFields = [...prev];
+
+                childData.forEach((data) => {
+                    let index = updatedFields.findIndex(
+                        (i) => i.tableName === data.toColmunName
+                    );
+
+                    if (index !== -1) {
+                        // Update the specific object at the found index
+                        updatedFields[index] = {
+                            ...updatedFields[index],
+                            isAddFunctionality: data.isAddFunctionality,
+                            isDeleteFunctionality: data.isDeleteFunctionality,
+                            isCopyFunctionality: data.isCopyFunctionality,
+                        };
+                    }
+                });
+                return updatedFields;
+            });
+
+            console.log("getCopyDetails", dataToCopy);
+
+            const dataObj = dataToCopy;
+
+            Object.keys(dataObj).forEach((key) => {
+                if (Array.isArray(dataObj[key])) {
+                    dataObj[key] = dataObj[key].map((item, index) => ({
+                        ...item,
+                        indexValue: index + 1,
+                    }));
+                }
+            });
+
+            const finalIndexdata = {
+                ...getCopyDetails,
+                data: [dataObj, ...(getCopyDetails?.data?.slice(1) || [])],
             };
 
-            const apiResponse = await fetchSearchPageData(requestData);
-
-            if (apiResponse?.success === true && Array.isArray(apiResponse?.data)) {
-                const sorted = applyClientSort(apiResponse.data);
-                setGridData(sorted);
-
-                const countReq = {
-                    columns: "id",
-                    tableName: TABLE_NAME,
-                    // whereCondition: filterCondition || "1=1",
-                    // clientIdCondition: `FOR JSON PATH, INCLUDE_NULL_VALUES`,
+            setNewState((prevState) => {
+                finalIndexdata.keyToValidate.fieldsMaping.forEach((data) => {
+                    if (data.isChild == "true") {
+                        if (typeof prevState[data.ToColmunName] === "undefined") {
+                            prevState[data.ToColmunName] = [];
+                        }
+                        for (const iterator of finalIndexdata.data[0][data.ToColmunName]) {
+                            prevState[data.ToColmunName].push(iterator);
+                        }
+                    }
+                });
+                return {
+                    ...prevState,
+                    ...finalIndexdata.data[0],
                 };
+            });
+            setSubmitNewState((prevState) => ({
+                ...prevState,
+                ...finalIndexdata.data[0],
+            }));
 
-                const countResp = await fetchReportData(countReq);
-
-                const countArr = Array.isArray(countResp?.data) ? countResp.data : Array.isArray(countResp) ? countResp : [];
-                const Count = countArr?.length || 0;
-
-                setPageCount(Count);
-                setTotalPages(Math.ceil(Count / rowsPerPage) || 1);
-
-                setSearchOpen(false);
-            } else {
-                setGridData([]);
-                setParaText(apiResponse?.message || "No records found.");
-                setIsError(false);
-                setOpenModal(true);
-            }
+            setKeysTovalidate(finalIndexdata.keyToValidate.fieldsMaping);
         } catch (error) {
-            console.error("Error fetching data:", error);
-            setGridData([]);
-            setParaText("Error while fetching data.");
-            setIsError(true);
-            setOpenModal(true);
-        } finally {
-            setLoader(false);
+            console.error("Fetch Error :", error);
         }
-    }
-    useEffect(() => {
-        fetchData();
-    }, [page, rowsPerPage, sortedColumn, isAscending, columnSearchKeyName, columnSearchKeyValue]);
-
-    useEffect(() => {
-        const el = document.getElementById("paper");
-        if (!el) return;
-
-        let timerId = null;
-        const onScroll = () => {
-            if (!timerId) {
-                timerId = setTimeout(() => {
-                    setScrollLeft(el.scrollLeft || 0);
-                    timerId = null;
-                }, 100);
-            }
-        };
-
-        el.addEventListener("scroll", onScroll);
-        return () => {
-            el.removeEventListener("scroll", onScroll);
-            if (timerId) clearTimeout(timerId);
-        };
-    }, [gridData?.length]);
-
-    // Toolbar actions
-    const handleInitailSearch = () => {
-        setPage(1);
-        setSelectedPageNumber(1);
-        fetchData();
-        setSearchOpen(false);
     };
+    const handleClose = useCallback(() => {
+        setNewState(DEFAULT_STATE);
+        setClearFlag({ isClear: true, fieldName: "" });
+    }, []);
+    const handleSubmit = useCallback(async () => {
+        try {
+            const payload = { ...newState, clientId, userId };
+            const result = await getContainerData(payload);
 
-    const handleRemoveFilter = () => {
-        setSearchInput("");
-        setFilters({
-            jobNo: "",
-            createdBy: "",
-            status: "",
-            jobDateFrom: null,
-            jobDateTo: null,
-        });
-        setColumnSearchKeyName("");
-        setColumnSearchKeyValue("");
-        setPrevSearchInput("");
-        setInputVisible(false);
-        setActiveColumn(null);
-        setSortedColumn(null);
-        setIsAscending(true);
-
-        setRowsPerPage(17);
-        setPage(1);
-        setSelectedPageNumber(1);
-    };
-
-    const handleClose = () => {
-        router.back();
-    };
-
-    const handleAdd = () => {
-        router.push("/exportChaJob");
-    };
-
+            if (result?.success) toast.success("Saved successfully.");
+            else toast.error(result?.message || "Save failed.");
+        } catch (err) {
+            console.error(err);
+            toast.error("Error submitting form.");
+        }
+    }, [newState, clientId, userId]);
     return (
-        <div className="relative">
-            <CustomeBreadCrumb name="Job" />
-
-            <div className="flex mb-3 justify-end -mt-[10px]">
-                <div className="flex justify-between h-[27px] border border-gray-100 rounded-[7px] shadow-md">
-                    <Stack direction="row">
-                        <LightTooltip title="Add Form">
-                            <Button
-                                onMouseEnter={() => setHoveredIcon("addForm")}
-                                onMouseLeave={() => setHoveredIcon(null)}
-                                onClick={handleAdd}
-                            >
-                                <Image
-                                    src={hoveredIcon === "addForm" ? addDocIconHover : addDocIcon}
-                                    alt="Add Icon"
-                                    priority={false}
-                                    className="cursor-pointer gridIcons2"
-                                />
-                            </Button>
-                        </LightTooltip>
-
-                        <LightTooltip title="Advanced Search">
-                            <Button
-                                onClick={() => setSearchOpen(!searchOpen)}
-                                onMouseEnter={() => setHoveredIcon("advanceSearch")}
-                                onMouseLeave={() => setHoveredIcon(null)}
-                            >
-                                <Image
-                                    src={hoveredIcon === "advanceSearch" ? magnifyIconHover : searchImage}
-                                    alt="Search Icon"
-                                    priority={false}
-                                    className="cursor-pointer gridIcons2"
-                                />
-                            </Button>
-                        </LightTooltip>
-
-                        <LightTooltip title="Close">
-                            <Button
-                                onMouseEnter={() => setHoveredIcon("close")}
-                                onMouseLeave={() => setHoveredIcon(null)}
-                                onClick={handleClose}
-                            >
-                                <CloseIcon sx={{ fontSize: 18, color: "var(--table-text-color)" }} />
-                            </Button>
-                        </LightTooltip>
-                    </Stack>
-                </div>
-            </div>
-
-            {searchOpen && (
-                <Paper
-                    className={`absolute top-[8%] right-0 z-50 ${styles.searchDispalyBg} border border-[#B2BAC2] rounded-[7px] shadow-md`}
-                    sx={{ width: "90%", height: "auto" }}
-                >
-                    <div className="mx-[20px]">
-                        {/* Global search row */}
-                        <div className="flex items-center relative mt-[6px]">
-                            <Paper sx={{ ...advanceSearchPaperStyles }}>
-                                <InputBase
-                                    autoFocus
-                                    autoComplete="off"
-                                    value={searchInput}
-                                    onChange={(e) => setSearchInput(e.target.value)}
-                                    placeholder="Search..."
-                                    inputProps={{ "aria-label": "search..." }}
-                                    sx={{ ...searchInputStyling }}
-                                    onKeyDown={(e) => e.key === "Enter" && handleInitailSearch()}
-                                />
-                                <GridHoverIcon
-                                    defaultIcon={magnifyIcon}
-                                    hoverIcon={magnifyIconHover}
-                                    altText={"search"}
-                                    title={"search"}
-                                    onClick={() => handleInitailSearch()}
-                                />
-                            </Paper>
-
-                            <GridHoverIcon
-                                defaultIcon={closeIcon}
-                                hoverIcon={crossIconHover}
-                                altText={"close"}
-                                title={"close"}
-                                className={"relative left-2 cursor-pointer"}
-                                onClick={() => setSearchOpen(false)}
-                            />
-                        </div>
-
-                        <button
-                            className={`${styles.txtColorDark} mt-[6px] block text-[12px]`}
-                            onClick={() => setIsAdvanceSearchOpen((p) => !p)}
-                        >
-                            Advanced Search
-                        </button>
-
-                        {isAdvanceSearchOpen && (
-                            <div className="mt-[8px] mb-[8px] grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <TextField
-                                    size="small"
-                                    label="Job No"
-                                    value={filters.jobNo}
-                                    onChange={(e) => setFilters((p) => ({ ...p, jobNo: e.target.value }))}
-                                />
-                                <TextField
-                                    size="small"
-                                    label="Created By"
-                                    value={filters.createdBy}
-                                    onChange={(e) =>
-                                        setFilters((p) => ({ ...p, createdBy: e.target.value }))
-                                    }
-                                />
-                                <TextField
-                                    size="small"
-                                    label="Status"
-                                    value={filters.status}
-                                    onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value }))}
-                                />
-
-                                <DateTimePicker
-                                    label="Job Date From"
-                                    value={filters.jobDateFrom ? dayjs(filters.jobDateFrom) : null}
-                                    onChange={(v) =>
-                                        setFilters((p) => ({ ...p, jobDateFrom: v ? v.toDate() : null }))
-                                    }
-                                    slots={{ openPickerIcon: ExpandMoreIcon }}
-                                    slotProps={{
-                                        field: { clearable: true },
-                                        actionBar: { actions: ["cancel"] },
-                                    }}
-                                />
-
-                                <DateTimePicker
-                                    label="Job Date To"
-                                    value={filters.jobDateTo ? dayjs(filters.jobDateTo) : null}
-                                    onChange={(v) =>
-                                        setFilters((p) => ({ ...p, jobDateTo: v ? v.toDate() : null }))
-                                    }
-                                    slots={{ openPickerIcon: ExpandMoreIcon }}
-                                    slotProps={{
-                                        field: { clearable: true },
-                                        actionBar: { actions: ["cancel"] },
-                                    }}
-                                />
-                            </div>
-                        )}
-
-                        <div className="flex gap-3 mt-1 pb-2">
-                            <button
-                                className={`my-[6px] ${styles.commonBtn}`}
-                                onClick={() => {
-                                    setPage(1);
-                                    setSelectedPageNumber(1);
-                                    fetchData();
-                                    setSearchOpen(false);
-                                }}
-                            >
-                                Search
-                            </button>
-                            <button className={`my-[6px] ${styles.commonBtn}`} onClick={handleRemoveFilter}>
-                                Remove filter
-                            </button>
-                        </div>
-                    </div>
-                </Paper>
-            )}
-
-            <Paper sx={{ ...displayTablePaperStyles }}>
-                <TableContainer
-                    id="paper"
-                    className={`${styles.thinScrollBar}`}
-                    sx={{
-                        ...displayTableContainerStyles,
-                        position: "relative !important",
-                    }}
-                    ref={tableRef}
-                >
-                    <Table stickyHeader aria-label="sticky table" className={`overflow-auto ${styles.thinScrollBar}`}>
-                        <TableHead sx={{ ...displaytableHeadStyles }}>
-                            <TableRow style={{ cursor: "context-menu" }}>
-                                {tableheading.map((col, index) => (
-                                    <TableCell
-                                        key={index}
-                                        align={col.align}
-                                        style={{ minWidth: col.minWidth }}
-                                        width={"auto"}
-                                        className={`${styles.cellHeading} cursor-pointer`}
-                                        onContextMenu={(event) => handleRightClick(event, col.id)}
-                                    >
-                                        <span
-                                            className={`${styles.labelText}`}
-                                            onClick={() => handleSortBy(col)}
-                                        >
-                                            {col.label}
-                                        </span>
-
-                                        <span>
-                                            {isInputVisible && activeColumn === col.id && (
-                                                <CustomizedInputBase
-                                                    columnData={col}
-                                                    setPrevSearchInput={setPrevSearchInput}
-                                                    prevSearchInput={prevSearchInput}
-                                                    setInputVisible={setInputVisible}
-                                                    setColumnSearchKeyName={setColumnSearchKeyName}
-                                                    setColumnSearchKeyValue={setColumnSearchKeyValue}
-                                                    isInputVisible={isInputVisible}
-                                                    setSearchInput={setSearchInput}
-                                                    setRowsPerPage={setRowsPerPage}
-                                                    setPage={setPage}
-                                                />
-                                            )}
-                                        </span>
-
-                                        <span className="ml-1">{renderSortIcon(col.id)}</span>
-                                    </TableCell>
-                                ))}
-                                <TableCell align="left" width={"auto"} />
-                            </TableRow>
-                        </TableHead>
-
-                        <TableBody
-                            style={{
-                                overflow: "auto",
-                                marginTop: "30px",
-                            }}
-                            key={"body"}
-                        >
-                            {gridData?.length > 0 &&
-                                gridData?.map((row, rowIndex) => (
-                                    <TableRow
-                                        hover
-                                        role="checkbox"
-                                        key={rowIndex}
-                                        className={`${styles.tableCellHoverEffect} ${styles.hh} rounded-lg p-0 opacity-1 z-0`}
-                                        sx={{
-                                            ...displaytableRowStyles_two(),
-                                        }}
-                                        onDoubleClick={() => {
-                                            // ✅ update your route
-                                            router.push(`/job/addEdit?id=${row?.id}`);
-                                        }}
-                                    >
-                                        {tableheading.map((fieldName, idx) => (
-                                            <TableCell key={`${rowIndex}-${fieldName.id}`} align="left">
-                                                {isDateFormat(row?.[fieldName.id])}
-                                            </TableCell>
-                                        ))}
-
-                                        <TableCell style={{ width: "auto" }}>
-                                            <div className="w-full">
-                                                <div
-                                                    id={"iconsRow"}
-                                                    className={`${styles.iconContainer2} flex items-center w-full -mt-[11px]`}
-                                                    style={{
-                                                        height: "20px",
-                                                        right: `-${scrollLeft}px`,
-                                                        display: "flex",
-                                                        opacity: 0.85,
-                                                    }}
-                                                >
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-
-                            {gridData?.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={tableheading.length + 1}>
-                                        <div
-                                            className={`${styles.pageBackground} flex items-center justify-center h-[calc(100vh-168px)]`}
-                                        >
-                                            <div className={`${styles.pageBackground} container mx-auto text-center`}>
-                                                {loader ? (
-                                                    <p className="text-gray-500 text-lg mt-4">{"Loading..."}</p>
-                                                ) : (
-                                                    <p className="text-gray-500 text-lg mt-4">{"No Records Found."}</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Paper>
-
-            <div className="flex items-center justify-end pt-2 px-4 text-black">
-                <PaginationButtons
-                    totalPages={totalPages || 1}
-                    pageSelected={pageSelected}
-                    selectedPageNumber={selectedPageNumber}
-                />
-
-                <input
-                    type="number"
-                    value={rowsPerPage}
-                    onChange={handleCustomRowsPerPageChange}
-                    className={`border ${styles.txtColorDark} ${styles.pageBackground} border-gray-300 rounded-md p-2 h-[17px] w-14 text-[10px] mr-[15px] outline-gray-300 outline-0`}
-                />
-
-                <p className={`text-[10px] ${styles.txtColorDark}`}>
-                    {selectedPageNumber} of {totalPages || 1} Pages
-                </p>
-            </div>
-
-            {openModal && (
-                <CustomeModal
-                    setOpenModal={setOpenModal}
-                    openModal={openModal}
-                    onConfirm={() => setOpenModal(false)}
-                    isError={isError}
-                    paraText={paraText}
-                    labelValue={""}
-                />
-            )}
-        </div>
-    );
-}
-
-function CustomizedInputBase({
-    columnData,
-    setPrevSearchInput,
-    prevSearchInput,
-    setInputVisible,
-    setColumnSearchKeyName,
-    setColumnSearchKeyValue,
-    isInputVisible,
-    setSearchInput,
-    setRowsPerPage,
-    setPage,
-}) {
-    const inputRef = useRef(null);
-    const [searchInputGridData, setSearchInputGridData] = useState(prevSearchInput || "");
-
-    const filterFunction = (searchValue, columnKey) => {
-        setColumnSearchKeyName(columnKey);
-        setColumnSearchKeyValue(searchValue);
-        setSearchInput(searchValue);
-        setPrevSearchInput(searchValue);
-        setInputVisible(false);
-        setRowsPerPage(17);
-        setPage(1);
-    };
-
-    const handleClear = () => {
-        setSearchInputGridData("");
-        setPrevSearchInput("");
-        setSearchInput("");
-        setColumnSearchKeyName("");
-        setColumnSearchKeyValue("");
-        setPage(1);
-        setRowsPerPage(17);
-        setInputVisible(false);
-    };
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (inputRef.current && !inputRef.current.contains(event.target)) {
-                setInputVisible(!isInputVisible);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [isInputVisible, setInputVisible]);
-
-    return (
-        <Paper
-            ref={inputRef}
-            sx={{
-                ...createAddEditPaperStyles,
-            }}
-        >
-            <InputBase
-                autoFocus
-                sx={{ ...searchInputStyling }}
-                placeholder="Search..."
-                inputProps={{ "aria-label": "search..." }}
-                value={searchInputGridData}
-                onChange={(e) => setSearchInputGridData(e.target.value)}
-                onKeyDown={(e) => {
-                    if (e.key === "Enter") filterFunction(searchInputGridData, columnData.id);
-                }}
-            />
-
-            <LightTooltip title="Clear">
-                <IconButton sx={{ p: "2px" }} aria-label="clear" onClick={handleClear}>
-                    <ClearIcon sx={{ color: "var(--table-text-color)" }} />
-                </IconButton>
-            </LightTooltip>
-
-            <Divider
-                sx={{
-                    height: 25,
-                    borderColor: "var(--table-text-color)",
-                    opacity: 0.3,
-                }}
-                orientation="vertical"
-            />
-
-            <LightTooltip title="Search">
-                <IconButton
+        <>
+            <div className="flex space-x-4 p-2 mb-5">
+                <button
+                    className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
                     type="button"
-                    sx={{ p: "2px" }}
-                    aria-label="search"
-                    onClick={() => filterFunction(searchInputGridData, columnData.id)}
+                    onClick={handleSubmit}
                 >
-                    <SearchIcon sx={{ color: "var(--table-text-color)" }} />
-                </IconButton>
-            </LightTooltip>
-        </Paper>
+                    Submit
+                </button>
+
+                <button
+                    className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
+                    type="button"
+                    onClick={handleClose}
+                >
+                    Close
+                </button>
+            </div>
+            <div
+                className={`p-0 ${styles.thinScrollBar}`}
+                style={{ "--inputFontSize": "12px", "--labelFontSize": "12px" }}
+            >
+                <CustomeInputFields
+                    inputFieldData={PARENT_FIELDS[0]["Job Details"]}
+                    values={newState}
+                    onValuesChange={handleFieldValuesChange}
+                    inEditMode={{ isEditMode: false, isCopy: false }}
+                    clearFlag={clearFlag}
+                    newState={newState}
+                    setStateVariable={setNewState}
+                    handleFieldValuesChange2={handleFieldValuesChange2}
+                />
+            </div>
+
+            <div className="tabsBar">
+                {TABS.map((t) => (
+                    <button
+                        key={t}
+                        type="button"
+                        onClick={() => setActiveTab(t)}
+                        className={`tabBtn ${activeTab === t ? "tabBtnActive" : ""}`}
+                    >
+                        {t}
+                    </button>
+                ))}
+            </div>
+
+            {activeTab === "Job" ? (
+                <JobSheet
+                    value={jobState}
+                    onChange={setJobState}
+                />
+            ) : null}
+            {activeTab === "Entity" ? (
+                <EntitySheet
+                    value={entityState}
+                    onChange={setEntityState}
+                />
+            ) : null}
+            {activeTab === "Shipment" ? (
+                <ShipmentSheet
+                    value={shipmentState}
+                    onChange={setShipmentState}
+                />
+            ) : null}
+            {activeTab === "Invoice" ? (
+                <InvoiceSheet
+                    value={invoiceState}
+                    onChange={setInvoiceState}
+                />
+            ) : null}
+            {activeTab === "Item" ? (
+                <ItemSheet
+                    value={itemState}
+                    onChange={setItemState}
+                />
+            ) : null}
+            {activeTab === "Container" ? (
+                <ContainerSheet
+                    value={containerState}
+                    onChange={setContainerState}
+                />
+            ) : null}
+        </>
     );
 }

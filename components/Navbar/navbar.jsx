@@ -258,7 +258,7 @@ export default function NavbarPage() {
     try {
       const apiResponse = await dynamicDropDownFieldsData(
         requestData,
-        abortController
+        abortController,
       );
       if (pageNo == 1 || inputValueForDataFetch.length > 0) {
         setCompanyData(apiResponse.data);
@@ -300,7 +300,7 @@ export default function NavbarPage() {
     try {
       const apiResponse = await dynamicDropDownFieldsData(
         requestData,
-        abortController
+        abortController,
       );
       if (pageNo == 1 || inputValueForDataFetch.length > 0) {
         setBranchData(apiResponse.data);
@@ -320,7 +320,7 @@ export default function NavbarPage() {
   async function fetchFinancialYearData(
     pageNo,
     inputValueForDataFetch,
-    valueSearch
+    valueSearch,
   ) {
     if (Controller) Controller.abort();
     const abortController = new AbortController();
@@ -344,7 +344,7 @@ export default function NavbarPage() {
     try {
       const apiResponse = await dynamicDropDownFieldsData(
         requestData,
-        abortController
+        abortController,
       );
       if (pageNo == 1 || inputValueForDataFetch.length > 0) {
         setFinancialYearData(apiResponse.data);
@@ -366,7 +366,7 @@ export default function NavbarPage() {
     selectedValue,
     setState,
     selectedBy,
-    updateColumn
+    updateColumn,
   ) => {
     const storedUserData = localStorage.getItem("userData");
     const userData = JSON.parse(decrypt(storedUserData));
@@ -411,7 +411,7 @@ export default function NavbarPage() {
           dropValue,
           setSelectedCompany,
           selectedBy,
-          "defaultCompanyId"
+          "defaultCompanyId",
         );
         break;
       case "financialYear":
@@ -419,7 +419,7 @@ export default function NavbarPage() {
           dropValue,
           setSelectedFinancialYear,
           selectedBy,
-          "defaultFinYearId"
+          "defaultFinYearId",
         );
         break;
       case "branchId":
@@ -427,7 +427,7 @@ export default function NavbarPage() {
           dropValue,
           setSelectedBranch,
           selectedBy,
-          "defaultBranchId"
+          "defaultBranchId",
         );
         break;
       default:
@@ -446,7 +446,7 @@ export default function NavbarPage() {
         const loginCredentials = JSON.parse(decrypt(storedUserData));
         localStorage.setItem(
           "loginCredentials",
-          encrypt(JSON.stringify(loginCredentials))
+          encrypt(JSON.stringify(loginCredentials)),
         );
       }
       push("/login");
@@ -462,7 +462,7 @@ export default function NavbarPage() {
     debounce((searchValue) => {
       fetchCompanyData(pageNo, searchValue);
     }, 50),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -637,7 +637,7 @@ export default function NavbarPage() {
                         styles={customStyles}
                         value={
                           companyData?.find(
-                            (item) => item.value === parseInt(selectedCompany)
+                            (item) => item.value === parseInt(selectedCompany),
                           ) || null
                         }
                         isClearable={false}
@@ -646,7 +646,7 @@ export default function NavbarPage() {
                           callInputChangeFunc = false;
                           handleChangeValue(
                             newValue ? [newValue] : null,
-                            "companyId"
+                            "companyId",
                           );
                           callInputChangeFunc = true;
                         }}
@@ -699,7 +699,7 @@ export default function NavbarPage() {
                         styles={customStyles}
                         value={
                           branchData?.find(
-                            (item) => item.value === parseInt(selectedBranch)
+                            (item) => item.value === parseInt(selectedBranch),
                           ) || null
                         }
                         isClearable={false}
@@ -708,7 +708,7 @@ export default function NavbarPage() {
                           callInputChangeFunc = false;
                           handleChangeValue(
                             newValue ? [newValue] : null,
-                            "branchId"
+                            "branchId",
                           );
                           callInputChangeFunc = true;
                         }}
@@ -761,13 +761,13 @@ export default function NavbarPage() {
                         value={
                           financialYearData?.find(
                             (item) =>
-                              item.value === parseInt(selectedFinancialYear)
+                              item.value === parseInt(selectedFinancialYear),
                           ) || null
                         }
                         onChange={(newValue) => {
                           handleChangeValue(
                             newValue ? [newValue] : null,
-                            "financialYear"
+                            "financialYear",
                           );
                         }}
                         options={financialYearData}
@@ -974,9 +974,7 @@ export default function NavbarPage() {
               }}
             >
               <div className="flex items-center justify-between mb-2">
-                <div className="text-[12px] font-semibold text-black">
-              
-                </div>
+                <div className="text-[12px] font-semibold text-black"></div>
                 <button
                   onClick={() => setOpenSwitchModal(false)}
                   className={`px-3 py-1 text-[11px] ${styles.bgPrimaryColorBtn} rounded-[5px]`}
@@ -1007,7 +1005,7 @@ export default function NavbarPage() {
                         styles={modalSelectStyles}
                         value={
                           companyData?.find(
-                            (item) => item.value === parseInt(selectedCompany)
+                            (item) => item.value === parseInt(selectedCompany),
                           ) || null
                         }
                         isClearable={false}
@@ -1015,7 +1013,7 @@ export default function NavbarPage() {
                         onChange={(newValue) => {
                           handleChangeValue(
                             newValue ? [newValue] : null,
-                            "companyId"
+                            "companyId",
                           );
                         }}
                         options={companyData}
@@ -1047,7 +1045,7 @@ export default function NavbarPage() {
                         styles={modalSelectStyles}
                         value={
                           branchData?.find(
-                            (item) => item.value === parseInt(selectedBranch)
+                            (item) => item.value === parseInt(selectedBranch),
                           ) || null
                         }
                         isClearable={false}
@@ -1055,7 +1053,7 @@ export default function NavbarPage() {
                         onChange={(newValue) => {
                           handleChangeValue(
                             newValue ? [newValue] : null,
-                            "branchId"
+                            "branchId",
                           );
                         }}
                         options={branchData}
@@ -1088,7 +1086,7 @@ export default function NavbarPage() {
                         value={
                           financialYearData?.find(
                             (item) =>
-                              item.value === parseInt(selectedFinancialYear)
+                              item.value === parseInt(selectedFinancialYear),
                           ) || null
                         }
                         isClearable={false}
@@ -1096,7 +1094,7 @@ export default function NavbarPage() {
                         onChange={(newValue) => {
                           handleChangeValue(
                             newValue ? [newValue] : null,
-                            "financialYear"
+                            "financialYear",
                           );
                         }}
                         options={financialYearData}

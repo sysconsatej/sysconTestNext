@@ -58,21 +58,20 @@ export default function PrintModal({
       const clientId = userData[0]?.clientId;
       const userId = userData[0]?.id;
 
-      // const { clientId, userId } = getUserDetails();
       if (!reportData || reportData.length === 0) {
         toast.error("Please select a report First.");
         return;
       }
       let selectedHtmlReportData = [];
-      // let selectedRedirectionReportData = [];
       let selectedRedirectionHtmlReportData = [];
+      let selectedBlReportTemplateData = [];
 
       if (reportType) {
         dispatch(
           updateFlag({
             flag: "reportTypeForPrint",
             value: reportType,
-          })
+          }),
         );
       }
 
@@ -82,32 +81,107 @@ export default function PrintModal({
         return;
       }
 
-      // const selectedHtmlReportData = reportData.filter(
-      //   (report) => report.menuType === "O" || report.menuType === "o"
-      // );
-
       const selectedTemplateReportData = reportData.filter(
-        (report) => report?.menuType === "T" || report?.menuType === "t"
+        (report) => report?.menuType === "T" || report?.menuType === "t",
       );
 
+      selectedBlReportTemplateData = reportData.filter(
+        (report) => report?.menuType === "B" || report?.menuType === "b",
+      );
+
+      // New Code
+      if (
+        selectedBlReportTemplateData &&
+        selectedBlReportTemplateData.length > 0
+      ) {
+        // ✅ validate once
+        if (!submittedRecordId) {
+          console.error("Unable to open the report: BL Id is not defined.", {
+            submittedRecordId,
+            selectedBlReportTemplateData,
+          });
+        } else {
+          if (reportType === "separate") {
+            for (
+              let index = 0;
+              index < selectedBlReportTemplateData.length;
+              index++
+            ) {
+              const report = selectedBlReportTemplateData[index];
+
+              const templateId =
+                report?.reportTemplateId || report?.ReportId || null;
+              const url = `/blReport?templateId=${templateId}&blId=${submittedRecordId}`;
+
+              window.open(url, "_blank");
+            }
+          } else if (reportType === "combined") {
+            const groupedData = selectedBlReportTemplateData.reduce(
+              (acc, curr) => {
+                const existing = acc.find(
+                  (item) => item.ReportMenuLink === curr.ReportMenuLink,
+                );
+
+                if (existing) {
+                  if (
+                    curr?.ReportName &&
+                    !existing.ReportName.includes(curr.ReportName)
+                  ) {
+                    existing.ReportName.push(curr.ReportName);
+                  }
+                  // keep a template id if you want to open per group
+                  if (
+                    !existing.reportTemplateId &&
+                    (curr?.reportTemplateId || curr?.ReportId)
+                  ) {
+                    existing.reportTemplateId =
+                      curr?.reportTemplateId || curr?.ReportId;
+                  }
+                } else {
+                  acc.push({
+                    ReportMenuLink: curr?.ReportMenuLink,
+                    reportMenuId: curr?.reportMenuId,
+                    reportTemplateId:
+                      curr?.reportTemplateId || curr?.ReportId || null,
+                    ReportName: curr?.ReportName ? [curr.ReportName] : [],
+                  });
+                }
+                return acc;
+              },
+              [],
+            );
+
+            // ✅ open per group (because it's "combined")
+            for (let index = 0; index < groupedData.length; index++) {
+              const report = groupedData[index];
+
+              const templateId = report?.reportTemplateId || null;
+              const url = `/blReport?templateId=${templateId}&blId=${submittedRecordId}`;
+
+              window.open(url, "_blank");
+            }
+          }
+        }
+      }
+
+      // New Code Ends Here
       if (redirectedPageType === "Forms") {
         selectedHtmlReportData = reportData.filter(
-          (report) => report?.menuType === "O" || report?.menuType === "o"
+          (report) => report?.menuType === "O" || report?.menuType === "o",
         );
       } else if (redirectedPageType === "searchPage") {
         selectedRedirectionHtmlReportData = reportData.filter(
           (report) =>
             (report?.menuType === "O" || report?.menuType === "o") &&
-            report?.redirectionPath != null
+            report?.redirectionPath != null,
         );
 
         selectedHtmlReportData = reportData.filter(
           (report) =>
             (report?.menuType === "O" || report?.menuType === "o") &&
-            report?.redirectionPath == null
+            report?.redirectionPath == null,
         );
       }
-
       if (selectedHtmlReportData.length > 0) {
         if (reportType === "separate") {
           for (let index = 0; index < selectedHtmlReportData.length; index++) {
@@ -116,7 +190,7 @@ export default function PrintModal({
             console.log("ReportName", selectedReportIds);
             sessionStorage.setItem(
               "selectedReportIds",
-              JSON.stringify(selectedReportIds)
+              JSON.stringify(selectedReportIds),
             );
 
             const url = `${report?.ReportMenuLink}?recordId=${submittedRecordId}&reportId=${report?.reportMenuId}`;
@@ -125,14 +199,14 @@ export default function PrintModal({
             } else {
               console.error(
                 "Unable to open the report: URL or ID is not defined.",
-                report
+                report,
               );
             }
           }
         } else if (reportType === "combined") {
           const groupedData = selectedHtmlReportData.reduce((acc, curr) => {
             const existing = acc.find(
-              (item) => item.ReportMenuLink === curr.ReportMenuLink
+              (item) => item.ReportMenuLink === curr.ReportMenuLink,
             );
             if (existing) {
               if (!existing.ReportName.includes(curr.ReportName)) {
@@ -152,7 +226,7 @@ export default function PrintModal({
             const report = groupedData[index];
             sessionStorage.setItem(
               "selectedReportIds",
-              JSON.stringify(report?.ReportName)
+              JSON.stringify(report?.ReportName),
             );
 
             const url = `${report?.ReportMenuLink}?recordId=${submittedRecordId}&reportId=${report?.reportMenuId}`;
@@ -161,7 +235,7 @@ export default function PrintModal({
             } else {
               console.error(
                 "Unable to open the report: URL or ID is not defined.",
-                report
+                report,
               );
             }
           }
@@ -178,7 +252,7 @@ export default function PrintModal({
             } else {
               console.error(
                 "Unable to open the report: URL or ID is not defined.",
-                report
+                report,
               );
             }
           });
@@ -196,7 +270,7 @@ export default function PrintModal({
             window.open(url, "_blank");
           } else {
             console.error(
-              "Unable to open the combined report: URL not defined."
+              "Unable to open the combined report: URL not defined.",
             );
           }
         }
@@ -206,7 +280,7 @@ export default function PrintModal({
           const rawPath = decodeURIComponent(report?.redirectionPath || "");
           const replacedPath = rawPath.replace(
             "{selectedReportId}",
-            submittedRecordId
+            submittedRecordId,
           );
           const match = replacedPath.match(/formControl\/addEdit\/(.+)$/);
           let finalUrl = null;
@@ -220,7 +294,7 @@ export default function PrintModal({
                   menuName: parsedData?.menuName,
                   isCopy: parsedData?.isCopy,
                   isView: parsedData?.isView,
-                })
+                }),
               )}`;
             } catch (err) {
               console.error("Error parsing JSON from replacedPath:", err);
@@ -233,7 +307,7 @@ export default function PrintModal({
           } else {
             console.error(
               "Unable to open the report: URL or ID is not defined.",
-              report
+              report,
             );
           }
         });
@@ -293,51 +367,88 @@ export default function PrintModal({
 
   useEffect(() => {
     const fetchData = async () => {
-      const storedUserData = localStorage.getItem("userData");
-      if (storedUserData) {
+      // ✅ reset once when effect runs (not on every render)
+      setReportNames([]);
+
+      try {
+        const storedUserData = localStorage.getItem("userData");
+        if (!storedUserData) {
+          setReportNames([]);
+          return;
+        }
+
         const decryptedData = decrypt(storedUserData);
         const userData = JSON.parse(decryptedData);
-        const clientId = userData[0]?.clientId;
-        const menuName = id;
-        if (menuName !== null) {
-          const requestBody = {
-            columns:
-              "mrm.reportMenuId,mrm.reportTemplateId,tm.menuName,tm.menuLink,tm.menuType,tm.clientId,mrm.redirectionPath,tm.displayName",
-            tableName:
-              "tblMenuReportMapping mrm Inner Join tblMenu tm on mrm.reportMenuId = tm.id",
-            whereCondition: `mrm.menuId = ${submittedMenuId} and tm.status = 1 and mrm.clientId in (${clientId} ,(select id from tblClient where clientCode = 'SYSCON'))`,
-            clientIdCondition: `mrm.status = 1 and tm.menuType in ('O','T') FOR JSON PATH, INCLUDE_NULL_VALUES`,
-          };
+        const clientId = userData?.[0]?.clientId;
 
-          try {
-            const response = await fetchReportData(requestBody);
-            console.log("Response Test:", response);
-            const data = response.data || response;
-            if (Array.isArray(data) && data.length > 0) {
-              const fetchedMenuNames = data.map((item) => ({
-                ReportId: item.reportTemplateId,
-                ReportName: item.menuName,
-                ReportMenuLink: item.menuLink,
-                menuType: item.menuType,
-                reportMenuId: item.reportMenuId,
-                reportTemplateId: item?.reportTemplateId,
-                redirectionPath: item?.redirectionPath,
-                displayName: item?.displayName,
-                //reportType: "T", // Assuming "T" as a static value for `reportType`
-              }));
-              setReportNames(fetchedMenuNames);
-            } else {
-              setReportNames([]);
-            }
-          } catch (error) {
-            console.error("Error fetching initial data:", error);
-          }
+        const { companyId } = getUserDetails();
+
+        if (!submittedMenuId || !clientId) {
+          setReportNames([]);
+          return;
         }
+
+        const requestBody = {
+          columns:
+            "mrm.reportMenuId,mrm.reportTemplateId,tm.menuName,tm.menuLink,tm.menuType,tm.clientId,mrm.redirectionPath,tm.displayName",
+          tableName:
+            "tblMenuReportMapping mrm Inner Join tblMenu tm on mrm.reportMenuId = tm.id",
+          whereCondition: `mrm.menuId = ${submittedMenuId} and tm.status = 1 and mrm.clientId in (${clientId} ,(select id from tblClient where clientCode = 'SYSCON'))`,
+          clientIdCondition: `mrm.status = 1 and tm.menuType in ('O','T') FOR JSON PATH, INCLUDE_NULL_VALUES`,
+        };
+
+        const blEditerRequestBody = {
+          columns: "tbp.id,tbp.name,tbp.blPrintTemplateJson",
+          tableName: "tblBlPrintTemplate tbp",
+          whereCondition: `tbp.clientId=${clientId} and tbp.blOfId=${companyId}`,
+          clientIdCondition: `tbp.status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+        };
+
+        const [response, blResponse] = await Promise.all([
+          fetchReportData(requestBody),
+          fetchReportData(blEditerRequestBody),
+        ]);
+
+        const data = response?.data || response || [];
+        const blData =
+          tableName === "tblBl" ? blResponse?.data || blResponse || [] : [];
+
+        const fetchedMenuNames = Array.isArray(data)
+          ? data.map((item) => ({
+              ReportId: item?.reportTemplateId,
+              ReportName: item?.menuName,
+              ReportMenuLink: item?.menuLink,
+              menuType: item?.menuType,
+              reportMenuId: item?.reportMenuId,
+              reportTemplateId: item?.reportTemplateId,
+              redirectionPath: item?.redirectionPath,
+              displayName: item?.displayName,
+            }))
+          : [];
+
+        const blPrintTemplate = Array.isArray(blData)
+          ? blData.map((item) => ({
+              ReportId: item?.id,
+              ReportName: item?.name,
+              ReportMenuLink: "/blReport",
+              menuType: "B",
+              reportMenuId: null,
+              reportTemplateId: item?.id, // optional
+              redirectionPath: null,
+              displayName: item?.name,
+            }))
+          : [];
+
+        const combined = [...fetchedMenuNames, ...blPrintTemplate];
+        setReportNames(combined.length > 0 ? combined : []);
+      } catch (error) {
+        console.error("Error fetching initial data:", error);
+        setReportNames([]);
       }
     };
 
     fetchData();
-  }, [id]);
+  }, [submittedMenuId]);
 
   useEffect(() => {
     const fetchMenuTableNames = async () => {
@@ -456,12 +567,12 @@ export default function PrintModal({
                       <input
                         type="checkbox"
                         name="reportName"
-                        value={reportName.ReportId}
+                        value={reportName?.ReportId}
                         className="mr-1"
                         checked={
                           !!selectedReportNames.find(
                             (item) =>
-                              item?.ReportName === reportName?.ReportName
+                              item?.ReportName === reportName?.ReportName,
                           )
                         }
                         onChange={(e) => {
@@ -471,8 +582,9 @@ export default function PrintModal({
                           } else {
                             setSelectedReportNames((selectedReportNames) =>
                               selectedReportNames.filter(
-                                (item) => item?.ReportName !== value?.ReportName
-                              )
+                                (item) =>
+                                  item?.ReportName !== value?.ReportName,
+                              ),
                             );
                           }
                         }}

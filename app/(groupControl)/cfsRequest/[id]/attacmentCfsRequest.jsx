@@ -60,11 +60,9 @@ const Attachments = ({
 
   const handleUploadFiles = async (filesToUpload) => {
     for (const file of filesToUpload) {
-      // Create a new FormData object for each file
       const formData = new FormData();
       formData.append("documents", file);
       try {
-        // Make the API call with the formData containing just this file
         const response = await uploadFormDocument(formData);
         if (response.success === false) {
           setOpenModal(true);
@@ -72,8 +70,6 @@ const Attachments = ({
           setIsError(true);
           throw new Error(`Error: ${response.statusText}`);
         }
-        // const result = await response.json();
-        // Update state with the result of this file's upload
         setNewState((prev) => {
           const attachment = prev.attachment
             ? [...prev.attachment, response.data]
@@ -99,7 +95,7 @@ const Attachments = ({
   };
 
   //test
-  console.log("attachmentsData", attachmentsData);
+  // console.log("attachmentsData", attachmentsData)
 
   const [stateAttachments, setStateAttachments] = useState([]);
 
@@ -228,20 +224,16 @@ const Attachments = ({
     const fileNameWithExtension = filePath?.split("/").pop();
     const lastDotIndex = fileNameWithExtension?.lastIndexOf(".");
 
-    // Extract the name without extension, or the full name if there's no dot
     const fileName =
       lastDotIndex > 0
         ? fileNameWithExtension.substring(0, lastDotIndex)
         : fileNameWithExtension;
 
-    // Use a regex to extract only alphabets before the extension
-    const matches = fileName?.match(/[A-Za-z_]+/); // Matches alphabetical characters and underscores
+    const matches = fileName?.match(/[A-Za-z_]+/);
 
-    // Check if the match was successful and return the first match
     const formattedFileName =
       matches && matches.length > 0 ? matches[0] : fileName;
 
-    // Truncate the file name to the first 15 characters plus ellipsis if it's too long
     return formattedFileName?.length > 0
       ? `${formattedFileName.substring(0, 15)}...`
       : formattedFileName;
@@ -251,12 +243,12 @@ const Attachments = ({
     setIsParentAccordionOpen(expandAll);
   }, [expandAll]);
 
-  const handleCheckChange = (event, id) => {
-    // Find the corresponding file object
+  const handleCheckChange = (event, id, index) => {
     const updatedCheckedFiles = {
       ...checkedFiles,
       [id]: event.target.checked,
       idValue: id,
+      indexValue: index,
     };
 
     setCheckedFiles(updatedCheckedFiles);
@@ -268,7 +260,6 @@ const Attachments = ({
   };
 
   const handleDeleteSelected = () => {
-    // Check if any files are selected
     const isSelected = Object.values(checkedFiles).some(
       (value) => value === true
     );
@@ -276,28 +267,31 @@ const Attachments = ({
     if (isSelected) {
       setOpenModal(true);
       setParaText("Are you sure you want to delete the selected files?");
-      setModalAction("delete");
+      setModalAction("delete"); // Set the modal action to delete
     } else {
       setOpenModal(true);
       setParaText("Please select at least one file to delete.");
     }
   };
-  // share file
+
   const handleShareSelectedFiles = () => {
     const selectedFiles = attachmentsData.filter(
       (file) => checkedFiles[file.path]
     );
+    setMailData({});
     if (selectedFiles.length === 0) {
-      // alert("Please select at least one file to share.");
       setOpenModal(true);
       setParaText("Please select at least one file to share.");
       setIsError(true);
       return;
     }
-
+    setshareDocumentModal((prev) => !prev);
+    return;
+    // Disable no-unreachable for the next line
+    // eslint-disable-next-line no-unreachable
     const emailBody = selectedFiles
       .map((file) => `Download file: ${baseUrl}/${file.path}`)
-      .join("%0A"); // '%0A' is URL encoding for a new line
+      .join("%0A");
 
     const mailtoLink = `mailto:?subject=Files%20to%20Share&body=${emailBody}`;
 
@@ -317,7 +311,7 @@ const Attachments = ({
     }
   };
 
-   const confirmDeletion = async () => {
+  const confirmDeletion = async () => {
     const updatedAttachmentsData = attachmentsData
       ?.map((file) => {
         if (checkedFiles[file?.path] && file?.status !== 2) {
@@ -378,7 +372,6 @@ const Attachments = ({
     setOpenModal(false);
   };
 
-  // Function to download selected files and open automatically in Adobe Reader
   const downloadSelectedFiles = async () => {
     const selectedFiles = attachmentsData.filter(
       (file) => checkedFiles[file.path]
@@ -550,7 +543,6 @@ const Attachments = ({
                       hoverIcon={ShareIconHover}
                       altText={"share"}
                       title={"Share"}
-                      // onClick={() => setFiles([])}
                       onClick={handleShareSelectedFiles}
                     />
                   </div>
@@ -636,7 +628,6 @@ const Attachments = ({
                           </FormGroup>
                         )}
 
-                        {/* Wrap the clickable elements in an <a> tag */}
                         <a
                           href={`${baseUrl}/${file.path}`}
                           target="_blank"

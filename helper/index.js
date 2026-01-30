@@ -1,1 +1,2 @@
-export { useChargesData } from './useChargesData';
+export { useChargesData } from "./useChargesData";
+export { passwordValidator } from "./passwordValidator";

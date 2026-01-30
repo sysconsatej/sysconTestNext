@@ -33,7 +33,7 @@ import { toast } from "react-toastify";
 import Checkbox from "@mui/material/Checkbox";
 import { ActionButton } from "@/components/ActionsButtons";
 import * as onSubmitValidation from "@/helper/onSubmitFunction";
-
+//import {setSameDDValuesBasedOnSecondRow} from "@/helper/onSubmitFunction"
 function onSubmitFunctionCall(
   functionData,
   newState,
@@ -301,6 +301,141 @@ export default function EditSubChildComponent(props) {
     });
   };
 
+//   const syncLedgerTotalsFromDetails = () => {
+//  //alert("omkarrrrrc");
+//   if (!newState || !Array.isArray(newState.tblVoucherLedger)) {
+//     return newState;
+//   }
+
+//   // Helpers
+//   const toNum = (v) => {
+//     if (v === null || v === undefined || v === "") return 0;
+//     const n = Number(String(v).replace(/,/g, "")); // handles "5,000.00"
+//     return Number.isFinite(n) ? n : 0;
+//   };
+
+//   const getDetails = (ledgerRow) =>
+//     Array.isArray(ledgerRow?.tblVoucherLedgerDetails)
+//       ? ledgerRow.tblVoucherLedgerDetails
+//       : [];
+
+//   // Pass 1: compute totals for each parent ledger row index
+//   const totalsByLedgerIndex = {};
+
+//   newState.tblVoucherLedger.forEach((ledgerRow, idx) => {
+//     const details = getDetails(ledgerRow);
+
+//     let debitHC = 0;
+//     let debitFC = 0;
+
+//     for (const d of details) {
+//       // ✅ handle both correct key & buggy key with trailing space "debitAmount "
+//       const rawDebitHC = d?.debitAmount ?? d?.["debitAmount "] ?? 0;
+//       const rawDebitFC = d?.debitAmountFc ?? d?.["debitAmountFc "] ?? 0;
+
+//       debitHC += toNum(rawDebitHC);
+//       debitFC += toNum(rawDebitFC);
+//     }
+
+//     totalsByLedgerIndex[idx] = {
+//       debitAmount: debitHC === 0 ? "" : debitHC.toFixed(2),
+//       debitAmountFc: debitFC === 0 ? "" : debitFC.toFixed(2),
+//     };
+//   });
+
+//   // Nothing to do if no rows
+//   if (Object.keys(totalsByLedgerIndex).length === 0) {
+//     return newState;
+//   }
+
+//   // Pass 2: enforce totals into tblVoucherLedger (single state write)
+//   setNewState((prev) => {
+//     const ledgers = Array.isArray(prev.tblVoucherLedger)
+//       ? prev.tblVoucherLedger
+//       : [];
+
+//     const updated = ledgers.map((row, idx) => {
+//       const totals = totalsByLedgerIndex[idx];
+//       if (!totals) return row;
+
+//       return {
+//         ...row,
+//         debitAmount: totals.debitAmount,
+//         debitAmountFc: totals.debitAmountFc,
+//       };
+//     });
+
+//     return { ...prev, tblVoucherLedger: updated };
+//   });
+// };
+
+const syncLedgerTotalsFromDetails = () => {
+  if (!newState || !Array.isArray(newState.tblVoucherLedger)) {
+    return newState;
+  }
+
+  // Helpers
+  const toNum = (v) => {
+    if (v === null || v === undefined || v === "") return 0;
+    const n = Number(String(v).replace(/,/g, "")); // handles "5,000.00"
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const getDetails = (ledgerRow) =>
+    Array.isArray(ledgerRow?.tblVoucherLedgerDetails)
+      ? ledgerRow.tblVoucherLedgerDetails
+      : [];
+
+  // Pass 1: compute totals for each parent ledger row index
+  const totalsByLedgerIndex = {};
+
+  newState.tblVoucherLedger.forEach((ledgerRow, idx) => {
+    const details = getDetails(ledgerRow);
+
+    let creditHC = 0;
+    let creditFC = 0;
+
+    for (const d of details) {
+      // ✅ handle both correct key & buggy key with trailing space "debitAmount "
+      const rawHC = d?.debitAmount ?? d?.["debitAmount "] ?? 0;
+      const rawFC = d?.debitAmountFc ?? d?.["debitAmountFc "] ?? 0;
+
+      creditHC += toNum(rawHC);
+      creditFC += toNum(rawFC);
+    }
+
+    totalsByLedgerIndex[idx] = {
+      creditAmount: creditHC === 0 ? "" : creditHC.toFixed(2),
+      creditAmountFc: creditFC === 0 ? "" : creditFC.toFixed(2),
+    };
+  });
+
+  // Nothing to do if no rows
+  if (Object.keys(totalsByLedgerIndex).length === 0) {
+    return newState;
+  }
+
+  // Pass 2: enforce totals into tblVoucherLedger (single state write)
+  setNewState((prev) => {
+    const ledgers = Array.isArray(prev.tblVoucherLedger)
+      ? prev.tblVoucherLedger
+      : [];
+
+    const updated = ledgers.map((row, idx) => {
+      const totals = totalsByLedgerIndex[idx];
+      if (!totals) return row;
+
+      return {
+        ...row,
+        creditAmount: totals.creditAmount,
+        creditAmountFc: totals.creditAmountFc,
+      };
+    });
+
+    return { ...prev, tblVoucherLedger: updated };
+  });
+};
+
 
   return (
     <React.Fragment>
@@ -556,7 +691,7 @@ export default function EditSubChildComponent(props) {
                         defaultIcon={saveIcon}
                         hoverIcon={saveIconHover}
                         altText={"Save"}
-                        title={"Save"}
+                        title={"Save 1"}
                         onClick={() => {
                           for (const feild of subChild.fields) {
                             if (
@@ -667,6 +802,7 @@ export default function EditSubChildComponent(props) {
                           });
 
                           toggleSubChildEdit();
+                          syncLedgerTotalsFromDetails();
                         }}
                       />
                     </div>

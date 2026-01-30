@@ -1840,7 +1840,6 @@ const setTaxDetails = async (obj) => {
     totalInvoiceAmountFc,
   } = newState;
   const { chargeId, chargeGlId, SelectedParentInvId } = values;
-
   const requestData = {
     chargeId: chargeId,
     invoiceDate: moment(invoiceDate).format("YYYY-MM-DD"),
@@ -1855,7 +1854,7 @@ const setTaxDetails = async (obj) => {
     totalAmount: values.totalAmount,
     totalAmountFc: values.totalAmountFc,
     sacCodeId: values.sacId,
-    totalAmountHc: values.totalAmount,
+    totalAmountHc: values?.totalAmountHc || values?.totalAmount,
     taxType: taxType || "G",
     companyId: companyId,
     branchId: branchId,
@@ -12004,6 +12003,102 @@ const calculateVoucherAmtDy = async (obj) => {
   }
 };
 
+const sameDebitAmount = async (obj) => {
+  const { args,values, newState, setStateVariable } = obj;
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+    const debitAmount = values?.[argNames[0]];
+    setStateVariable((prev) => ({
+      ...prev,
+      [argNames[1]]: debitAmount,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "Amount & TDS calculated successfully",
+    };
+  } catch (error) {
+    console.error("Error in setSameCurrency:", error);
+  }
+};
+// const setBankVoucher = async (obj) => {
+//   const { args,values, newState, setStateVariable } = obj;
+//   try {
+//     const argNames = args.split(",").map((arg) => arg.trim());
+//     const bankName = newState?.[argNames[0]];
+//     setStateVariable((prev) => ({
+//       ...prev,
+//       [argNames[1]]: bankName,
+//     }));
+
+//     return {
+//       type: "success",
+//       result: true,
+//       message: "Amount & TDS calculated successfully",
+//     };
+//   } catch (error) {
+//     console.error("Error in setSameCurrency:", error);
+//   }
+// };
+
+const setTdsAmt = async (obj) => {
+  const { args, values, setStateVariable } = obj;
+
+  try {
+    // args example: "amtRec,amtRecFC"
+    const [hcKey, fcKey] = (args || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const toNum = (v) => {
+      if (v === null || v === undefined || v === "") return 0;
+      const n = typeof v === "number" ? v : Number(String(v).replace(/,/g, ""));
+      return Number.isFinite(n) ? n : 0;
+    };
+    const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+    const amtHc = toNum(values?.[hcKey]);
+    const amtFc = toNum(values?.[fcKey]);
+
+    const isTds = !!values?.tdsApplicable;
+    const rate = 0.02; // 2%
+
+    setStateVariable((prev) => {
+      const base = prev || {};
+
+      if (!isTds) {
+        return {
+          ...base,
+          tdsAmt: null,     // or 0 if you prefer
+          tdsAmtFC: null,   // or 0 if you prefer
+        };
+      }
+
+      return {
+        ...base,
+        tdsAmt: round2(amtHc * rate),
+        tdsAmtFC: round2(amtFc * rate),
+      };
+    });
+
+    return {
+      type: "success",
+      result: true,
+      message: "TDS calculated successfully",
+    };
+  } catch (error) {
+    console.error("Error in setTdsAmt:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Failed to calculate TDS",
+    };
+  }
+};
+
+
+
 export {
   setSameCurrencyFc,
   setSameCurrencyHc,
@@ -12134,5 +12229,9 @@ export {
   getJournalVoucherBalanceCalculate,
   checkExchangesRate,
   setBlData,
-  calculateVoucherAmtDy
+  calculateVoucherAmtDy,
+  sameDebitAmount,
+  setTdsAmt
+  //setBankVoucher
+
 };

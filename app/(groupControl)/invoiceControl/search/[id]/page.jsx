@@ -21,7 +21,8 @@ import {
   handleSubmitApi,
   validateSubmit,
   tallyDebitCredit,
-  insertVoucherData
+  insertVoucherData,
+  insertVoucherDataDynami,
 } from "@/services/auth/FormControl.services.js";
 import { ButtonPanel } from "@/components/Buttons/customeButton.jsx";
 import CustomeInputFields from "@/components/Inputs/customeInputFields";
@@ -108,7 +109,7 @@ function groupAndSortAllFields(fields) {
   // Sort each group by 'sectionOrder'
   Object.keys(groupedFields).forEach((section) => {
     groupedFields[section].sort(
-      (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0)
+      (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0),
     );
   });
   return groupedFields;
@@ -137,7 +138,7 @@ function groupAndSortFields(fields) {
   Object.keys(groupedFields).forEach((section) => {
     Object.keys(groupedFields[section]).forEach((position) => {
       groupedFields[section][position].sort(
-        (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0)
+        (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0),
       );
 
       // Push sorted sections into the respective position object in the result with sectionHeader as key
@@ -153,7 +154,7 @@ function onSubmitFunctionCall(
   newState,
   formControlData,
   values,
-  setStateVariable
+  setStateVariable,
 ) {
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
@@ -281,17 +282,15 @@ export default function AddEditFormControll() {
     function checkIsDataSaved(firstState, newState) {
       return deepEqual(firstState, newState);
     }
-    //let isDataMatched = checkIsDataSaved(stateToCheck, newState);
     let isDataMatched = checkIsDataSaved(firstState, newState);
     if (isDataMatched) {
       console.log("All keys & values match 1", firstState);
       console.log("All keys & values match 2", newState);
-      // setIsChangesMade(isDataMatched);
       dispatch(
         updateFlag({
           flag: "isRedirection",
           value: isDataMatched,
-        })
+        }),
       );
     } else {
       console.log("Mismatch found. 1", firstState);
@@ -301,7 +300,7 @@ export default function AddEditFormControll() {
         updateFlag({
           flag: "isRedirection",
           value: isDataMatched,
-        })
+        }),
       );
     }
   }, [newState]);
@@ -331,8 +330,6 @@ export default function AddEditFormControll() {
       }
       return a.every((item, idx) => deepEqual(item, b[idx]));
     }
-
-    // Both are plain objects: compare keys length
     const keysA = Object.keys(a);
     const keysB = Object.keys(b);
     if (keysA.length !== keysB.length) {
@@ -435,7 +432,7 @@ export default function AddEditFormControll() {
   const handleFieldValuesChange2 = async (
     updatedValues,
     field,
-    formControlData
+    formControlData,
   ) => {
     try {
       const requestData = {
@@ -460,7 +457,7 @@ export default function AddEditFormControll() {
             formControlData?.controlname.toLowerCase() == "multiselect"
           ) {
             dataToCopy[data.toColmunName] = newState[data.toColmunName].concat(
-              getCopyDetails.data[0][data.toColmunName]
+              getCopyDetails.data[0][data.toColmunName],
             );
           } else {
             dataToCopy[data.toColmunName] =
@@ -469,7 +466,7 @@ export default function AddEditFormControll() {
         });
       console.log("dataToCopy", dataToCopy);
       let childData = getCopyDetails.keyToValidate.fieldsMaping.filter(
-        (data) => data.isChild == true
+        (data) => data.isChild == true,
       );
       console.log("childData", childData);
 
@@ -479,7 +476,7 @@ export default function AddEditFormControll() {
 
         childData.forEach((data) => {
           let index = updatedFields.findIndex(
-            (i) => i.tableName === data.toColmunName
+            (i) => i.tableName === data.toColmunName,
           );
 
           if (index !== -1) {
@@ -524,7 +521,7 @@ export default function AddEditFormControll() {
   Object.keys(topParentsFields)?.forEach((section) => {
     topParentsFields[section]?.forEach((field) => {
       const keyMapping = keysTovalidate.find(
-        (key) => key?.toColmunName === field?.fieldname
+        (key) => key?.toColmunName === field?.fieldname,
       );
       if (keyMapping) {
         field.isChild = keyMapping?.isChild;
@@ -540,7 +537,6 @@ export default function AddEditFormControll() {
       }
     });
   });
-  
 
   // Define your button click handlers
   const handleButtonClick = {
@@ -548,7 +544,7 @@ export default function AddEditFormControll() {
       // console.log("newState", newState);
       if (isFormSaved)
         return toast.error(
-          "This form has already been saved. Please refresh the screen to save one more record"
+          "This form has already been saved. Please refresh the screen to save one more record",
         );
 
       const isEqual = areObjectsEqual(newState, initialState);
@@ -558,7 +554,7 @@ export default function AddEditFormControll() {
           const missingField = Object.entries(fields).find(
             // eslint-disable-next-line no-unused-vars
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -580,8 +576,8 @@ export default function AddEditFormControll() {
                   newState,
                   formControlData,
                   newState,
-                  setNewState
-                )
+                  setNewState,
+                ),
               );
             // onSubmitValidation?.[formControlData.functionOnSubmit]({
             //   ...newState})
@@ -592,7 +588,7 @@ export default function AddEditFormControll() {
         try {
           const cleanData = replaceNullStrings(
             { ...newState, menuId: selectedMenuId },
-            ChildTableName
+            ChildTableName,
           );
           if (uriDecodedMenu?.menuName == "Journal Voucher") {
             const voucherLedgerTotals = cleanData?.tblVoucherLedger?.reduce(
@@ -605,7 +601,7 @@ export default function AddEditFormControll() {
 
                 return totals;
               },
-              { debitAmount: 0, creditAmount: 0 }
+              { debitAmount: 0, creditAmount: 0 },
             );
 
             console.log("cleanData", cleanData);
@@ -615,7 +611,7 @@ export default function AddEditFormControll() {
             };
 
             const tallyDebitCreditData = await tallyDebitCredit(
-              tallyDebitCreditRequestBody
+              tallyDebitCreditRequestBody,
             );
 
             if (tallyDebitCreditData.success === true) {
@@ -644,21 +640,21 @@ export default function AddEditFormControll() {
                     if (!ledger || typeof ledger !== "object") return ledger;
 
                     const details = Array.isArray(
-                      ledger.tblVoucherLedgerDetails
+                      ledger.tblVoucherLedgerDetails,
                     )
                       ? ledger.tblVoucherLedgerDetails
                       : [];
 
                     // keep only checked rows; if none → [], as required
                     const filteredDetails = details.filter(
-                      (row) => row && row.isChecked === true
+                      (row) => row && row.isChecked === true,
                     );
 
                     return {
                       ...ledger,
                       tblVoucherLedgerDetails: filteredDetails, // [] if no checked rows
                     };
-                  }
+                  },
                 );
               }
             }
@@ -675,7 +671,8 @@ export default function AddEditFormControll() {
               //   data?.data?.recordset[0]?.ParentId;
               const id =
                 data?.data?.recordset?.at(-1)?.id ??
-                data?.data?.recordset?.at(-1)?.ParentId;
+                data?.data?.recordset?.at(-1)?.ParentId ??
+                data?.data?.recordset?.at(-1)?.InsertedId;
               setOpenPrintModal((prev) => !prev);
               setSubmittedMenuId(uriDecodedMenu?.id);
               setSubmittedRecordId(id);
@@ -689,9 +686,8 @@ export default function AddEditFormControll() {
               updateFlag({
                 flag: "isRedirection",
                 value: true,
-              })
+              }),
             );
-            toast.success(data.message);
             const requestBody = {
               tableName: tableName,
               recordId: uriDecodedMenu.id,
@@ -757,7 +753,7 @@ export default function AddEditFormControll() {
       // console.log("Save and Close clicked");
       if (isFormSaved)
         return toast.error(
-          "This form has already been saved. Please refresh the screen to save one more record"
+          "This form has already been saved. Please refresh the screen to save one more record",
         );
       const isEqual = areObjectsEqual(newState, initialState);
       // event.preventDefault();
@@ -767,7 +763,7 @@ export default function AddEditFormControll() {
           const missingField = Object.entries(fields).find(
             // eslint-disable-next-line no-unused-vars
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -781,7 +777,7 @@ export default function AddEditFormControll() {
         try {
           const cleanData = replaceNullStrings(
             { ...newState, menuId: selectedMenuId },
-            ChildTableName
+            ChildTableName,
           );
           setIsFormSaved(true);
           let data = await handleSubmitApi(cleanData);
@@ -790,7 +786,7 @@ export default function AddEditFormControll() {
               updateFlag({
                 flag: "isRedirection",
                 value: true,
-              })
+              }),
             );
             toast.success(data.message);
             const requestBody = {
@@ -809,7 +805,7 @@ export default function AddEditFormControll() {
                   id: uriDecodedMenu.id,
                   menuName: uriDecodedMenu.menuName,
                   parentMenuId: uriDecodedMenu.parentMenuId,
-                })}`
+                })}`,
               );
             }, 500);
           } else {
@@ -836,7 +832,7 @@ export default function AddEditFormControll() {
           const missingField = Object.entries(fields).find(
             // eslint-disable-next-line no-unused-vars
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -858,8 +854,8 @@ export default function AddEditFormControll() {
                   newState,
                   formControlData,
                   newState,
-                  setNewState
-                )
+                  setNewState,
+                ),
               );
           }
         } catch (error) {
@@ -868,7 +864,7 @@ export default function AddEditFormControll() {
         try {
           const cleanData = replaceNullStrings(
             { ...newState, menuId: selectedMenuId },
-            ChildTableName
+            ChildTableName,
           );
           if (uriDecodedMenu?.menuName == "") {
           }
@@ -901,7 +897,7 @@ export default function AddEditFormControll() {
 
       if (isFormSaved)
         return toast.error(
-          "This form has already been saved. Please refresh the screen to save one more record"
+          "This form has already been saved. Please refresh the screen to save one more record",
         );
 
       const isEqual = areObjectsEqual(newState, initialState);
@@ -911,7 +907,7 @@ export default function AddEditFormControll() {
       for (const [section, fields] of Object.entries(parentsFields)) {
         const missingField = Object.entries(fields).find(
           ([, { isRequired, fieldname, yourlabel }]) =>
-            isRequired && !newState[fieldname]
+            isRequired && !newState[fieldname],
         );
         if (missingField) {
           const [, { yourlabel }] = missingField;
@@ -922,7 +918,10 @@ export default function AddEditFormControll() {
 
       // ✅ functionOnSubmit hook
       try {
-        if (formControlData.functionOnSubmit && formControlData.functionOnSubmit !== null) {
+        if (
+          formControlData.functionOnSubmit &&
+          formControlData.functionOnSubmit !== null
+        ) {
           formControlData?.functionOnSubmit
             .split(";")
             .forEach((e) =>
@@ -931,8 +930,8 @@ export default function AddEditFormControll() {
                 newState,
                 formControlData,
                 newState,
-                setNewState
-              )
+                setNewState,
+              ),
             );
         }
       } catch (error) {
@@ -942,7 +941,7 @@ export default function AddEditFormControll() {
       try {
         const cleanData = replaceNullStrings(
           { ...newState, menuId: selectedMenuId },
-          ChildTableName
+          ChildTableName,
         );
 
         setIsFormSaved(true);
@@ -958,22 +957,24 @@ export default function AddEditFormControll() {
             if (!Array.isArray(cleanData.tblVoucherLedger)) {
               cleanData.tblVoucherLedger = [];
             } else {
-              cleanData.tblVoucherLedger = cleanData.tblVoucherLedger.map((ledger) => {
-                if (!ledger || typeof ledger !== "object") return ledger;
+              cleanData.tblVoucherLedger = cleanData.tblVoucherLedger.map(
+                (ledger) => {
+                  if (!ledger || typeof ledger !== "object") return ledger;
 
-                const details = Array.isArray(ledger.tblVoucherLedgerDetails)
-                  ? ledger.tblVoucherLedgerDetails
-                  : [];
+                  const details = Array.isArray(ledger.tblVoucherLedgerDetails)
+                    ? ledger.tblVoucherLedgerDetails
+                    : [];
 
-                const filteredDetails = details.filter(
-                  (row) => row && row.isChecked === true
-                );
+                  const filteredDetails = details.filter(
+                    (row) => row && row.isChecked === true,
+                  );
 
-                return {
-                  ...ledger,
-                  tblVoucherLedgerDetails: filteredDetails,
-                };
-              });
+                  return {
+                    ...ledger,
+                    tblVoucherLedgerDetails: filteredDetails,
+                  };
+                },
+              );
             }
           }
         }
@@ -1005,7 +1006,7 @@ export default function AddEditFormControll() {
           json: cleanData,
         };
 
-        const data = await insertVoucherData(payload);
+        const data = await insertVoucherDataDynami(payload);
 
         if (data?.success === true) {
           toast.success(data.message);
@@ -1024,7 +1025,10 @@ export default function AddEditFormControll() {
 
           dispatch(updateFlag({ flag: "isRedirection", value: true }));
 
-          const requestBody = { tableName: tableName, recordId: uriDecodedMenu.id };
+          const requestBody = {
+            tableName: tableName,
+            recordId: uriDecodedMenu.id,
+          };
           const validateSubmitData = await validateSubmit(requestBody);
 
           if (validateSubmitData.success === true) {
@@ -1188,7 +1192,12 @@ export default function AddEditFormControll() {
 
           containerIddropdown:
             _containerId !== null
-              ? [{ value: _containerId, label: item.containerNo ?? String(_containerId) }]
+              ? [
+                  {
+                    value: _containerId,
+                    label: item.containerNo ?? String(_containerId),
+                  },
+                ]
               : [],
           sizeIddropdown:
             _sizeId !== null
@@ -1204,22 +1213,32 @@ export default function AddEditFormControll() {
               : [],
           containerTransactionIddropdown:
             _containerTransactionId !== null
-              ? [{
-                value: _containerTransactionId,
-                label: item.containerTransactionName ?? String(_containerTransactionId),
-              }]
+              ? [
+                  {
+                    value: _containerTransactionId,
+                    label:
+                      item.containerTransactionName ??
+                      String(_containerTransactionId),
+                  },
+                ]
               : [],
           containerRepairIddropdown:
             _containerRepairId !== null
-              ? [{
-                value: _containerRepairId,
-                label: item.containerRepairName ?? String(_containerRepairId),
-              }]
+              ? [
+                  {
+                    value: _containerRepairId,
+                    label:
+                      item.containerRepairName ?? String(_containerRepairId),
+                  },
+                ]
               : [],
           blIddropdown:
-            _blId !== null ? [{ value: _blId, label: item.blNo ?? String(_blId) }] : [],
+            _blId !== null
+              ? [{ value: _blId, label: item.blNo ?? String(_blId) }]
+              : [],
 
-          calculatedAmount: (Number(item.noOfDays) || 0) * (Number(item.rate) || 0),
+          calculatedAmount:
+            (Number(item.noOfDays) || 0) * (Number(item.rate) || 0),
         };
       });
     };
@@ -1230,7 +1249,7 @@ export default function AddEditFormControll() {
 
       const totalWeighted = detailsRows.reduce(
         (acc, r) => acc + (Number(r.noOfDays) || 0) * (Number(r.rate) || 0),
-        0
+        0,
       );
 
       const avgRate = qty > 0 ? totalWeighted / qty : 0;
@@ -1269,7 +1288,9 @@ export default function AddEditFormControll() {
     };
 
     setNewState((prev) => {
-      const prevCharges = Array.isArray(prev.tblInvoiceCharge) ? prev.tblInvoiceCharge : [];
+      const prevCharges = Array.isArray(prev.tblInvoiceCharge)
+        ? prev.tblInvoiceCharge
+        : [];
 
       // ✅ add indexValue to each CHARGE from API (0,1,2...) before mapping by id
       const apiChargesWithIndex = apiCharges.map((c, i) => ({
@@ -1280,7 +1301,7 @@ export default function AddEditFormControll() {
       const apiMap = new Map(
         apiChargesWithIndex
           .filter((x) => x && x.chargeId != null)
-          .map((x) => [Number(x.chargeId), x])
+          .map((x) => [Number(x.chargeId), x]),
       );
 
       const updatedExisting = prevCharges.map((ch) => {
@@ -1296,23 +1317,22 @@ export default function AddEditFormControll() {
         const thirdlevel = buildThirdLevelForSave(detailsRows, id);
 
         // ✅ FIX: currency dropdown (prefer apiRow.currencyIddropdown else derive from first detail row)
-        const derivedCurrencyDD =
-          pickValidDD(apiRow.currencyIddropdown).length
-            ? pickValidDD(apiRow.currencyIddropdown)
-            : pickValidDD(ch.currencyIddropdown).length
-              ? pickValidDD(ch.currencyIddropdown)
-              : mkDD(
+        const derivedCurrencyDD = pickValidDD(apiRow.currencyIddropdown).length
+          ? pickValidDD(apiRow.currencyIddropdown)
+          : pickValidDD(ch.currencyIddropdown).length
+            ? pickValidDD(ch.currencyIddropdown)
+            : mkDD(
                 ch.currencyId ?? apiRow.currencyId ?? prev.currencyId,
-                detailsRows?.[0]?.currencyName ?? detailsRows?.[0]?.currencyIddropdown?.[0]?.label
+                detailsRows?.[0]?.currencyName ??
+                  detailsRows?.[0]?.currencyIddropdown?.[0]?.label,
               );
 
         // ✅ FIX: charge dropdown (prefer apiRow.chargeIddropdown else derive)
-        const derivedChargeDD =
-          pickValidDD(apiRow.chargeIddropdown).length
-            ? pickValidDD(apiRow.chargeIddropdown)
-            : pickValidDD(ch.chargeIddropdown).length
-              ? pickValidDD(ch.chargeIddropdown)
-              : mkDD(id, apiRow.description ?? ch.description);
+        const derivedChargeDD = pickValidDD(apiRow.chargeIddropdown).length
+          ? pickValidDD(apiRow.chargeIddropdown)
+          : pickValidDD(ch.chargeIddropdown).length
+            ? pickValidDD(ch.chargeIddropdown)
+            : mkDD(id, apiRow.description ?? ch.description);
 
         return {
           ...ch,
@@ -1348,34 +1368,44 @@ export default function AddEditFormControll() {
           currencyId: ch.currencyId ?? apiRow.currencyId ?? prev.currencyId,
           exchangeRate: prev.exchangeRate ?? 1,
 
-          containerTransactionId: apiRow.containerTransactionId ?? ch.containerTransactionId ?? null,
-          containerRepairId: apiRow.containerRepairId ?? ch.containerRepairId ?? null,
+          containerTransactionId:
+            apiRow.containerTransactionId ?? ch.containerTransactionId ?? null,
+          containerRepairId:
+            apiRow.containerRepairId ?? ch.containerRepairId ?? null,
         };
       });
 
-      const existingIds = new Set(updatedExisting.map((x) => Number(x.chargeId)));
+      const existingIds = new Set(
+        updatedExisting.map((x) => Number(x.chargeId)),
+      );
 
       const newOnes = apiChargesWithIndex
-        .filter((x) => x && x.chargeId != null && !existingIds.has(Number(x.chargeId)))
+        .filter(
+          (x) =>
+            x && x.chargeId != null && !existingIds.has(Number(x.chargeId)),
+        )
         .map((apiRow) => {
           const id = Number(apiRow.chargeId);
 
           const detailsRows = buildChargeDetailsRows(apiRow.thirdlevel);
-          const totals = computeTotalsFromDetails(detailsRows, prev.exchangeRate);
+          const totals = computeTotalsFromDetails(
+            detailsRows,
+            prev.exchangeRate,
+          );
           const thirdlevel = buildThirdLevelForSave(detailsRows, id);
 
-          const derivedCurrencyDD =
-            pickValidDD(apiRow.currencyIddropdown).length
-              ? pickValidDD(apiRow.currencyIddropdown)
-              : mkDD(
+          const derivedCurrencyDD = pickValidDD(apiRow.currencyIddropdown)
+            .length
+            ? pickValidDD(apiRow.currencyIddropdown)
+            : mkDD(
                 apiRow.currencyId ?? prev.currencyId,
-                detailsRows?.[0]?.currencyName ?? detailsRows?.[0]?.currencyIddropdown?.[0]?.label
+                detailsRows?.[0]?.currencyName ??
+                  detailsRows?.[0]?.currencyIddropdown?.[0]?.label,
               );
 
-          const derivedChargeDD =
-            pickValidDD(apiRow.chargeIddropdown).length
-              ? pickValidDD(apiRow.chargeIddropdown)
-              : mkDD(id, apiRow.description ?? "");
+          const derivedChargeDD = pickValidDD(apiRow.chargeIddropdown).length
+            ? pickValidDD(apiRow.chargeIddropdown)
+            : mkDD(id, apiRow.description ?? "");
 
           return {
             chargeId: id,
@@ -1418,11 +1448,11 @@ export default function AddEditFormControll() {
 
       const invAmount = updatedCharges.reduce(
         (sum, ch) => sum + (Number(ch.totalAmountHc) || 0),
-        0
+        0,
       );
       const invAmountFc = updatedCharges.reduce(
         (sum, ch) => sum + (Number(ch.totalAmountFc) || 0),
-        0
+        0,
       );
 
       const taxHc = Number(prev.taxAmount || 0);
@@ -1440,7 +1470,6 @@ export default function AddEditFormControll() {
       };
     });
   }
-
 
   const onConfirm = async (conformData) => {
     if (
@@ -1460,7 +1489,7 @@ export default function AddEditFormControll() {
             id: uriDecodedMenu.id,
             menuName: uriDecodedMenu.menuName,
             parentMenuId: uriDecodedMenu.parentMenuId,
-          })}`
+          })}`,
         );
       }
     } else if (conformData.type === "onCheck") {
@@ -1536,7 +1565,7 @@ export default function AddEditFormControll() {
           }
         });
         const groupAllFieldsData = groupAndSortAllFields(
-          apiResponseData.fields
+          apiResponseData.fields,
         );
         setParentsFields(groupAllFieldsData);
         const resData = groupAndSortFields(apiResponseData.fields);
@@ -1589,7 +1618,6 @@ export default function AddEditFormControll() {
       console.error("Fetch Error :- ", error);
     }
   }
-  console.log("childsFields", childsFields);
 
   useEffect(() => {
     fetchData();
@@ -1640,6 +1668,40 @@ export default function AddEditFormControll() {
     });
   }, [newState?.tblInvoiceCharge, newState?.tblInvoiceCharge?.length]);
 
+  // useEffect(() => {
+  //   const pb = newState?.paymentBank;
+  //   if (!pb) return;
+
+  //   setNewState((prev) => {
+  //     const ledgers = Array.isArray(prev?.tblVoucherLedger)
+  //       ? [...prev.tblVoucherLedger]
+  //       : [];
+  //     const pbStr = String(pb);
+  //     const row0 = ledgers.length
+  //       ? { ...ledgers[0] }
+  //       : {
+  //         tblVoucherLedgerDetails: [],
+  //         glIddropdown: [],
+  //         glId: "",
+  //         isChecked: true,
+  //         indexValue: 0,
+  //       };
+
+  //     if (String(row0.glId || "") === pbStr && ledgers.length) return prev;
+
+  //     row0.glId = pbStr;
+
+  //     if (Array.isArray(prev?.paymentBankdropdown) && prev.paymentBankdropdown[0]) {
+  //       row0.glIddropdown = [prev.paymentBankdropdown[0]];
+  //     }
+
+  //     if (ledgers.length) ledgers[0] = row0;
+  //     else ledgers.push(row0);
+
+  //     return { ...prev, tblVoucherLedger: ledgers };
+  //   });
+  // }, [newState?.paymentBank]);
+
   useEffect(() => {
     // Prevent calculation if tblInvoiceCharge is empty or not available
     if (!Array.isArray(newState?.tblInvoiceCharge)) return;
@@ -1687,7 +1749,7 @@ export default function AddEditFormControll() {
     functionData,
     formControlData,
     setFormControlData,
-    setStateVariable
+    setStateVariable,
   ) {
     console.log("functionData", formControlData, setFormControlData);
     const funcNameMatch = functionData?.match(/^(\w+)/);
@@ -1735,7 +1797,7 @@ export default function AddEditFormControll() {
             funcCall,
             formControlData,
             setFormControlData,
-            setNewState
+            setNewState,
           );
         });
       }
@@ -1973,26 +2035,34 @@ export default function AddEditFormControll() {
 
     const asNum2 = (n) => round2(n);
 
+    // ✅ NEW: clamp to prevent negative balances/remaining (does NOT change existing flow)
+    const clamp0 = (n) => Math.max(0, round2(n));
+
     // ✅ pay amounts
     const payHC = toNum(newState?.amtRec ?? 0);
     const payFC = toNum(newState?.amtRecFC ?? 0);
 
     const hasLedgers =
-      Array.isArray(newState?.tblVoucherLedger) && newState.tblVoucherLedger.length > 0;
+      Array.isArray(newState?.tblVoucherLedger) &&
+      newState.tblVoucherLedger.length > 0;
 
     const ledgers = hasLedgers
       ? newState.tblVoucherLedger
       : [
-        {
-          __virtual: true,
-          tblVoucherLedgerDetails: Array.isArray(newState?.tblVoucherLedgerDetails)
-            ? newState.tblVoucherLedgerDetails
-            : [],
-        },
-      ];
+          {
+            __virtual: true,
+            tblVoucherLedgerDetails: Array.isArray(
+              newState?.tblVoucherLedgerDetails,
+            )
+              ? newState.tblVoucherLedgerDetails
+              : [],
+          },
+        ];
 
     const allDetails = ledgers.flatMap((l) =>
-      Array.isArray(l?.tblVoucherLedgerDetails) ? l.tblVoucherLedgerDetails : []
+      Array.isArray(l?.tblVoucherLedgerDetails)
+        ? l.tblVoucherLedgerDetails
+        : [],
     );
 
     if (DBG) {
@@ -2040,7 +2110,8 @@ export default function AddEditFormControll() {
         return v?.c === cur?.c && v?.d === cur?.d && v?.df === cur?.df;
       });
 
-    const willReturn = prev.amtHC === amtHCKey && prev.amtFC === amtFCKey && sameChecks;
+    const willReturn =
+      prev.amtHC === amtHCKey && prev.amtFC === amtFCKey && sameChecks;
 
     if (DBG) {
       console.log(`${tag} GUARD`, {
@@ -2055,7 +2126,11 @@ export default function AddEditFormControll() {
 
     if (willReturn) return;
 
-    allocPrevRef.current = { amtHC: amtHCKey, amtFC: amtFCKey, checks: checksNow };
+    allocPrevRef.current = {
+      amtHC: amtHCKey,
+      amtFC: amtFCKey,
+      checks: checksNow,
+    };
 
     // PASS 1: build rows, set unchecked debit to "0.00", keep checked debits
     let sumCheckedHC = 0;
@@ -2071,11 +2146,15 @@ export default function AddEditFormControll() {
         const isChecked = !!row?.isChecked;
 
         const origBalHC =
-          row?.__origBalHC != null ? toNum(row.__origBalHC) : toNum(row?.balanceAmount);
+          row?.__origBalHC != null
+            ? toNum(row.__origBalHC)
+            : toNum(row?.balanceAmount);
         const origBalFC =
-          row?.__origBalFC != null ? toNum(row.__origBalFC) : toNum(row?.balanceAmountFc);
+          row?.__origBalFC != null
+            ? toNum(row.__origBalFC)
+            : toNum(row?.balanceAmountFc);
 
-        // ✅ unchecked → set debit "0.00" + restore balances
+        // ✅ unchecked → set debit "0.00" + restore balances (clamped to avoid negatives)
         if (!isChecked) {
           return {
             ...row,
@@ -2085,8 +2164,8 @@ export default function AddEditFormControll() {
             debitAmountFc: "0.00",
             creditAmount: row?.creditAmount ?? "",
             creditAmountFc: row?.creditAmountFc ?? "",
-            balanceAmount: asNum2(origBalHC),
-            balanceAmountFc: asNum2(origBalFC),
+            balanceAmount: asNum2(clamp0(origBalHC)),
+            balanceAmountFc: asNum2(clamp0(origBalFC)),
           };
         }
 
@@ -2094,8 +2173,11 @@ export default function AddEditFormControll() {
         const existingHC = toNum(row?.debitAmount);
         const existingFC = toNum(row?.debitAmountFc);
 
-        const keepHC = existingHC > 0 ? Math.min(existingHC, origBalHC) : 0;
-        const keepFC = existingFC > 0 ? Math.min(existingFC, origBalFC) : 0;
+        // keep values within orig balances and clamp to >= 0
+        const keepHC =
+          existingHC > 0 ? clamp0(Math.min(existingHC, origBalHC)) : 0;
+        const keepFC =
+          existingFC > 0 ? clamp0(Math.min(existingFC, origBalFC)) : 0;
 
         sumCheckedHC = round2(sumCheckedHC + keepHC);
         sumCheckedFC = round2(sumCheckedFC + keepFC);
@@ -2104,12 +2186,13 @@ export default function AddEditFormControll() {
           ...row,
           __origBalHC: origBalHC,
           __origBalFC: origBalFC,
-          debitAmount: keepHC > 0 ? asStr2(keepHC) : "",     // blank means "auto-fill later"
+          debitAmount: keepHC > 0 ? asStr2(keepHC) : "", // blank means "auto-fill later"
           debitAmountFc: keepFC > 0 ? asStr2(keepFC) : "",
           creditAmount: row?.creditAmount ?? "",
           creditAmountFc: row?.creditAmountFc ?? "",
-          balanceAmount: asNum2(round2(origBalHC - keepHC)),
-          balanceAmountFc: asNum2(round2(origBalFC - keepFC)),
+          // ✅ clamp so balances never go negative
+          balanceAmount: asNum2(clamp0(origBalHC - keepHC)),
+          balanceAmountFc: asNum2(clamp0(origBalFC - keepFC)),
         };
       });
 
@@ -2117,8 +2200,9 @@ export default function AddEditFormControll() {
     });
 
     // remaining after keeping explicit checked debits
-    let remHC = round2(payHC - sumCheckedHC);
-    let remFC = round2(payFC - sumCheckedFC);
+    // ✅ clamp so remaining doesn't go negative (prevents negative allocations later)
+    let remHC = clamp0(payHC - sumCheckedHC);
+    let remFC = clamp0(payFC - sumCheckedFC);
 
     if (DBG) {
       console.log(`${tag} PASS1`, { sumCheckedHC, sumCheckedFC, remHC, remFC });
@@ -2139,22 +2223,28 @@ export default function AddEditFormControll() {
         if (existingHC > 0 || existingFC > 0) return row;
 
         const origBalHC =
-          row?.__origBalHC != null ? toNum(row.__origBalHC) : toNum(row?.balanceAmount);
+          row?.__origBalHC != null
+            ? toNum(row.__origBalHC)
+            : toNum(row?.balanceAmount);
         const origBalFC =
-          row?.__origBalFC != null ? toNum(row.__origBalFC) : toNum(row?.balanceAmountFc);
+          row?.__origBalFC != null
+            ? toNum(row.__origBalFC)
+            : toNum(row?.balanceAmountFc);
 
-        const allocHC = Math.min(remHC, origBalHC);
-        const allocFC = Math.min(remFC, origBalFC);
+        // ✅ allocate only from non-negative remaining + within original balance
+        const allocHC = clamp0(Math.min(remHC, origBalHC));
+        const allocFC = clamp0(Math.min(remFC, origBalFC));
 
-        remHC = round2(remHC - allocHC);
-        remFC = round2(remFC - allocFC);
+        remHC = clamp0(remHC - allocHC);
+        remFC = clamp0(remFC - allocFC);
 
         return {
           ...row,
           debitAmount: allocHC > 0 ? asStr2(allocHC) : "0.00",
           debitAmountFc: allocFC > 0 ? asStr2(allocFC) : "0.00",
-          balanceAmount: asNum2(round2(origBalHC - allocHC)),
-          balanceAmountFc: asNum2(round2(origBalFC - allocFC)),
+          // ✅ clamp so balances never go negative
+          balanceAmount: asNum2(clamp0(origBalHC - allocHC)),
+          balanceAmountFc: asNum2(clamp0(origBalFC - allocFC)),
         };
       });
 
@@ -2163,14 +2253,24 @@ export default function AddEditFormControll() {
 
     // ✅ Prevent setNewState loop if nothing actually changed
     const computeSig = (stateObj) => {
-      const sLedgers = Array.isArray(stateObj?.tblVoucherLedger) && stateObj.tblVoucherLedger.length
-        ? stateObj.tblVoucherLedger
-        : [
-          { tblVoucherLedgerDetails: Array.isArray(stateObj?.tblVoucherLedgerDetails) ? stateObj.tblVoucherLedgerDetails : [] },
-        ];
+      const sLedgers =
+        Array.isArray(stateObj?.tblVoucherLedger) &&
+        stateObj.tblVoucherLedger.length
+          ? stateObj.tblVoucherLedger
+          : [
+              {
+                tblVoucherLedgerDetails: Array.isArray(
+                  stateObj?.tblVoucherLedgerDetails,
+                )
+                  ? stateObj.tblVoucherLedgerDetails
+                  : [],
+              },
+            ];
 
       const sAll = sLedgers.flatMap((l) =>
-        Array.isArray(l?.tblVoucherLedgerDetails) ? l.tblVoucherLedgerDetails : []
+        Array.isArray(l?.tblVoucherLedgerDetails)
+          ? l.tblVoucherLedgerDetails
+          : [],
       );
 
       return JSON.stringify({
@@ -2191,17 +2291,18 @@ export default function AddEditFormControll() {
     setNewState((prevState) => {
       const out = Array.isArray(prevState?.tblVoucherLedger)
         ? {
-          ...prevState,
-          tblVoucherLedger: filledLedgers.filter((l) => !l?.__virtual),
-          balanceAmtHc: asStr2(remHC),
-          balanceAmtFc: asStr2(remFC),
-        }
+            ...prevState,
+            tblVoucherLedger: filledLedgers.filter((l) => !l?.__virtual),
+            balanceAmtHc: asStr2(remHC),
+            balanceAmtFc: asStr2(remFC),
+          }
         : {
-          ...prevState,
-          tblVoucherLedgerDetails: filledLedgers[0]?.tblVoucherLedgerDetails || [],
-          balanceAmtHc: asStr2(remHC),
-          balanceAmtFc: asStr2(remFC),
-        };
+            ...prevState,
+            tblVoucherLedgerDetails:
+              filledLedgers[0]?.tblVoucherLedgerDetails || [],
+            balanceAmtHc: asStr2(remHC),
+            balanceAmtFc: asStr2(remFC),
+          };
 
       if (computeSig(prevState) === computeSig(out)) {
         if (DBG) console.log(`${tag} setNewState skipped (no diff)`);
@@ -2220,13 +2321,35 @@ export default function AddEditFormControll() {
       return out;
     });
 
-    if (DBG) console.log("====================================================================");
+    if (DBG)
+      console.log(
+        "====================================================================",
+      );
   }, [
     newState?.amtRec,
     newState?.amtRecFC,
     newState?.tblVoucherLedger,
     newState?.tblVoucherLedgerDetails,
   ]);
+
+  //  useEffect(() => {
+  //     const list = newState?.tblVoucherLedgerDetails ?? [];
+  //     if (!list.length) return;
+
+  //     const sumField = (field) =>
+  //       list.reduce((sum, row) => sum + (parseFloat(row[field]) || 0), 0);
+
+  //     setTotals({
+  //       // osAmtFC: sumField("OsAmtFC").toFixed(2),
+  //       // osAmtHC: sumField("OsAmtHC").toFixed(2),
+  //       // allocatedAmtHC: sumField("allocatedAmtHC").toFixed(2),
+  //       // allocatedAmtFC: sumField("allocatedAmtFC").toFixed(2),
+  //       balanceAmtFC: sumField("balanceAmtFC").toFixed(2),
+  //       balanceAmtHC: sumField("balanceAmtHC").toFixed(2),
+  //       tdsAmtFC: sumField("tdsAmtFC").toFixed(2),
+  //       tdsAmtHC: sumField("tdsAmtHC").toFixed(2),
+  //     });
+  //   }, [newState?.tblVoucherLedgerDetails]);
 
   return (
     <div className={`h-screen relative`}>
@@ -2447,7 +2570,7 @@ function ParentAccordianComponent({
       return;
     }
     // let data = { ...result.values };
-    let data = { ...result.newState };
+    let data = { ...result?.newState };
     setNewState((pre) => {
       return {
         ...pre,
@@ -2698,7 +2821,7 @@ function ChildAccordianComponent({
           feild.isRequired &&
           (!Object.prototype.hasOwnProperty.call(
             childObject,
-            feild.fieldname
+            feild.fieldname,
           ) ||
             childObject[feild.fieldname]?.trim() === "")
         ) {
@@ -2723,7 +2846,7 @@ function ChildAccordianComponent({
               newState,
               formControlData,
               Data,
-              setChildObject
+              setChildObject,
             );
             if (updatedData?.alertShow == true) {
               // if (updatedData.type == "success") {
@@ -2934,7 +3057,8 @@ function ChildAccordianComponent({
     const container = tableRef.current;
     if (container) {
       const { scrollTop, scrollHeight, clientHeight } = container;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight;
+      const threshold = 5; // px
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - threshold;
       if (isAtBottom) {
         // console.log("You have reached the bottom of the scroll.");
         renderMoreData();
@@ -2953,13 +3077,13 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-              // const parsedValue = parseFloat(row[item.fieldname] || 0);
-              const parsedValue =
-                typeof row[item.fieldname] === "number"
-                  ? row[item.fieldname]
-                  : parseFloat(row[item.fieldname] || 0);
-              return isNaN(parsedValue) ? sum : sum + parsedValue;
-            }, 0) // Calculate sum for 's' type
+                // const parsedValue = parseFloat(row[item.fieldname] || 0);
+                const parsedValue =
+                  typeof row[item.fieldname] === "number"
+                    ? row[item.fieldname]
+                    : parseFloat(row[item.fieldname] || 0);
+                return isNaN(parsedValue) ? sum : sum + parsedValue;
+              }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -2980,7 +3104,7 @@ function ChildAccordianComponent({
     const lastIndex = renderedData.length + 10;
     const newData = newState[section.tableName]?.slice(
       renderedData.length,
-      lastIndex
+      lastIndex,
     );
     setRenderedData((prevData) => [...prevData, ...newData]);
   };
@@ -2989,7 +3113,7 @@ function ChildAccordianComponent({
     setNewState((prevState) => {
       const newStateCopy = { ...prevState };
       const updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx !== index
+        (_, idx) => idx !== index,
       );
       newStateCopy[section.tableName] = updatedData;
       if (updatedData.length === 0) {
@@ -3000,7 +3124,7 @@ function ChildAccordianComponent({
     setSubmitNewState((prevState) => {
       const newStateCopy = { ...prevState };
       const updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx !== index
+        (_, idx) => idx !== index,
       );
       newStateCopy[section.tableName] = updatedData;
       if (updatedData.length === 0) {
@@ -3011,7 +3135,7 @@ function ChildAccordianComponent({
     setOriginalData((prevState) => {
       const newStateCopy = { ...prevState };
       const updatedData = newStateCopy[section.tableName]?.filter(
-        (_, idx) => idx !== index
+        (_, idx) => idx !== index,
       );
       newStateCopy[section.tableName] = updatedData;
       // if (updatedData?.length === 0) {
@@ -3027,7 +3151,7 @@ function ChildAccordianComponent({
       const newStateCopy = { ...newState, ...prevState };
       // Assume each entry in the array has an 'id' property
       let updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx === index
+        (_, idx) => idx === index,
       );
       updatedData = { ...updatedData[0], isChecked: false };
       newStateCopy[section.tableName][index] = updatedData;
@@ -3040,7 +3164,7 @@ function ChildAccordianComponent({
       //   (item) => item._id !== id
       // );
       let updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx === index
+        (_, idx) => idx === index,
       );
       updatedData = { ...updatedData[0], isChecked: false };
       newStateCopy[section.tableName][index] = updatedData;
@@ -3376,7 +3500,7 @@ function ChildAccordianComponent({
     formControlData,
     setFormControlData,
     setStateVariable,
-    values
+    values,
   ) {
     const funcNameMatch = functionData?.match(/^(\w+)/);
     const argsMatch = functionData?.match(/\((.*)\)/);
@@ -3425,13 +3549,12 @@ function ChildAccordianComponent({
             formControlData,
             setFormControlData,
             setChildObject,
-            childObject
+            childObject,
           );
         });
       }
     }
   }, [inputFieldsVisible]);
-
 
   return (
     <>
@@ -3621,7 +3744,7 @@ function ChildAccordianComponent({
                         width: "100%",
                         height:
                           newState[section.tableName]?.length > 10
-                            ? "290px"
+                            ? "285px"
                             : "auto",
                         overflowY:
                           newState[section.tableName]?.length > 10
@@ -3651,7 +3774,7 @@ function ChildAccordianComponent({
                                       event,
                                       field.fieldname,
                                       section,
-                                      section.fields
+                                      section.fields,
                                     )
                                   } // Add the right-click handler here
                                 >
@@ -3787,7 +3910,7 @@ function ChildAccordianComponent({
                                             {(field.type === "number" ||
                                               field.type === "decimal" ||
                                               field.type === "string") &&
-                                              field.gridTotal
+                                            field.gridTotal
                                               ? columnTotals[field.fieldname]
                                               : ""}
                                           </div>

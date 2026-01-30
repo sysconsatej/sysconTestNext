@@ -72,14 +72,3 @@
   overflow: auto;
 }
 
-
-/* ✅ Optional: keep tabs in one line but scroll horizontally instead of wrapping */
-/*
-.tabsBar {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-*/
-
-

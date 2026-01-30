@@ -23,6 +23,17 @@ import {
   totalSumChildStyle,
   expandIconStyle,
 } from "@/app/globalCss";
+import SearchEditGrid from "./SearchEditGrid";
+
+const exBondColumns = [
+  { field: "voyage", headerName: "Voyage", width: 160 },
+  { field: "igmNo", headerName: "IGM No", width: 140 },
+  { field: "igmDate", headerName: "IGM Date", width: 140 },
+  { field: "noOfPkg", headerName: "No Of Pkg", width: 140 },
+  { field: "bondNo", headerName: "Bond No", width: 140 },
+  { field: "bondDate", headerName: "Bond Date", width: 140 },
+  { field: "warehouse", headerName: "Warehouse", width: 220 },
+];
 
 const formdata = {
   "Main": [
@@ -386,8 +397,7 @@ const formdata = {
       "isBreak": false,
       "ordering": 24
     }
-  ]
-  ,
+  ],
   "Stuffing Details": [
     {
       "fieldname": "goodsStuffedAtId",
@@ -510,7 +520,6 @@ const formdata = {
       "ordering": 8
     }
   ],
-
   "Invoice Printing": [
     {
       "fieldname": "buyersOrderNo",
@@ -588,354 +597,438 @@ const formdata = {
       "ordering": 5
     }
   ],
- 
   "shipping bill Printing": [
-  {
-    "fieldname": "qCertNoDate",
-    "yourlabel": "Q/Cert. No./Date",
-    "controlname": "text",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 1
-  },
-  {
-    "fieldname": "exportTradeControl",
-    "yourlabel": "Export Trade Control",
-    "controlname": "textarea",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 2
-  },
-  {
-    "fieldname": "typeOfShipmentId",
-    "yourlabel": "Type of Shipment",
-    "controlname": "dropdown",
-    "referenceTable": "tblMasterData",
-    "referenceColumn": "name",
-    "dropdownFilter": "and masterListId in (select id from tblMasterList where name = 'tblTypeOfShipment')",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 3
-  },
-  {
-    "fieldname": "shipmentTypeOther",
-    "yourlabel": "Specify, if Other",
-    "controlname": "text",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 4
-  },
-  {
-    "fieldname": "permissionNoDate",
-    "yourlabel": "Permission No. & Date",
-    "controlname": "text",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 5
-  },
-  {
-    "fieldname": "exportUnderId",
-    "yourlabel": "Export Under",
-    "controlname": "dropdown",
-    "referenceTable": "tblMasterData",
-    "referenceColumn": "name",
-    "dropdownFilter": "and masterListId in (select id from tblMasterList where name = 'tblExportUnder')",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 6
-  },
-  {
-    "fieldname": "sbHeading",
-    "yourlabel": "S/B Heading",
-    "controlname": "text",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 7
-  },
-  {
-    "fieldname": "sbBottomText",
-    "yourlabel": "Text to be printed on S/B bottom area",
-    "controlname": "textarea",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": true,
-    "ordering": 8
-  }
-]
-,
-  "Ex-Bond Details": [
     {
-
+      "fieldname": "qCertNoDate",
+      "yourlabel": "Q/Cert. No./Date",
+      "controlname": "text",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 1
+    },
+    {
+      "fieldname": "exportTradeControl",
+      "yourlabel": "Export Trade Control",
+      "controlname": "textarea",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 2
+    },
+    {
+      "fieldname": "typeOfShipmentId",
+      "yourlabel": "Type of Shipment",
+      "controlname": "dropdown",
+      "referenceTable": "tblMasterData",
+      "referenceColumn": "name",
+      "dropdownFilter": "and masterListId in (select id from tblMasterList where name = 'tblTypeOfShipment')",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 3
+    },
+    {
+      "fieldname": "shipmentTypeOther",
+      "yourlabel": "Specify, if Other",
+      "controlname": "text",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 4
+    },
+    {
+      "fieldname": "permissionNoDate",
+      "yourlabel": "Permission No. & Date",
+      "controlname": "text",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 5
+    },
+    {
+      "fieldname": "exportUnderId",
+      "yourlabel": "Export Under",
+      "controlname": "dropdown",
+      "referenceTable": "tblMasterData",
+      "referenceColumn": "name",
+      "dropdownFilter": "and masterListId in (select id from tblMasterList where name = 'tblExportUnder')",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 6
+    },
+    {
+      "fieldname": "sbHeading",
+      "yourlabel": "S/B Heading",
+      "controlname": "text",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 7
+    },
+    {
+      "fieldname": "sbBottomText",
+      "yourlabel": "Text to be printed on S/B bottom area",
+      "controlname": "textarea",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": true,
+      "ordering": 8
     }
   ],
+  "Ex-Bond Details": [
+    {
+      fieldname: "voyage",
+      yourlabel: "Voyage",
+      controlname: "text",
+      referenceTable: "",
+      referenceColumn: "",
+      dropdownFilter: "",
+      isControlShow: true,
+      isGridView: false,
+      isDataFlow: true,
+      isRequired: false,
+      isEditable: true,
+      isBreak: false,
+      ordering: 1,
+    },
+    {
+      fieldname: "igmNo",
+      yourlabel: "IGM No",
+      controlname: "text",
+      referenceTable: "",
+      referenceColumn: "",
+      dropdownFilter: "",
+      isControlShow: true,
+      isGridView: false,
+      isDataFlow: true,
+      isRequired: false,
+      isEditable: true,
+      isBreak: false,
+      ordering: 2,
+    },
+    {
+      fieldname: "igmDate",
+      yourlabel: "IGM Date",
+      controlname: "date",
+      referenceTable: "",
+      referenceColumn: "",
+      dropdownFilter: "",
+      isControlShow: true,
+      isGridView: false,
+      isDataFlow: true,
+      isRequired: false,
+      isEditable: true,
+      isBreak: false,
+      ordering: 3,
+    },
+    {
+      fieldname: "noOfPkg",
+      yourlabel: "No Of Pkg",
+      controlname: "number",
+      referenceTable: "",
+      referenceColumn: "",
+      dropdownFilter: "",
+      isControlShow: true,
+      isGridView: false,
+      isDataFlow: true,
+      isRequired: false,
+      isEditable: true,
+      isBreak: false,
+      ordering: 4,
+    },
+    {
+      fieldname: "bondNo",
+      yourlabel: "Bond No",
+      controlname: "text",
+      referenceTable: "",
+      referenceColumn: "",
+      dropdownFilter: "",
+      isControlShow: true,
+      isGridView: false,
+      isDataFlow: true,
+      isRequired: false,
+      isEditable: true,
+      isBreak: false,
+      ordering: 5,
+    },
+    {
+      fieldname: "bondDate",
+      yourlabel: "Bond Date",
+      controlname: "date",
+      referenceTable: "",
+      referenceColumn: "",
+      dropdownFilter: "",
+      isControlShow: true,
+      isGridView: false,
+      isDataFlow: true,
+      isRequired: false,
+      isEditable: true,
+      isBreak: false,
+      ordering: 6,
+    },
+    {
+      fieldname: "warehouse",
+      yourlabel: "Warehouse",
+      controlname: "text",
+      referenceTable: "",
+      referenceColumn: "",
+      dropdownFilter: "",
+      isControlShow: true,
+      isGridView: false,
+      isDataFlow: true,
+      isRequired: false,
+      isEditable: true,
+      isBreak: true,   // ✅ break to next line after long field
+      ordering: 7,
+    },
+  ],
   "Annex C1 Details": [
-  {
-    "fieldname": "ieCodeOfEou",
-    "yourlabel": "IE Code Of EOU",
-    "controlname": "text",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 1
-  },
-  {
-    "fieldname": "branchSlNo",
-    "yourlabel": "Branch Sl. No.",
-    "controlname": "number",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 2
-  },
-  {
-    "fieldname": "examinationDate",
-    "yourlabel": "Examination Date",
-    "controlname": "date",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 3
-  },
-  {
-    "fieldname": "examiningOfficer",
-    "yourlabel": "Examining Officer",
-    "controlname": "text",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 4
-  },
-  {
-    "fieldname": "examiningOfficerDesignation",
-    "yourlabel": "Designation",
-    "controlname": "text",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 5
-  },
-  {
-    "fieldname": "supervisingOfficer",
-    "yourlabel": "Supervising Officer",
-    "controlname": "text",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 6
-  },
-  {
-    "fieldname": "supervisingOfficerDesignation",
-    "yourlabel": "Designation",
-    "controlname": "text",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 7
-  },
-  {
-    "fieldname": "commissionerate",
-    "yourlabel": "Commissionerate",
-    "controlname": "text",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 8
-  },
-  {
-    "fieldname": "division",
-    "yourlabel": "Division",
-    "controlname": "text",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 9
-  },
-  {
-    "fieldname": "range",
-    "yourlabel": "Range",
-    "controlname": "text",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 10
-  },
-  {
-    "fieldname": "verifiedByExaminingOfficer",
-    "yourlabel": "Verified by Examining Officer",
-    "controlname": "checkbox",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 11
-  },
-  {
-    "fieldname": "sampleForwarded",
-    "yourlabel": "Sample Forwarded",
-    "controlname": "checkbox",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": false,
-    "ordering": 12
-  },
-  {
-    "fieldname": "sealNumber",
-    "yourlabel": "Seal Number",
-    "controlname": "text",
-    "referenceTable": "",
-    "referenceColumn": "",
-    "dropdownFilter": "",
-    "isControlShow": true,
-    "isGridView": false,
-    "isDataFlow": true,
-    "isRequired": false,
-    "isEditable": true,
-    "isBreak": true,
-    "ordering": 13
-  }
-]
-,
+    {
+      "fieldname": "ieCodeOfEou",
+      "yourlabel": "IE Code Of EOU",
+      "controlname": "text",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 1
+    },
+    {
+      "fieldname": "branchSlNo",
+      "yourlabel": "Branch Sl. No.",
+      "controlname": "number",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 2
+    },
+    {
+      "fieldname": "examinationDate",
+      "yourlabel": "Examination Date",
+      "controlname": "date",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 3
+    },
+    {
+      "fieldname": "examiningOfficer",
+      "yourlabel": "Examining Officer",
+      "controlname": "text",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 4
+    },
+    {
+      "fieldname": "examiningOfficerDesignation",
+      "yourlabel": "Designation",
+      "controlname": "text",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 5
+    },
+    {
+      "fieldname": "supervisingOfficer",
+      "yourlabel": "Supervising Officer",
+      "controlname": "text",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 6
+    },
+    {
+      "fieldname": "supervisingOfficerDesignation",
+      "yourlabel": "Designation",
+      "controlname": "text",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 7
+    },
+    {
+      "fieldname": "commissionerate",
+      "yourlabel": "Commissionerate",
+      "controlname": "text",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 8
+    },
+    {
+      "fieldname": "division",
+      "yourlabel": "Division",
+      "controlname": "text",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 9
+    },
+    {
+      "fieldname": "range",
+      "yourlabel": "Range",
+      "controlname": "text",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 10
+    },
+    {
+      "fieldname": "verifiedByExaminingOfficer",
+      "yourlabel": "Verified by Examining Officer",
+      "controlname": "checkbox",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 11
+    },
+    {
+      "fieldname": "sampleForwarded",
+      "yourlabel": "Sample Forwarded",
+      "controlname": "checkbox",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 12
+    },
+    {
+      "fieldname": "sealNumber",
+      "yourlabel": "Seal Number",
+      "controlname": "text",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": true,
+      "ordering": 13
+    }
+  ],
 }
 
-export default function GeneralSheet({
-  values = {},
-  onValuesChange,
-  // clearFlag,
-  inEditMode = { isEditMode: false, isCopy: false },
-  newState,
-  setStateVariable,
-}) {
-  const fields = useMemo(
-    () => [
-
-    ],
-    []
-  );
-
-  const [parentsFields, setParentsFields] = useState(formdata);
+export default function ShipmentSheet({ value, onChange }) {
+  const parentsFields = formdata;
   const [expandAll, setExpandAll] = useState(true);
   const [expandedAccordion, setExpandedAccordion] = useState([]);
-  const [newStateData, setNewState] = useState({ routeName: "mastervalue" });
   const [openModal, setOpenModal] = useState(false);
   const [paraText, setParaText] = useState("");
   const [isError, setIsError] = useState(false);
@@ -949,6 +1042,8 @@ export default function GeneralSheet({
   });
   const [tableName, setTableName] = useState(false);
   const [formControlData, setFormControlData] = useState([]);
+  const newState = value;          // ✅ source of truth
+  const setNewState = onChange;    // ✅ direct update
 
   const getLabelValue = (labelValue) => {
     //    console.log(labelValue, "labelValue");
@@ -956,34 +1051,24 @@ export default function GeneralSheet({
   };
   const [hideFieldName, setHideFieldName] = useState([]);
   const [labelName, setLabelName] = useState("");
-  const handleFieldValuesChange = (updatedValues) => {
-    const entries = Object.entries(updatedValues);
-    const hasFile = entries.some(([, value]) => value instanceof File);
 
-    if (hasFile) {
-      // Process each entry and handle files specifically
-      entries.forEach(([key, value]) => {
-        if (value instanceof File) {
-          // Process the file and update the corresponding key with JSON data
-          handleFileAndUpdateState(value, (jsonData) => {
-            const newFormFieldsValues = { ...newState, [key]: jsonData };
-            setNewState(newFormFieldsValues);
-            setSubmitNewState(newFormFieldsValues);
-          });
-        } else {
-          // Directly merge non-file data into the state
-          const newFormFieldsValues = { ...newState, [key]: value };
-          setNewState(newFormFieldsValues);
-          setSubmitNewState(newFormFieldsValues);
-        }
+  const handleFieldValuesChange = (updatedValues = {}) => {
+    setNewState((prev) => {
+      const next = { ...(prev || {}) };
+
+      Object.entries(updatedValues).forEach(([key, value]) => {
+        next[key] = value;
       });
-    } else {
-      // No files, proceed as normal
-      const formFieldsValues = { ...newState, ...updatedValues };
-      setNewState(formFieldsValues);
-      setSubmitNewState(formFieldsValues);
-    }
+
+      return next;
+    });
+
+    setSubmitNewState((prev) => ({
+      ...(prev || {}),
+      ...updatedValues,
+    }));
   };
+
 
   const handleFieldValuesChange2 = async (
     updatedValues,
@@ -1075,28 +1160,48 @@ export default function GeneralSheet({
         data: [dataObj, ...(getCopyDetails?.data?.slice(1) || [])],
       };
 
+      // setNewState((prevState) => {
+      //   finalIndexdata.keyToValidate.fieldsMaping.forEach((data) => {
+      //     if (data.isChild == "true") {
+      //       if (typeof prevState[data.ToColmunName] === "undefined") {
+      //         prevState[data.ToColmunName] = [];
+      //       }
+      //       for (const iterator of finalIndexdata.data[0][data.ToColmunName]) {
+      //         prevState[data.ToColmunName].push(iterator);
+      //       }
+
+      //       //            console.log("prevState", prevState);
+      //     }
+      //   });
+      //   // return {
+      //   //   ...prevState,
+      //   //   ...dataToCopy,
+      //   // };
+      //   return {
+      //     ...prevState,
+      //     ...finalIndexdata.data[0],
+      //   };
+      // });
+
       setNewState((prevState) => {
+        const next = { ...(prevState || {}) };
+
         finalIndexdata.keyToValidate.fieldsMaping.forEach((data) => {
           if (data.isChild == "true") {
-            if (typeof prevState[data.ToColmunName] === "undefined") {
-              prevState[data.ToColmunName] = [];
-            }
-            for (const iterator of finalIndexdata.data[0][data.ToColmunName]) {
-              prevState[data.ToColmunName].push(iterator);
-            }
-
-            //            console.log("prevState", prevState);
+            const key = data.ToColmunName;
+            next[key] = [
+              ...(next[key] || []),
+              ...(finalIndexdata.data[0][key] || []),
+            ];
           }
         });
-        // return {
-        //   ...prevState,
-        //   ...dataToCopy,
-        // };
+
         return {
-          ...prevState,
+          ...next,
           ...finalIndexdata.data[0],
         };
       });
+
       setSubmitNewState((prevState) => ({
         ...prevState,
         ...finalIndexdata.data[0],
@@ -1107,11 +1212,6 @@ export default function GeneralSheet({
       console.error("Fetch Error :", error);
     }
   };
-
-  const orderedFields = useMemo(
-    () => [...fields].sort((a, b) => (a.ordering ?? 0) - (b.ordering ?? 0)),
-    [fields]
-  );
 
   const ui = useMemo(
     () => ({
@@ -1173,16 +1273,6 @@ export default function GeneralSheet({
     </>
   );
 }
-
-GeneralSheet.propTypes = {
-  values: PropTypes.object,
-  onValuesChange: PropTypes.func,
-  clearFlag: PropTypes.object,
-  inEditMode: PropTypes.object,
-  newState: PropTypes.object,
-  setStateVariable: PropTypes.func,
-};
-
 
 ParentAccordianComponent.propTypes = {
   section: PropTypes.any,
@@ -1302,25 +1392,16 @@ function ParentAccordianComponent({
     <React.Fragment key={indexValue}>
       <Accordion
         expanded={isParentAccordionOpen}
-        sx={{
-          ...parentAccordionSection,
-          // border: isParentAccordionOpen ? "  red" : "none",
-        }}
-        key={indexValue}
+        onChange={() => setIsParentAccordionOpen((p) => !p)}
+        sx={{ ...parentAccordionSection }}
       >
         <AccordionSummary
-          className="relative left-[11px]"
           sx={{ ...SummaryStyles }}
           expandIcon={
             <LightTooltip title={isParentAccordionOpen ? "Collapse" : "Expand"}>
-              <ExpandMoreIcon
-                sx={{ ...expandIconStyle }}
-                onClick={() => setIsParentAccordionOpen((prev) => !prev)}
-              />
+              <ExpandMoreIcon sx={{ ...expandIconStyle }} />
             </LightTooltip>
           }
-          aria-controls={`panel${indexValue + 1}-content`}
-          id={`panel${indexValue + 1}-header`}
         >
           <Typography className="relative right-[11px]" key={indexValue}>
             {section}
@@ -1329,34 +1410,65 @@ function ParentAccordianComponent({
 
         <AccordionDetails
           className={` overflow-hidden p-0 ${styles.thinScrollBar}`}
-          sx={{
-            ...accordianDetailsStyleForm,
-          }}
+          sx={{ ...accordianDetailsStyleForm }}
         >
-          <div className="">
-            <CustomeInputFields
-              inputFieldData={parentsFields[section]}
-              values={newState}
-              onValuesChange={handleFieldValuesChange}
-              handleFieldValuesChange2={handleFieldValuesChange2}
-              inEditMode={{ isEditMode: false, isCopy: true }}
-              onChangeHandler={(result) => {
-                handleChangeFunction(result);
-                //                console.log("result---", result);
-              }}
-              onBlurHandler={(result) => {
-                handleBlurFunction(result);
-              }}
-              clearFlag={clearFlag}
-              newState={newState}
-              tableName={parentTableName}
-              formControlData={formControlData}
-              setFormControlData={setFormControlData}
-              setStateVariable={setNewState}
-              getLabelValue={getLabelValue}
-              hideColumnsId={fieldId}
-            />
-          </div>
+          {section === "Ex-Bond Details" ? (
+            <div className="p-1">
+              <SearchEditGrid
+                title="Ex-Bond Details"
+                columns={exBondColumns}
+                editorFields={parentsFields?.[section] || []}
+                rowIdField="id"
+                fetchPayload={{ jobId: newState?.jobId }}
+                fetchRows={async (payload) => {
+                  return { data: [], totalCount: 0 };
+                }}
+                onSave={async (row) => row}
+                onDelete={async (row) => { }}
+                height={220}
+              />
+
+              <div className="mt-2">
+                <CustomeInputFields
+                  inputFieldData={parentsFields?.[section] || []}
+                  values={newState}
+                  onValuesChange={handleFieldValuesChange}
+                  handleFieldValuesChange2={handleFieldValuesChange2}
+                  inEditMode={{ isEditMode: false, isCopy: true }}
+                  onChangeHandler={(result) => handleChangeFunction(result)}
+                  onBlurHandler={(result) => handleBlurFunction(result)}
+                  clearFlag={clearFlag}
+                  newState={newState}
+                  tableName={parentTableName}
+                  formControlData={formControlData}
+                  setFormControlData={setFormControlData}
+                  setStateVariable={setNewState}
+                  getLabelValue={getLabelValue}
+                  hideColumnsId={fieldId}
+                />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <CustomeInputFields
+                inputFieldData={parentsFields[section]}
+                values={newState}
+                onValuesChange={handleFieldValuesChange}
+                handleFieldValuesChange2={handleFieldValuesChange2}
+                inEditMode={{ isEditMode: false, isCopy: true }}
+                onChangeHandler={(result) => handleChangeFunction(result)}
+                onBlurHandler={(result) => handleBlurFunction(result)}
+                clearFlag={clearFlag}
+                newState={newState}
+                tableName={parentTableName}
+                formControlData={formControlData}
+                setFormControlData={setFormControlData}
+                setStateVariable={setNewState}
+                getLabelValue={getLabelValue}
+                hideColumnsId={fieldId}
+              />
+            </div>
+          )}
         </AccordionDetails>
       </Accordion>
     </React.Fragment>

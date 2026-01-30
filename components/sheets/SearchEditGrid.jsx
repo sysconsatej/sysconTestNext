@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable */
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import styles from "@/app/app.module.css";
 
@@ -17,14 +17,12 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import IconButton from "@mui/material/IconButton";
+import Button from "@mui/material/Button";
 import Tooltip from "@mui/material/Tooltip";
 import InputBase from "@mui/material/InputBase";
 import Divider from "@mui/material/Divider";
-import Button from "@mui/material/Button";
-import { useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
 
-// Icons
+// Icons (same as ContainerSheet)
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
@@ -35,7 +33,7 @@ import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 
-// ✅ Your theme-friendly styles (already in your project)
+// ✅ Your theme-friendly styles
 import {
     displayTablePaperStyles,
     displayTableContainerStyles,
@@ -46,170 +44,38 @@ import {
 } from "@/app/globalCss";
 
 /**
- * ✅ Bottom editor fields rendered using CustomeInputFields.
- * NOTE: for dropdowns, this assumes your CustomeInputFields supports `staticData`.
+ * SearchEditGrid (ContainerSheet-style)
+ * - Server-side paging (pageNo/pageSize)
+ * - Right-click column filter (keyName/keyValue)
+ * - Row hover actions: View/Edit/Copy/Delete
+ * - Top toolbar: New/Save/Close
+ * - Bottom editor using CustomeInputFields (no bottom buttons)
  */
-const bottomFormdata = {
-    "Container Details": [
-        {
-            id: 1,
-            fieldname: "containerNo",
-            yourlabel: "Container No",
-            controlname: "text",
-            type: 6902,
-            typeValue: "string",
-            ordering: 1,
-            isControlShow: true,
-            isGridView: false,
-            isEditable: true,
-            isRequired: false,
-            sectionHeader: "General",
-            sectionOrder: 1,
-        },
-        {
-            id: 2,
-            fieldname: "type",
-            yourlabel: "Type",
-            controlname: "dropdown",
-            type: 6902,
-            typeValue: "string",
-            ordering: 2,
-            isControlShow: true,
-            isGridView: false,
-            isEditable: true,
-            isRequired: false,
-            sectionHeader: "General",
-            sectionOrder: 1,
-            staticData: [
-                { id: "20 High Cube", name: "20 High Cube" },
-                { id: "40 High Cube", name: "40 High Cube" },
-                { id: "20 GP", name: "20 GP" },
-                { id: "40 GP", name: "40 GP" },
-            ],
-        },
-        {
-            id: 3,
-            fieldname: "pkgsStuffed",
-            yourlabel: "Pkgs Stuffed",
-            controlname: "text",
-            type: 6902,
-            typeValue: "string",
-            ordering: 3,
-            isControlShow: true,
-            isGridView: false,
-            isEditable: true,
-            isRequired: false,
-            sectionHeader: "General",
-            sectionOrder: 1,
-        },
-        {
-            id: 4,
-            fieldname: "grossWeight",
-            yourlabel: "Gross Weight",
-            controlname: "text",
-            type: 6902,
-            typeValue: "string",
-            ordering: 4,
-            isControlShow: true,
-            isGridView: false,
-            isEditable: true,
-            isRequired: false,
-            sectionHeader: "General",
-            sectionOrder: 1,
-        },
-        {
-            id: 5,
-            fieldname: "sealNo",
-            yourlabel: "Seal No",
-            controlname: "text",
-            type: 6902,
-            typeValue: "string",
-            ordering: 5,
-            isControlShow: true,
-            isGridView: false,
-            isEditable: true,
-            isRequired: false,
-            sectionHeader: "General",
-            sectionOrder: 2,
-        },
-        {
-            id: 6,
-            fieldname: "sealDate",
-            yourlabel: "Seal Date",
-            controlname: "text", // change to "date" if supported
-            type: 6902,
-            typeValue: "string",
-            ordering: 6,
-            isControlShow: true,
-            isGridView: false,
-            isEditable: true,
-            isRequired: false,
-            sectionHeader: "General",
-            sectionOrder: 2,
-        },
-        {
-            id: 7,
-            fieldname: "sealType",
-            yourlabel: "Seal Type",
-            controlname: "dropdown",
-            type: 6902,
-            typeValue: "string",
-            ordering: 7,
-            isControlShow: true,
-            isGridView: false,
-            isEditable: true,
-            isRequired: false,
-            sectionHeader: "General",
-            sectionOrder: 2,
-            staticData: [
-                { id: "BTSL - Bottle", name: "BTSL - Bottle" },
-                { id: "Cable", name: "Cable" },
-                { id: "Metal", name: "Metal" },
-            ],
-        },
-        {
-            id: 8,
-            fieldname: "location",
-            yourlabel: "Location",
-            controlname: "text",
-            type: 6902,
-            typeValue: "string",
-            ordering: 8,
-            isControlShow: true,
-            isGridView: false,
-            isEditable: true,
-            isRequired: false,
-            sectionHeader: "General",
-            sectionOrder: 2,
-        },
-    ],
-};
+export default function SearchEditGrid({
+    title = "",
+    columns = [],
+    editorFields = [],
+    rowIdField = "id",
 
-export default function ContainerSheet({ value, onChange }) {
-    // ✅ Replace with your real endpoints
-    const API_LIST = "/api/blcontainer/list";
-    const API_UPSERT = "/api/blcontainer/update";
-    const API_DELETE = "/api/blcontainer/delete";
+    fetchPayload = {},
+    fetchRows, // async (payload)=> { data:[], totalCount:number } OR []
+    onSave, // async (row)=> savedRow or ok
+    onDelete, // async (row)=> ok
 
-    const theme = useTheme();
-    useMediaQuery(theme.breakpoints.down("md")); // isMobile not used; keep if you want responsive tweaks later
-
+    height = 220,
+}) {
     const [loading, setLoading] = useState(false);
     const [rows, setRows] = useState([]);
-
-    // ✅ Parent state: single source of truth
-    const newState = value || {};
-    const setNewState = onChange;
 
     // ✅ paging
     const [page, setPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(15);
     const [totalCount, setTotalCount] = useState(0);
 
-    // ✅ (optional) global search
+    // ✅ optional global search (not shown)
     const [query, setQuery] = useState("");
 
-    // ✅ column right-click filter
+    // ✅ right-click column filter
     const [isColumnSearchOpen, setIsColumnSearchOpen] = useState(false);
     const [activeColumn, setActiveColumn] = useState(null);
     const [columnKeyName, setColumnKeyName] = useState("");
@@ -218,14 +84,11 @@ export default function ContainerSheet({ value, onChange }) {
     // ✅ selection + bottom editor
     const [selectedId, setSelectedId] = useState(null);
     const [mode, setMode] = useState("view"); // view | edit | new
-
-    // ✅ local form drives editor UI (BUT always sync to parent like InvoiceSheet)
-    const [form, setForm] = useState(getEmptyForm());
+    const [form, setForm] = useState({});
 
     // ✅ hover actions
     const [hoverRowId, setHoverRowId] = useState(null);
 
-    // ✅ local clearFlag
     const [clearFlagLocal, setClearFlagLocal] = useState({
         isClear: false,
         fieldName: "",
@@ -234,56 +97,39 @@ export default function ContainerSheet({ value, onChange }) {
     const safeStr = (v) => (v === null || v === undefined ? "" : String(v));
     const isEditable = mode === "edit" || mode === "new";
 
-    // ✅ columns (top grid)
-    const columns = useMemo(
-        () => [
-            { id: "containerNo", label: "Container No", minWidth: 200 },
-            { id: "sealNo", label: "Seal No", minWidth: 160 },
-            { id: "sealDate", label: "Seal Date", minWidth: 160 },
-            { id: "type", label: "Type", minWidth: 130 },
-            { id: "pkgsStuffed", label: "Pkgs stuffed", minWidth: 140 },
-            { id: "grossWeight", label: "Gross Weight", minWidth: 140 },
-            { id: "sealType", label: "Seal Type", minWidth: 160 },
-        ],
-        []
-    );
+    const totalPages = Math.max(1, Math.ceil((totalCount || 0) / rowsPerPage));
 
-    const normalizeRow = (r, idx) => ({
-        id: r?.blContainerId ?? r?.id ?? r?._id ?? idx + 1,
-        containerNo: r?.containerNo ?? "",
-        sealNo: r?.sealNo ?? "",
-        sealDate: r?.sealDate ?? "",
-        type: r?.containerType ?? r?.type ?? "",
-        pkgsStuffed: r?.pkgsStuffed ?? r?.pkgs ?? "",
-        grossWeight: r?.grossWt ?? r?.grossWeight ?? "",
-        sealType: r?.sealType ?? "",
-        location: r?.location ?? "",
-        __raw: r,
-    });
+    const normalizeRow = (r, idx) => {
+        const id =
+            r?.[rowIdField] ??
+            r?.id ??
+            r?._id ??
+            r?.rowId ??
+            idx + 1;
 
-    // ✅ helper: keep parent state synced EXACTLY like InvoiceSheet
-    const patchParent = useCallback(
-        (patch = {}) => {
-            // supports both setter styles:
-            // 1) setState(prev => ({...prev,...patch}))
-            // 2) setState(nextObj)
-            if (typeof setNewState === "function") {
-                try {
-                    setNewState((prev) => ({ ...(prev || {}), ...(patch || {}) }));
-                } catch (e) {
-                    // fallback if parent provided non-functional setter
-                    setNewState({ ...(newState || {}), ...(patch || {}) });
-                }
-            }
-        },
-        [setNewState, newState]
-    );
+        const mapped = { id };
 
-    // ✅ fetch list
-    const fetchRows = useCallback(async () => {
+        columns.forEach((c) => {
+            mapped[c.field] = r?.[c.field] ?? "";
+        });
+
+        mapped.__raw = r;
+        return mapped;
+    };
+
+    const buildEmptyFormFromFields = () => {
+        const base = { id: null };
+        (editorFields || []).forEach((f) => {
+            if (f?.fieldname) base[f.fieldname] = "";
+        });
+        return base;
+    };
+
+    const fetchList = async () => {
         setLoading(true);
         try {
             const payload = {
+                ...(fetchPayload || {}),
                 pageNo: page,
                 pageSize: rowsPerPage,
                 searchQuery: query?.trim() || "",
@@ -291,46 +137,59 @@ export default function ContainerSheet({ value, onChange }) {
                 keyValue: columnKeyValue || "",
             };
 
-            const res = await fetch(API_LIST, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
+            const out = await fetchRows?.(payload);
 
-            if (!res.ok) throw new Error("Failed to load tblBlContainer data");
-
-            const json = await res.json();
-
-            const dataArr = Array.isArray(json?.data)
-                ? json.data
-                : Array.isArray(json)
-                    ? json
-                    : [];
+            const dataArr = Array.isArray(out)
+                ? out
+                : Array.isArray(out?.data)
+                    ? out.data
+                    : Array.isArray(out?.rows)
+                        ? out.rows
+                        : [];
 
             const mapped = dataArr.map((r, idx) => normalizeRow(r, idx));
             setRows(mapped);
-            setTotalCount(Number(json?.totalCount ?? json?.count ?? mapped.length ?? 0));
 
+            const tc = Number(out?.totalCount ?? out?.count ?? mapped.length ?? 0);
+            setTotalCount(tc);
+
+            // if selected no longer exists
             if (selectedId && !mapped.some((x) => x.id === selectedId)) {
                 setSelectedId(null);
                 setMode("view");
-                setForm(getEmptyForm());
-                patchParent(getEmptyFormForParent()); // ✅ keep parent clean too
+                setForm(buildEmptyFormFromFields());
             }
         } catch (e) {
-            console.error("tblBlContainer fetch error:", e);
+            console.error("[SearchEditGrid] fetch error:", e);
             setRows([]);
             setTotalCount(0);
         } finally {
             setLoading(false);
         }
-    }, [API_LIST, page, rowsPerPage, query, columnKeyName, columnKeyValue, selectedId, patchParent]);
+    };
 
+    // fetch on dependencies
     useEffect(() => {
-        fetchRows();
-    }, [fetchRows]);
+        fetchList();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        page,
+        rowsPerPage,
+        query,
+        columnKeyName,
+        columnKeyValue,
+        JSON.stringify(fetchPayload || {}),
+    ]);
 
-    // ✅ local filter (client-side)
+    // init form once editor fields are known
+    useEffect(() => {
+        setForm((p) => {
+            const empty = buildEmptyFormFromFields();
+            return Object.keys(p || {}).length ? p : empty;
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [JSON.stringify(editorFields || [])]);
+
     const filteredRowsLocal = useMemo(() => {
         if (!columnKeyName || !columnKeyValue) return rows;
         const ck = (columnKeyName || "").trim();
@@ -338,67 +197,35 @@ export default function ContainerSheet({ value, onChange }) {
         return rows.filter((r) => safeStr(r?.[ck]).toLowerCase().includes(cv));
     }, [rows, columnKeyName, columnKeyValue]);
 
-    const handleRightClick = (event, columnId) => {
+    const handleRightClick = (event, colField) => {
         event.preventDefault();
-        setActiveColumn(columnId);
+        setActiveColumn(colField);
         setIsColumnSearchOpen(true);
     };
 
-    const clearAllFilters = () => {
-        setQuery("");
-        setColumnKeyName("");
-        setColumnKeyValue("");
-        setActiveColumn(null);
-        setIsColumnSearchOpen(false);
-        setPage(1);
-    };
-
-    const totalPages = Math.max(1, Math.ceil((totalCount || 0) / rowsPerPage));
-
-    // ✅ when selecting row, ALSO push to parent so finalState picks it up
     const selectRow = (row) => {
-        const next = {
-            id: row?.id ?? null,
-            containerNo: row?.containerNo ?? "",
-            sealNo: row?.sealNo ?? "",
-            sealDate: row?.sealDate ?? "",
-            type: row?.type ?? "",
-            pkgsStuffed: row?.pkgsStuffed ?? "",
-            grossWeight: row?.grossWeight ?? "",
-            sealType: row?.sealType ?? "",
-            location: row?.__raw?.location ?? row?.location ?? "",
-            moveDocType: row?.__raw?.moveDocType ?? "",
-            moveDocNo: row?.__raw?.moveDocNo ?? "",
-            grWtTRWt: row?.__raw?.grWtTRWt ?? "",
-        };
-
-        setSelectedId(next.id);
+        setSelectedId(row?.id ?? null);
         setMode("view");
-        setForm(next);
 
-        // ✅ parent sync (like InvoiceSheet)
-        patchParent({
-            containerNo: next.containerNo ?? null,
-            type: next.type ?? null,
-            pkgsStuffed: next.pkgsStuffed ?? null,
-            grossWeight: next.grossWeight ?? null,
-            sealNo: next.sealNo ?? null,
-            sealDate: next.sealDate ?? null,
-            sealType: next.sealType ?? null,
-            location: next.location ?? null,
-            blContainerId: next.id ?? null,
+        const next = buildEmptyFormFromFields();
+        next.id = row?.id ?? null;
+
+        (editorFields || []).forEach((f) => {
+            if (!f?.fieldname) return;
+            next[f.fieldname] =
+                row?.__raw?.[f.fieldname] ??
+                row?.[f.fieldname] ??
+                "";
         });
+
+        setForm(next);
     };
 
-    // ✅ top toolbar actions
+    // ✅ ContainerSheet-like actions
     const onNew = () => {
         setSelectedId(null);
         setMode("new");
-        const empty = getEmptyForm();
-        setForm(empty);
-
-        // ✅ parent sync
-        patchParent(getEmptyFormForParent());
+        setForm(buildEmptyFormFromFields());
     };
 
     const onView = (row) => {
@@ -417,142 +244,59 @@ export default function ContainerSheet({ value, onChange }) {
         setMode("new");
         setForm((prev) => ({ ...(prev || {}), id: null }));
         setSelectedId(null);
-
-        // ✅ parent sync (new record)
-        patchParent({ blContainerId: null });
     };
 
     const onClose = () => {
         setMode("view");
         setSelectedId(null);
-        setForm(getEmptyForm());
-
-        // ✅ parent sync (clear selection)
-        patchParent(getEmptyFormForParent());
+        setForm(buildEmptyFormFromFields());
     };
 
-    // ✅ upsert
     const upsert = async () => {
         if (mode === "edit" && !form?.id) return;
 
-        const payload = {
-            blContainerId: form?.id ?? null,
-            containerNo: form.containerNo,
-            sealNo: form.sealNo,
-            sealDate: form.sealDate,
-            containerType: form.type,
-            pkgsStuffed: form.pkgsStuffed,
-            grossWt: form.grossWeight,
-            sealType: form.sealType,
-            moveDocType: form.moveDocType,
-            moveDocNo: form.moveDocNo,
-            location: form.location,
-            grWtTRWt: form.grWtTRWt,
-        };
-
         setLoading(true);
         try {
-            const res = await fetch(API_UPSERT, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
+            const payload = {
+                ...(form || {}),
+                [rowIdField]: form?.id ?? null,
+            };
 
-            if (!res.ok) throw new Error("Upsert failed");
+            const saved = await onSave?.(payload);
 
-            let savedId = form?.id ?? null;
-            try {
-                const json = await res.json();
-                savedId = json?.id ?? json?.blContainerId ?? savedId;
-            } catch (_) { }
-
-            await fetchRows();
+            await fetchList();
 
             setMode("view");
-            if (savedId) {
-                setSelectedId(savedId);
-                // ✅ parent sync: store id too (if you want)
-                patchParent({ blContainerId: savedId });
-            }
+            const sid = saved?.[rowIdField] ?? saved?.id ?? form?.id ?? null;
+            if (sid) setSelectedId(sid);
         } catch (e) {
-            console.error("tblBlContainer upsert error:", e);
+            console.error("[SearchEditGrid] upsert error:", e);
         } finally {
             setLoading(false);
         }
     };
 
-    // ✅ delete
-    const onDelete = async (rowOrId) => {
-        const id = typeof rowOrId === "object" ? rowOrId?.id : rowOrId;
-        const deleteId = id ?? form?.id;
-        if (!deleteId) return;
+    const del = async (row) => {
+        const id = row?.id ?? form?.id ?? null;
+        if (!id) return;
 
         setLoading(true);
         try {
-            const res = await fetch(API_DELETE, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ blContainerId: deleteId }),
-            });
-
-            if (!res.ok) throw new Error("Delete failed");
+            await onDelete?.({ ...(row?.__raw || row || {}), [rowIdField]: id });
 
             setSelectedId(null);
             setMode("view");
-            setForm(getEmptyForm());
-            patchParent(getEmptyFormForParent());
-            await fetchRows();
+            setForm(buildEmptyFormFromFields());
+            await fetchList();
         } catch (e) {
-            console.error("tblBlContainer delete error:", e);
+            console.error("[SearchEditGrid] delete error:", e);
         } finally {
             setLoading(false);
         }
     };
 
-    /**
-     * ✅ KEY FIX:
-     * - Always patch BOTH local form + parent state (InvoiceSheet pattern)
-     * - Also supports functional setter style.
-     */
-    const handleBottomFieldValuesChange = (updatedValues = {}) => {
-        setForm((prev) => {
-            const next = { ...(prev || {}), ...(updatedValues || {}) };
-
-            // ✅ parent sync (PATCH, not replace)
-            patchParent({
-                containerNo: next.containerNo ?? null,
-                type: next.type ?? null,
-                pkgsStuffed: next.pkgsStuffed ?? null,
-                grossWeight: next.grossWeight ?? null,
-                sealNo: next.sealNo ?? null,
-                sealDate: next.sealDate ?? null,
-                sealType: next.sealType ?? null,
-                location: next.location ?? null,
-                blContainerId: next.id ?? null,
-            });
-
-            return next;
-        });
-    };
-
-    // ✅ Apply CustomeInputFields "result" object (like InvoiceSheet applyResultToState)
-    const applyResultToState = (result) => {
-        // handle validation fail pattern (if your CustomeInputFields uses it)
-        if (result?.isCheck === false) {
-            if (result?.alertShow && result?.fieldName) {
-                setClearFlagLocal({ isClear: true, fieldName: result.fieldName });
-            }
-            return;
-        }
-
-        const patch = { ...(result?.newState || {}) };
-        if (!Object.keys(patch).length) return;
-
-        // update local
-        setForm((p) => ({ ...(p || {}), ...patch }));
-
-        // update parent
-        patchParent(patch);
+    const handleBottomFieldValuesChange = (updatedValues) => {
+        setForm((prev) => ({ ...(prev || {}), ...(updatedValues || {}) }));
     };
 
     const editorWrapSx = {
@@ -563,7 +307,7 @@ export default function ContainerSheet({ value, onChange }) {
 
     return (
         <div style={{ width: "100%" }}>
-            {/* ✅ Top hover toolbar */}
+            {/* ✅ Top hover toolbar (same as ContainerSheet) */}
             <div className="flex mb-2 justify-end">
                 <div
                     className="flex justify-between h-[27px] border border-gray-100 rounded-[7px] shadow-md"
@@ -572,13 +316,18 @@ export default function ContainerSheet({ value, onChange }) {
                     <div className="flex items-center px-1">
                         <Tooltip title="New">
                             <span>
-                                <IconButton size="small" onClick={onNew} disabled={loading} sx={iconBtnSx()}>
+                                <IconButton
+                                    size="small"
+                                    onClick={onNew}
+                                    disabled={loading}
+                                    sx={iconBtnSx()}
+                                >
                                     <AddCircleOutlineIcon fontSize="small" />
                                 </IconButton>
                             </span>
                         </Tooltip>
 
-                        <Tooltip title={isEditable ? "Save" : "Select row to edit"}>
+                        <Tooltip title={isEditable ? "Save" : "Edit or New to Save"}>
                             <span>
                                 <IconButton
                                     size="small"
@@ -593,17 +342,13 @@ export default function ContainerSheet({ value, onChange }) {
 
                         <Tooltip title="Close">
                             <span>
-                                <IconButton size="small" onClick={onClose} disabled={loading} sx={iconBtnSx()}>
+                                <IconButton
+                                    size="small"
+                                    onClick={onClose}
+                                    disabled={loading}
+                                    sx={iconBtnSx()}
+                                >
                                     <CloseOutlinedIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-
-                        {/* optional: clear filters */}
-                        <Tooltip title="Clear Filters">
-                            <span>
-                                <IconButton size="small" onClick={clearAllFilters} disabled={loading} sx={iconBtnSx()}>
-                                    <ClearIcon fontSize="small" />
                                 </IconButton>
                             </span>
                         </Tooltip>
@@ -612,32 +357,40 @@ export default function ContainerSheet({ value, onChange }) {
             </div>
 
             <Paper elevation={0} sx={displayTablePaperStyles}>
-                <TableContainer className={styles.thinScrollBar} sx={displayTableContainerStyles}>
+                <TableContainer
+                    className={styles.thinScrollBar}
+                    sx={{
+                        ...displayTableContainerStyles,
+                        maxHeight: height,
+                    }}
+                >
                     <Table stickyHeader size="small">
                         <TableHead sx={displaytableHeadStyles}>
                             <TableRow>
-                                <TableCell sx={{ whiteSpace: "nowrap" }}>Sr No</TableCell>
+                                <TableCell sx={{ whiteSpace: "nowrap" }}>
+                                    {title ? `${title} - Sr No` : "Sr No"}
+                                </TableCell>
 
                                 {columns.map((c) => (
                                     <TableCell
-                                        key={c.id}
-                                        onContextMenu={(e) => handleRightClick(e, c.id)}
+                                        key={c.field}
+                                        onContextMenu={(e) => handleRightClick(e, c.field)}
                                         sx={{
                                             whiteSpace: "nowrap",
-                                            minWidth: c.minWidth,
+                                            minWidth: c.width || 120,
                                             cursor: "context-menu",
                                             position: "relative",
                                             userSelect: "none",
                                         }}
                                     >
-                                        {c.label}
+                                        {c.headerName || c.label || c.field}
 
-                                        {isColumnSearchOpen && activeColumn === c.id && (
+                                        {isColumnSearchOpen && activeColumn === c.field && (
                                             <ColumnSearchBox
                                                 onClose={() => setIsColumnSearchOpen(false)}
                                                 onApply={(val) => {
                                                     setPage(1);
-                                                    setColumnKeyName(c.id);
+                                                    setColumnKeyName(c.field);
                                                     setColumnKeyValue(val);
                                                     setIsColumnSearchOpen(false);
                                                 }}
@@ -647,13 +400,16 @@ export default function ContainerSheet({ value, onChange }) {
                                                     setColumnKeyValue("");
                                                     setIsColumnSearchOpen(false);
                                                 }}
-                                                defaultValue={columnKeyName === c.id ? columnKeyValue : ""}
+                                                defaultValue={columnKeyName === c.field ? columnKeyValue : ""}
                                             />
                                         )}
                                     </TableCell>
                                 ))}
 
-                                <TableCell sx={{ whiteSpace: "nowrap", minWidth: 170 }}>Actions</TableCell>
+                                {/* ✅ Actions column like ContainerSheet */}
+                                <TableCell sx={{ whiteSpace: "nowrap", minWidth: 170 }}>
+                                    Actions
+                                </TableCell>
                             </TableRow>
                         </TableHead>
 
@@ -662,7 +418,10 @@ export default function ContainerSheet({ value, onChange }) {
                                 <TableRow sx={displaytableRowStyles_two()}>
                                     <TableCell
                                         colSpan={columns.length + 2}
-                                        sx={{ fontSize: "var(--tableRowFontSize)", color: "var(--tableRowTextColor)" }}
+                                        sx={{
+                                            fontSize: "var(--tableRowFontSize)",
+                                            color: "var(--tableRowTextColor)",
+                                        }}
                                     >
                                         {loading ? "Loading..." : "No data found."}
                                     </TableCell>
@@ -677,20 +436,28 @@ export default function ContainerSheet({ value, onChange }) {
                                             sx={{
                                                 ...displaytableRowStyles_two(),
                                                 cursor: "pointer",
-                                                outline: isSelected ? "1px solid var(--inputBorderHoverColor)" : "none",
+                                                outline: isSelected
+                                                    ? "1px solid var(--inputBorderHoverColor)"
+                                                    : "none",
                                                 outlineOffset: "-1px",
                                             }}
                                             onMouseEnter={() => setHoverRowId(r.id)}
                                             onMouseLeave={() => setHoverRowId(null)}
                                             onClick={() => selectRow(r)}
                                         >
-                                            <TableCell>{(page - 1) * rowsPerPage + (idx + 1)}</TableCell>
+                                            <TableCell>
+                                                {(page - 1) * rowsPerPage + (idx + 1)}
+                                            </TableCell>
 
                                             {columns.map((c) => (
-                                                <TableCell key={c.id}>{safeStr(r?.[c.id])}</TableCell>
+                                                <TableCell key={c.field}>{safeStr(r?.[c.field])}</TableCell>
                                             ))}
 
-                                            <TableCell onClick={(e) => e.stopPropagation()} sx={{ paddingRight: 1 }}>
+                                            {/* ✅ Hover icons */}
+                                            <TableCell
+                                                onClick={(e) => e.stopPropagation()}
+                                                sx={{ paddingRight: 1 }}
+                                            >
                                                 <div
                                                     className="flex items-center gap-1"
                                                     style={{
@@ -701,7 +468,11 @@ export default function ContainerSheet({ value, onChange }) {
                                                 >
                                                     <Tooltip title="View">
                                                         <span>
-                                                            <IconButton size="small" onClick={() => onView(r)} sx={iconBtnSx()}>
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => onView(r)}
+                                                                sx={iconBtnSx()}
+                                                            >
                                                                 <VisibilityOutlinedIcon fontSize="small" />
                                                             </IconButton>
                                                         </span>
@@ -737,7 +508,7 @@ export default function ContainerSheet({ value, onChange }) {
                                                         <span>
                                                             <IconButton
                                                                 size="small"
-                                                                onClick={() => onDelete(r)}
+                                                                onClick={() => del(r)}
                                                                 disabled={loading}
                                                                 sx={iconBtnSx({ danger: true })}
                                                             >
@@ -747,8 +518,13 @@ export default function ContainerSheet({ value, onChange }) {
                                                     </Tooltip>
                                                 </div>
 
-                                                {/* keep layout stable even when icons hidden */}
-                                                <div style={{ height: 32, display: hoverRowId === r.id ? "none" : "block" }} />
+                                                {/* keep row height stable */}
+                                                <div
+                                                    style={{
+                                                        height: 32,
+                                                        display: hoverRowId === r.id ? "none" : "block",
+                                                    }}
+                                                />
                                             </TableCell>
                                         </TableRow>
                                     );
@@ -757,7 +533,7 @@ export default function ContainerSheet({ value, onChange }) {
                         </TableBody>
                     </Table>
 
-                    {/* pagination */}
+                    {/* ✅ Pagination footer (unchanged) */}
                     <div className="flex items-center justify-end pt-2 px-4 text-black gap-3">
                         <Button
                             size="small"
@@ -810,18 +586,34 @@ export default function ContainerSheet({ value, onChange }) {
                     {/* ✅ Bottom Editor (no buttons) */}
                     <div style={editorWrapSx}>
                         <CustomeInputFields
-                            inputFieldData={bottomFormdata["Container Details"]}
+                            inputFieldData={editorFields || []}
                             values={form}
                             onValuesChange={handleBottomFieldValuesChange}
                             inEditMode={{ isEditMode: isEditable, isCopy: false }}
                             clearFlag={clearFlagLocal}
                             newState={form}
                             setStateVariable={setForm}
-                            onChangeHandler={(result) => applyResultToState(result)}
-                            onBlurHandler={(result) => applyResultToState(result)}
+                            onChangeHandler={(result) => {
+                                if (result?.newState) {
+                                    setForm((p) => ({ ...(p || {}), ...(result.newState || {}) }));
+                                }
+                            }}
+                            onBlurHandler={(result) => {
+                                if (result?.newState) {
+                                    setForm((p) => ({ ...(p || {}), ...(result.newState || {}) }));
+                                }
+                            }}
                         />
 
-                        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: 8,
+                                marginTop: 8,
+                                flexWrap: "wrap",
+                                alignItems: "center",
+                            }}
+                        >
                             <div style={{ marginLeft: "auto", fontSize: 11, color: "var(--tableRowTextColor)" }}>
                                 {mode === "new" ? "Mode: New" : mode === "edit" ? "Mode: Edit" : "Mode: View"}
                                 {selectedId ? ` | Selected: ${selectedId}` : ""}
@@ -834,9 +626,16 @@ export default function ContainerSheet({ value, onChange }) {
     );
 }
 
-ContainerSheet.propTypes = {
-    value: PropTypes.object,
-    onChange: PropTypes.func,
+SearchEditGrid.propTypes = {
+    title: PropTypes.string,
+    columns: PropTypes.array,
+    editorFields: PropTypes.array,
+    rowIdField: PropTypes.string,
+    fetchPayload: PropTypes.object,
+    fetchRows: PropTypes.func,
+    onSave: PropTypes.func,
+    onDelete: PropTypes.func,
+    height: PropTypes.number,
 };
 
 function ColumnSearchBox({ onClose, onApply, onClear, defaultValue }) {
@@ -895,45 +694,13 @@ ColumnSearchBox.propTypes = {
     defaultValue: PropTypes.string,
 };
 
-/* ============================== Helpers ============================== */
-
-function getEmptyForm() {
-    return {
-        id: null,
-        containerNo: "",
-        sealNo: "",
-        sealDate: "",
-        type: "",
-        pkgsStuffed: "",
-        grossWeight: "",
-        sealType: "",
-        moveDocType: "",
-        moveDocNo: "",
-        location: "",
-        grWtTRWt: "",
-    };
-}
-
-// ✅ parent patch values (only what you need in finalState)
-function getEmptyFormForParent() {
-    return {
-        blContainerId: null,
-        containerNo: null,
-        type: null,
-        pkgsStuffed: null,
-        grossWeight: null,
-        sealNo: null,
-        sealDate: null,
-        sealType: null,
-        location: null,
-    };
-}
-
 function iconBtnSx({ danger = false } = {}) {
     return {
         border: "1px solid var(--inputBorderColor)",
         background: "var(--page-bg-color)",
-        color: danger ? "var(--dangerText, var(--table-text-color))" : "var(--table-text-color)",
+        color: danger
+            ? "var(--dangerText, var(--table-text-color))"
+            : "var(--table-text-color)",
         "&:hover": { background: "var(--tableRowBgHover)" },
         width: 30,
         height: 30,

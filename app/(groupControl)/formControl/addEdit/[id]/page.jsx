@@ -223,8 +223,22 @@ export default function AddEditFormControll() {
   const [submittedMenuId, setSubmittedMenuId] = useState(null);
   const [isFormSaved, setIsFormSaved] = useState(false);
   const childTableRow = useSelector((state) => state?.counter?.childRecord);
+  const { clientId } = getUserDetails();
+  const [clientName, setClientName] = useState(null);
 
-  console.log("newState", newState);
+  useEffect(() => {
+    const fetchClientName = async () => {
+      const requestBodyGrid = {
+        columns: "clientCode",
+        tableName: "tblClient",
+        whereCondition: `id = ${clientId} `,
+        clientIdCondition: `status = 1 FOR JSON PATH`,
+      };
+      const data = await fetchReportData(requestBodyGrid);
+      setClientName(data.data[0].clientCode);
+    };
+    fetchClientName();
+  }, [clientId]);
 
   useEffect(() => {
     const fetchChargeDetails = async () => {
@@ -1396,7 +1410,12 @@ export default function AddEditFormControll() {
         if (funcCallString) {
           let multiCallFunctions = funcCallString.split(";");
           multiCallFunctions.forEach((funcCall) => {
-            onLoadFunctionCall(funcCall, formControlData, setFormControlData,setNewState);
+            onLoadFunctionCall(
+              funcCall,
+              formControlData,
+              setFormControlData,
+              setNewState
+            );
           });
         }
       }
@@ -2693,9 +2712,25 @@ function ChildAccordianComponent({
     newState[section.tableName] !== null ? false : true
   );
   const params = useParams();
+  const { clientId } = getUserDetails();
   const search = JSON.parse(decodeURIComponent(params.id));
   console.log("copyChildValueObj page", copyChildValueObj);
   console.log("childObject", childObject);
+  const [clientName, setClientName] = useState(null);
+
+  useEffect(() => {
+    const fetchClientName = async () => {
+      const requestBodyGrid = {
+        columns: "clientCode",
+        tableName: "tblClient",
+        whereCondition: `id = ${clientId} `,
+        clientIdCondition: `status = 1 FOR JSON PATH`,
+      };
+      const data = await fetchReportData(requestBodyGrid);
+      setClientName(data.data[0].clientCode);
+    };
+    fetchClientName();
+  }, [clientId]);
 
   useEffect(() => {
     // const getGridStatus = childsFields.map((item) => {
@@ -3059,60 +3094,61 @@ function ChildAccordianComponent({
     calculateTotalVolumeAndWeight();
   }, [newState.tblRateRequestQty]);
 
-const calculateTotalNoOfPackages = () => {
-  if (!newState || !Array.isArray(newState.tblJobContainer)) {
-    return newState; // Return unchanged state if invalid
-  }
+  const calculateTotalNoOfPackages = () => {
+    if (!newState || !Array.isArray(newState.tblJobContainer)) {
+      return newState; // Return unchanged state if invalid
+    }
 
-  const toNum = (v) =>
-    v == null || v === "" ? 0 : Number(String(v).replace(/,/g, "")) || 0;
+    const toNum = (v) =>
+      v == null || v === "" ? 0 : Number(String(v).replace(/,/g, "")) || 0;
 
-  let totalNoPackages = 0;
+    let totalNoPackages = 0;
 
-  newState.tblJobContainer.forEach((row) => {
-    totalNoPackages += toNum(row?.noOfPackages);
-  });
+    newState.tblJobContainer.forEach((row) => {
+      totalNoPackages += toNum(row?.noOfPackages);
+    });
 
-  setNewState((prevState) => {
-    // If your state ever had a legacy key, prefer it
-    const targetKey = Object.prototype.hasOwnProperty.call(prevState, "noOfpackages")
-      ? "noOfpackages"
-      : "noOfPackages";
+    setNewState((prevState) => {
+      // If your state ever had a legacy key, prefer it
+      const targetKey = Object.prototype.hasOwnProperty.call(
+        prevState,
+        "noOfpackages"
+      )
+        ? "noOfpackages"
+        : "noOfPackages";
 
-    // Prevent unnecessary re-renders
-    if (toNum(prevState?.[targetKey]) === totalNoPackages) return prevState;
+      // Prevent unnecessary re-renders
+      if (toNum(prevState?.[targetKey]) === totalNoPackages) return prevState;
 
-    return {
-      ...prevState,
-      [targetKey]: totalNoPackages,
-    };
-  });
-};
-
+      return {
+        ...prevState,
+        [targetKey]: totalNoPackages,
+      };
+    });
+  };
 
   useEffect(() => {
     calculateTotalNoOfPackages();
   }, [newState.tblJobContainer]);
 
   const calculateTotalGrossWeight = () => {
-    if(search?.menuName !="1279"){
- if (!newState || !Array.isArray(newState.tblJobContainer)) {
-      return newState;
+    if (search?.menuName != "1279") {
+      if (!newState || !Array.isArray(newState.tblJobContainer)) {
+        return newState;
+      }
+
+      let totalGrossWt = 0;
+
+      newState.tblJobContainer.forEach((row) => {
+        const cargoWt = parseFloat(row.grossWt) || 0;
+        totalGrossWt += cargoWt;
+      });
+
+      setNewState((prevState) => ({
+        ...prevState,
+        cargoWt: totalGrossWt,
+      }));
     }
-
-    let totalGrossWt = 0;
-
-    newState.tblJobContainer.forEach((row) => {
-      const cargoWt = parseFloat(row.grossWt) || 0;
-      totalGrossWt += cargoWt;
-    });
-
-    setNewState((prevState) => ({
-      ...prevState,
-      cargoWt: totalGrossWt,
-    }));
-    }
-   
   };
 
   useEffect(() => {
@@ -3138,6 +3174,7 @@ const calculateTotalNoOfPackages = () => {
   };
 
   useEffect(() => {
+    if (clientName != "SLS") return;
     calculateTotalGrossWeightBl();
   }, [newState.tblBlContainer]);
 
@@ -3150,90 +3187,7 @@ const calculateTotalNoOfPackages = () => {
       [section?.tableName]: newState[section?.tableName],
     });
   }, [newState]);
-
-const didInitCopyRef = useRef(false);
-const prevFirstRowRef = useRef("");
-
-// ✅ stable stringify (sorted keys) + date normalization
-const stableSignature = (obj) => {
-  const normalize = (v) => {
-    if (v instanceof Date) return v.toISOString();
-
-    // if your date picker stores like dayjs/moment object
-    if (v && typeof v === "object") {
-      if (typeof v.toDate === "function") return v.toDate().toISOString();
-      if (v.$d instanceof Date) return v.$d.toISOString();
-    }
-
-    return v;
-  };
-
-  const keys = Object.keys(obj || {}).sort();
-  const out = {};
-  for (const k of keys) out[k] = normalize(obj[k]);
-  return JSON.stringify(out);
-};
-
-const copyFirstRowToAllRowsExceptContainer = () => {
-  const rows = newState?.tblContainerTransactionDetails;
-  if (!Array.isArray(rows) || rows.length < 2) return;
-
-  const firstRow = rows[0] || {};
-
-  const PROTECT_KEYS = new Set([
-    "id",
-    "containerTransactionId",
-    "indexValue",
-    "createdDate",
-    "createdBy",
-    "updatedDate",
-    "updatedBy",
-    "deletedNo",
-    "clientId",
-    "status",
-    "containerNo",
-    "containerId",
-    "containerIdDropdown",
-  ]);
-
-  // ✅ patch = everything from row 1 except protected keys
-  const patch = {};
-  Object.keys(firstRow).forEach((k) => {
-    if (!PROTECT_KEYS.has(k)) patch[k] = firstRow[k];
-  });
-
-  // ✅ signature only from the patch (copyable) keys, stable + normalized
-  const firstRowSignature = stableSignature(patch);
-
-  // ✅ 1) DON’T COPY on initial load
-  if (!didInitCopyRef.current) {
-    didInitCopyRef.current = true;
-    prevFirstRowRef.current = firstRowSignature;
-    return;
-  }
-
-  // ✅ 2) copy ONLY when first row actually changed
-  if (prevFirstRowRef.current === firstRowSignature) return;
-  prevFirstRowRef.current = firstRowSignature;
-
-  const updatedRows = rows.map((r, i) => {
-    if (i === 0 || !r) return r;
-    return { ...r, ...patch };
-  });
- 
-  setNewState((prev) => ({
-    ...prev,
-    tblContainerTransactionDetails: updatedRows,
-  }));
-};
- 
-useEffect(() => {
-  copyFirstRowToAllRowsExceptContainer();
-}, [newState?.tblContainerTransactionDetails]);
-
-
-
-
+  
   const renderMoreData = () => {
     // Calculate the index range to render
     const lastIndex = renderedData.length + 10;
@@ -3971,7 +3925,7 @@ useEffect(() => {
                 />
               </LightTooltip>
               {isGridEdit && (
-                <LightTooltip title="Save">
+                <LightTooltip title="Save 1"> 
                   <SaveOutlinedIcon
                     sx={{
                       marginLeft: "8px",
@@ -4088,7 +4042,7 @@ useEffect(() => {
                     defaultIcon={saveIcon}
                     hoverIcon={saveIconHover}
                     altText={"Save"}
-                    title={"Save"}
+                    title={"Save 1"}
                     onClick={() => {
                       childButtonHandler(section, indexValue);
                       calculateTotalVolumeAndWeight();
@@ -4274,8 +4228,7 @@ useEffect(() => {
                                   className={
                                     isView
                                       ? ""
-                                      :
-                                       `${styles.tableCellHoverEffect} ${styles.hh}`
+                                      : `${styles.tableCellHoverEffect} ${styles.hh}`
                                   }
                                   sx={{
                                     "& > *": { borderBottom: "unset" },

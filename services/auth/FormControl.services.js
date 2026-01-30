@@ -62,7 +62,7 @@ export async function fetchSearchPageData(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(insertedData),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -150,7 +150,7 @@ export async function formControlMenuList(id) {
           "Content-Type": "application/json",
           "x-access-token": JSON.parse(token),
         },
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -293,7 +293,7 @@ export async function dynamicDropDownFieldsDataCreateForm(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -387,14 +387,14 @@ export async function DynamicUpdateFieldNames(filterCondition) {
   };
   const filterConditionWithoutDropdowns = removeDropdownFields(filterCondition);
   const updatedConditionWithFieldNames = await updateFieldNames(
-    filterConditionWithoutDropdowns
+    filterConditionWithoutDropdowns,
   );
   return updatedConditionWithFieldNames;
 }
 export async function dynamicReportFilter(
   updatedConditionWithFieldNames,
   clientId,
-  spName
+  spName,
 ) {
   try {
     const payload = {
@@ -414,7 +414,7 @@ export async function dynamicReportFilter(
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      }
+      },
     ).then((response) => response.json());
     console;
     return response;
@@ -427,7 +427,7 @@ export async function dynamicReportFilter(
 export async function htmlReportFilter(
   updatedConditionWithFieldNames,
   clientId,
-  spName
+  spName,
 ) {
   try {
     const payload = {
@@ -446,7 +446,7 @@ export async function htmlReportFilter(
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      }
+      },
     ).then((response) => response.json());
     console;
     return response;
@@ -459,7 +459,7 @@ export async function htmlReportFilter(
 export async function fetchReportAPIData(
   updatedConditionWithFieldNames,
   clientId,
-  spName
+  spName,
 ) {
   try {
     const payload = {
@@ -479,7 +479,7 @@ export async function fetchReportAPIData(
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      }
+      },
     ).then((response) => response.json());
     console;
     return response;
@@ -492,7 +492,7 @@ export async function fetchReportAPIData(
 export async function fetchDynamicReportSpData(spName, filterCondition) {
   try {
     const payload = {
-      filterCondition: null,
+      filterCondition: filterCondition,
       spName: spName,
     };
 
@@ -506,7 +506,7 @@ export async function fetchDynamicReportSpData(spName, filterCondition) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      }
+      },
     ).then((response) => response.json());
     console;
     return response;
@@ -533,7 +533,7 @@ export async function fetchExcelData(spName, filterCondition) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -559,7 +559,7 @@ export async function fetchExcelDataInsert(spName, filterCondition) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -691,7 +691,7 @@ export const fetchDataFromAPI = async (requestBody) => {
         },
         body: JSON.stringify(requestBody),
         signal: controller.signal,
-      }
+      },
     );
 
     clearTimeout(timeoutId); // Clear timeout if fetch completes in time
@@ -764,7 +764,7 @@ export async function getJobChargeDetails(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -785,7 +785,7 @@ export async function getBlChargeDetails(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -804,7 +804,7 @@ export async function fetchDataAPI(data) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -823,7 +823,7 @@ export async function fetchDataApi(requestBodyToFetchTableData) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBodyToFetchTableData),
-      }
+      },
     );
 
     if (!response.ok) {
@@ -847,7 +847,7 @@ export async function getCharges(data) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -866,7 +866,7 @@ export const updateUserData = async (userId, data) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      }
+      },
     );
 
     if (!response.ok) {
@@ -894,7 +894,7 @@ export const exportToJsonApi = async () => {
           "Content-Type": "application/json",
           "x-access-token": JSON.parse(token),
         },
-      }
+      },
     );
 
     console.log("Response received:", response);
@@ -924,7 +924,7 @@ export const exportToXMLApi = async () => {
           "Content-Type": "application/json",
           "x-access-token": JSON.parse(token),
         },
-      }
+      },
     );
 
     console.log("Response received:", response);
@@ -954,7 +954,7 @@ export const exportToASCII = async () => {
           "Content-Type": "application/json",
           "x-access-token": JSON.parse(token),
         },
-      }
+      },
     );
 
     console.log("Response received:", response);
@@ -984,7 +984,7 @@ export const CopyDataBase = async (data) => {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     );
 
     if (!response.ok) {
@@ -1119,7 +1119,7 @@ export async function checkDuplicateAPI(data) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -1201,7 +1201,7 @@ export async function FormControlOfToClinetCode(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     console.log("dropdown api", response);
     return response;
@@ -1226,7 +1226,7 @@ export async function clientCodeDropDown(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     console.log("dropdown api", response);
     return response;
@@ -1282,7 +1282,7 @@ export async function fetchAnaylsisData(spName, filterCondition) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -1317,7 +1317,7 @@ export async function getGLChargeDetails(data) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -1353,7 +1353,7 @@ export async function insertReportRecordData(data) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -1372,7 +1372,7 @@ export async function reportSearchCriteria(data) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -1417,7 +1417,7 @@ export async function companyHeaderAndFooterLogoChange(formData) {
       {
         method: "POST",
         body: formData,
-      }
+      },
     );
     const result = await response.json();
     return result;
@@ -1454,7 +1454,7 @@ export async function getUserDashboardData(data) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      }
+      },
     );
     const result = await response.json();
     return result;
@@ -1474,7 +1474,7 @@ export async function userDashboardDataSubmit(data) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      }
+      },
     );
     const result = await response.json();
     return result;
@@ -1494,7 +1494,7 @@ export async function getUserDashboard(data) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-      }
+      },
     );
     const result = await response.json();
     return result;
@@ -1516,7 +1516,7 @@ export async function getInvoice(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -1537,7 +1537,7 @@ export async function getVoucherInvoiceData(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -1580,7 +1580,7 @@ export async function insertExcelData(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -1602,7 +1602,7 @@ export async function insertExcelDataInDatabase(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -1804,7 +1804,7 @@ export async function validateSubmit(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
 
     return response;
@@ -1827,7 +1827,7 @@ export async function tallyDebitCredit(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
 
     return response;
@@ -1850,7 +1850,7 @@ export async function getTaxDetailsQuotation(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -1891,7 +1891,7 @@ export async function getContainerActivity(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -1931,7 +1931,7 @@ export async function getContainerData(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -1952,7 +1952,7 @@ export async function getGeneralLegerBillingParty(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -1992,7 +1992,7 @@ export async function getVoucherThirdLevelData(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -2014,7 +2014,7 @@ export async function getContainerRepairDetails(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -2074,7 +2074,7 @@ export async function getThridDatePurchaseData(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -2096,7 +2096,7 @@ export async function calculateDetentionRateData(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -2140,7 +2140,7 @@ export async function fetchContainerNoData(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -2181,7 +2181,7 @@ export async function editLastActivity(data) {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(data),
-      }
+      },
     ).then((response) => response.json());
     return response;
   } catch (error) {
@@ -2220,14 +2220,17 @@ export async function disablePrint(data) {
 export async function fetchSecondThirdLevelDetails(data) {
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${baseUrl}/Sql/api/sp/getSecondThirdLevelData`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-access-token": JSON.parse(token),
+    const response = await fetch(
+      `${baseUrl}/Sql/api/sp/getSecondThirdLevelData`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(data),
       },
-      body: JSON.stringify(data),
-    }).then((response) => response.json());
+    ).then((response) => response.json());
     return response;
   } catch (error) {
     console.log(error);
@@ -2245,14 +2248,75 @@ export async function fetchVoucherDataDynamic(data) {
       financialYearId: sessionStorage.getItem("financialYear"),
     };
     const token = localStorage.getItem("token");
-    const response = await fetch(`${baseUrlSQl}/api/master/fetchVoucherDataDynamic`, {
+    const response = await fetch(
+      `${baseUrlSQl}/api/master/fetchVoucherDataDynamic`,
+      {
+        method: "POST",
+        // credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(insertedData),
+      },
+    ).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+
+export async function insertVoucherDataDynami(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${baseUrl}/Sql/api/sp/insertVoucherDataDynamic`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(data),
+      },
+    ).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+
+export async function warehouseData(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${baseUrl}/Sql/api/Reports/warehouseData`, {
       method: "POST",
-      // credentials: "include",
       headers: {
         "Content-Type": "application/json",
         "x-access-token": JSON.parse(token),
       },
-      body: JSON.stringify(insertedData),
+      body: JSON.stringify(data),
+    }).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+
+export async function fetchBlPrintReportData(data) {
+  try {
+    const response = await fetch(`${baseUrl}/Sql/api/Reports/blPrint`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
     }).then((response) => response.json());
     return response;
   } catch (error) {

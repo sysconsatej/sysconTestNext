@@ -107,6 +107,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { useTheme } from "@mui/material/styles";
 import Pagination from "@mui/material/Pagination";
+import { useSelector } from "react-redux";
 
 /* ✅ put these styles ABOVE return OR near your component (same file) */
 const chipBtnStyle = {
@@ -143,7 +144,7 @@ function onEditAndDeleteFunctionCall(
   newState,
   formControlData,
   values,
-  setStateVariable,
+  setStateVariable
 ) {
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
@@ -182,9 +183,8 @@ function onEditAndDeleteFunctionCall(
 export default function StickyHeadTable() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const search = JSON.parse(searchParams.get("menuName")).id;
-  const prevMenuIdRef = React.useRef(null); // stores previous menuId
-  const previousMenuId = prevMenuIdRef.current; // read previous value
+   const selectedMenuId = useSelector((state) => state?.counter?.selectedMenuId);
+  const search = JSON.parse(searchParams.get("menuName"))?.id || selectedMenuId;
   const inputRef = useRef(null);
   const { clientId } = getUserDetails();
   const [menuSearch, setMenuSearch] = useState("");
@@ -246,9 +246,6 @@ export default function StickyHeadTable() {
   // Tailwind lg starts at 1024px
   //const isLgUp = useMediaQuery("(min-width:1024px)", { noSsr: true });
   const isLgUp = useMediaQuery("(min-width:1024px)");
-
-  console.log("Previous Menu ID:", previousMenuId);
-  console.log("Current Menu ID:", search);
 
   // ✅ small screen height = full viewport height (dynamic, correct on mobile address bar too)
   const [mobileViewportH, setMobileViewportH] = React.useState(0);
@@ -417,18 +414,22 @@ export default function StickyHeadTable() {
       addEditController(recordId);
     }
   };
-  const validateAdd = async (tableName) => {
-    const requestBody = {
-      tableName: tableName,
-    };
-    const data = await disableAdd(requestBody);
-    if (data.success === true) {
-      setParaText(data.message);
-      setIsError(false);
-      setOpenModal((prev) => !prev);
-    } else {
-      addEditController("add");
-    }
+//   const validateAdd = async (tableName) => {
+//     const requestBody = {
+//       tableName: tableName,
+//     };
+//     const data = await disableAdd(requestBody);
+//     if (data.success === true) {
+//       setParaText(data.message);
+//       setIsError(false);
+//       setOpenModal((prev) => !prev);
+//     } else {
+//       addEditController("add");
+//     }
+//   };
+
+  const validateAdd = () => {
+    router.push("/cfsRequest/search");
   };
 
   const [dynamic, setDynamic] = useState([
@@ -469,7 +470,7 @@ export default function StickyHeadTable() {
   const tableRef = useRef(null);
   const { moveToRow, setMoveToRow } = useTableNavigation(
     tableRef,
-    gridData.length > 0 ? gridData : [],
+    gridData.length > 0 ? gridData : []
   );
 
   useEffect(() => {
@@ -632,7 +633,7 @@ export default function StickyHeadTable() {
         setDropHeaderFields(tableHeadingsData.data[0]?.fields);
         setDataFetched(true);
         setIsRequiredAttachment(
-          tableHeadingsData.data[0]?.isRequiredAttachment,
+          tableHeadingsData.data[0]?.isRequiredAttachment
         );
         let requestData = {
           tableName: tableHeadingsData.data[0]?.tableName,
@@ -654,11 +655,11 @@ export default function StickyHeadTable() {
             setPageCount(Count);
           }
           setTotalPages(
-            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage),
+            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage)
           );
           console.log(
             "Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage)",
-            Math.ceil((Count !== 0 ? Count : pageCount) / 1),
+            Math.ceil((Count !== 0 ? Count : pageCount) / 1)
           );
 
           setSearchOpen(false);
@@ -698,7 +699,7 @@ export default function StickyHeadTable() {
         ]);
         setDataFetched(true);
         setIsRequiredAttachment(
-          tableHeadingsData.data[0]?.isRequiredAttachment,
+          tableHeadingsData.data[0]?.isRequiredAttachment
         );
         let requestData = {
           tableName: tableHeadingsData.data[0]?.tableName,
@@ -720,7 +721,7 @@ export default function StickyHeadTable() {
             setPageCount(Count);
           }
           setTotalPages(
-            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage),
+            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage)
           );
           setSearchOpen(false);
           setPage(1);
@@ -757,7 +758,7 @@ export default function StickyHeadTable() {
             setPageCount(Count);
           }
           setTotalPages(
-            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage),
+            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage)
           );
           pageSelected(requestData.pageNo);
         } else {
@@ -783,7 +784,7 @@ export default function StickyHeadTable() {
             setPageCount(Count);
           }
           setTotalPages(
-            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage),
+            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage)
           );
           pageSelected(requestData.pageNo);
           setGridData([]);
@@ -934,7 +935,7 @@ export default function StickyHeadTable() {
               func,
               data,
               formControlData,
-              data,
+              data
             );
             if (updatedData.alertShow == true) {
               setParaText(updatedData.message);
@@ -1027,9 +1028,9 @@ export default function StickyHeadTable() {
   // Filter fields with isRequired true for headers
   // var headers = headerFields?.filter((field) => field.isGridView);
   var headers =
-    formControlData.gridConfig && typeof formControlData.gridConfig === "string"
-      ? JSON.parse(formControlData.gridConfig)
-      : headerFields?.filter((field) => field.isGridView);
+    formControlData?.gridConfig && typeof formControlData?.gridConfig === "string"
+      ? JSON.parse(formControlData?.gridConfig)
+      : headerFields?.filter((field) => field?.isGridView);
 
   headers = headers?.concat(viewFields);
 
@@ -1113,14 +1114,14 @@ export default function StickyHeadTable() {
       if (typeof Data[key] === "object" && Data[key] !== null) {
         let find = ProccessForTheCommaSeperated(
           Data[key],
-          keys.slice(1).join("."),
+          keys.slice(1).join(".")
         );
         value = [...value, find];
       }
       if (Array.isArray(Data[key])) {
         const keytoSend = keys.slice(1).join(".");
         let find = Data[key].map((item) =>
-          ProccessForTheCommaSeperated(item, keytoSend),
+          ProccessForTheCommaSeperated(item, keytoSend)
         );
         value = [...find];
       }
@@ -1137,11 +1138,11 @@ export default function StickyHeadTable() {
       setSelectedPageNumber(page);
       setRowsPerPage(value);
       setTotalPages(
-        Math.ceil((pageCount !== 0 ? pageCount : pageCount) / value),
+        Math.ceil((pageCount !== 0 ? pageCount : pageCount) / value)
       );
       console.log(
         "pageCount",
-        Math.ceil((pageCount !== 0 ? pageCount : pageCount) / value),
+        Math.ceil((pageCount !== 0 ? pageCount : pageCount) / value)
       );
     }
   };
@@ -1247,7 +1248,7 @@ export default function StickyHeadTable() {
     index,
     newValue,
     dropPageNo,
-    searchValue,
+    searchValue
   ) => {
     try {
       const prevData = [...dynamic];
@@ -1312,7 +1313,7 @@ export default function StickyHeadTable() {
         });
       }
       setDropHeaderFields((prev) =>
-        prev.filter((item) => item.fieldname !== newValue.fieldname),
+        prev.filter((item) => item.fieldname !== newValue.fieldname)
       );
     } catch (error) {
       console.error(" error ", error);
@@ -1385,8 +1386,8 @@ export default function StickyHeadTable() {
                   },
                 },
               }
-            : item,
-        ),
+            : item
+        )
       );
     }
   };
@@ -1410,8 +1411,8 @@ export default function StickyHeadTable() {
                   },
                 },
               }
-            : item,
-        ),
+            : item
+        )
       );
     }
   };
@@ -1446,7 +1447,7 @@ export default function StickyHeadTable() {
     const updatedItems = [...dynamic];
     const removedDropData = headerFields.filter(
       (header) =>
-        !updatedItems.some((item) => header.fieldname === item.value.fieldname),
+        !updatedItems.some((item) => header.fieldname === item.value.fieldname)
     );
 
     const insertDropData = headerFields.find((item) => {
@@ -1776,7 +1777,7 @@ export default function StickyHeadTable() {
                     <Button
                       onMouseEnter={() => setHoveredIcon("addForm")}
                       onMouseLeave={() => setHoveredIcon(null)}
-                      onClick={() => validateAdd(tableName)}
+                      onClick={() => validateAdd()}
                       sx={{ minWidth: 0, padding: "2px 6px" }}
                     >
                       <Image
@@ -1898,7 +1899,7 @@ export default function StickyHeadTable() {
                             className={`w-full ${styles.inputField}`}
                             value={
                               initialHeaderFields?.find(
-                                (option) => option.label === elem.value?.label,
+                                (option) => option.label === elem.value?.label
                               ) || null
                             }
                             noOptionsMessage={() => "No records found"}
@@ -1910,7 +1911,7 @@ export default function StickyHeadTable() {
                                   index,
                                   newValue,
                                   dropPageNo,
-                                  "",
+                                  ""
                                 );
                               } else {
                                 handleRevert(index, elem);
@@ -1942,7 +1943,7 @@ export default function StickyHeadTable() {
                               value={elem.dropDownValues?.find(
                                 (option) =>
                                   option.value ===
-                                  elem.advanceSearch?.[elem.value?.fieldname],
+                                  elem.advanceSearch?.[elem.value?.fieldname]
                               )}
                               noOptionsMessage={() =>
                                 dropHeaderOptions.length === 0
@@ -2156,7 +2157,7 @@ export default function StickyHeadTable() {
                             className={`w-full lg:w-[12rem] ${styles.inputField}`}
                             value={
                               initialHeaderFields?.find(
-                                (option) => option.label === elem.value?.label,
+                                (option) => option.label === elem.value?.label
                               ) || null
                             }
                             noOptionsMessage={() => "No records found"}
@@ -2168,7 +2169,7 @@ export default function StickyHeadTable() {
                                   index,
                                   newValue,
                                   dropPageNo,
-                                  "",
+                                  ""
                                 );
                               } else {
                                 handleRevert(index, elem);
@@ -2201,7 +2202,7 @@ export default function StickyHeadTable() {
                               value={elem.dropDownValues?.find(
                                 (option) =>
                                   option.value ===
-                                  elem.advanceSearch?.[elem.value?.fieldname],
+                                  elem.advanceSearch?.[elem.value?.fieldname]
                               )}
                               noOptionsMessage={() =>
                                 dropHeaderOptions.length === 0
@@ -2338,11 +2339,11 @@ export default function StickyHeadTable() {
                           return field?.dummyField === "comma"
                             ? getCommaSeparatedValuesCountFromNestedKeys(
                                 row?.[field?.id],
-                                field?.refkey,
+                                field?.refkey
                               )?.values
                             : getCommaSeparatedValuesCountFromNestedKeys(
                                 row?.[field?.id],
-                                field?.refkey,
+                                field?.refkey
                               )?.count;
                         }
                         if (
@@ -2351,7 +2352,7 @@ export default function StickyHeadTable() {
                         ) {
                           return getNestedValue(
                             row?.[field?.id],
-                            field?.refkey,
+                            field?.refkey
                           );
                         }
                         return isDateFormat(row?.[field?.id]);
@@ -2368,7 +2369,7 @@ export default function StickyHeadTable() {
                           (f) =>
                             f?.id &&
                             f?.id !== titleField?.id &&
-                            f?.id !== subField?.id,
+                            f?.id !== subField?.id
                         )
                         .slice(0, 4);
 
@@ -2380,7 +2381,7 @@ export default function StickyHeadTable() {
                           if (compactFields.some((cf) => cf?.id === f.id))
                             return false;
                           return true;
-                        },
+                        }
                       );
 
                       const translateX =
@@ -3042,7 +3043,7 @@ export default function StickyHeadTable() {
                                       row[fieldName.id] !== null
                                         ? getNestedValue(
                                             row[fieldName.id],
-                                            fieldName.refkey,
+                                            fieldName.refkey
                                           )
                                         : isDateFormat(row[fieldName.id])}
                                     </TableCell>
@@ -3059,11 +3060,11 @@ export default function StickyHeadTable() {
                                       {fieldName.dummyField == "comma"
                                         ? getCommaSeparatedValuesCountFromNestedKeys(
                                             row[fieldName.id],
-                                            fieldName.refkey,
+                                            fieldName.refkey
                                           ).values
                                         : getCommaSeparatedValuesCountFromNestedKeys(
                                             row[fieldName.id],
-                                            fieldName.refkey,
+                                            fieldName.refkey
                                           ).count}
                                     </TableCell>
                                   )}
@@ -3285,7 +3286,7 @@ function CustomizedInputBase({
 }) {
   const inputRef = useRef(null); // Ref to the Paper component
   const [searchInputGridData, setSearchInputGridData] = useState(
-    prevSearchInput || "",
+    prevSearchInput || ""
   );
 
   // Custom filter logic

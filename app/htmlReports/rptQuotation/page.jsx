@@ -86,7 +86,7 @@ function rptQuotation() {
                 "x-access-token": JSON.parse(token),
               },
               body: JSON.stringify(requestBody),
-            }
+            },
           );
           if (!response.ok) throw new Error("Failed to fetch job data");
           const data = await response.json();
@@ -95,12 +95,12 @@ function rptQuotation() {
             if (Array.isArray(data?.data) && data?.data?.length > 0) {
               console.log(
                 "data for print report name:",
-                data?.data[0]?.rateRequestNo
+                data?.data[0]?.rateRequestNo,
               );
               setPrintReportName(
                 data?.data[0]?.rateRequestNo !== ""
                   ? [data?.data[0]?.rateRequestNo]
-                  : []
+                  : [],
               );
             }
           }
@@ -333,7 +333,7 @@ function rptQuotation() {
         w
           .split("-")
           .map((s) => (s ? s[0].toUpperCase() + s.slice(1) : s))
-          .join("-")
+          .join("-"),
       )
       .join(" ");
 
@@ -505,7 +505,7 @@ function rptQuotation() {
         customerName: PropTypes.string,
         rateRequestNo: PropTypes.string,
         customerPerson: PropTypes.string,
-      })
+      }),
     ).isRequired,
     data: PropTypes.arrayOf(PropTypes.object),
   };
@@ -578,7 +578,7 @@ function rptQuotation() {
         customerName: PropTypes.string,
         rateRequestNo: PropTypes.string,
         customerPerson: PropTypes.string,
-      })
+      }),
     ).isRequired,
     data: PropTypes.arrayOf(PropTypes.object),
   };
@@ -587,7 +587,7 @@ function rptQuotation() {
     clientCode,
     loginCompany,
     loginBranch,
-    businessSegmentId
+    businessSegmentId,
   ) {
     const url = `${baseUrl}/api/validations/formControlValidation/fetchdata`;
 
@@ -612,7 +612,7 @@ function rptQuotation() {
 
       if (!response.ok) {
         throw new Error(
-          `HTTP error! Status: ${response.status}, StatusText: ${response.statusText}`
+          `HTTP error! Status: ${response.status}, StatusText: ${response.statusText}`,
         );
       }
 
@@ -689,7 +689,7 @@ function rptQuotation() {
         pickupAddress: PropTypes.string,
         vendorId: PropTypes.string,
         deliveryAddress: PropTypes.string,
-      })
+      }),
     ).isRequired,
     data: PropTypes.arrayOf(PropTypes.object),
   };
@@ -838,7 +838,7 @@ function rptQuotation() {
         commodity: PropTypes.string,
         podName: PropTypes.string,
         transitTime: PropTypes.string,
-      })
+      }),
     ).isRequired,
     data: PropTypes.arrayOf(PropTypes.object),
   };
@@ -992,7 +992,7 @@ function rptQuotation() {
         podName: PropTypes.string,
         commodityTypeName: PropTypes.string,
         commodity: PropTypes.string,
-      })
+      }),
     ).isRequired,
     data: PropTypes.arrayOf(PropTypes.object),
   };
@@ -1053,9 +1053,9 @@ function rptQuotation() {
             typeName: PropTypes.string,
             qty: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
             wtUnitName: PropTypes.string,
-          })
+          }),
         ),
-      })
+      }),
     ).isRequired,
     data: PropTypes.arrayOf(PropTypes.object),
   };
@@ -1129,10 +1129,10 @@ function rptQuotation() {
             wtUnitName: PropTypes.string,
             volume: PropTypes.string,
             volumeUnitNameCode: PropTypes.string, // Add this line for volumeUnitNameCode
-          })
+          }),
         ),
         volumeUnitNameCode: PropTypes.string, // Define volumeUnitNameCode at the top level of data
-      })
+      }),
     ).isRequired,
   };
 
@@ -1144,7 +1144,7 @@ function rptQuotation() {
     console.log("1", rateRequestCharge);
     // Filter out records where vendorName is ''
     const filteredRateRequestCharge = rateRequestCharge.filter(
-      (charge) => charge.vendorName !== ""
+      (charge) => charge.vendorName !== "",
     );
 
     const sortedRateRequestCharge = filteredRateRequestCharge.sort((a, b) => {
@@ -1365,9 +1365,9 @@ function rptQuotation() {
             sellAmount: PropTypes.number,
             sellTotalAmount: PropTypes.number,
             remarks: PropTypes.string,
-          })
+          }),
         ),
-      })
+      }),
     ).isRequired,
   };
 
@@ -1383,7 +1383,7 @@ function rptQuotation() {
 
     // Check if any quotationFlag is true
     const hasQuotationFlagTrue = data.some((item) =>
-      item.tblRateRequestCharge.some((charge) => charge.quotationFlag === true)
+      item.tblRateRequestCharge.some((charge) => charge.quotationFlag === true),
     );
 
     // If no quotationFlag is true, return an empty div
@@ -1396,8 +1396,8 @@ function rptQuotation() {
       item.tblRateRequestCharge.some(
         (charge) =>
           charge.quotationFlag === true &&
-          charge.chargeName?.toLowerCase().includes("freight")
-      )
+          charge.chargeName?.toLowerCase().includes("freight"),
+      ),
     );
 
     if (!hasOceanFreight) {
@@ -1435,19 +1435,19 @@ function rptQuotation() {
           groupName,
           buyRateInrSubtotal: groupCharges.reduce(
             (acc, charge) => acc + (charge.buyAmountHc || 0),
-            0
+            0,
           ),
           buyRateUsdSubtotal: groupCharges.reduce(
             (acc, charge) => acc + (charge.buyAmount || 0),
-            0
+            0,
           ),
           sellRateInrSubtotal: groupCharges.reduce(
             (acc, charge) => acc + (charge.sellAmountHc || 0),
-            0
+            0,
           ),
           sellRateUsdSubtotal: groupCharges.reduce(
             (acc, charge) => acc + (charge.sellAmount || 0),
-            0
+            0,
           ),
         };
       });
@@ -1466,7 +1466,7 @@ function rptQuotation() {
           buyRateUsdTotal: 0,
           sellRateInrTotal: 0,
           sellRateUsdTotal: 0,
-        }
+        },
       );
       return (
         <div className="dynamic_table mt-2" style={{ width: "100%" }}>
@@ -1585,7 +1585,7 @@ function rptQuotation() {
                             {(charge.sellAmount || 0).toFixed(2)}
                           </td>
                         </tr>
-                      )
+                      ),
                     )}
                     {/* Subtotal Row */}
                     <tr
@@ -1704,7 +1704,7 @@ function rptQuotation() {
         data
           .flatMap((item) => item.tblRateRequestCharge)
           .filter((charge) => charge.quotationFlag === true),
-      [data]
+      [data],
     );
 
     // Handling Sea Freight with distinct logic
@@ -1712,7 +1712,7 @@ function rptQuotation() {
       () =>
         allCharges
           .filter((charge) =>
-            charge.chargeGroupName.toLowerCase().includes("freight")
+            charge.chargeGroupName.toLowerCase().includes("freight"),
           )
           .reduce((acc, charge) => {
             const key = `${charge.chargeName}-${charge.sizeName}-${charge.typeName}`;
@@ -1722,7 +1722,7 @@ function rptQuotation() {
             acc[key].push(charge);
             return acc;
           }, {}),
-      [allCharges]
+      [allCharges],
     );
 
     // Handling other charges without distinct logic
@@ -1731,18 +1731,18 @@ function rptQuotation() {
         allCharges
           .filter(
             (charge) =>
-              !charge.chargeGroupName.toLowerCase().includes("freight")
+              !charge.chargeGroupName.toLowerCase().includes("freight"),
           )
           .reduce((acc, charge) => {
             acc.push(charge);
             return acc;
           }, []),
-      [allCharges]
+      [allCharges],
     );
 
     const combinedCharges = useMemo(
       () => [...Object.values(oceanFreightCharges).flat(), ...otherCharges],
-      [oceanFreightCharges, otherCharges]
+      [oceanFreightCharges, otherCharges],
     );
 
     // Get unique vendors specific to OCEAN FREIGHT charges
@@ -1752,9 +1752,9 @@ function rptQuotation() {
           Object.values(oceanFreightCharges)
             .flat()
             .filter((charge) =>
-              charge.chargeName?.toLowerCase().includes("freight")
+              charge.chargeName?.toLowerCase().includes("freight"),
             )
-            .map((charge) => charge.vendorName)
+            .map((charge) => charge.vendorName),
         ),
       ].sort();
     }, [oceanFreightCharges]);
@@ -2127,7 +2127,7 @@ function rptQuotation() {
 
     // Check if any quotationFlag is true
     const hasQuotationFlagTrue = data.some((item) =>
-      item.tblRateRequestCharge.some((charge) => charge.quotationFlag === true)
+      item.tblRateRequestCharge.some((charge) => charge.quotationFlag === true),
     );
 
     // If no quotationFlag is true, return an empty div
@@ -2145,8 +2145,8 @@ function rptQuotation() {
       item.tblRateRequestCharge.some(
         (charge) =>
           charge.quotationFlag === true &&
-          charge.chargeName?.toLowerCase().includes("freight")
-      )
+          charge.chargeName?.toLowerCase().includes("freight"),
+      ),
     );
 
     if (!hasOceanFreight) {
@@ -2156,7 +2156,7 @@ function rptQuotation() {
           data
             .flatMap((item) => item.tblRateRequestCharge)
             .filter((charge) => charge.quotationFlag === true),
-        [data]
+        [data],
       );
 
       // const groupedCharges = useMemo(() => {
@@ -2306,7 +2306,7 @@ function rptQuotation() {
         data
           .flatMap((item) => item.tblRateRequestCharge)
           .filter((charge) => charge.quotationFlag === true),
-      [data]
+      [data],
     );
 
     // Filtering and ensuring distinct rows for Sea Freight
@@ -2314,7 +2314,7 @@ function rptQuotation() {
       () =>
         allCharges
           .filter((charge) =>
-            charge?.chargeGroupName?.toLowerCase().includes("freight")
+            charge?.chargeGroupName?.toLowerCase().includes("freight"),
           )
           .reduce((acc, charge) => {
             const key = `${charge?.chargeName}-${charge?.sizeName}-${charge?.typeName}`;
@@ -2324,7 +2324,7 @@ function rptQuotation() {
             acc[key].push(charge);
             return acc;
           }, {}),
-      [allCharges]
+      [allCharges],
     );
 
     // const otherCharges = useMemo(
@@ -2342,15 +2342,15 @@ function rptQuotation() {
             !(
               charge.chargeGroupName &&
               charge.chargeGroupName.toLowerCase().includes("freight")
-            )
+            ),
         ),
-      [allCharges]
+      [allCharges],
     );
 
     // Flatten the distinct Sea Freight charges
     const combinedCharges = useMemo(
       () => [...Object.values(oceanFreightCharges).flat(), ...otherCharges],
-      [oceanFreightCharges, otherCharges]
+      [oceanFreightCharges, otherCharges],
     );
 
     // Get unique vendors specific to OCEAN FREIGHT charges
@@ -2360,9 +2360,9 @@ function rptQuotation() {
           Object.values(oceanFreightCharges)
             .flat()
             .filter((charge) =>
-              charge.chargeName?.toLowerCase().includes("freight")
+              charge.chargeName?.toLowerCase().includes("freight"),
             )
-            .map((charge) => charge.vendorName)
+            .map((charge) => charge.vendorName),
         ),
       ].sort();
     }, [oceanFreightCharges]);
@@ -2381,10 +2381,10 @@ function rptQuotation() {
           .toLowerCase()
           .includes("freight")
           ? `${safe(charge.chargeGroupName)}-${safe(charge.chargeName)}-${safe(
-              charge.sizeName
+              charge.sizeName,
             )}-${safe(charge.typeName)}`
           : `${safe(charge.chargeGroupName)}-${safe(charge.chargeName)}-${safe(
-              charge.vendorName
+              charge.vendorName,
             )}-${safe(charge.sizeName)}-${safe(charge.typeName)}`;
 
         if (!acc[key]) {
@@ -2813,7 +2813,7 @@ function rptQuotation() {
         : [];
     // Filter out records where vendorName is ''
     const filteredRateRequestCharge = rateRequestCharge.filter(
-      (charge) => charge.vendorName !== ""
+      (charge) => charge.vendorName !== "",
     );
 
     const sortedRateRequestCharge = filteredRateRequestCharge.sort((a, b) => {
@@ -3048,9 +3048,9 @@ function rptQuotation() {
             sellTaxAmount: PropTypes.number, // New prop type for sellTaxAmount
             sellTotalAmount: PropTypes.number,
             remarks: PropTypes.string,
-          })
+          }),
         ),
-      })
+      }),
     ).isRequired,
   };
 
@@ -3064,7 +3064,7 @@ function rptQuotation() {
     // Filter out charges where the vendorName IS NOT present in the data array
     const filteredRateRequestCharge = rateRequestCharge.filter((charge) => {
       return !data.some(
-        (dataItem) => dataItem.vendorName !== charge.vendorName
+        (dataItem) => dataItem.vendorName !== charge.vendorName,
       ); // Invert the comparison
     });
 
@@ -3089,7 +3089,7 @@ function rptQuotation() {
 
     const grandTotal = sortedRateRequestCharge.reduce(
       (acc, charge) => acc + (charge.sellTotalAmount || 0),
-      0
+      0,
     );
 
     const grandTotalInWords = toWords(grandTotal);
@@ -3241,7 +3241,7 @@ function rptQuotation() {
                       )
                     </td>
                     <td className="text-center border-black border-b border-r"></td>
-                  </tr>
+                  </tr>,
                 );
               }
               return rows;
@@ -3296,9 +3296,9 @@ function rptQuotation() {
             sellAmount: PropTypes.number,
             sellTotalAmount: PropTypes.number,
             remarks: PropTypes.string,
-          })
+          }),
         ),
-      })
+      }),
     ).isRequired,
   };
   const ExportChargeModuleWithTax = ({ data }) => {
@@ -3310,7 +3310,7 @@ function rptQuotation() {
     // Filter out charges where the vendorName IS NOT present in the data array
     const filteredRateRequestCharge = rateRequestCharge.filter((charge) => {
       return !data.some(
-        (dataItem) => dataItem.vendorName !== charge.vendorName
+        (dataItem) => dataItem.vendorName !== charge.vendorName,
       ); // Invert the comparison
     });
 
@@ -3336,7 +3336,7 @@ function rptQuotation() {
 
     const grandTotal = sortedRateRequestCharge.reduce(
       (acc, charge) => acc + (charge.sellTotalAmount || 0),
-      0
+      0,
     );
 
     const grandTotalInWords = toWords(grandTotal);
@@ -3499,10 +3499,11 @@ function rptQuotation() {
                       {subtotal.taxAmount.toFixed(2)}({item.sellCurrencyName})
                     </td>
                     <td className="text-right border-black border-b border-r font-bold py-px">
-                      {subtotal.totalAmount.toFixed(2)}({item.sellCurrencyName}){" "}
+                      {subtotal.totalAmount.toFixed(2)}({item.sellCurrencyName}
+                      ){" "}
                     </td>
                     <td className="text-center border-black border-b border-r"></td>
-                  </tr>
+                  </tr>,
                 );
               }
               return rows;
@@ -3559,10 +3560,10 @@ function rptQuotation() {
             sellTotalAmount: PropTypes.number,
             remarks: PropTypes.string,
             // Add any other fields as necessary based on your data structure
-          })
+          }),
         ),
         // Add other fields from data if needed
-      })
+      }),
     ).isRequired,
   };
   function capitalizeFirstLetters(words) {
@@ -3672,7 +3673,7 @@ Operator/ Airport Authority or any other third party.
       PropTypes.shape({
         companyName: PropTypes.string,
         // Add any other expected properties from data here
-      })
+      }),
     ).isRequired,
   };
 
@@ -3699,7 +3700,7 @@ Operator/ Airport Authority or any other third party.
 
       if (!response.ok) {
         throw new Error(
-          `HTTP error! Status: ${response.status}, StatusText: ${response.statusText}`
+          `HTTP error! Status: ${response.status}, StatusText: ${response.statusText}`,
         );
       }
 
@@ -3741,30 +3742,30 @@ Operator/ Airport Authority or any other third party.
         data
           .flatMap((item) => item.tblRateRequestCharge || [])
           .filter((charge) => charge.quotationFlag),
-      [data]
+      [data],
     );
 
     const oceanFreightCharges = useMemo(
       () =>
         allCharges.filter((charge) =>
-          charge.chargeName?.toLowerCase().includes("freight")
+          charge.chargeName?.toLowerCase().includes("freight"),
         ),
-      [allCharges]
+      [allCharges],
     );
 
     const otherCharges = useMemo(
       () =>
         allCharges
           .filter(
-            (charge) => !charge.chargeName?.toLowerCase().includes("freight")
+            (charge) => !charge.chargeName?.toLowerCase().includes("freight"),
           )
           .sort((a, b) => a?.chargeName?.localeCompare(b.chargeName)),
-      [allCharges]
+      [allCharges],
     );
 
     const combinedCharges = useMemo(
       () => [...oceanFreightCharges, ...otherCharges],
-      [oceanFreightCharges, otherCharges]
+      [oceanFreightCharges, otherCharges],
     );
 
     const groupedCharges = useMemo(() => {
@@ -3781,22 +3782,22 @@ Operator/ Airport Authority or any other third party.
         [
           ...new Set(oceanFreightCharges.map((charge) => charge.vendorName)),
         ].sort(),
-      [oceanFreightCharges]
+      [oceanFreightCharges],
     );
 
     const filteredRateRequestPlan = useMemo(
       () =>
         tblRateRequestPlan.filter((item) =>
-          oceanFreightVendors.includes(item.vendorNamePlan)
+          oceanFreightVendors.includes(item.vendorNamePlan),
         ),
-      [tblRateRequestPlan, oceanFreightVendors]
+      [tblRateRequestPlan, oceanFreightVendors],
     );
 
     const formatDate = (dateString) => {
       if (!dateString) return "";
       const date = new Date(dateString);
       return `${String(date.getDate()).padStart(2, "0")}/${String(
-        date.getMonth() + 1
+        date.getMonth() + 1,
       ).padStart(2, "0")}/${date.getFullYear()}`;
     };
 
@@ -3889,7 +3890,7 @@ Operator/ Airport Authority or any other third party.
       const date = new Date(dateString);
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
         2,
-        "0"
+        "0",
       )}-${String(date.getDate()).padStart(2, "0")}`;
     };
 
@@ -4087,7 +4088,7 @@ Operator/ Airport Authority or any other third party.
     // Filter the charges where rateBasisName does not include 'weight'
     const tblRateRequestCharge =
       data[0]?.tblRateRequestCharge?.filter(
-        (charge) => !charge?.rateBasis?.toLowerCase().includes("weight")
+        (charge) => !charge?.rateBasis?.toLowerCase().includes("weight"),
       ) || [];
     if (tblRateRequestCharge.length === 0) {
       return;
@@ -4095,7 +4096,7 @@ Operator/ Airport Authority or any other third party.
     // Calculate the total amount
     const totalAmount = tblRateRequestCharge.reduce(
       (acc, item) => acc + item.sellAmount,
-      0
+      0,
     );
 
     const thStyle = {
@@ -4187,7 +4188,7 @@ Operator/ Airport Authority or any other third party.
       if (!dateString) return "";
       const date = new Date(dateString);
       return `${String(date.getDate()).padStart(2, "0")}/${String(
-        date.getMonth() + 1
+        date.getMonth() + 1,
       ).padStart(2, "0")}/${date.getFullYear()}`;
     };
 
@@ -4477,7 +4478,7 @@ Operator/ Airport Authority or any other third party.
     // Filter rate requests containing 'weight'
     const filteredRateRequestCharge =
       data[0]?.tblRateRequestCharge?.filter((charge) =>
-        charge?.rateBasis?.toLowerCase().includes("weight")
+        charge?.rateBasis?.toLowerCase().includes("weight"),
       ) || [];
 
     if (filteredRateRequestCharge.length === 0) {
@@ -4496,8 +4497,8 @@ Operator/ Airport Authority or any other third party.
     const vendorPairs = [
       ...new Set(
         filteredRateRequestCharge.map(
-          (c) => `${c.vendorName || ""}||${c.vendorAgentName || ""}`
-        )
+          (c) => `${c.vendorName || ""}||${c.vendorAgentName || ""}`,
+        ),
       ),
     ].map((pair) => {
       const [vendorName, vendorAgentName] = pair.split("||");
@@ -4614,7 +4615,7 @@ Operator/ Airport Authority or any other third party.
     // Filter charges that contain 'weight' in rateBasisName
     const filteredRateRequestCharge =
       data[0]?.tblRateRequestCharge?.filter((charge) =>
-        charge?.rateBasis?.toLowerCase().includes("weight")
+        charge?.rateBasis?.toLowerCase().includes("weight"),
       ) || [];
 
     // Exit if there are no charges
@@ -4628,13 +4629,13 @@ Operator/ Airport Authority or any other third party.
     // Filter out weight-related charges for calculations
     const tblRateRequestCharge =
       data[0]?.tblRateRequestCharge?.filter(
-        (charge) => !charge?.rateBasis?.toLowerCase().includes("weight")
+        (charge) => !charge?.rateBasis?.toLowerCase().includes("weight"),
       ) || [];
 
     // Calculate the total amount for other charges
     const totalAmount = tblRateRequestCharge.reduce(
       (acc, item) => acc + (item.sellAmount || 0),
-      0
+      0,
     );
 
     // const vendorPairs = [
@@ -4759,7 +4760,7 @@ Operator/ Airport Authority or any other third party.
                       </td>
                     </tr>
                   );
-                }
+                },
               )}
             </tbody>
           </table>
@@ -4978,7 +4979,7 @@ Operator/ Airport Authority or any other third party.
         customerName: PropTypes.string,
         rateRequestNo: PropTypes.string,
         preparedById: PropTypes.string,
-      })
+      }),
     ).isRequired,
     data: PropTypes.arrayOf(PropTypes.object),
   };
@@ -5134,7 +5135,7 @@ Operator/ Airport Authority or any other third party.
         validityFrom: PropTypes.string,
         validityTo: PropTypes.string,
         Remarks: PropTypes.string,
-      })
+      }),
     ).isRequired,
     data: PropTypes.arrayOf(PropTypes.object),
   };
@@ -5182,7 +5183,7 @@ Operator/ Airport Authority or any other third party.
 
     const grandTotal = sortedRateRequestCharge.reduce(
       (acc, charge) => acc + (charge.sellTotalAmount || 0),
-      0
+      0,
     );
 
     console.log("sortedRateRequestCharge", sortedRateRequestCharge);
@@ -5348,7 +5349,7 @@ Operator/ Airport Authority or any other third party.
                         {item.sellCurrencyName}){/* {totalAmount.toFixed(2)} */}
                       </td>
                       <td className="text-center border-black border-b border-r"></td>
-                    </tr>
+                    </tr>,
                   );
                 }
                 return rows;
@@ -5404,9 +5405,9 @@ Operator/ Airport Authority or any other third party.
             sellAmount: PropTypes.number,
             sellTotalAmount: PropTypes.number,
             remarks: PropTypes.string,
-          })
+          }),
         ),
-      })
+      }),
     ).isRequired,
   };
   const TariffExportParagrafModule = ({ data }) => {
@@ -5463,7 +5464,7 @@ Operator/ Airport Authority or any other third party.
       PropTypes.shape({
         companyName: PropTypes.string,
         // Add any other expected properties from data here
-      })
+      }),
     ).isRequired,
   };
 
@@ -5695,7 +5696,8 @@ Operator/ Airport Authority or any other third party.
                     : ""}{" "}
                   {data && data.length > 0 && data[0].demurrageCurrency !== ""
                     ? data[0].demurrageCurrency
-                    : ""}
+                    : ""}{" "}
+                  {"per day"}
                 </td>
               </tr>
             </table>
@@ -5736,7 +5738,8 @@ Operator/ Airport Authority or any other third party.
                     : ""}{" "}
                   {data && data.length > 0 && data[0].demurrageCurrency !== ""
                     ? data[0].demurrageCurrency
-                    : ""}
+                    : ""}{" "}
+                  {"per day"}
                 </td>
               </tr>
             </table>
@@ -5853,7 +5856,7 @@ Operator/ Airport Authority or any other third party.
     // Filter out charges where the vendorName IS NOT present in the data array
     const filteredRateRequestCharge = rateRequestCharge.filter((charge) => {
       return !data.some(
-        (dataItem) => dataItem.vendorName !== charge.vendorName
+        (dataItem) => dataItem.vendorName !== charge.vendorName,
       ); // Invert the comparison
     });
 
@@ -5879,7 +5882,7 @@ Operator/ Airport Authority or any other third party.
 
     const grandTotal = sortedRateRequestCharge.reduce(
       (acc, charge) => acc + (charge.sellTotalAmount || 0),
-      0
+      0,
     );
 
     const grandTotalInWords = toWords(grandTotal);
@@ -6041,10 +6044,11 @@ Operator/ Airport Authority or any other third party.
                       {subtotal?.taxAmount.toFixed(2)}({item.sellCurrency})
                     </td>
                     <td className="text-right border-black border-b border-r font-bold py-px">
-                      {subtotal?.totalAmount.toFixed(2)}({item.sellCurrency}){" "}
+                      {subtotal?.totalAmount.toFixed(2)}({item.sellCurrency}
+                      ){" "}
                     </td>
                     <td className="text-center border-black border-b border-r"></td>
-                  </tr>
+                  </tr>,
                 );
               }
               return rows;
@@ -6091,7 +6095,7 @@ Operator/ Airport Authority or any other third party.
     // Filter out charges where the vendorName IS NOT present in the data array
     const filteredRateRequestCharge = rateRequestCharge.filter((charge) => {
       return !data.some(
-        (dataItem) => dataItem.vendorName !== charge.vendorName
+        (dataItem) => dataItem.vendorName !== charge.vendorName,
       ); // Invert the comparison
     });
 
@@ -6129,7 +6133,7 @@ Operator/ Airport Authority or any other third party.
 
     const grandTotal = sortedRateRequestCharge.reduce(
       (acc, charge) => acc + (charge.sellTotalAmount || 0),
-      0
+      0,
     );
 
     const grandTotalInWords = toWords(grandTotal);
@@ -6276,10 +6280,11 @@ Operator/ Airport Authority or any other third party.
                       {subtotal?.taxAmount.toFixed(2)}({item.sellCurrency})
                     </td>
                     <td className="text-right border-black border-b border-r font-bold py-px">
-                      {subtotal?.totalAmount.toFixed(2)}({item.sellCurrency}){" "}
+                      {subtotal?.totalAmount.toFixed(2)}({item.sellCurrency}
+                      ){" "}
                     </td>
                     <td className="text-center border-black border-b border-r"></td>
-                  </tr>
+                  </tr>,
                 );
               }
               return rows;
@@ -6475,7 +6480,7 @@ Operator/ Airport Authority or any other third party.
 
     const filteredRateRequestCharge = rateRequestCharge.filter((charge) => {
       return !data.some(
-        (dataItem) => dataItem.vendorName !== charge.vendorName
+        (dataItem) => dataItem.vendorName !== charge.vendorName,
       );
     });
 
@@ -6497,7 +6502,7 @@ Operator/ Airport Authority or any other third party.
 
     const grandTotal = sortedRateRequestCharge.reduce(
       (acc, charge) => acc + (charge.sellTotalAmount || 0),
-      0
+      0,
     );
 
     const grandTotalInWords = toWords(grandTotal);
@@ -6606,7 +6611,7 @@ Operator/ Airport Authority or any other third party.
                       {item.sellCurrency})
                     </td>
                     <td className="text-center border-black border-b border-r"></td>
-                  </tr>
+                  </tr>,
                 );
               }
               return rows;
@@ -6762,7 +6767,7 @@ Operator/ Airport Authority or any other third party.
 
     const filteredRateRequestCharge = rateRequestCharge.filter((charge) => {
       return !data.some(
-        (dataItem) => dataItem.vendorName !== charge.vendorName
+        (dataItem) => dataItem.vendorName !== charge.vendorName,
       );
     });
 
@@ -6773,7 +6778,7 @@ Operator/ Airport Authority or any other third party.
     // });
 
     const sortedRateRequestCharge = rateRequestCharge.filter(
-      (item) => item.sellTaxAmount == null || item.sellTaxAmount === ""
+      (item) => item.sellTaxAmount == null || item.sellTaxAmount === "",
     );
 
     const subtotals = sortedRateRequestCharge.reduce((acc, curr) => {
@@ -6788,7 +6793,7 @@ Operator/ Airport Authority or any other third party.
 
     const grandTotal = sortedRateRequestCharge.reduce(
       (acc, charge) => acc + (charge.sellTotalAmount || 0),
-      0
+      0,
     );
 
     const grandTotalInWords = toWords(grandTotal);
@@ -6896,7 +6901,7 @@ Operator/ Airport Authority or any other third party.
                       {subtotal?.totalAmount.toFixed(2)} ({item.sellCurrency})
                     </td>
                     <td className="text-center border-black border-b border-r"></td>
-                  </tr>
+                  </tr>,
                 );
               }
               return rows;
@@ -7024,7 +7029,7 @@ Operator/ Airport Authority or any other third party.
                           day: "numeric",
                           month: "short",
                           year: "numeric",
-                        }
+                        },
                       )
                     : ""}
                 </td>
@@ -7204,7 +7209,7 @@ Operator/ Airport Authority or any other third party.
 
     // Separate records into two groups: with and without vendors
     const recordsWithVendor = chargeData.filter(
-      (item) => item.vendorName && item.vendorName.trim() !== ""
+      (item) => item.vendorName && item.vendorName.trim() !== "",
     );
     // const recordsWithoutVendor = chargeData.filter(
     //   (item) => !item.vendorName || item.vendorName.trim() === ""
@@ -7218,7 +7223,7 @@ Operator/ Airport Authority or any other third party.
           item.sellRate === 0 ||
           item.sellRate === "0.00" ||
           item.sellRate === 0.0
-        )
+        ),
     );
 
     // If no valid records exist for either category, show a message
@@ -7258,7 +7263,7 @@ Operator/ Airport Authority or any other third party.
               {totalTotalAmount.toFixed(2)}
             </td>
             <td className="border-black border-b border-r pt-2 pb-2"></td>
-          </tr>
+          </tr>,
         );
 
         // Reset totals for the new vendor
@@ -7276,7 +7281,7 @@ Operator/ Airport Authority or any other third party.
             >
               {item.vendorName}
             </td>
-          </tr>
+          </tr>,
         );
 
         lastVendor = item.vendorName;
@@ -7317,7 +7322,7 @@ Operator/ Airport Authority or any other third party.
           <td className="border-black border-b border-r pt-2 pb-3 ps-2">
             {item.remarks || ""}
           </td>
-        </tr>
+        </tr>,
       );
     });
 
@@ -7341,7 +7346,7 @@ Operator/ Airport Authority or any other third party.
             {totalTotalAmount.toFixed(2)}
           </td>
           <td className="border-black border-b border-r pt-2 pb-2"></td>
-        </tr>
+        </tr>,
       );
     }
 
@@ -7525,10 +7530,10 @@ Operator/ Airport Authority or any other third party.
 
     // Separate records into two groups: with and without vendors
     const recordsWithVendor = chargeData.filter(
-      (item) => item.vendorName && item.vendorName.trim() !== ""
+      (item) => item.vendorName && item.vendorName.trim() !== "",
     );
     const recordsWithoutVendor = chargeData.filter(
-      (item) => !item.vendorName || item.vendorName.trim() === ""
+      (item) => !item.vendorName || item.vendorName.trim() === "",
     );
 
     // If no valid records exist for either category, show a message
@@ -7572,7 +7577,7 @@ Operator/ Airport Authority or any other third party.
               {totalTotalAmount.toFixed(2)}
             </td>
             <td className="border-black border-b border-r pt-2 pb-2"></td>
-          </tr>
+          </tr>,
         );
 
         // Reset totals for the new vendor
@@ -7591,7 +7596,7 @@ Operator/ Airport Authority or any other third party.
             >
               {item.vendorName}
             </td>
-          </tr>
+          </tr>,
         );
 
         lastVendor = item.vendorName;
@@ -7636,7 +7641,7 @@ Operator/ Airport Authority or any other third party.
           <td className="border-black border-b border-r pt-2 pb-3 ps-2">
             {item.remarks || ""}
           </td>
-        </tr>
+        </tr>,
       );
     });
 
@@ -7663,7 +7668,7 @@ Operator/ Airport Authority or any other third party.
             {totalTotalAmount.toFixed(2)}
           </td>
           <td className="border-black border-b border-r pt-2 pb-2"></td>
-        </tr>
+        </tr>,
       );
     }
 
@@ -8130,7 +8135,7 @@ Operator/ Airport Authority or any other third party.
     // Filter the charges where rateBasisName does not include 'weight'
     const tblRateRequestCharge =
       data[0]?.tblRateRequestCharge?.filter(
-        (charge) => !charge?.rateBasis?.toLowerCase().includes("weight")
+        (charge) => !charge?.rateBasis?.toLowerCase().includes("weight"),
       ) || [];
     if (tblRateRequestCharge.length === 0) {
       return;
@@ -8138,7 +8143,7 @@ Operator/ Airport Authority or any other third party.
     // Calculate the total amount
     const totalAmount = tblRateRequestCharge.reduce(
       (acc, item) => acc + item.sellAmount,
-      0
+      0,
     );
 
     const thStyle = {
@@ -8433,7 +8438,7 @@ Operator/ Airport Authority or any other third party.
     // Filter rate requests containing 'weight'
     const filteredRateRequestCharge =
       data[0]?.tblRateRequestCharge?.filter((charge) =>
-        charge?.rateBasis?.toLowerCase().includes("weight")
+        charge?.rateBasis?.toLowerCase().includes("weight"),
       ) || [];
 
     if (filteredRateRequestCharge.length === 0) {
@@ -8455,8 +8460,8 @@ Operator/ Airport Authority or any other third party.
       ...new Set(
         filteredRateRequestCharge.map(
           (charge) =>
-            `${charge.vendorName || ""}||${charge.vendorAgentName || ""}`
-        )
+            `${charge.vendorName || ""}||${charge.vendorAgentName || ""}`,
+        ),
       ),
     ].map((pair) => {
       const [vendorName, vendorAgentName] = pair.split("||");
@@ -8600,7 +8605,7 @@ Operator/ Airport Authority or any other third party.
 
     // Check if any quotationFlag is true
     const hasQuotationFlagTrue = data.some((item) =>
-      item.tblRateRequestCharge.some((charge) => charge.quotationFlag === true)
+      item.tblRateRequestCharge.some((charge) => charge.quotationFlag === true),
     );
 
     // If no quotationFlag is true, return an empty div
@@ -8613,8 +8618,8 @@ Operator/ Airport Authority or any other third party.
       item.tblRateRequestCharge.some(
         (charge) =>
           charge.quotationFlag === true &&
-          charge.chargeName?.toLowerCase().includes("freight")
-      )
+          charge.chargeName?.toLowerCase().includes("freight"),
+      ),
     );
 
     if (!hasOceanFreight) {
@@ -8652,19 +8657,19 @@ Operator/ Airport Authority or any other third party.
           groupName,
           buyRateInrSubtotal: groupCharges.reduce(
             (acc, charge) => acc + (charge.buyAmountHc || 0),
-            0
+            0,
           ),
           buyRateUsdSubtotal: groupCharges.reduce(
             (acc, charge) => acc + (charge.buyAmount || 0),
-            0
+            0,
           ),
           sellRateInrSubtotal: groupCharges.reduce(
             (acc, charge) => acc + (charge.sellAmountHc || 0),
-            0
+            0,
           ),
           sellRateUsdSubtotal: groupCharges.reduce(
             (acc, charge) => acc + (charge.sellAmount || 0),
-            0
+            0,
           ),
         };
       });
@@ -8683,7 +8688,7 @@ Operator/ Airport Authority or any other third party.
           buyRateUsdTotal: 0,
           sellRateInrTotal: 0,
           sellRateUsdTotal: 0,
-        }
+        },
       );
       return (
         <div className="dynamic_table mt-2" style={{ width: "100%" }}>
@@ -8803,7 +8808,7 @@ Operator/ Airport Authority or any other third party.
                             {(charge.sellAmount || 0).toFixed(2)}
                           </td>
                         </tr>
-                      )
+                      ),
                     )}
                     {/* Subtotal Row */}
                     <tr
@@ -8922,7 +8927,7 @@ Operator/ Airport Authority or any other third party.
         data
           .flatMap((item) => item.tblRateRequestCharge)
           .filter((charge) => charge.quotationFlag === true),
-      [data]
+      [data],
     );
 
     // Handling Sea Freight with distinct logic
@@ -8930,7 +8935,7 @@ Operator/ Airport Authority or any other third party.
       () =>
         allCharges
           .filter((charge) =>
-            charge.chargeGroupName.toLowerCase().includes("freight")
+            charge.chargeGroupName.toLowerCase().includes("freight"),
           )
           .reduce((acc, charge) => {
             const key = `${charge.chargeName}-${charge.sizeName}-${charge.typeName}`;
@@ -8940,7 +8945,7 @@ Operator/ Airport Authority or any other third party.
             acc[key].push(charge);
             return acc;
           }, {}),
-      [allCharges]
+      [allCharges],
     );
 
     // Handling other charges without distinct logic
@@ -8949,18 +8954,18 @@ Operator/ Airport Authority or any other third party.
         allCharges
           .filter(
             (charge) =>
-              !charge.chargeGroupName.toLowerCase().includes("freight")
+              !charge.chargeGroupName.toLowerCase().includes("freight"),
           )
           .reduce((acc, charge) => {
             acc.push(charge);
             return acc;
           }, []),
-      [allCharges]
+      [allCharges],
     );
 
     const combinedCharges = useMemo(
       () => [...Object.values(oceanFreightCharges).flat(), ...otherCharges],
-      [oceanFreightCharges, otherCharges]
+      [oceanFreightCharges, otherCharges],
     );
 
     // Get unique vendors specific to OCEAN FREIGHT charges
@@ -9003,7 +9008,7 @@ Operator/ Airport Authority or any other third party.
       return uniquePairs.sort(
         (a, b) =>
           (a.vendorAgentName || "").localeCompare(b.vendorAgentName || "") ||
-          a.vendorName.localeCompare(b.vendorName)
+          a.vendorName.localeCompare(b.vendorName),
       );
     }, [oceanFreightCharges]);
 
@@ -9341,7 +9346,7 @@ Operator/ Airport Authority or any other third party.
     // Filter charges that contain 'weight' in rateBasisName
     const filteredRateRequestCharge =
       data[0]?.tblRateRequestCharge?.filter((charge) =>
-        charge?.rateBasis?.toLowerCase().includes("weight")
+        charge?.rateBasis?.toLowerCase().includes("weight"),
       ) || [];
 
     // Exit if there are no charges
@@ -9355,13 +9360,13 @@ Operator/ Airport Authority or any other third party.
     // Filter out weight-related charges for calculations
     const tblRateRequestCharge =
       data[0]?.tblRateRequestCharge?.filter(
-        (charge) => !charge?.rateBasis?.toLowerCase().includes("weight")
+        (charge) => !charge?.rateBasis?.toLowerCase().includes("weight"),
       ) || [];
 
     // Calculate the total amount for other charges
     const totalAmount = tblRateRequestCharge.reduce(
       (acc, item) => acc + (item.sellAmount || 0),
-      0
+      0,
     );
 
     // Custom styles for the table
@@ -9683,7 +9688,7 @@ Operator/ Airport Authority or any other third party.
         customerName: PropTypes.string,
         rateRequestNo: PropTypes.string,
         preparedById: PropTypes.string,
-      })
+      }),
     ).isRequired,
     data: PropTypes.arrayOf(PropTypes.object),
   };
@@ -9922,9 +9927,9 @@ Operator/ Airport Authority or any other third party.
             sellAmount: PropTypes.number,
             sellTotalAmount: PropTypes.number,
             remarks: PropTypes.string,
-          })
+          }),
         ),
-      })
+      }),
     ).isRequired,
   };
   const PalletAdditionalSeriesModule = ({ data }) => {
@@ -10033,9 +10038,9 @@ Operator/ Airport Authority or any other third party.
             sellAmount: PropTypes.number,
             sellTotalAmount: PropTypes.number,
             remarks: PropTypes.string,
-          })
+          }),
         ),
-      })
+      }),
     ).isRequired,
   };
 
@@ -10063,7 +10068,7 @@ Operator/ Airport Authority or any other third party.
             loginCompany,
             loginBranch,
             businessSegmentId,
-            ownCompanyName
+            ownCompanyName,
           );
           if (data && data.length > 0) {
             setTermsAndConditions(data[0].termsCondition || "");
@@ -10124,7 +10129,7 @@ Operator/ Airport Authority or any other third party.
       PropTypes.shape({
         companyName: PropTypes.string,
         // Add any other expected properties from data here
-      })
+      }),
     ).isRequired,
   };
 
@@ -10371,7 +10376,7 @@ Operator/ Airport Authority or any other third party.
 
     const grandTotal = sortedRateRequestCharge.reduce(
       (acc, charge) => acc + (charge.sellAmount || 0),
-      0
+      0,
     );
 
     console.log("sortedRateRequestCharge", sortedRateRequestCharge);

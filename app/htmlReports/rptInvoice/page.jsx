@@ -75,7 +75,7 @@ function rptInvoice() {
 
       return acc;
     },
-    { chargesWithVat: [], chargesWithoutVat: [] }
+    { chargesWithVat: [], chargesWithoutVat: [] },
   );
 
   // Results:
@@ -252,6 +252,7 @@ function rptInvoice() {
           if (!response.ok) throw new Error("Failed to fetch job data");
           const data = await response.json();
           setData(data.data);
+          setPrintName(data?.data[0]?.invoiceNo);
           const storedReportIds = sessionStorage.getItem("selectedReportIds");
           let reportNames = null;
           if (storedReportIds) {
@@ -274,17 +275,17 @@ function rptInvoice() {
           ) {
             const result = splitIntoChunksWithExtraArray(
               data.data[0]?.tblInvoiceCharge,
-              itemsPerPage
+              itemsPerPage,
             );
             console.log("Data received:", result);
             setCharge(result);
 
             const allInvoiceDetails = data?.data[0]?.tblInvoiceCharge?.flatMap(
-              (charge) => charge.tblInvoiceChargeDetails || []
+              (charge) => charge.tblInvoiceChargeDetails || [],
             );
             const resultAtt = splitIntoChunksWithExtraArray(
               allInvoiceDetails,
-              itemsPerPageAtt
+              itemsPerPageAtt,
             );
             console.log("Data received Abhi:", resultAtt);
 
@@ -310,7 +311,7 @@ function rptInvoice() {
             // Step 2: Calculate for SAC
             const sacSummary = dedupedSacList.map((sac) => {
               const matchingRecords = charges.filter(
-                (charge) => charge.sac === sac
+                (charge) => charge.sac === sac,
               );
 
               let CGST = 0;
@@ -356,7 +357,7 @@ function rptInvoice() {
             // Step 3: Calculate for HSN
             const hsnSummary = dedupedHsnList.map((hsn) => {
               const matchingRecords = charges.filter(
-                (charge) => charge.hsn === hsn
+                (charge) => charge.hsn === hsn,
               );
 
               let CGST = 0;
@@ -404,7 +405,7 @@ function rptInvoice() {
             if (combinedSummary.length > 0) {
               const hsnSacResult = splitIntoChunks(
                 combinedSummary,
-                hsnSacItemPerPage
+                hsnSacItemPerPage,
               );
               setHsnSac(hsnSacResult);
             }
@@ -670,9 +671,6 @@ function rptInvoice() {
     );
   };
   const InvoicePrintHeader = ({ data }) => {
-    console.log("TaxInvoiceHeader", data);
-    console.log("reportIds", reportIds[0]);
-    setPrintName(data[0]?.invoiceNo);
     return (
       <div className="border-l border-r border-b border-black pt-1 pb-1">
         <div className="flex flex-grow w-full justify-center items-center">
@@ -1624,9 +1622,11 @@ function rptInvoice() {
       const qty = Number(curr.qty || 0);
       const rate = Number(curr.rate || 0);
       const exchangeRate = Number(curr.exchangeRate || 1);
-      const tax = Number(curr.IGST || curr.CGST || curr.SGST || 0);
+      const IGST = Number(curr.IGST || 0);
+      const CGST = Number(curr.CGST || 0);
+      const SGST = Number(curr.SGST || 0);
 
-      const rowTotal = qty * rate * exchangeRate + tax;
+      const rowTotal = qty * rate * exchangeRate + IGST + CGST + SGST;
       return acc + rowTotal;
     }, 0);
 
@@ -1786,12 +1786,9 @@ function rptInvoice() {
                     Number(chargeData?.qty || 0) *
                       Number(chargeData?.rate || 0) *
                       Number(chargeData?.exchangeRate || 1) +
-                    Number(
-                      chargeData?.IGST ||
-                        chargeData?.CGST ||
-                        chargeData?.SGST ||
-                        0
-                    )
+                    Number(chargeData?.IGST || 0) +
+                    Number(chargeData?.CGST || 0) +
+                    Number(chargeData?.SGST || 0)
                   ).toFixed(2)}
                 </p>
               </div>
@@ -1850,7 +1847,7 @@ function rptInvoice() {
       const tax = Number(curr.IGST || curr.CGST || curr.SGST || 0);
 
       // const rowTotal = qty * rate * exchangeRate + tax;
-      const rowTotal = Math.round(qty * rate * exchangeRate + tax);
+      const rowTotal = qty * rate * exchangeRate + tax; //Math.round(qty * rate * exchangeRate + tax);
 
       return acc + rowTotal;
     }, 0);
@@ -2194,7 +2191,7 @@ function rptInvoice() {
                       {chargeAtt[index]
                         ?.reduce(
                           (sum, curr) => sum + (parseFloat(curr?.rate) || 0),
-                          0
+                          0,
                         )
                         .toFixed(2)}
                     </p>
@@ -2206,7 +2203,7 @@ function rptInvoice() {
                         ?.reduce(
                           (sum, curr) =>
                             sum + (parseFloat(curr?.amountHc) || 0),
-                          0
+                          0,
                         )
                         .toFixed(2)}
                     </p>
@@ -2244,12 +2241,12 @@ function rptInvoice() {
     //const gridTotal = data[0]?.totalInvoiceAmount;
     // number in, string "5498.00" out
     const raw = Number(data?.[0]?.totalInvoiceAmount ?? 0);
-    const gridTotal = Math.ceil(raw); // 5498 (number)
+    const gridTotal = raw; // 5498 (number)
     const gridTotalDisplay = gridTotal.toFixed(2); // "5498.00" (string)
 
     const totalAmountInWords = numberToWords(
       parseFloat(gridTotalDisplay),
-      "INR"
+      "INR",
     );
 
     // Calculate the number of charges on the current page
@@ -2440,12 +2437,12 @@ function rptInvoice() {
     // const totalAmountInWords = numberToWords(parseFloat(gridTotal), "INR");
 
     const raw = Number(data?.[0]?.totalInvoiceAmount ?? 0);
-    const gridTotal = Math.round(raw); // 5498 (number)
+    const gridTotal = raw; //Math.round(raw); // 5498 (number)
     const gridTotalDisplay = gridTotal.toFixed(2); // "5498.00" (string)
 
     const totalAmountInWords = numberToWords(
       parseFloat(gridTotalDisplay),
-      "INR"
+      "INR",
     );
 
     // Calculate the number of charges on the current page
@@ -2777,7 +2774,8 @@ function rptInvoice() {
             style={{ width: "60%", fontSize: "9px" }}
           >
             <p className="font-bold">
-              All payment to be issued in favour of {data[0]?.company || ""}{" "}
+              All payment to be issued in favour of{" "}
+              {data[0]?.company || ""}{" "}
             </p>
             <br />
             <p className="pt-1 pb-1 font-bold">For RTGS / NEFT Payment:</p>
@@ -3235,7 +3233,7 @@ function rptInvoice() {
         acc.taxableAmount += item.taxableAmount || 0;
         return acc;
       },
-      { CGST: 0, SGST: 0, IGST: 0, taxableAmount: 0 }
+      { CGST: 0, SGST: 0, IGST: 0, taxableAmount: 0 },
     );
     return (
       <div
@@ -3303,7 +3301,7 @@ function rptInvoice() {
                     <p className="flex-1 pb-1 border-r border-black">&nbsp;</p>
                     <p className="flex-1 pb-1">&nbsp;</p>
                   </div>
-                )
+                ),
               );
 
               return [...rows, ...emptyRows];
@@ -3382,7 +3380,7 @@ function rptInvoice() {
       <div className="mx-auto !text-black">
         <CompanyImgModule data={data} />
         <div className="flex flex-grow w-full justify-center items-center text-black border-l border-r border-black">
-          <h1
+          {/* <h1
             className="text-black" // removed font-bold and text-sm
             style={{
               color: "black",
@@ -3392,8 +3390,8 @@ function rptInvoice() {
               fontSynthesis: "none", // prevent synthetic bold
             }}
           >
-            {"TAX INVOICE"}
-          </h1>
+            {"TAX INVOICE "}
+          </h1> */}
         </div>
         <TaxInvoiceHeader data={data} />
         <TaxInvoiceBillingDetails data={data} />
@@ -3674,7 +3672,7 @@ function rptInvoice() {
       ? chargeAtt.reduce(
           (last, inner, idx) =>
             Array.isArray(inner) && inner.length > 0 ? idx : last,
-          -1 // → -1 if none are non-empty
+          -1, // → -1 if none are non-empty
         )
       : -1;
 
@@ -3691,12 +3689,12 @@ function rptInvoice() {
     // Calculate totals
     const totalDays = currentChargeAtt.reduce(
       (sum, item) => sum + (Number(item.noOfDays) || 0),
-      0
+      0,
     );
 
     const totalAmount = currentChargeAtt.reduce(
       (sum, item) => sum + (Number(item.amountHc) || 0),
-      0
+      0,
     );
 
     return (
@@ -4099,7 +4097,7 @@ function rptInvoice() {
       const n = parseFloat(
         String(v ?? "")
           .replace(/,/g, "")
-          .trim()
+          .trim(),
       );
       return Number.isFinite(n) ? n : 0;
     };
@@ -4109,7 +4107,7 @@ function rptInvoice() {
         const taxHC = toNum(row?.tblInvoiceChargeTax?.[0]?.taxAmountHc);
         const taxFC = toNum(row?.tblInvoiceChargeTax?.[0]?.taxAmountFc);
         const taxHCvatAmount = toNum(
-          row?.tblInvoiceChargeTax?.[0]?.taxAmountFc
+          row?.tblInvoiceChargeTax?.[0]?.taxAmountFc,
         );
 
         acc.totalAmountFc += toNum(row?.totalAmountFc) + taxFC; // add FC tax
@@ -4118,7 +4116,7 @@ function rptInvoice() {
 
         return acc;
       },
-      { totalAmountFc: 0, totalAmount: 0, vatAmount: 0 }
+      { totalAmountFc: 0, totalAmount: 0, vatAmount: 0 },
     );
 
     // (optional) formatted strings:
@@ -4297,7 +4295,7 @@ function rptInvoice() {
                     style={{ color: "black", fontSize: "9px" }}
                   >
                     {Number(
-                      r?.tblInvoiceChargeTax[0]?.taxAmountFc || 0
+                      r?.tblInvoiceChargeTax[0]?.taxAmountFc || 0,
                     ).toFixed(2)}
                   </td>
                   <td
@@ -4425,7 +4423,7 @@ function rptInvoice() {
       const n = parseFloat(
         String(v ?? "")
           .replace(/,/g, "")
-          .trim()
+          .trim(),
       );
       return Number.isFinite(n) ? n : 0;
     };
@@ -4435,7 +4433,7 @@ function rptInvoice() {
         const taxHC = toNum(row?.tblInvoiceChargeTax?.[0]?.taxAmountHc);
         const taxFC = toNum(row?.tblInvoiceChargeTax?.[0]?.taxAmountFc);
         const taxHCvatAmount = toNum(
-          row?.tblInvoiceChargeTax?.[0]?.taxAmountFc
+          row?.tblInvoiceChargeTax?.[0]?.taxAmountFc,
         );
 
         acc.totalAmountFc += toNum(row?.totalAmountFc) + taxFC; // add FC tax
@@ -4444,7 +4442,7 @@ function rptInvoice() {
 
         return acc;
       },
-      { totalAmountFc: 0, totalAmount: 0, vatAmount: 0 }
+      { totalAmountFc: 0, totalAmount: 0, vatAmount: 0 },
     );
 
     // (optional) formatted strings:
@@ -4623,7 +4621,7 @@ function rptInvoice() {
                     style={{ color: "black", fontSize: "9px" }}
                   >
                     {Number(
-                      r?.tblInvoiceChargeTax[0]?.taxAmountFc || 0
+                      r?.tblInvoiceChargeTax[0]?.taxAmountFc || 0,
                     ).toFixed(2)}
                   </td>
                   <td
@@ -4734,7 +4732,7 @@ function rptInvoice() {
       const n = parseFloat(
         String(v ?? "")
           .replace(/,/g, "")
-          .trim()
+          .trim(),
       );
       return Number.isFinite(n) ? n : 0;
     };
@@ -4744,7 +4742,7 @@ function rptInvoice() {
         const taxHC = toNum(row?.tblInvoiceChargeTax?.[0]?.taxAmountHc);
         const taxFC = toNum(row?.tblInvoiceChargeTax?.[0]?.taxAmountFc);
         const taxHCvatAmount = toNum(
-          row?.tblInvoiceChargeTax?.[0]?.taxAmountFc
+          row?.tblInvoiceChargeTax?.[0]?.taxAmountFc,
         );
 
         acc.totalAmountFc += toNum(row?.totalAmountFc) + taxFC; // add FC tax
@@ -4753,7 +4751,7 @@ function rptInvoice() {
 
         return acc;
       },
-      { totalAmountFc: 0, totalAmount: 0, vatAmount: 0 }
+      { totalAmountFc: 0, totalAmount: 0, vatAmount: 0 },
     );
 
     // (optional) formatted strings:
@@ -4930,7 +4928,7 @@ function rptInvoice() {
                     style={{ color: "black", fontSize: "9px" }}
                   >
                     {Number(
-                      r?.tblInvoiceChargeTax[0]?.taxAmountFc || 0
+                      r?.tblInvoiceChargeTax[0]?.taxAmountFc || 0,
                     ).toFixed(2)}
                   </td>
                   <td
@@ -4999,7 +4997,7 @@ function rptInvoice() {
       const n = parseFloat(
         String(v ?? "")
           .replace(/,/g, "")
-          .trim()
+          .trim(),
       );
       return Number.isFinite(n) ? n : 0;
     };
@@ -5009,7 +5007,7 @@ function rptInvoice() {
         const taxHC = toNum(row?.tblInvoiceChargeTax?.[0]?.taxAmountHc);
         const taxFC = toNum(row?.tblInvoiceChargeTax?.[0]?.taxAmountFc);
         const taxHCvatAmount = toNum(
-          row?.tblInvoiceChargeTax?.[0]?.taxAmountFc
+          row?.tblInvoiceChargeTax?.[0]?.taxAmountFc,
         );
 
         acc.totalAmountFc += toNum(row?.totalAmountFc) + taxFC; // add FC tax
@@ -5018,7 +5016,7 @@ function rptInvoice() {
 
         return acc;
       },
-      { totalAmountFc: 0, totalAmount: 0, vatAmount: 0 }
+      { totalAmountFc: 0, totalAmount: 0, vatAmount: 0 },
     );
 
     // (optional) formatted strings:
@@ -5194,7 +5192,7 @@ function rptInvoice() {
                     style={{ color: "black", fontSize: "9px" }}
                   >
                     {Number(
-                      r?.tblInvoiceChargeTax[0]?.taxAmountFc || 0
+                      r?.tblInvoiceChargeTax[0]?.taxAmountFc || 0,
                     ).toFixed(2)}
                   </td>
                   <td
@@ -5832,7 +5830,7 @@ function rptInvoice() {
       const n = parseFloat(
         String(v ?? "")
           .replace(/,/g, "")
-          .trim()
+          .trim(),
       );
       return Number.isFinite(n) ? n : 0;
     };
@@ -5842,7 +5840,7 @@ function rptInvoice() {
         const taxHC = toNum(row?.tblInvoiceChargeTax?.[0]?.taxAmountHc);
         const taxFC = toNum(row?.tblInvoiceChargeTax?.[0]?.taxAmountFc);
         const taxHCvatAmount = toNum(
-          row?.tblInvoiceChargeTax?.[0]?.taxAmountFc
+          row?.tblInvoiceChargeTax?.[0]?.taxAmountFc,
         );
 
         acc.totalAmountFc += toNum(row?.totalAmountFc) + taxFC; // add FC tax
@@ -5851,7 +5849,7 @@ function rptInvoice() {
 
         return acc;
       },
-      { totalAmountFc: 0, totalAmount: 0, vatAmount: 0 }
+      { totalAmountFc: 0, totalAmount: 0, vatAmount: 0 },
     );
 
     // (optional) formatted strings:
@@ -6017,7 +6015,7 @@ function rptInvoice() {
                     style={{ color: "black", fontSize: "9px" }}
                   >
                     {Number(
-                      r?.tblInvoiceChargeTax[0]?.taxAmountFc || 0
+                      r?.tblInvoiceChargeTax[0]?.taxAmountFc || 0,
                     ).toFixed(2)}
                   </td>
                   <td
@@ -6150,7 +6148,7 @@ function rptInvoice() {
       return sorted
         .map(
           ({ count, size, typeStr }) =>
-            `${count} X ${size}${" "}${typeStr ? typeStr : ""}`
+            `${count} X ${size}${" "}${typeStr ? typeStr : ""}`,
         )
         .join(", ");
     };
@@ -6572,7 +6570,7 @@ function rptInvoice() {
       return sorted
         .map(
           ({ count, size, typeStr }) =>
-            `${count} X ${size}${" "}${typeStr ? typeStr : ""}`
+            `${count} X ${size}${" "}${typeStr ? typeStr : ""}`,
         )
         .join(", ");
     };
@@ -7236,15 +7234,15 @@ function rptInvoice() {
         sum +
         toNum(r?.totalAmount) +
         toNum(r?.tblInvoiceChargeTax?.[0]?.taxAmountHc),
-      0
+      0,
     );
     const totalFirstTaxFc = charges.reduce(
       (sum, r) => sum + toNum(r?.tblInvoiceChargeTax?.[0]?.taxAmountFc),
-      0
+      0,
     );
     const totalFirstTaxHc = charges.reduce(
       (sum, r) => sum + toNum(r?.tblInvoiceChargeTax?.[0]?.taxAmountHc),
-      0
+      0,
     );
     const netAmountHc = totalAmountPlusFirstTaxHc - totalFirstTaxHc;
 
@@ -7255,7 +7253,7 @@ function rptInvoice() {
         sum +
         toNum(r?.totalAmountFc) +
         toNum(r?.tblInvoiceChargeTax?.[0]?.taxAmountFc),
-      0
+      0,
     );
 
     return (
@@ -8571,7 +8569,7 @@ function rptInvoice() {
                 >
                   {item?.discountAmount
                     ? `${data[0]?.currency} ${parseFloat(
-                        item.discountAmount
+                        item.discountAmount,
                       ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
@@ -8587,7 +8585,7 @@ function rptInvoice() {
                 >
                   {item?.tblInvoiceChargeTax?.[0]?.taxAmountHc
                     ? `${data[0]?.currency} ${parseFloat(
-                        item.tblInvoiceChargeTax[0].taxAmountHc
+                        item.tblInvoiceChargeTax[0].taxAmountHc,
                       ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
@@ -8602,7 +8600,7 @@ function rptInvoice() {
                 >
                   {item?.totalAmount
                     ? `${data[0]?.currency} ${parseFloat(
-                        item.totalAmount
+                        item.totalAmount,
                       ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
@@ -8629,12 +8627,12 @@ function rptInvoice() {
 
     const totalAmount = data[0]?.tblInvoiceCharge?.reduce(
       (total, item) => total + item.totalAmount,
-      0
+      0,
     );
 
     const discountAmount = data[0]?.tblInvoiceCharge?.reduce(
       (total, item) => total + item.discountAmount,
-      0
+      0,
     );
 
     const grossTotalAmount = totalAmount - discountAmount;
@@ -8645,9 +8643,9 @@ function rptInvoice() {
           total +
           (item?.tblInvoiceChargeTax?.reduce(
             (taxTotal, tax) => taxTotal + (tax?.taxAmountHc || 0),
-            0
+            0,
           ) || 0),
-        0
+        0,
       ) ?? 0;
 
     return (
@@ -8725,7 +8723,7 @@ function rptInvoice() {
             >
               {discountAmount
                 ? `${data[0]?.currency} ${parseFloat(discountAmount).toFixed(
-                    2
+                    2,
                   )}`
                 : `${data[0]?.currency}  0.00`}
             </td>
@@ -8755,7 +8753,7 @@ function rptInvoice() {
             >
               {grossTotalAmount
                 ? `${data[0]?.currency} ${parseFloat(grossTotalAmount).toFixed(
-                    2
+                    2,
                   )}`
                 : `${data[0]?.currency}  0.00`}
             </td>
@@ -8784,7 +8782,7 @@ function rptInvoice() {
               }}
             >
               {`${data[0]?.currency} ${(parseFloat(vatAmount) || 0).toFixed(
-                2
+                2,
               )}`}
             </td>
           </tr>
@@ -9097,7 +9095,7 @@ function rptInvoice() {
         {/* ------- ROWS ------- */}
         {(chargeAtt[0] ?? []).map((row, idx) => {
           // helpers
-          const safe = (v) => (v ?? v === 0 ? String(v) : "-");
+          const safe = (v) => ((v ?? v === 0) ? String(v) : "-");
 
           const sizeType =
             [row?.size, row?.typeCode || row?.type]
@@ -9708,7 +9706,7 @@ function rptInvoice() {
                               .map((inner, idx) =>
                                 Array.isArray(inner) && inner.length > 0
                                   ? idx
-                                  : null
+                                  : null,
                               )
                               .filter((v) => v !== null)
                               .map((idx, i, nonEmptyIdx) => (
@@ -9956,7 +9954,7 @@ function rptInvoice() {
                     {Array.isArray(chargeAtt) &&
                       chargeAtt
                         .map((inner, idx) =>
-                          Array.isArray(inner) && inner.length > 0 ? idx : null
+                          Array.isArray(inner) && inner.length > 0 ? idx : null,
                         )
                         .filter((v) => v !== null)
                         .map((idx, i, nonEmptyIdx) => (
@@ -10150,7 +10148,7 @@ function rptInvoice() {
                     {Array.isArray(chargeAtt) &&
                       chargeAtt
                         .map((inner, idx) =>
-                          Array.isArray(inner) && inner.length > 0 ? idx : null
+                          Array.isArray(inner) && inner.length > 0 ? idx : null,
                         )
                         .filter((v) => v !== null)
                         .map((idx, i, nonEmptyIdx) => (
@@ -10269,7 +10267,7 @@ function rptInvoice() {
                     {Array.isArray(chargeAtt) &&
                       chargeAtt
                         .map((inner, idx) =>
-                          Array.isArray(inner) && inner.length > 0 ? idx : null
+                          Array.isArray(inner) && inner.length > 0 ? idx : null,
                         )
                         .filter((v) => v !== null)
                         .map((idx, i, nonEmptyIdx) => (

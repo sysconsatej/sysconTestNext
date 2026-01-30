@@ -19,14 +19,16 @@ export default function RootLayout({ children }) {
       </div>
 
       {/* Main content area */}
-      <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
+      <div className="flex flex-col min-w-0 min-h-0 overflow-hidden w-full">
         {/* Navbar */}
-        <div className="shrink-0">
+        <div className="shrink-0 flex">
           <NavbarPage />
         </div>
 
         {/* ✅ Children scroll area */}
-        <div className={`flex-1 min-h-0 overflow-auto pl-2 mt-1 ${styles.hideScrollbar}`}>
+        <div
+          className={`min-h-0 overflow-auto pl-2 mt-1 ${styles.hideScrollbar}`}
+        >
           <div className="pr-[10px]">{children}</div>
         </div>
       </div>

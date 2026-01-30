@@ -12,6 +12,7 @@ import AccordionSummary from "@mui/material/AccordionSummary";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import Typography from "@mui/material/Typography";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import SearchEditGrid from "./SearchEditGrid";
 
 import {
   parentAccordionSection,
@@ -26,7 +27,6 @@ import LightTooltip from "@/components/Tooltip/customToolTip";
 
 import Box from "@mui/material/Box";
 import {
-  Checkbox,
   MenuItem,
   Table,
   TableBody,
@@ -37,8 +37,338 @@ import {
   TextField,
 } from "@mui/material";
 
+/* =========================================================
+   TABLE SECTIONS (SearchEditGrid)
+========================================================= */
+const TABLE_SECTIONS = new Set(["DUC-Info", "DOC-Info", "ARE-Details"]);
+
+const ducColumns = [
+  { field: "ducRefNo", headerName: "DUC Ref No", width: 160 },
+  { field: "exportType", headerName: "Export Type", width: 140 },
+  { field: "sbDate", headerName: "SB Date", width: 120 },
+  { field: "beNo", headerName: "BE No", width: 120 },
+  { field: "beDate", headerName: "BE Date", width: 120 },
+  { field: "beFiledAt", headerName: "BE Filed At", width: 140 },
+  { field: "beInvSr", headerName: "BE Inv Sr", width: 120 },
+  { field: "beItemSr", headerName: "BE Item Sr", width: 120 },
+];
+
+const docColumns = [
+  { field: "docType", headerName: "Doc Type", width: 140 },
+  { field: "description", headerName: "Description", width: 240 },
+  { field: "agencyCode", headerName: "Agency Code", width: 140 },
+  { field: "agencyName", headerName: "Agency Name", width: 180 },
+  { field: "documentName", headerName: "Document Name", width: 180 },
+];
+
+const areColumns = [
+  { field: "areNumber", headerName: "ARE Number", width: 150 },
+  { field: "areDate", headerName: "ARE Date", width: 120 },
+  { field: "commissionerate", headerName: "Commissionerate", width: 180 },
+  { field: "division", headerName: "Division", width: 150 },
+  { field: "range", headerName: "Range", width: 150 },
+  { field: "remark", headerName: "Remark", width: 240 },
+];
+
+const bottomFormdata = {
+  "DUC-Info": [
+    {
+      id: 1,
+      fieldname: "ducRefNo",
+      yourlabel: "DUC Ref No.",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 1,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 1,
+    },
+    {
+      id: 2,
+      fieldname: "exportType",
+      yourlabel: "Export Type",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 2,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 1,
+    },
+    {
+      id: 3,
+      fieldname: "sbDate",
+      yourlabel: "SB Date",
+      controlname: "date",
+      type: 6902,
+      typeValue: "string",
+      ordering: 3,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 1,
+    },
+    {
+      id: 4,
+      fieldname: "beNo",
+      yourlabel: "BE No.",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 4,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 1,
+    },
+    {
+      id: 5,
+      fieldname: "beDate",
+      yourlabel: "BE Date",
+      controlname: "date",
+      type: 6902,
+      typeValue: "string",
+      ordering: 5,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 1,
+    },
+    {
+      id: 6,
+      fieldname: "beFiledAt",
+      yourlabel: "BE Filed At",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 6,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 2,
+    },
+    {
+      id: 7,
+      fieldname: "beInvSr",
+      yourlabel: "BE Inv. Sr.",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 7,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 2,
+    },
+    {
+      id: 8,
+      fieldname: "beItemSr",
+      yourlabel: "BE Item Sr.",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 8,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 2,
+    },
+  ],
+  "DOC-Info": [
+    {
+      id: 1,
+      fieldname: "docType",
+      yourlabel: "Doc Type",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 1,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 1,
+    },
+    {
+      id: 2,
+      fieldname: "description",
+      yourlabel: "Description",
+      controlname: "textarea",
+      type: 6902,
+      typeValue: "string",
+      ordering: 2,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 1,
+      isBreak: 1,
+    },
+    {
+      id: 3,
+      fieldname: "agencyCode",
+      yourlabel: "Agency Code",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 3,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 2,
+    },
+    {
+      id: 4,
+      fieldname: "agencyName",
+      yourlabel: "Agency Name",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 4,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 2,
+    },
+    {
+      id: 5,
+      fieldname: "documentName",
+      yourlabel: "Document Name",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 5,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 2,
+    },
+  ],
+  "ARE-Details": [
+    {
+      id: 1,
+      fieldname: "areNumber",
+      yourlabel: "ARE Number",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 1,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 1,
+    },
+    {
+      id: 2,
+      fieldname: "areDate",
+      yourlabel: "ARE Date",
+      controlname: "date",
+      type: 6902,
+      typeValue: "string",
+      ordering: 2,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 1,
+    },
+    {
+      id: 3,
+      fieldname: "commissionerate",
+      yourlabel: "Commissionerate",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 3,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 1,
+    },
+    {
+      id: 4,
+      fieldname: "division",
+      yourlabel: "Division",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 4,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 2,
+    },
+    {
+      id: 5,
+      fieldname: "range",
+      yourlabel: "Range",
+      controlname: "text",
+      type: 6902,
+      typeValue: "string",
+      ordering: 5,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 2,
+    },
+    {
+      id: 6,
+      fieldname: "remark",
+      yourlabel: "Remark",
+      controlname: "textarea",
+      type: 6902,
+      typeValue: "string",
+      ordering: 6,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 2,
+      isBreak: 1,
+    },
+  ],
+
+};
+
 const formdata = {
-  "Main": [
+  Main: [
     {
       id: 4201,
       fieldname: "itemDescription",
@@ -69,8 +399,6 @@ const formdata = {
       sectionHeader: "General",
       sectionOrder: 8,
     },
-
-    // 🔹 Quantity
     {
       id: 4204,
       fieldname: "quantity",
@@ -86,8 +414,6 @@ const formdata = {
       sectionHeader: "General",
       sectionOrder: 8,
     },
-
-    // 🔹 SQC Qty
     {
       id: 4205,
       fieldname: "sqcQuantity",
@@ -149,56 +475,55 @@ const formdata = {
       sectionOrder: 8,
     },
   ],
-
-  "General": [
+  General: [
     {
-      "id": 125711,
-      "fieldname": null,
-      "yourlabel": "General Info",
-      "controlname": "label",
-      "isControlShow": true,
-      "isGridView": false,
-      "isDataFlow": true,
-      "copyMappingName": null,
-      "hyperlinkValue": null,
-      "isCommaSeparatedOrCount": null,
-      "isAuditLog": true,
-      "keyToShowOnGrid": null,
-      "isDummy": true,
-      "dropDownValues": null,
-      "referenceTable": null,
-      "referenceColumn": null,
-      "type": null,
-      "typeValue": null,
-      "size": null,
-      "ordering": 25,
-      "gridTotal": false,
-      "gridTypeTotal": null,
-      "toolTipMessage": null,
-      "isRequired": false,
-      "isEditable": true,
-      "isSwitchToText": false,
-      "isBreak": true,
-      "dropdownFilter": null,
-      "controlDefaultValue": null,
-      "functionOnChange": "",
-      "functionOnBlur": null,
-      "functionOnKeyPress": null,
-      "sectionHeader": "Port Details",
-      "sectionOrder": 2,
-      "isCopy": true,
-      "isCopyEditable": true,
-      "isEditableMode": "e",
-      "position": "top",
-      "isHideGrid": false,
-      "isHideGridHeader": false,
-      "isGridExpandOnLoad": false,
-      "clientId": 1,
-      "isColumnVisible": null,
-      "isColumnDisabled": null,
-      "columnsToDisabled": null,
-      "columnsToHide": null,
-      "columnsToBeVisible": true
+      id: 125711,
+      fieldname: null,
+      yourlabel: "General Info",
+      controlname: "label",
+      isControlShow: true,
+      isGridView: false,
+      isDataFlow: true,
+      copyMappingName: null,
+      hyperlinkValue: null,
+      isCommaSeparatedOrCount: null,
+      isAuditLog: true,
+      keyToShowOnGrid: null,
+      isDummy: true,
+      dropDownValues: null,
+      referenceTable: null,
+      referenceColumn: null,
+      type: null,
+      typeValue: null,
+      size: null,
+      ordering: 25,
+      gridTotal: false,
+      gridTypeTotal: null,
+      toolTipMessage: null,
+      isRequired: false,
+      isEditable: true,
+      isSwitchToText: false,
+      isBreak: true,
+      dropdownFilter: null,
+      controlDefaultValue: null,
+      functionOnChange: "",
+      functionOnBlur: null,
+      functionOnKeyPress: null,
+      sectionHeader: "Port Details",
+      sectionOrder: 2,
+      isCopy: true,
+      isCopyEditable: true,
+      isEditableMode: "e",
+      position: "top",
+      isHideGrid: false,
+      isHideGridHeader: false,
+      isGridExpandOnLoad: false,
+      clientId: 1,
+      isColumnVisible: null,
+      isColumnDisabled: null,
+      columnsToDisabled: null,
+      columnsToHide: null,
+      columnsToBeVisible: true
     },
     {
 
@@ -453,53 +778,53 @@ const formdata = {
       sectionOrder: 3,
     },
     {
-      "id": 125711,
-      "fieldname": null,
-      "yourlabel": "PMV Info",
-      "controlname": "label",
-      "isControlShow": true,
-      "isGridView": false,
-      "isDataFlow": true,
-      "copyMappingName": null,
-      "hyperlinkValue": null,
-      "isCommaSeparatedOrCount": null,
-      "isAuditLog": true,
-      "keyToShowOnGrid": null,
-      "isDummy": true,
-      "dropDownValues": null,
-      "referenceTable": null,
-      "referenceColumn": null,
-      "type": null,
-      "typeValue": null,
-      "size": null,
-      "ordering": 25,
-      "gridTotal": false,
-      "gridTypeTotal": null,
-      "toolTipMessage": null,
-      "isRequired": false,
-      "isEditable": true,
-      "isSwitchToText": false,
-      "isBreak": true,
-      "dropdownFilter": null,
-      "controlDefaultValue": null,
-      "functionOnChange": "",
-      "functionOnBlur": null,
-      "functionOnKeyPress": null,
-      "sectionHeader": "Port Details",
-      "sectionOrder": 2,
-      "isCopy": true,
-      "isCopyEditable": true,
-      "isEditableMode": "e",
-      "position": "top",
-      "isHideGrid": false,
-      "isHideGridHeader": false,
-      "isGridExpandOnLoad": false,
-      "clientId": 1,
-      "isColumnVisible": null,
-      "isColumnDisabled": null,
-      "columnsToDisabled": null,
-      "columnsToHide": null,
-      "columnsToBeVisible": true
+      id: 125711,
+      fieldname: null,
+      yourlabel: "PMV Info",
+      controlname: "label",
+      isControlShow: true,
+      isGridView: false,
+      isDataFlow: true,
+      copyMappingName: null,
+      hyperlinkValue: null,
+      isCommaSeparatedOrCount: null,
+      isAuditLog: true,
+      keyToShowOnGrid: null,
+      isDummy: true,
+      dropDownValues: null,
+      referenceTable: null,
+      referenceColumn: null,
+      type: null,
+      typeValue: null,
+      size: null,
+      ordering: 25,
+      gridTotal: false,
+      gridTypeTotal: null,
+      toolTipMessage: null,
+      isRequired: false,
+      isEditable: true,
+      isSwitchToText: false,
+      isBreak: true,
+      dropdownFilter: null,
+      controlDefaultValue: null,
+      functionOnChange: "",
+      functionOnBlur: null,
+      functionOnKeyPress: null,
+      sectionHeader: "Port Details",
+      sectionOrder: 2,
+      isCopy: true,
+      isCopyEditable: true,
+      isEditableMode: "e",
+      position: "top",
+      isHideGrid: false,
+      isHideGridHeader: false,
+      isGridExpandOnLoad: false,
+      clientId: 1,
+      isColumnVisible: null,
+      isColumnDisabled: null,
+      columnsToDisabled: null,
+      columnsToHide: null,
+      columnsToBeVisible: true
     },
 
     {
@@ -555,7 +880,7 @@ const formdata = {
       sectionHeader: "General",
       sectionOrder: 4,
     },
-     {
+    {
       id: 3004,
       fieldname: "pmvPerUnit",
       yourlabel: "Pmv Currency",
@@ -603,55 +928,54 @@ const formdata = {
       isBreak: 1
     },
     {
-      "id": 125711,
-      "fieldname": null,
-      "yourlabel": "IGST Compensation Cess Info",
-      "controlname": "label",
-      "isControlShow": true,
-      "isGridView": false,
-      "isDataFlow": true,
-      "copyMappingName": null,
-      "hyperlinkValue": null,
-      "isCommaSeparatedOrCount": null,
-      "isAuditLog": true,
-      "keyToShowOnGrid": null,
-      "isDummy": true,
-      "dropDownValues": null,
-      "referenceTable": null,
-      "referenceColumn": null,
-      "type": null,
-      "typeValue": null,
-      "size": null,
-      "ordering": 25,
-      "gridTotal": false,
-      "gridTypeTotal": null,
-      "toolTipMessage": null,
-      "isRequired": false,
-      "isEditable": true,
-      "isSwitchToText": false,
-      "isBreak": true,
-      "dropdownFilter": null,
-      "controlDefaultValue": null,
-      "functionOnChange": "",
-      "functionOnBlur": null,
-      "functionOnKeyPress": null,
-      "sectionHeader": "Port Details",
-      "sectionOrder": 2,
-      "isCopy": true,
-      "isCopyEditable": true,
-      "isEditableMode": "e",
-      "position": "top",
-      "isHideGrid": false,
-      "isHideGridHeader": false,
-      "isGridExpandOnLoad": false,
-      "clientId": 1,
-      "isColumnVisible": null,
-      "isColumnDisabled": null,
-      "columnsToDisabled": null,
-      "columnsToHide": null,
-      "columnsToBeVisible": true
+      id: 125711,
+      fieldname: null,
+      yourlabel: "IGST Compensation Cess Info",
+      controlname: "label",
+      isControlShow: true,
+      isGridView: false,
+      isDataFlow: true,
+      copyMappingName: null,
+      hyperlinkValue: null,
+      isCommaSeparatedOrCount: null,
+      isAuditLog: true,
+      keyToShowOnGrid: null,
+      isDummy: true,
+      dropDownValues: null,
+      referenceTable: null,
+      referenceColumn: null,
+      type: null,
+      typeValue: null,
+      size: null,
+      ordering: 25,
+      gridTotal: false,
+      gridTypeTotal: null,
+      toolTipMessage: null,
+      isRequired: false,
+      isEditable: true,
+      isSwitchToText: false,
+      isBreak: true,
+      dropdownFilter: null,
+      controlDefaultValue: null,
+      functionOnChange: "",
+      functionOnBlur: null,
+      functionOnKeyPress: null,
+      sectionHeader: "Port Details",
+      sectionOrder: 2,
+      isCopy: true,
+      isCopyEditable: true,
+      isEditableMode: "e",
+      position: "top",
+      isHideGrid: false,
+      isHideGridHeader: false,
+      isGridExpandOnLoad: false,
+      clientId: 1,
+      isColumnVisible: null,
+      isColumnDisabled: null,
+      columnsToDisabled: null,
+      columnsToHide: null,
+      columnsToBeVisible: true
     },
-
     {
       id: 3101,
       fieldname: "gstPaymentStatus",
@@ -748,55 +1072,54 @@ const formdata = {
       isBreak: 1
     },
     {
-      "id": 125711,
-      "fieldname": null,
-      "yourlabel": "RODTEP Info",
-      "controlname": "label",
-      "isControlShow": true,
-      "isGridView": false,
-      "isDataFlow": true,
-      "copyMappingName": null,
-      "hyperlinkValue": null,
-      "isCommaSeparatedOrCount": null,
-      "isAuditLog": true,
-      "keyToShowOnGrid": null,
-      "isDummy": true,
-      "dropDownValues": null,
-      "referenceTable": null,
-      "referenceColumn": null,
-      "type": null,
-      "typeValue": null,
-      "size": null,
-      "ordering": 25,
-      "gridTotal": false,
-      "gridTypeTotal": null,
-      "toolTipMessage": null,
-      "isRequired": false,
-      "isEditable": true,
-      "isSwitchToText": false,
-      "isBreak": true,
-      "dropdownFilter": null,
-      "controlDefaultValue": null,
-      "functionOnChange": "",
-      "functionOnBlur": null,
-      "functionOnKeyPress": null,
-      "sectionHeader": "Port Details",
-      "sectionOrder": 2,
-      "isCopy": true,
-      "isCopyEditable": true,
-      "isEditableMode": "e",
-      "position": "top",
-      "isHideGrid": false,
-      "isHideGridHeader": false,
-      "isGridExpandOnLoad": false,
-      "clientId": 1,
-      "isColumnVisible": null,
-      "isColumnDisabled": null,
-      "columnsToDisabled": null,
-      "columnsToHide": null,
-      "columnsToBeVisible": true
+      id: 125711,
+      fieldname: null,
+      yourlabel: "RODTEP Info",
+      controlname: "label",
+      isControlShow: true,
+      isGridView: false,
+      isDataFlow: true,
+      copyMappingName: null,
+      hyperlinkValue: null,
+      isCommaSeparatedOrCount: null,
+      isAuditLog: true,
+      keyToShowOnGrid: null,
+      isDummy: true,
+      dropDownValues: null,
+      referenceTable: null,
+      referenceColumn: null,
+      type: null,
+      typeValue: null,
+      size: null,
+      ordering: 25,
+      gridTotal: false,
+      gridTypeTotal: null,
+      toolTipMessage: null,
+      isRequired: false,
+      isEditable: true,
+      isSwitchToText: false,
+      isBreak: true,
+      dropdownFilter: null,
+      controlDefaultValue: null,
+      functionOnChange: "",
+      functionOnBlur: null,
+      functionOnKeyPress: null,
+      sectionHeader: "Port Details",
+      sectionOrder: 2,
+      isCopy: true,
+      isCopyEditable: true,
+      isEditableMode: "e",
+      position: "top",
+      isHideGrid: false,
+      isHideGridHeader: false,
+      isGridExpandOnLoad: false,
+      clientId: 1,
+      isColumnVisible: null,
+      isColumnDisabled: null,
+      columnsToDisabled: null,
+      columnsToHide: null,
+      columnsToBeVisible: true
     },
-
     {
       id: 3201,
       fieldname: "rodtepClaim",
@@ -892,925 +1215,95 @@ const formdata = {
       sectionOrder: 6
     }
   ],
-  "Quota": [
-
-  ],
-  "ARE-Details": [
-
-  ],
-  "Re-export": [
-    {
-      "id": 125711,
-      "fieldname": null,
-      "yourlabel": "RE-EXPORT ITEM",
-      "controlname": "label",
-      "isControlShow": true,
-      "isGridView": false,
-      "isDataFlow": true,
-      "copyMappingName": null,
-      "hyperlinkValue": null,
-      "isCommaSeparatedOrCount": null,
-      "isAuditLog": true,
-      "keyToShowOnGrid": null,
-      "isDummy": true,
-      "dropDownValues": null,
-      "referenceTable": null,
-      "referenceColumn": null,
-      "type": null,
-      "typeValue": null,
-      "size": null,
-      "ordering": 25,
-      "gridTotal": false,
-      "gridTypeTotal": null,
-      "toolTipMessage": null,
-      "isRequired": false,
-      "isEditable": true,
-      "isSwitchToText": false,
-      "isBreak": true,
-      "dropdownFilter": null,
-      "controlDefaultValue": null,
-      "functionOnChange": "",
-      "functionOnBlur": null,
-      "functionOnKeyPress": null,
-      "sectionHeader": "Port Details",
-      "sectionOrder": 2,
-      "isCopy": true,
-      "isCopyEditable": true,
-      "isEditableMode": "e",
-      "position": "top",
-      "isHideGrid": false,
-      "isHideGridHeader": false,
-      "isGridExpandOnLoad": false,
-      "clientId": 1,
-      "isColumnVisible": null,
-      "isColumnDisabled": null,
-      "columnsToDisabled": null,
-      "columnsToHide": null,
-      "columnsToBeVisible": true
-    },
-    {
-
-      id: 2001,
-      fieldname: "eximCodeId",
-      yourlabel: "B/E Number",
-      controlname: "dropdown",
-      referenceTable: "tblMasterData",
-      referenceColumn: "name",
-      dropdownFilter:
-        "and masterListId in (select id from tblMasterList where name = 'tblEximCode')",
-      type: 6653,
-      typeValue: "number",
-      ordering: 1,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2002,
-      fieldname: "endUse",
-      yourlabel: "Quantity Exported",
-      controlname: "text",
-      type: 6902,
-      typeValue: "string",
-      ordering: 2,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2003,
-      fieldname: "ptaFtaInfoId",
-      yourlabel: "Invoice SNo",
-      controlname: "dropdown",
-      referenceTable: "tblMasterData",
-      referenceColumn: "name",
-      dropdownFilter:
-        "and masterListId in (select id from tblMasterList where name = 'tblPtaFtaInfo')",
-      type: 6653,
-      typeValue: "number",
-      ordering: 3,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2004,
-      fieldname: "medicinalPlantId",
-      yourlabel: "Item No",
-      controlname: "dropdown",
-      referenceTable: "tblMasterData",
-      referenceColumn: "name",
-      dropdownFilter:
-        "and masterListId in (select id from tblMasterList where name = 'tblMedicinalPlant')",
-      type: 6653,
-      typeValue: "number",
-      ordering: 4,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2005,
-      fieldname: "labGrownDiamondId",
-      yourlabel: "Import Port Code",
-      controlname: "dropdown",
-      referenceTable: "tblMasterData",
-      referenceColumn: "name",
-      dropdownFilter:
-        "and masterListId in (select id from tblMasterList where name = 'tblLabGrownDiamond')",
-      type: 6653,
-      typeValue: "number",
-      ordering: 5,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2006,
-      fieldname: "nfeiCategoryId",
-      yourlabel: "Technical Details",
-      controlname: "dropdown",
-      referenceTable: "tblMasterData",
-      referenceColumn: "name",
-      dropdownFilter:
-        "and masterListId in (select id from tblMasterList where name = 'tblNfeiCategory')",
-      type: 6653,
-      typeValue: "number",
-      ordering: 6,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2007,
-      fieldname: "originDistrictId",
-      yourlabel: "Manual B/E",
-      controlname: "checkbox",
-      referenceTable: "tblDistrict",
-      referenceColumn: "name",
-      dropdownFilter: "",
-      type: 6653,
-      typeValue: "number",
-      ordering: 7,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2008,
-      fieldname: "alternateQty",
-      yourlabel: "Input CRedit Availed",
-      controlname: "checkbox",
-      type: 6706,
-      typeValue: "decimal",
-      ordering: 8,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-
-    {
-      id: 2010,
-      fieldname: "formulation",
-      yourlabel: "Personal Use Item",
-      controlname: "checkbox",
-      type: 6902,
-      typeValue: "string",
-      ordering: 9,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2011,
-      fieldname: "rewardItem",
-      yourlabel: "B/E Item Desc",
-      controlname: "text",
-      type: 6902,
-      typeValue: "string",
-      ordering: 10,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2012,
-      fieldname: "isStrCode",
-      yourlabel: "Other Identifying Parameters",
-      controlname: "checkbox",
-      type: 6902,
-      typeValue: "boolean",
-      ordering: 11,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2013,
-      fieldname: "originStateId",
-      yourlabel: "Against Export Obligation",
-      controlname: "checkbox",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      dropdownFilter: "",
-      type: 6653,
-      typeValue: "number",
-      ordering: 12,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2014,
-      fieldname: "materialCode",
-      yourlabel: "Obligation No.",
-      controlname: "checkbox",
-      type: 6902,
-      typeValue: "string",
-      ordering: 13,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2015,
-      fieldname: "surfaceMaterialInContact",
-      yourlabel: "Throwback Amt Claimed",
-      controlname: "numbers",
-      type: 6902,
-      typeValue: "string",
-      ordering: 14,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2013,
-      fieldname: "originStateId",
-      yourlabel: "quality imported",
-      controlname: "numbers",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      dropdownFilter: "",
-      type: 6653,
-      typeValue: "number",
-      ordering: 15,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2013,
-      fieldname: "originStateId",
-      yourlabel: "Item-Un Used",
-      controlname: "checkbox",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      dropdownFilter: "",
-      type: 6653,
-      typeValue: "number",
-      ordering: 16,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2013,
-      fieldname: "originStateId",
-      yourlabel: "Commisioner Person",
-      controlname: "checkbox",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      dropdownFilter: "",
-      type: 6653,
-      typeValue: "number",
-      ordering: 17,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2013,
-      fieldname: "originStateId",
-      yourlabel: "Assessable Value ",
-      controlname: "checkbox",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      dropdownFilter: "",
-      type: 6653,
-      typeValue: "number",
-      ordering: 18,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2013,
-      fieldname: "originStateId",
-      yourlabel: "Board Number",
-      controlname: "numbers",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      dropdownFilter: "",
-      type: 6653,
-      typeValue: "number",
-      ordering: 19,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2013,
-      fieldname: "originStateId",
-      yourlabel: "Board Number Date",
-      controlname: "date",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      dropdownFilter: "",
-      type: 6653,
-      typeValue: "number",
-      ordering: 20,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2013,
-      fieldname: "originStateId",
-      yourlabel: "Total Duty Paid",
-      controlname: "checkbox",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      dropdownFilter: "",
-      type: 6653,
-      typeValue: "number",
-      ordering: 21,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2013,
-      fieldname: "originStateId",
-      yourlabel: "Total Duty Paid date",
-      controlname: "date",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      dropdownFilter: "",
-      type: 6653,
-      typeValue: "number",
-      ordering: 22,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2013,
-      fieldname: "originStateId",
-      yourlabel: "Modvat Availed",
-      controlname: "checkbox",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      dropdownFilter: "",
-      type: 6653,
-      typeValue: "number",
-      ordering: 23,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-    {
-      id: 2013,
-      fieldname: "originStateId",
-      yourlabel: "Modvat Reserved",
-      controlname: "checkbox",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      dropdownFilter: "",
-      type: 6653,
-      typeValue: "number",
-      ordering: 24,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 3,
-    },
-  ],
+  Quota: [],
+  "ARE-Details": [],
+  "Re-export": [],
   "Other-Details": [
-    {
-      "id": 125711,
-      "fieldname": null,
-      "yourlabel": "Acessories",
-      "controlname": "label",
-      "isControlShow": true,
-      "isGridView": false,
-      "isDataFlow": true,
-      "copyMappingName": null,
-      "hyperlinkValue": null,
-      "isCommaSeparatedOrCount": null,
-      "isAuditLog": true,
-      "keyToShowOnGrid": null,
-      "isDummy": true,
-      "dropDownValues": null,
-      "referenceTable": null,
-      "referenceColumn": null,
-      "type": null,
-      "typeValue": null,
-      "size": null,
-      "ordering": 25,
-      "gridTotal": false,
-      "gridTypeTotal": null,
-      "toolTipMessage": null,
-      "isRequired": false,
-      "isEditable": true,
-      "isSwitchToText": false,
-      "isBreak": true,
-      "dropdownFilter": null,
-      "controlDefaultValue": null,
-      "functionOnChange": "",
-      "functionOnBlur": null,
-      "functionOnKeyPress": null,
-      "sectionHeader": "Port Details",
-      "sectionOrder": 2,
-      "isCopy": true,
-      "isCopyEditable": true,
-      "isEditableMode": "e",
-      "position": "top",
-      "isHideGrid": false,
-      "isHideGridHeader": false,
-      "isGridExpandOnLoad": false,
-      "clientId": 1,
-      "isColumnVisible": null,
-      "isColumnDisabled": null,
-      "columnsToDisabled": null,
-      "columnsToHide": null,
-      "columnsToBeVisible": true
-    },
-    {
-      id: 1002,
-      fieldname: "exporterAddress",
-      yourlabel: "Acessories",
-      controlname: "textarea",
-      type: 6902,
-      typeValue: "string",
-      ordering: 2,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 1,
-      isBreak: 1
-    },
-
-    {
-      "id": 125711,
-      "fieldname": null,
-      "yourlabel": "Third Party Export",
-      "controlname": "label",
-      "isControlShow": true,
-      "isGridView": false,
-      "isDataFlow": true,
-      "copyMappingName": null,
-      "hyperlinkValue": null,
-      "isCommaSeparatedOrCount": null,
-      "isAuditLog": true,
-      "keyToShowOnGrid": null,
-      "isDummy": true,
-      "dropDownValues": null,
-      "referenceTable": null,
-      "referenceColumn": null,
-      "type": null,
-      "typeValue": null,
-      "size": null,
-      "ordering": 25,
-      "gridTotal": false,
-      "gridTypeTotal": null,
-      "toolTipMessage": null,
-      "isRequired": false,
-      "isEditable": true,
-      "isSwitchToText": false,
-      "isBreak": true,
-      "dropdownFilter": null,
-      "controlDefaultValue": null,
-      "functionOnChange": "",
-      "functionOnBlur": null,
-      "functionOnKeyPress": null,
-      "sectionHeader": "Port Details",
-      "sectionOrder": 2,
-      "isCopy": true,
-      "isCopyEditable": true,
-      "isEditableMode": "e",
-      "position": "top",
-      "isHideGrid": false,
-      "isHideGridHeader": false,
-      "isGridExpandOnLoad": false,
-      "clientId": 1,
-      "isColumnVisible": null,
-      "isColumnDisabled": null,
-      "columnsToDisabled": null,
-      "columnsToHide": null,
-      "columnsToBeVisible": true
-    },
-    {
-      id: 1002,
-      fieldname: "exporterAddress",
-      yourlabel: "Name",
-      controlname: "text",
-      type: 6902,
-      typeValue: "string",
-      ordering: 2,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 1,
-    },
-    {
-      id: 1002,
-      fieldname: "exporterAddress",
-      yourlabel: "IE Code",
-      controlname: "numbers",
-      type: 6902,
-      typeValue: "string",
-      ordering: 2,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 1,
-    },
-    {
-      id: 1002,
-      fieldname: "exporterAddress",
-      yourlabel: "Branch SNo",
-      controlname: "number",
-      type: 6902,
-      typeValue: "string",
-      ordering: 2,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 1,
-    },
-    {
-      id: 1002,
-      fieldname: "exporterAddress",
-      yourlabel: "Reg no",
-      controlname: "number",
-      type: 6902,
-      typeValue: "string",
-      ordering: 2,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 1,
-    },
-    {
-      id: 1002,
-      fieldname: "exporterAddress",
-      yourlabel: "Address",
-      controlname: "textarea",
-      type: 6902,
-      typeValue: "string",
-      ordering: 2,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 1,
-      isBreak: 1
-    },
-
-    {
-      "id": 125711,
-      "fieldname": null,
-      "yourlabel": "Manufacturer/Producer/Grower Details",
-      "controlname": "label",
-      "isControlShow": true,
-      "isGridView": false,
-      "isDataFlow": true,
-      "copyMappingName": null,
-      "hyperlinkValue": null,
-      "isCommaSeparatedOrCount": null,
-      "isAuditLog": true,
-      "keyToShowOnGrid": null,
-      "isDummy": true,
-      "dropDownValues": null,
-      "referenceTable": null,
-      "referenceColumn": null,
-      "type": null,
-      "typeValue": null,
-      "size": null,
-      "ordering": 25,
-      "gridTotal": false,
-      "gridTypeTotal": null,
-      "toolTipMessage": null,
-      "isRequired": false,
-      "isEditable": true,
-      "isSwitchToText": false,
-      "isBreak": true,
-      "dropdownFilter": null,
-      "controlDefaultValue": null,
-      "functionOnChange": "",
-      "functionOnBlur": null,
-      "functionOnKeyPress": null,
-      "sectionHeader": "Port Details",
-      "sectionOrder": 2,
-      "isCopy": true,
-      "isCopyEditable": true,
-      "isEditableMode": "e",
-      "position": "top",
-      "isHideGrid": false,
-      "isHideGridHeader": false,
-      "isGridExpandOnLoad": false,
-      "clientId": 1,
-      "isColumnVisible": null,
-      "isColumnDisabled": null,
-      "columnsToDisabled": null,
-      "columnsToHide": null,
-      "columnsToBeVisible": true
-    },
-    {
-      id: 1004,
-      fieldname: "exporterStateId",
-      yourlabel: "Name",
-      controlname: "dropdown",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      type: 6653,
-      typeValue: "number",
-      ordering: 1,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 1,
-    },
-    {
-      id: 1005,
-      fieldname: "ieCodeNo",
-      yourlabel: "Code",
-      controlname: "text",
-      type: 6902,
-      typeValue: "string",
-      ordering: 2,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 1,
-    },
-    {
-      id: 1002,
-      fieldname: "exporterAddress",
-      yourlabel: "Address",
-      controlname: "textarea",
-      type: 6902,
-      typeValue: "string",
-      ordering: 3,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 1,
-    },
-    {
-      id: 1012,
-      fieldname: "consigneeCountryName",
-      yourlabel: "Country",
-      controlname: "text",
-      type: 6902,
-      typeValue: "string",
-      ordering: 4,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 1,
-    },
-    {
-      id: 1005,
-      fieldname: "ieCodeNo",
-      yourlabel: "Postal Code",
-      controlname: "text",
-      type: 6902,
-      typeValue: "string",
-      ordering: 6,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 1,
-    },
-    {
-      id: 1004,
-      fieldname: "exporterStateId",
-      yourlabel: " Source State",
-      controlname: "dropdown",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      type: 6653,
-      typeValue: "number",
-      ordering: 7,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 1,
-    },
-    {
-      id: 1012,
-      fieldname: "consigneeCountryName",
-      yourlabel: "Transit Country",
-      controlname: "text",
-      type: 6902,
-      typeValue: "string",
-      ordering: 8,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-      isRequired: false,
-      sectionHeader: "General",
-      sectionOrder: 1,
-    },
   ],
-  "DUC-Info": [
-
-  ],
-  "DOC-Info": [
-
-  ],
+  "DUC-Info": [],
+  "DOC-Info": [],
 };
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    try {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
 
-export default function EntitySheet({
-  values = {},
-  onValuesChange,
-  inEditMode = { isEditMode: false, isCopy: false },
-  newState,
-  setStateVariable,
-}) {
-  // ✅ Keep form sections (Accordion list is derived from keys)
+async function defaultHandleFileAndUpdateState(file, cb) {
+  const base64 = await fileToBase64(file);
+  cb?.({
+    name: file?.name || "",
+    type: file?.type || "",
+    size: file?.size || 0,
+    base64,
+  });
+}
+export default function ItemSheet({ value, onChange }) {
   const [parentsFields] = useState(formdata);
-
-  // ✅ Expand/collapse all parent accordions
   const [expandAll, setExpandAll] = useState(true);
-
-  // ✅ Used by your dynamic form component
   const [clearFlag, setClearFlag] = useState({ isClear: false, fieldName: "" });
   const [tableName, setTableName] = useState(false);
   const [formControlData, setFormControlData] = useState([]);
   const [hideFieldName, setHideFieldName] = useState([]);
   const [labelName, setLabelName] = useState("");
-
-  // (Optional) You had these modal states in your old code.
-  // They are only needed if your onChange/onBlur validations require a modal.
   const [openModal, setOpenModal] = useState(false);
   const [paraText, setParaText] = useState("");
   const [isError, setIsError] = useState(false);
   const [typeofModal, setTypeofModal] = useState("onClose");
-
-  // ✅ If you are maintaining newState + submitNewState in this file
   const [submitNewState, setSubmitNewState] = useState({
     routeName: "mastervalue",
   });
+  const newState = value;
+  const setNewState = onChange;
 
-  // ✅ Label getter (kept because you pass it to CustomeInputFields)
   const getLabelValue = (labelValue) => setLabelName(labelValue);
 
-  /**
-   * ✅ MAIN handler called by CustomeInputFields when any field changes.
-   * - If file found, handle file separately (your existing behavior).
-   * - Otherwise merge values.
-   */
-  const handleFieldValuesChange = (updatedValues) => {
-    const entries = Object.entries(updatedValues);
+  const handleFieldValuesChange = async (updatedValues) => {
+    const entries = Object.entries(updatedValues || {});
     const hasFile = entries.some(([, v]) => v instanceof File);
 
     if (hasFile) {
-      entries.forEach(([key, value]) => {
+      for (const [key, value] of entries) {
         if (value instanceof File) {
-          // ⚠️ You referenced handleFileAndUpdateState earlier.
-          // Keep your existing function in your project. (Not redefining here)
-          handleFileAndUpdateState(value, (jsonData) => {
-            const merged = { ...newState, [key]: jsonData };
+          const fn =
+            typeof window !== "undefined" && typeof window.handleFileAndUpdateState === "function"
+              ? window.handleFileAndUpdateState
+              : defaultHandleFileAndUpdateState;
+
+          await fn(value, (jsonData) => {
+            const merged = { ...(newState || {}), [key]: jsonData };
             setStateVariable?.(merged);
             setSubmitNewState(merged);
           });
         } else {
-          const merged = { ...newState, [key]: value };
+          const merged = { ...(newState || {}), [key]: value };
           setStateVariable?.(merged);
           setSubmitNewState(merged);
         }
-      });
+      }
       return;
     }
 
-    const merged = { ...newState, ...updatedValues };
+    const merged = { ...(newState || {}), ...(updatedValues || {}) };
     setStateVariable?.(merged);
     setSubmitNewState(merged);
   };
 
-  /**
-   * ✅ Your copy-mapping handler
-   * NOTE: You used many external vars/functions (uriDecodedMenu, getCopyData, toast, etc.)
-   * Keep your existing implementation if it works.
-   * I am keeping the signature so your CustomeInputFields integration doesn't break.
-   */
-  const handleFieldValuesChange2 = async () => {
-    // keep your original logic here if needed
-  };
+  const handleFieldValuesChange2 = async () => { };
 
   return (
     <div
       className={`w-full p-1 ${styles.pageBackground} overflow-y-auto overflow-x-hidden ${styles.thinScrollBar}`}
       style={{ height: "calc(100vh - 24vh)" }}
     >
-      {Object.keys(parentsFields).map((section, index) => (
+      {Object.keys(parentsFields || {}).map((section, index) => (
         <ParentAccordianComponent
           key={`${section}-${index}`}
           section={section}
@@ -1820,7 +1313,7 @@ export default function EntitySheet({
           newState={newState}
           handleFieldValuesChange={handleFieldValuesChange}
           handleFieldValuesChange2={handleFieldValuesChange2}
-          setNewState={setStateVariable}
+          setNewState={setNewState}
           setOpenModal={setOpenModal}
           setParaText={setParaText}
           setIsError={setIsError}
@@ -1835,21 +1328,14 @@ export default function EntitySheet({
           hideColumnsId={hideFieldName}
         />
       ))}
+      <CessCenvatAccordion
+        values={newState}
+        onChangeHandler={(next) => setNewState(next)}
+      />
 
-      {/* ✅ Additional CESS/CENVAT accordion (custom table UI) */}
-      <CessCenvatAccordion />
     </div>
   );
 }
-
-EntitySheet.propTypes = {
-  values: PropTypes.object,
-  onValuesChange: PropTypes.func,
-  clearFlag: PropTypes.object,
-  inEditMode: PropTypes.object,
-  newState: PropTypes.object,
-  setStateVariable: PropTypes.func,
-};
 
 ParentAccordianComponent.propTypes = {
   section: PropTypes.any,
@@ -1896,13 +1382,30 @@ function ParentAccordianComponent({
   getLabelValue,
   hideColumnsId,
 }) {
+  const SECTION_TO_STATE_KEY = {
+    "DUC-Info": "tblDucInfo",
+    "DOC-Info": "tblDocInfo",
+    "ARE-Details": "tblAreDetails",
+  };
+
+  const getArr = (sec, state) => {
+    const key = SECTION_TO_STATE_KEY[sec];
+    const arr = state?.[key];
+    return Array.isArray(arr) ? arr : [];
+  };
+
+  const setArr = (sec, next) => {
+    const key = SECTION_TO_STATE_KEY[sec];
+    setNewState?.((prev) => ({ ...(prev || {}), [key]: next }));
+    setSubmitNewState?.((prev) => ({ ...(prev || {}), [key]: next }));
+  };
+
   const [isOpen, setIsOpen] = useState(false);
   const [fieldId, setFieldId] = useState([]);
 
-  useEffect(() => setIsOpen(expandAll), [expandAll]);
+  useEffect(() => setIsOpen(!!expandAll), [expandAll]);
   useEffect(() => setFieldId(hideColumnsId || []), [hideColumnsId]);
 
-  // ✅ unify change behavior (your form sends result)
   const applyResultToState = (result, from = "change") => {
     if (result?.isCheck === false) {
       if (result?.alertShow) {
@@ -1918,26 +1421,23 @@ function ParentAccordianComponent({
     }
 
     const patch = { ...(result?.newState || {}) };
-
-    setNewState?.((prev) => ({ ...prev, ...patch }));
-    setSubmitNewState?.((prev) => ({ ...prev, ...patch }));
+    setNewState?.((prev) => ({ ...(prev || {}), ...patch }));
+    setSubmitNewState?.((prev) => ({ ...(prev || {}), ...patch }));
   };
 
   return (
-    <Accordion expanded={isOpen} sx={{ ...parentAccordionSection }}>
+    <Accordion
+      expanded={isOpen}
+      onChange={() => setIsOpen((p) => !p)}
+      sx={{ ...parentAccordionSection }}
+    >
       <AccordionSummary
-        className="relative left-[11px]"
         sx={{ ...SummaryStyles }}
         expandIcon={
           <LightTooltip title={isOpen ? "Collapse" : "Expand"}>
-            <ExpandMoreIcon
-              sx={{ ...expandIconStyle }}
-              onClick={() => setIsOpen((p) => !p)}
-            />
+            <ExpandMoreIcon sx={{ ...expandIconStyle }} />
           </LightTooltip>
         }
-        aria-controls={`panel${indexValue + 1}-content`}
-        id={`panel${indexValue + 1}-header`}
       >
         <Typography className="relative right-[11px]">{section}</Typography>
       </AccordionSummary>
@@ -1946,33 +1446,77 @@ function ParentAccordianComponent({
         className={`overflow-hidden p-0 ${styles.thinScrollBar}`}
         sx={{ ...accordianDetailsStyleForm }}
       >
-        <CustomeInputFields
-          inputFieldData={parentsFields?.[section] || []}
-          values={newState}
-          onValuesChange={handleFieldValuesChange}
-          handleFieldValuesChange2={handleFieldValuesChange2}
-          inEditMode={{ isEditMode: false, isCopy: true }}
-          onChangeHandler={(result) => applyResultToState(result, "change")}
-          onBlurHandler={(result) => applyResultToState(result, "blur")}
-          clearFlag={clearFlag}
-          newState={newState}
-          tableName={parentTableName}
-          formControlData={formControlData}
-          setFormControlData={setFormControlData}
-          setStateVariable={setNewState}
-          getLabelValue={getLabelValue}
-          hideColumnsId={fieldId}
-        />
+        {TABLE_SECTIONS.has(section) ? (
+          <Box sx={{ p: 1, display: "flex", flexDirection: "column", gap: 1 }}>
+            <SearchEditGrid
+              title={section}
+              columns={
+                section === "DUC-Info"
+                  ? ducColumns
+                  : section === "DOC-Info"
+                    ? docColumns
+                    : areColumns
+              }
+              editorFields={bottomFormdata?.[section] || []}
+              rowIdField="id"
+              fetchPayload={{ jobId: newState?.jobId }}
+              height={section === "DUC-Info" ? 220 : 180}
+              fetchRows={async () => {
+                const data = getArr(section, newState).map((r, idx) => ({
+                  ...r,
+                  id: r?.id ?? idx + 1,
+                }));
+                return { data, totalCount: data.length };
+              }}
+              onSave={async (row) => {
+                const prev = getArr(section, newState);
+
+                // insert
+                if (!row?.id) {
+                  const newId = Date.now();
+                  const next = [{ ...row, id: newId }, ...prev];
+                  setArr(section, next);
+                  return { ...row, id: newId };
+                }
+
+                // update
+                const next = prev.map((x) =>
+                  String(x.id) === String(row.id) ? { ...x, ...row } : x
+                );
+                setArr(section, next);
+                return row;
+              }}
+              onDelete={async (row) => {
+                const prev = getArr(section, newState);
+                const next = prev.filter((x) => String(x.id) !== String(row?.id));
+                setArr(section, next);
+                return true;
+              }}
+            />
+          </Box>
+        ) : (
+          <CustomeInputFields
+            inputFieldData={parentsFields?.[section] || []}
+            values={newState}
+            onValuesChange={handleFieldValuesChange}
+            handleFieldValuesChange2={handleFieldValuesChange2}
+            inEditMode={{ isEditMode: false, isCopy: true }}
+            onChangeHandler={(result) => applyResultToState(result, "change")}
+            onBlurHandler={(result) => applyResultToState(result, "blur")}
+            clearFlag={clearFlag}
+            newState={newState}
+            tableName={parentTableName}
+            formControlData={formControlData}
+            setFormControlData={setFormControlData}
+            setStateVariable={setNewState}
+            getLabelValue={getLabelValue}
+            hideColumnsId={fieldId}
+          />
+        )}
       </AccordionDetails>
     </Accordion>
   );
 }
-
-/* ============================================================================
-  ✅ CESS / CENVAT ACCORDION
-  - Built for the ICEGATE style table you want
-  - Uses your customTextFieldStyles + textInputStyle for inputs
-============================================================================ */
 
 function CessCenvatAccordion({
   section = "CESS / CENVAT",
@@ -1982,7 +1526,6 @@ function CessCenvatAccordion({
 }) {
   const [isOpen, setIsOpen] = useState(true);
 
-  // ✅ local fallback state (works even if parent doesn't pass values)
   const [localValues, setLocalValues] = useState({
     cessLeviable: false,
 
@@ -1992,7 +1535,7 @@ function CessCenvatAccordion({
     exportDutyRate2: "0.00",
     exportDutyTV: "0.00",
     exportDutyQty: "0.000",
-    exportDutyUnit: "", // ✅ added
+    exportDutyUnit: "",
     exportDutyDesc: "",
 
     cess: "",
@@ -2010,7 +1553,7 @@ function CessCenvatAccordion({
     othDutyRate2: "0.00",
     othDutyTV: "0.00",
     othDutyQty: "0.000",
-    othDutyUnit: "", // ✅ added
+    othDutyUnit: "",
     othDutyDesc: "",
 
     thirdCess: "",
@@ -2019,7 +1562,7 @@ function CessCenvatAccordion({
     thirdCessRate2: "0.00",
     thirdCessTV: "0.00",
     thirdCessQty: "0.000",
-    thirdCessUnit: "", // ✅ added
+    thirdCessUnit: "",
     thirdCessDesc: "",
 
     cenvatCertNo: "",
@@ -2031,7 +1574,6 @@ function CessCenvatAccordion({
 
   const values = extValues ?? localValues;
 
-  // ✅ Safe setValue that supports controlled/uncontrolled usage
   const setValue = (key, val) => {
     if (typeof onChangeHandler === "function" && extValues) {
       onChangeHandler({ ...(extValues || {}), [key]: val });
@@ -2040,7 +1582,6 @@ function CessCenvatAccordion({
     setLocalValues((p) => ({ ...p, [key]: val }));
   };
 
-  // ✅ Styled textfield (your project styles)
   const CustomeTextField = useMemo(
     () =>
       styled(TextField)({
@@ -2049,7 +1590,6 @@ function CessCenvatAccordion({
     []
   );
 
-  // ✅ common compact field Sx using your system variables
   const compactFieldSx = (k, width) => ({
     ...textInputStyle({ fieldname: values?.[k], isFocused: false }),
     width,
@@ -2077,65 +1617,61 @@ function CessCenvatAccordion({
     },
   });
 
-  // ✅ reusable tiny input
-  const SmallText = ({ k, label, width = 120, type = "text", disabled = false }) => {
-    return (
-      <LightTooltip title={label || ""}>
-        <CustomeTextField
-          autoComplete="off"
-          type={type}
-          size="small"
-          variant="outlined"
-          value={values?.[k] ?? ""}
-          onChange={(e) => setValue(k, e.target.value)}
-          disabled={disabled}
-          sx={{
-            ...compactFieldSx(k, width),
-            "& input": {
-              padding: "2px 6px",
-            },
-          }}
-        />
-      </LightTooltip>
-    );
-  };
+  const SmallText = ({ k, label, width = 120, type = "text", disabled = false }) => (
+    <LightTooltip title={label || ""}>
+      <CustomeTextField
+        autoComplete="off"
+        type={type}
+        size="small"
+        variant="outlined"
+        value={values?.[k] ?? ""}
+        onChange={(e) => setValue(k, e.target.value)}
+        disabled={disabled}
+        sx={{
+          ...compactFieldSx(k, width),
+          "& input": { padding: "2px 6px" },
+        }}
+      />
+    </LightTooltip>
+  );
 
-  // ✅ reusable tiny select
-  const SmallSelect = ({ k, label, options, width = 140, disabled = false }) => {
-    return (
-      <LightTooltip title={label || ""}>
-        <CustomeTextField
-          select
-          size="small"
-          variant="outlined"
-          value={values?.[k] ?? ""}
-          onChange={(e) => setValue(k, e.target.value)}
-          disabled={disabled}
-          sx={{
-            ...compactFieldSx(k, width),
-            "& .MuiSelect-select": {
-              padding: "2px 26px 2px 6px",
-              fontSize: "var(--inputFontSize)",
-              color: "var(--inputTextColor)",
-            },
-            "& .MuiSvgIcon-root": {
-              color: "var(--table-text-color) !important",
-              fontSize: 18,
-              right: 4,
-            },
-          }}
-        >
-          {options.map((o) => (
-            <MenuItem key={o.value} value={o.value} dense sx={{ fontSize: "var(--inputFontSize)" }}>
-              {o.label}
-            </MenuItem>
-          ))}
-        </CustomeTextField>
-      </LightTooltip>
-    );
-  };
+  const SmallSelect = ({ k, label, options, width = 140, disabled = false }) => (
+    <LightTooltip title={label || ""}>
+      <CustomeTextField
+        select
+        size="small"
+        variant="outlined"
+        value={values?.[k] ?? ""}
+        onChange={(e) => setValue(k, e.target.value)}
+        disabled={disabled}
+        sx={{
+          ...compactFieldSx(k, width),
+          "& .MuiSelect-select": {
+            padding: "2px 26px 2px 6px",
+            fontSize: "var(--inputFontSize)",
+            color: "var(--inputTextColor)",
+          },
+          "& .MuiSvgIcon-root": {
+            color: "var(--table-text-color) !important",
+            fontSize: 18,
+            right: 4,
+          },
+        }}
+      >
+        {options.map((o) => (
+          <MenuItem
+            key={o.value}
+            value={o.value}
+            dense
+            sx={{ fontSize: "var(--inputFontSize)" }}
+          >
+            {o.label}
+          </MenuItem>
+        ))}
+      </CustomeTextField>
+    </LightTooltip>
+  );
 
-  // ✅ (Rate1) ( / ) (%/Rs dropdown) (Rate2)
   const RatesCell = ({ k1, kType, k2 }) => (
     <Box
       sx={{
@@ -2148,7 +1684,14 @@ function CessCenvatAccordion({
       }}
     >
       <SmallText k={k1} label="Rate" width={110} type="number" />
-      <Typography sx={{ fontSize: "12px", opacity: 0.75, whiteSpace: "nowrap", color: "var(--tableRowTextColor)" }}>
+      <Typography
+        sx={{
+          fontSize: "12px",
+          opacity: 0.75,
+          whiteSpace: "nowrap",
+          color: "var(--tableRowTextColor)",
+        }}
+      >
         /
       </Typography>
       <SmallSelect
@@ -2164,7 +1707,6 @@ function CessCenvatAccordion({
     </Box>
   );
 
-  // ✅ Table styles matching your software theme
   const headerCellSx = {
     height: "30px",
     padding: "0 15px",
@@ -2200,7 +1742,7 @@ function CessCenvatAccordion({
     borderRadius: "4px",
     overflow: "hidden",
     background: "var(--accordionBodyBg)",
-    minWidth: 980, // keep ICEGATE-like scroll
+    minWidth: 980,
   };
 
   const dutyRows = [
@@ -2302,7 +1844,6 @@ function CessCenvatAccordion({
         className={`overflow-hidden p-0 ${styles.thinScrollBar}`}
         sx={{ ...accordianDetailsStyleForm }}
       >
-        {/* ✅ Horizontal scroll area */}
         <Box
           sx={{
             width: "100%",
@@ -2312,11 +1853,7 @@ function CessCenvatAccordion({
           }}
           className={styles.thinScrollBar}
         >
-          {/* ===========================
-              ✅ TOP TABLE: CESS / EXP DUTY
-             =========================== */}
           <Box sx={tableWrapSx}>
-            {/* header strip (kept, themed) */}
             <Box
               sx={{
                 display: "flex",
@@ -2354,8 +1891,12 @@ function CessCenvatAccordion({
 
                 <TableBody>
                   {dutyRows.map((r) => {
-                    const cellSx = r.isLast ? { ...bodyCellSx, borderBottom: "none" } : bodyCellSx;
-                    const leftSx = r.isLast ? { ...leftLabelSx, borderBottom: "none" } : leftLabelSx;
+                    const cellSx = r.isLast
+                      ? { ...bodyCellSx, borderBottom: "none" }
+                      : bodyCellSx;
+                    const leftSx = r.isLast
+                      ? { ...leftLabelSx, borderBottom: "none" }
+                      : leftLabelSx;
 
                     return (
                       <TableRow
@@ -2417,9 +1958,6 @@ function CessCenvatAccordion({
             </TableContainer>
           </Box>
 
-          {/* ===========================
-              ✅ CENVAT DETAILS (below)
-             =========================== */}
           <Box sx={{ ...tableWrapSx, mt: 1.2 }}>
             <Box
               sx={{
@@ -2474,13 +2012,10 @@ function CessCenvatAccordion({
                 Assessee Code
               </Typography>
               <SmallText k="cenvatAssesseeCode" label="Assessee Code" width={220} />
-              
             </Box>
           </Box>
         </Box>
-        
       </AccordionDetails>
-      
     </Accordion>
   );
 }

@@ -83,7 +83,7 @@ function rptAirwayBill() {
                 "x-access-token": JSON.parse(token),
               },
               body: JSON.stringify(requestBody),
-            }
+            },
           );
           if (!response.ok) throw new Error("Failed to fetch Airway Bill data");
           const data = await response.json();
@@ -20216,7 +20216,7 @@ function rptAirwayBill() {
 
   console.log(
     "trimByWordCountBySup",
-    trimByWordCountBySup(bldata?.blClause, 50)
+    trimByWordCountBySup(bldata?.blClause, 50),
   );
 
   const rptBillOfLadingSBX = () => (
@@ -20601,7 +20601,7 @@ function rptAirwayBill() {
                               {c?.sizeType ? ` ${c.sizeType}` : ""}
                               {c?.agentSealNo ?? ""} {c?.customSealNo ?? ""}
                             </div>
-                            <div>PKG: {c?.package ?? ""}</div>
+                            <div>PKGS: {c?.package ?? ""}</div>
                             <div>GW: {c?.grossWt ?? ""}</div>
                             <div>NW: {c?.netWt ?? ""}</div>
                             {/* <div>CBM: {c?.tareWt ?? ""}</div> */}
@@ -20639,7 +20639,7 @@ function rptAirwayBill() {
                       <p className="text-left align-top">
                         {bldata?.goodsDescDetails}
                         <br />
-                        {"SHIPPER'S LOAD/STOW AND / COUNT"}
+                        {/* {"SHIPPER'S LOAD/STOW AND / COUNT"} */}
                       </p>
                     </div>
 
@@ -20673,6 +20673,12 @@ function rptAirwayBill() {
                       <pre className="text-left">
                         Gross Weight<br></br>
                         {bldata?.grossWt} {bldata?.weightUnit}
+                      </pre>
+                    </div>
+                    <div>
+                      <pre className="text-left">
+                        Net Weight<br></br>
+                        {bldata?.netWt} {bldata?.weightUnit}
                       </pre>
                     </div>
                     <div className="h-2/5">
@@ -21343,7 +21349,7 @@ function rptAirwayBill() {
               </div> */}
               <div>
                 {Array.isArray(bldata.tblBlContainer) &&
-                bldata.tblBlContainer.length < 4 ? (
+                  bldata.tblBlContainer.length < 4 ? (
                   <p></p>
                 ) : (
                   <p>– Continuing on Attach Sheet</p>
@@ -23971,7 +23977,7 @@ function rptAirwayBill() {
     // ✅ totals (based on your fields)
     const totalNetWt = tblBlContainer.reduce(
       (sum, r) => sum + toNum(r?.netWt),
-      0
+      0,
     );
 
     // grossWtAndUnit may be "123.45 KGS" -> take numeric part
@@ -23985,7 +23991,7 @@ function rptAirwayBill() {
     const unit =
       tblBlContainer.find((x) => x?.weightUnit)?.weightUnitCode ||
       (tblBlContainer.find((x) =>
-        (x?.grossWtAndUnit ?? "").toString().match(/[a-zA-Z]+/)
+        (x?.grossWtAndUnit ?? "").toString().match(/[a-zA-Z]+/),
       ) &&
         tblBlContainer
           .find((x) => (x?.grossWtAndUnit ?? "").toString().match(/[a-zA-Z]+/))
@@ -24117,6 +24123,1766 @@ function rptAirwayBill() {
           </div>
         </div>
       </>
+    );
+  };
+  const YMSBLREPORTS = () => {
+    return (
+      <div
+        className="text-black"
+        style={{
+          height: "280mm",
+          margin: "0 auto",
+          backgroundColor: "white",
+        }}
+      >
+        {/* Company Header */}
+        <div
+          className="flex items-center justify-between"
+          style={{ width: "100%", height: "60px" }}
+        >
+          <div
+            style={{
+              width: "80%",
+              height: "60px",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <img
+              src="https://api.artinshipping.com/sql-api/uploads/ymsblreport.png"
+              alt="Company"
+              style={{
+                height: "60px",
+                maxHeight: "60px",
+                objectFit: "contain",
+              }}
+            />
+          </div>
+
+          <div
+            style={{ width: "20%", textAlign: "center" }}
+            className="mx-auto"
+          >
+            <p style={{ fontSize: "8px", color: "black" }}>
+              FMC LIC NO. 15619N
+            </p>
+            <p style={{ fontSize: "11px", color: "black", fontWeight: "bold" }}>
+              BILL OF LADING
+            </p>
+            <p style={{ fontSize: "11px", color: "black", fontWeight: "bold" }}>
+              ORIGINAL
+            </p>
+          </div>
+        </div>
+
+        {/* Header Section */}
+        <div
+          className="flex"
+          style={{
+            width: "100%",
+            minHeight: "320px",
+            height: "320px",
+            maxHeight: "320px",
+          }}
+        >
+          <div style={{ width: "50%", border: "1px solid black" }}>
+            <div
+              style={{
+                minHeight: "100px",
+                height: "100px",
+                maxHeight: "100px",
+                borderBottom: "1px solid black",
+              }}
+            >
+              <div
+                style={{
+                  paddingTop: "4px",
+                  paddingBottom: "2px",
+                  paddingLeft: "4px",
+                }}
+              >
+                <p
+                  style={{
+                    color: "black",
+                    fontSize: "8px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  2. EXPORTER (Principal or seller licensee and address
+                  including ZIP CODE)
+                </p>
+              </div>
+              <div style={{ paddingLeft: "4px" }}>
+                <p
+                  style={{
+                    color: "black",
+                    fontSize: "8px",
+                    minHeight: "76px",
+                    height: "76px",
+                    maxHeight: "76px",
+                  }}
+                >
+                  {bldata?.shipperName}
+                  {bldata?.shipperAddress}
+                </p>
+              </div>
+            </div>
+            <div
+              style={{
+                minHeight: "100px",
+                height: "100px",
+                maxHeight: "100px",
+                borderBottom: "1px solid black",
+              }}
+            >
+              <div
+                style={{
+                  paddingTop: "4px",
+                  paddingBottom: "2px",
+                  paddingLeft: "4px",
+                }}
+              >
+                <p
+                  style={{
+                    color: "black",
+                    fontSize: "8px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  3. CONSIGNED TO
+                </p>
+              </div>
+              <div style={{ paddingLeft: "4px" }}>
+                <p
+                  style={{
+                    color: "black",
+                    fontSize: "8px",
+                    minHeight: "76px",
+                    height: "76px",
+                    maxHeight: "76px",
+                  }}
+                >
+                  {bldata?.consigneeName}
+                  {bldata?.consigneeAddress}
+                </p>
+              </div>
+            </div>
+            <div
+              style={{
+                minHeight: "120px",
+                height: "120px",
+                maxHeight: "120px",
+              }}
+            >
+              <div
+                style={{
+                  minHeight: "84px",
+                  height: "84px",
+                  maxHeight: "84px",
+                  borderBottom: "1px solid black",
+                }}
+              >
+                <div
+                  style={{
+                    paddingTop: "4px",
+                    paddingBottom: "2px",
+                    paddingLeft: "4px",
+                  }}
+                >
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    4. NOTIFY PARTY / INTERMEDIATE CONSIGNEE (Name and address)
+                  </p>
+                </div>
+                <div style={{ paddingLeft: "4px" }}>
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "8px",
+                      minHeight: "60px",
+                      height: "60px",
+                      maxHeight: "60px",
+                    }}
+                  >
+                    {bldata?.notifyPartyName}
+                    {bldata?.notifyPartyAddress}
+                  </p>
+                </div>
+              </div>
+              <div
+                className="flex"
+                style={{
+                  minHeight: "36px",
+                  height: "36px",
+                  maxHeight: "36px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "50%",
+                    borderRight: "1px solid black",
+                  }}
+                >
+                  <div
+                    style={{
+                      paddingTop: "4px",
+                      paddingBottom: "2px",
+                      paddingLeft: "4px",
+                    }}
+                  >
+                    <p
+                      style={{
+                        color: "black",
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      12. PRE-CARIAGE BY
+                    </p>
+                  </div>
+                  <div style={{ paddingLeft: "4px" }}>
+                    <p style={{ color: "black", fontSize: "8px" }}>
+                      {bldata?.preCarriage}
+                    </p>
+                  </div>
+                </div>
+                <div
+                  style={{
+                    width: "50%",
+                  }}
+                >
+                  <div
+                    style={{
+                      paddingTop: "4px",
+                      paddingBottom: "2px",
+                      paddingLeft: "4px",
+                    }}
+                  >
+                    <p
+                      style={{
+                        color: "black",
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      13. PLACE OF RECEIPT BY PRE-CARRIER
+                    </p>
+                  </div>
+                  <div style={{ paddingLeft: "4px" }}>
+                    <p style={{ color: "black", fontSize: "8px" }}>
+                      {bldata?.plr}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            style={{
+              width: "50%",
+              borderTop: "1px solid black",
+              borderRight: "1px solid black",
+              borderBottom: "1px solid black",
+            }}
+          >
+            <div
+              style={{
+                minHeight: "100px",
+                height: "100px",
+                maxHeight: "100px",
+                borderBottom: "1px solid black",
+              }}
+            >
+              <div
+                className="flex"
+                style={{
+                  minHeight: "36px",
+                  height: "36px",
+                  maxHeight: "36px",
+                  borderBottom: "1px solid black",
+                }}
+              >
+                <div
+                  style={{
+                    width: "50%",
+                    borderRight: "1px solid black",
+                  }}
+                >
+                  <div
+                    style={{
+                      paddingTop: "4px",
+                      paddingBottom: "2px",
+                      paddingLeft: "4px",
+                    }}
+                  >
+                    <p
+                      style={{
+                        color: "black",
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      5. DOCUMENT NUMBER
+                    </p>
+                  </div>
+                  <div style={{ paddingLeft: "4px" }}>
+                    <p style={{ color: "black", fontSize: "8px" }}>
+                      5. DOCUMENT NUMBER
+                    </p>
+                  </div>
+                </div>
+                <div
+                  style={{
+                    width: "50%",
+                  }}
+                >
+                  <div
+                    style={{
+                      paddingTop: "4px",
+                      paddingBottom: "2px",
+                      paddingLeft: "4px",
+                    }}
+                  >
+                    <p
+                      style={{
+                        color: "black",
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      5a. B/L NUMBER
+                    </p>
+                  </div>
+                  <div style={{ paddingLeft: "4px" }}>
+                    <p style={{ color: "black", fontSize: "8px" }}>
+                      {bldata?.blNo}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div
+                style={{
+                  minHeight: "64px",
+                  height: "64px",
+                  maxHeight: "64px",
+                  borderBottom: "1px solid black",
+                }}
+              >
+                <div
+                  style={{
+                    paddingTop: "4px",
+                    paddingBottom: "2px",
+                    paddingLeft: "4px",
+                  }}
+                >
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    6. EXPORT REFERENCES
+                  </p>
+                </div>
+                <div style={{ paddingLeft: "4px" }}>
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "8px",
+                      minHeight: "40px",
+                      height: "40px",
+                      maxHeight: "40px",
+                    }}
+                  >
+                    {bldata?.exportReferences}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div
+              style={{
+                minHeight: "100px",
+                height: "100px",
+                maxHeight: "100px",
+                borderBottom: "1px solid black",
+              }}
+            >
+              <div
+                style={{
+                  minHeight: "64px",
+                  height: "64px",
+                  maxHeight: "64px",
+                  borderBottom: "1px solid black",
+                }}
+              >
+                <div
+                  style={{
+                    paddingTop: "4px",
+                    paddingBottom: "2px",
+                    paddingLeft: "4px",
+                  }}
+                >
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    7. FORWARDING AGENT (Name and address-references)
+                  </p>
+                </div>
+                <div style={{ paddingLeft: "4px" }}>
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "8px",
+                      minHeight: "40px",
+                      height: "40px",
+                      maxHeight: "40px",
+                    }}
+                  >
+                    {bldata?.fpdAgentAddress}
+                  </p>
+                </div>
+              </div>
+              <div
+                className="flex"
+                style={{
+                  minHeight: "36px",
+                  height: "36px",
+                  maxHeight: "36px",
+                  borderBottom: "1px solid black",
+                }}
+              >
+                <div
+                  style={{
+                    width: "100%",
+                  }}
+                >
+                  <div
+                    style={{
+                      paddingTop: "4px",
+                      paddingBottom: "2px",
+                      paddingLeft: "4px",
+                    }}
+                  >
+                    <p
+                      style={{
+                        color: "black",
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      8. POINT (STATE) OF ORIGIN OR FTZ NUMBER
+                    </p>
+                  </div>
+                  <div style={{ paddingLeft: "4px" }}>
+                    <p style={{ color: "black", fontSize: "8px" }}>
+                      {bldata?.fpdAgentAddress}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              style={{
+                minHeight: "100px",
+                height: "100px",
+                maxHeight: "100px",
+              }}
+            >
+              <div
+                style={{
+                  paddingTop: "4px",
+                  paddingBottom: "2px",
+                  paddingLeft: "4px",
+                }}
+              >
+                <p
+                  style={{
+                    color: "black",
+                    fontSize: "8px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  9. DOMESTIC ROUTING / EXPORT INSTRUCTIONS
+                </p>
+              </div>
+              <div style={{ paddingLeft: "4px" }}>
+                <p
+                  style={{
+                    color: "black",
+                    fontSize: "8px",
+                    minHeight: "96px",
+                    height: "96px",
+                    maxHeight: "96px",
+                  }}
+                >
+                  {bldata?.route}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* 6 Column Grid Section */}
+        {/* Row 1 */}
+        <div
+          className="flex"
+          style={{ width: "100%", borderBottom: "1px solid black" }}
+        >
+          <div style={{ width: "50%" }}>
+            <div
+              className="flex"
+              style={{
+                minHeight: "36px",
+                height: "36px",
+                maxHeight: "36px",
+                borderLeft: "1px solid black",
+              }}
+            >
+              <div
+                style={{
+                  width: "50%",
+                  borderRight: "1px solid black",
+                }}
+              >
+                <div
+                  style={{
+                    paddingTop: "4px",
+                    paddingBottom: "2px",
+                    paddingLeft: "4px",
+                  }}
+                >
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    14. EXPORTING CARRIER
+                  </p>
+                </div>
+                <div style={{ paddingLeft: "4px" }}>
+                  <p style={{ color: "black", fontSize: "8px" }}>
+                    {bldata?.exportingCarrier}
+                  </p>
+                </div>
+              </div>
+              <div
+                style={{
+                  width: "50%",
+                  borderRight: "1px solid black",
+                }}
+              >
+                <div
+                  style={{
+                    paddingTop: "4px",
+                    paddingBottom: "2px",
+                    paddingLeft: "4px",
+                  }}
+                >
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    15. PORT OF LOADING / EXPORT
+                  </p>
+                </div>
+                <div style={{ paddingLeft: "4px" }}>
+                  <p style={{ color: "black", fontSize: "8px" }}>
+                    {bldata?.polText}
+                    {bldata?.polText}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{ width: "50%" }}>
+            <div
+              className="flex"
+              style={{
+                minHeight: "36px",
+                height: "36px",
+                maxHeight: "36px",
+              }}
+            >
+              <div
+                style={{
+                  width: "100%",
+                  borderRight: "1px solid black",
+                }}
+              >
+                <div
+                  style={{
+                    paddingTop: "4px",
+                    paddingBottom: "2px",
+                    paddingLeft: "4px",
+                  }}
+                >
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    10. LOADING PIER / TERMINAL
+                  </p>
+                </div>
+                <div style={{ paddingLeft: "4px" }}>
+                  <p style={{ color: "black", fontSize: "8px" }}>
+                    {bldata?.preCarriageBy}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Row 2 */}
+        <div
+          className="flex"
+          style={{
+            width: "100%",
+            borderLeft: "1px solid black",
+            borderBottom: "1px solid black",
+          }}
+        >
+          <div style={{ width: "50%", borderRight: "1px solid black" }}>
+            <div
+              className="flex"
+              style={{
+                minHeight: "56px",
+                height: "56px",
+                maxHeight: "56px",
+              }}
+            >
+              <div
+                style={{
+                  width: "50%",
+                  borderRight: "1px solid black",
+                }}
+              >
+                <div
+                  style={{
+                    paddingTop: "4px",
+                    paddingBottom: "2px",
+                    paddingLeft: "4px",
+                  }}
+                >
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    16. FOREIGN PORT OF UNLOADING (Vessel and air only)
+                  </p>
+                </div>
+                <div style={{ paddingLeft: "4px" }}>
+                  <p style={{ color: "black", fontSize: "8px" }}>
+                    {bldata?.plr}
+                  </p>
+                </div>
+              </div>
+              <div
+                style={{
+                  width: "50%",
+                }}
+              >
+                <div
+                  style={{
+                    paddingTop: "4px",
+                    paddingBottom: "2px",
+                    paddingLeft: "4px",
+                  }}
+                >
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    17. PLACE OF DELIVERY BY ON-CARRIER
+                  </p>
+                </div>
+                <div style={{ paddingLeft: "4px" }}>
+                  <p style={{ color: "black", fontSize: "8px" }}>
+                    {bldata?.podText}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{ width: "50%" }}>
+            <div
+              className="flex"
+              style={{
+                minHeight: "56px",
+                height: "56px",
+                maxHeight: "56px",
+                borderRight: "1px solid black",
+              }}
+            >
+              <div
+                style={{
+                  width: "50%",
+                  borderRight: "1px solid black",
+                }}
+              >
+                <div
+                  style={{
+                    paddingTop: "4px",
+                    paddingBottom: "2px",
+                    paddingLeft: "4px",
+                  }}
+                >
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    11. TYPE OF MOVE
+                  </p>
+                </div>
+                <div style={{ paddingLeft: "4px" }}>
+                  <p style={{ color: "black", fontSize: "8px" }}>
+                    {bldata?.movementCarrierId}
+                  </p>
+                </div>
+              </div>
+              <div
+                style={{
+                  width: "50%",
+                }}
+              >
+                <div
+                  style={{
+                    paddingTop: "4px",
+                    paddingBottom: "2px",
+                    paddingLeft: "4px",
+                  }}
+                >
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    11a. CONTANERIZED (Vessel only)
+                  </p>
+                </div>
+                <div style={{ paddingLeft: "4px" }}>
+                  <p style={{ color: "black", fontSize: "8px" }}>
+                    {bldata?.containerDetails}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Body Section Header */}
+        <div
+          className="flex"
+          style={{
+            height: "30px",
+            minHeight: "30px",
+            maxHeight: "30px",
+            borderBottom: "1px solid black",
+            borderLeft: "1px solid black",
+            borderRight: "1px solid black",
+            width: "100%",
+            backgroundColor: "#FFFFCC",
+          }}
+        >
+          <div
+            style={{
+              width: "120px",
+              borderRight: "1px solid black",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "7px",
+                color: "black",
+                fontWeight: "bold",
+                paddingTop: "3px",
+              }}
+            >
+              MARKS AND NUMBERS
+            </p>
+            <p style={{ fontSize: "7px", color: "black", fontWeight: "bold" }}>
+              (18)
+            </p>
+          </div>
+          <div
+            style={{
+              width: "68px",
+              borderRight: "1px solid black",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "7px",
+                color: "black",
+                fontWeight: "bold",
+                paddingTop: "3px",
+              }}
+            >
+              NUMBER OF
+            </p>
+            <p style={{ fontSize: "7px", color: "black", fontWeight: "bold" }}>
+              PACKAGES (19)
+            </p>
+          </div>
+          <div
+            style={{
+              width: "378px",
+              borderRight: "1px solid black",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "7px",
+                color: "black",
+                fontWeight: "bold",
+                paddingTop: "3px",
+              }}
+            >
+              DESCRIPTION OF COMMODITIES in Schedule B detail
+            </p>
+            <p style={{ fontSize: "7px", color: "black", fontWeight: "bold" }}>
+              (20)
+            </p>
+          </div>
+          <div
+            style={{
+              width: "94px",
+              borderRight: "1px solid black",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "7px",
+                color: "black",
+                fontWeight: "bold",
+                paddingTop: "3px",
+              }}
+            >
+              WEIGHT Kilos
+            </p>
+            <p style={{ fontSize: "7px", color: "black", fontWeight: "bold" }}>
+              (21)
+            </p>
+          </div>
+          <div
+            style={{
+              width: "94px",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "7px",
+                color: "black",
+                fontWeight: "bold",
+                paddingTop: "3px",
+              }}
+            >
+              MEASUREMENT
+            </p>
+            <p style={{ fontSize: "7px", color: "black", fontWeight: "bold" }}>
+              (22)
+            </p>
+          </div>
+        </div>
+        {/* Body Section Data */}
+        <div
+          className="flex"
+          style={{
+            borderLeft: "1px solid black",
+            borderRight: "1px solid black",
+            width: "100%",
+            borderBottom: "1px solid black",
+            height: "180px",
+            minHeight: "180px",
+            maxHeight: "180px",
+          }}
+        >
+          <div
+            style={{
+              width: "120px",
+              borderRight: "1px solid black",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "7px",
+                color: "black",
+                fontWeight: "bold",
+                paddingTop: "3px",
+              }}
+            >
+              <p className="text-left">{bldata?.marksAndNosDetails}</p>
+            </p>
+            {/* <p style={{ fontSize: "7px", color: "black", fontWeight: "bold" }}>
+              (18)
+            </p> */}
+          </div>
+          <div
+            style={{
+              width: "68px",
+              borderRight: "1px solid black",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "7px",
+                color: "black",
+                fontWeight: "bold",
+                paddingTop: "3px",
+              }}
+            >
+              {bldata?.noOfPackages} {bldata?.packagesCode}
+            </p>
+            {/* <p style={{ fontSize: "7px", color: "black", fontWeight: "bold" }}>
+              PACKAGES (19)
+            </p> */}
+          </div>
+          <div
+            style={{
+              width: "378px",
+              borderRight: "1px solid black",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "7px",
+                color: "black",
+                fontWeight: "bold",
+                paddingTop: "3px",
+              }}
+            >
+              {bldata?.goodsDescDetails}
+            </p>
+            <p style={{ fontSize: "7px", color: "black", fontWeight: "bold" }}>
+              {trimByWordCountBySup(bldata?.blClause, 50)}
+            </p>
+          </div>
+          <div
+            style={{
+              width: "94px",
+              borderRight: "1px solid black",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "7px",
+                color: "black",
+                fontWeight: "bold",
+                paddingTop: "3px",
+              }}
+            >
+              {bldata?.grossWt} {bldata?.weightUnit}
+            </p>
+            {/* <p style={{ fontSize: "7px", color: "black", fontWeight: "bold" }}>
+              (21)
+            </p> */}
+          </div>
+          <div
+            style={{
+              width: "94px",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "7px",
+                color: "black",
+                fontWeight: "bold",
+                paddingTop: "3px",
+              }}
+            >
+              {bldata?.volume} {bldata?.volumeUnitName}
+            </p>
+            {/* <p style={{ fontSize: "7px", color: "black", fontWeight: "bold" }}>
+              (22)
+            </p> */}
+          </div>
+        </div>
+        {/* Other Data */}
+        <div
+          style={{
+            borderLeft: "1px solid black",
+            borderRight: "1px solid black",
+            width: "100%",
+            borderBottom: "1px solid black",
+            height: "80px",
+            minHeight: "80px",
+            maxHeight: "80px",
+          }}
+        >
+          <div
+            style={{
+              padding: "5px",
+            }}
+          >
+            <p style={{ color: "black", fontSize: "10px", fontWeight: "bold" }}>
+              XX FREE DAYS OF DEMURRAGES AT DESTINATION, THEREAFTER XXUSD/TK/DAY
+              SHIPPER'S LOAD, COUNT & SEAL NUMBER OF ORIGINAL B/L 0 (ZERO)
+            </p>
+          </div>
+        </div>
+        {/* Other Data */}
+        <div
+          style={{
+            borderLeft: "1px solid black",
+            borderRight: "1px solid black",
+            width: "100%",
+            borderBottom: "1px solid black",
+            height: "80px",
+            minHeight: "50px",
+            maxHeight: "50px",
+          }}
+        >
+          <div
+            style={{
+              padding: "5px",
+            }}
+          >
+            <p style={{ color: "black", fontSize: "10px", fontWeight: "bold" }}>
+              Carrier has a policy against payment, solicitation, or receipt of
+              any rebate, directly or indirectly, which would be unlawful under
+              the United States Shipping Act, 1984 as amended. DECLARED VALUE
+              READ CLAUSE HEREOF CONCERNING EXTRA FREIGHT AND CARRIER'S
+              LIMITATIONS OF LIABILITY.
+            </p>
+          </div>
+        </div>
+        {/* Signature Section */}
+        <div
+          className="flex"
+          style={{
+            borderLeft: "1px solid black",
+            borderRight: "1px solid black",
+            width: "100%",
+            borderBottom: "1px solid black",
+            height: "270px",
+            minHeight: "270px",
+            maxHeight: "270px",
+          }}
+        >
+          <div style={{ width: "50%", borderRight: "1px solid black" }}>
+            <div
+              style={{
+                width: "100%",
+                borderBottom: "1px solid black",
+              }}
+            >
+              <p
+                style={{
+                  colo: "black",
+                  textAlign: "center",
+                  fontWeight: "bold",
+                  fontSize: "9px",
+                  marginTop: "5px",
+                  marginBottom: "5px",
+                }}
+              >
+                FREIGHT RATES, CHARGES, WEIGHTS AND/OR MEASUREMENTS
+              </p>
+            </div>
+            <div
+              className="flex"
+              style={{
+                width: "100%",
+                borderBottom: "1px solid black",
+              }}
+            >
+              <div style={{ width: "60%", borderRight: "1px solid black" }}>
+                <p
+                  className="text-center"
+                  style={{
+                    fontSize: "8px",
+                    color: "black",
+                    fontWeight: "bold",
+                    paddingTop: "3px",
+                  }}
+                >
+                  SUBJECT TO CORRECTION
+                </p>
+              </div>
+              <div style={{ width: "20%", borderRight: "1px solid black" }}>
+                <p
+                  className="text-center"
+                  style={{
+                    fontSize: "8px",
+                    color: "black",
+                    fontWeight: "bold",
+                    paddingTop: "3px",
+                  }}
+                >
+                  PREPAID
+                </p>
+              </div>
+              <div style={{ width: "20%" }}>
+                <p
+                  className="text-center"
+                  style={{
+                    fontSize: "8px",
+                    color: "black",
+                    fontWeight: "bold",
+                    paddingTop: "3px",
+                  }}
+                >
+                  COLLECT
+                </p>
+              </div>
+            </div>
+            <div
+              className="flex"
+              style={{
+                width: "100%",
+                height: "210px",
+                minHeight: "210px",
+                maxHeight: "210px",
+              }}
+            >
+              <div style={{ width: "60%", borderRight: "1px solid black" }}>
+                <p
+                  className="text-center"
+                  style={{
+                    fontSize: "8px",
+                    color: "black",
+                    fontWeight: "bold",
+                    paddingTop: "3px",
+                  }}
+                >SUBJECT TO CORRECTION</p>
+              </div>
+              <div style={{ width: "20%", borderRight: "1px solid black" }}>
+                <p
+                  className="text-center"
+                  style={{
+                    fontSize: "8px",
+                    color: "black",
+                    fontWeight: "bold",
+                    paddingTop: "3px",
+                  }}
+                >{bldata?.freightPrepaidCollect}</p>
+              </div>
+              <div style={{ width: "20%" }}>
+                <p
+                  className="text-center"
+                  style={{
+                    fontSize: "8px",
+                    color: "black",
+                    fontWeight: "bold",
+                    paddingTop: "3px",
+                  }}
+                >{bldata?.freightPrepaidCollectId}</p>
+              </div>
+            </div>
+            <div
+              className="flex"
+              style={{
+                width: "100%",
+                height: "20px",
+                minHeight: "20px",
+                maxHeight: "20px",
+                borderTop: "1px solid black",
+              }}
+            >
+              <div style={{ width: "60%", borderRight: "1px solid black" }}>
+                <p
+                  className="text-center"
+                  style={{
+                    fontSize: "8px",
+                    color: "black",
+                    fontWeight: "bold",
+                    paddingTop: "3px",
+                  }}
+                >
+                  GRAND TOTAL
+                </p>
+              </div>
+              <div style={{ width: "20%", borderRight: "1px solid black" }}>
+                <p
+                  className="text-center"
+                  style={{
+                    fontSize: "8px",
+                    color: "black",
+                    fontWeight: "bold",
+                    paddingTop: "3px",
+                  }}
+                ></p>
+              </div>
+              <div style={{ width: "20%" }}>
+                <p
+                  className="text-center"
+                  style={{
+                    fontSize: "8px",
+                    color: "black",
+                    fontWeight: "bold",
+                    paddingTop: "3px",
+                  }}
+                ></p>
+              </div>
+            </div>
+          </div>
+          <div style={{ width: "50%", backgroundColor: "#99FFCC" }}>
+            <div style={{ width: "100%" }}>
+              <p style={{ fontSize: "8px", color: "black", padding: "5px" }}>
+                Received by Carrier for shipment by ocean vessel between port of
+                loading and port of discharge, and for arrangement or
+                procurement of pre-cariage from place of delivery, where stated
+                above, the goods as specified above in apparent good order and
+                condition unless otherwise stated. The goods to be delivered at
+                the above mentioned port of discharge or place of delivery,
+                whichever is applicable, subject always to the exceptions,
+                limitations, conditions and liberties set out on the reverse
+                side hereof, to which the Shipper and/or Consignee agree to
+                accepting this Bill of Lading.
+              </p>
+              <br />
+              <p style={{ fontSize: "8px", color: "black", padding: "5px" }}>
+                IN WHITNESS WHEREOF three (3) original Bills of lading have been
+                signed, not otherwise stated above, one of which being
+                accomplished the others shall be void.
+              </p>
+              <div
+                className="flex"
+                style={{
+                  width: "100%",
+                  padding: "5px",
+                }}
+              >
+                <div style={{ width: "15%" }}>
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "9px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    DATED AT
+                  </p>
+                </div>
+                <div style={{ width: "80%" }}>
+                  <p style={{ color: "black", fontSize: "9px" }}>
+                    {bldata?.blIssuePlaceText}
+                  </p>
+                </div>
+              </div>
+              <div className="flex" style={{ width: "100%", padding: "5px" }}>
+                <div style={{ width: "15%" }}>
+                  <p
+                    style={{
+                      color: "black",
+                      fontSize: "9px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    BY
+                  </p>
+                </div>
+                <div style={{ width: "80%" }}>
+                  <p style={{ color: "black", fontSize: "9px" }}>
+                    {bldata?.companyBr}
+                  </p>
+                </div>
+              </div>
+              <div
+                className="flex"
+                style={{
+                  width: "100%",
+                  height: "20px",
+                  minHeight: "20px",
+                  maxHeight: "20px",
+                  marginTop: "63px",
+                  borderTop: "1px solid black",
+                  borderBottom: "1px solid black",
+                }}
+              >
+                <div style={{ width: "33%" }}>
+                  <p
+                    style={{
+                      fontSize: "8px",
+                      color: "black",
+                      fontWeight: "bold",
+                      paddingTop: "3px",
+                      paddingLeft: "5px",
+                    }}
+                  >
+                    MO
+                  </p>
+                </div>
+                <div style={{ width: "33%" }}>
+                  <p
+                    style={{
+                      fontSize: "8px",
+                      color: "black",
+                      fontWeight: "bold",
+                      paddingTop: "3px",
+                    }}
+                  >
+                    DAY
+                  </p>
+                </div>
+                <div style={{ width: "33%" }}>
+                  <p
+                    style={{
+                      fontSize: "8px",
+                      color: "black",
+                      fontWeight: "bold",
+                      paddingTop: "3px",
+                    }}
+                  >
+                    YEAR
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const YMSBLRPT = () => {
+    return (
+      <div
+        className="text-black"
+        style={{
+          height: "280mm",
+          margin: "0 auto",
+          backgroundColor: "white",
+        }}
+      >
+        <div
+          className=" text-center font-bold"
+          style={{ height: "3%", fontSize: "13px" }}
+        >
+          NON-NEGOTIABLE SEA WAYBILL
+        </div>
+        <div
+          className=" border border-black"
+          style={{ height: "77%", fontSize: "9px" }}
+        >
+          <div className=" flex" style={{ height: "30% ", width: "100%" }}>
+            <div className="" style={{ height: "100% ", width: "50%" }}>
+              <div
+                className="border-r  border-b border-black px-1 font-bold"
+                style={{ height: "33% ", width: "100%" }}
+              >
+                SHIPPER:
+                <p style={{ fontSize: "9px", margin: "4px 0 0 0" }}>
+                  {bldata?.shipperName}
+                </p>
+                <p
+                  className="word-break"
+                  style={{ fontSize: "9px", margin: "2px 0 0 0" }}
+                >
+                  {bldata?.shipperAddress}
+                </p>
+              </div>
+              <div
+                className=" border-r  border-b border-black px-1 font-bold"
+                style={{ height: "34% ", width: "100%" }}
+              >
+                CONSIGNEE:
+                <p style={{ fontSize: "9px", margin: "4px 0 0 0" }}>
+                  {bldata?.consigneeName}
+                </p>
+                <p
+                  className="word-break"
+                  style={{ fontSize: "9px", margin: "2px 0 0 0" }}
+                >
+                  {bldata?.consigneeAddress}
+                </p>
+              </div>
+              <div
+                className="border-r  border-b border-black px-1 font-bold"
+                style={{ height: "33% ", width: "100%" }}
+              >
+                NOTIFY PARTY: (NO CLAIM SHALL ATTACH OF FAILURE TO NOTIFY)
+                <p style={{ fontSize: "9px", margin: "4px 0 0 0" }}>
+                  {bldata?.notifyPartyName}
+                </p>
+                <p
+                  className="word-break"
+                  style={{ fontSize: "9px", margin: "2px 0 0 0" }}
+                >
+                  {bldata?.notifyPartyAddress}
+                </p>
+              </div>
+            </div>
+            <div className="" style={{ width: "50%" }}>
+              <div>
+                <img
+                  src=""
+                  alt="logo"
+                  style={{
+                    maxWidth: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex" style={{ height: "20%", width: "100%" }}>
+            <div className="" style={{ width: "50%" }}>
+              <div className="" style={{ height: "100% ", width: "100%" }}>
+                <div
+                  className="flex "
+                  style={{ height: "33% ", width: "100%" }}
+                >
+                  <div
+                    className="border-r  border-b border-black font-bold"
+                    style={{ width: "50%" }}
+                  >
+                    Place of Receipt:
+                    <p className="text-black px-1" style={{ fontSize: "9px" }}>
+                      {bldata?.plr}
+                    </p>
+                  </div>
+                  <div
+                    className=" border-r  border-b border-black px-1 font-bold"
+                    style={{ width: "50%" }}
+                  >
+                    Place of Delivery:
+                    <p className="text-black" style={{ fontSize: "9px" }}>
+                      {bldata?.fpd}
+                    </p>
+                  </div>
+
+                </div>
+                <div
+                  className=" flex"
+                  style={{ height: "34% ", width: "100%" }}
+                >
+                  <div
+                    className="border-r  border-b border-black px-1 font-bold"
+                    style={{ width: "50%" }}
+                  >
+                    Port of Loading:
+                    <p className="text-black" style={{ fontSize: "9px" }}>
+                      {bldata?.polName}
+                    </p>
+                  </div>
+                  <div
+                    className=" border-r  border-b border-black px-1 font-bold"
+                    style={{ width: "50%" }}
+                  >
+                    Port of Discharge:
+                    <p className="text-black" style={{ fontSize: "9px" }}>
+                      {bldata?.pod}
+                    </p>
+                  </div>
+
+                </div>
+                <div
+                  className="flex "
+                  style={{ height: "33% ", width: "100%" }}
+                >
+                  <div
+                    className=" border-r  border-b border-black px-1 font-bold "
+                    style={{ width: "50%" }}
+                  >
+                    Vessel:
+                    <p className="text-black" style={{ fontSize: "9px" }}>
+                      {bldata?.polVessel}
+                    </p>
+                  </div>
+                  <div
+                    className=" border-r  border-b border-black px-1 font-bold"
+                    style={{ width: "50%" }}
+                  >
+                    Voyage:
+                    <p className="text-black" style={{ fontSize: "9px" }}>
+                      {bldata?.polVoyage}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="" style={{ width: "50%" }}>
+              <div className="" style={{ height: "100%" }}>
+                <div className="ml-4" style={{ height: "33%", fontSize: "14px" }}>
+                  B/L No.{bldata?.blNo}
+                </div>
+                <div style={{ height: "33%" }}>
+                  <p className="ml-4">Place and Date of Issue:</p>
+                  <p className="ml-4">{bldata?.fpdAgent}</p>
+                  <p className="ml-4">{bldata?.fpdAgentAddressName}</p>
+                </div>
+
+                <div
+                  className=" flex border-b border-t border-black px-1 font-bold text-center"
+                  style={{ height: "34%", width: "100%" }}
+                >
+                  <div className="" style={{ width: "50%" }}>
+                    Option
+                    <p style={{ margin: 0 }}>{bldata?.tradeTermsId} </p>
+                  </div>
+                  <div className="" style={{ width: "50%" }}>
+                    Number of Non-Original B’L (s)
+                    <p style={{ margin: 0 }}>{bldata?.tradeTermsId} </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex " style={{ height: "38%", width: "100%" }}>
+            <table style={{ width: "100%", height: "100%", fontSize: "9px" }}>
+              <thead>
+                <tr className="">
+                  <th
+                    className=" border-r  border-black"
+                    style={{ width: "16%" }}
+                  >
+                    Container Serial No. <br></br>
+                    (and Serial No.){" "}
+                  </th>
+                  <th
+                    className=" border-r  border-black"
+                    style={{ width: "10%" }}
+                  >
+                    No of Package <br></br>
+                    or<br></br>
+                    Shipping Units{" "}
+                  </th>
+                  <th
+                    className="border-b border-r border-black"
+                    style={{ width: "38%" }}
+                  >
+                    PARTICULARS OF CARGO AS DECLARED BY SHIPPER
+                    <br></br>
+                    DESCRIPTION OF GOODS – SAID TO CONTAIN{" "}
+                    {/* <div style={{ fontSize: "8px", fontWeight: 400 }}>
+                    Said to Contain
+                  </div> */}
+                  </th>
+                  <th
+                    className="border-b border-r border-black"
+                    style={{ width: "12%" }}
+                  >
+                    NET WEIGHT<br></br>
+                    (KGS){" "}
+                    {/* <div style={{ fontSize: "8px", fontWeight: 400 }}>(kgs.)</div> */}
+                  </th>
+                  <th
+                    className="border-b border-r border-black"
+                    style={{ width: "12%" }}
+                  >
+                    TARE WEIGHT<br></br>
+                    (KGS){" "}
+                    {/* <div style={{ fontSize: "8px", fontWeight: 400 }}>(kgs.)</div> */}
+                  </th>
+                  <th
+                    className=" border-b  border-black p-1"
+                    style={{ width: "12%" }}
+                  >
+                    GROSS WEIGHT<br></br>
+                    (KGS)
+                    {/* <div style={{ fontSize: "8px", fontWeight: 400 }}>(cbm)</div> */}
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr>
+                  <td
+                    className="align-top p-2 border-r  border-black"
+                    style={{ height: "100%" }}
+                  >
+                    <div style={{ minHeight: "240px" }}>
+                      {bldata?.marksAndNosDetails}
+                    </div>
+                  </td>
+
+                  <td className=" align-top p-2 border-r  border-black">
+                    <pre className="whitespace-pre-wrap" style={{ margin: 0 }}>
+                      {bldata?.noOfPackages} {bldata?.packagesCode}
+                    </pre>
+                  </td>
+
+                  <td className="align-top p-2 border-r  border-black">
+                    <div style={{ minHeight: "240px" }}>
+                      <div>{bldata?.goodsDescDetails}</div>
+                      <div style={{ marginTop: "8px" }}>
+                        {trimByWordCount
+                          ? trimByWordCount(bldata?.blClause, 60)
+                          : ""}
+                      </div>
+                    </div>
+                  </td>
+
+                  <td className=" align-top p-2 border-r  border-black">
+                    <pre className="whitespace-pre-wrap" style={{ margin: 0 }}>
+                      {bldata?.grossWt} {bldata?.weightUnit}
+                    </pre>
+                  </td>
+                  <td className=" align-top p-2 border-r  border-black">
+                    <pre className="whitespace-pre-wrap" style={{ margin: 0 }}>
+                      {bldata?.tareWt} {bldata?.weightUnit}
+                    </pre>
+                  </td>
+
+                  <td className="align-top p-2 ">
+                    <pre className="whitespace-pre-wrap" style={{ margin: 0 }}>
+                      {bldata?.volume} {bldata?.volumeUnitName}
+                    </pre>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div
+            className=" flex border-b  border-t border-black  "
+            style={{ height: "3%", width: "100%" }}
+          >
+
+            <div className="text-center   border-r border-black" style={{ width: "50%" }}>DECLARATION OF HAZARDOUS/DANGEROUS MATERIALS</div>
+            <div className="text-center " style={{ width: "50%" }}>This is to certify that the above-named materials are property classified. described.</div>
+          </div>
+          <div className="flex text-center" style={{ height: "9%", width: "100%" }}>
+
+            <div className="text-center " style={{ width: "50%" }}>
+              <div className="flex " style={{ height: "33%", width: "100%" }}>
+                <div className="text-left " style={{ width: "50%" }}>IMOclass:<p >{bldata?.imo}</p> </div>
+                <div style={{ width: "50%" }}>UN No.<p >{bldata?.unno}</p> </div>
+              </div>
+              <div className="flex " style={{ height: "33%", width: "100%" }}>
+                <div className="text-left " style={{ width: "50%" }}>Flashpoint:<p >{bldata?.imo}</p></div>
+                <div style={{ width: "50%" }}>DOT 49 CFR Part. 172 Sub<p >{bldata?.imo}</p></div>
+              </div>
+              <div className="flex " style={{ height: "34%", width: "100%" }}>
+                <div className="text-left " style={{ width: "50%" }}>Page:<p >{bldata?.imo}</p></div>
+                <div style={{ width: "50%" }}>Certified on behalf of shipperby:<p >{bldata?.imo}</p></div>
+              </div>
+            </div>
+            <div className="text-center " style={{ width: "50%" }}>
+              <div className="flex " style={{ height: "33%", width: "100%", fontSize: "8px" }}>
+                packaged, marked and labeled, and are inproper condition fortransportation according to the applicable regulations of the Department of Transportation.
+              </div>
+              <div className="flex " style={{ height: "33%", width: "100%" }}>
+                <div style={{ width: "50%" }}> C Class/label:</div>
+                <div style={{ width: "50%" }}>Subsidiary risk:</div>
+              </div>
+              <div className="flex " style={{ height: "34%", width: "100%" }}>
+                <div style={{ width: "50%" }}></div>
+                <div style={{ width: "50%" }}>Date: SHIPPED ON BOARD DATE: 10/DEC/2025</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div className="border-r border-l border-b border-black" style={{ height: "20%", fontSize: "9px" }}>
+          <div className="flex border-b border-black" style={{ height: "50%", fontSize: "9px", width: "100%" }}>
+            <div className="border-r border-black " style={{ width: "50%" }}>
+              <p className="mt-4">For Delivery of Goods apply toMessrs.</p>
+              <pre className="whitespace-pre-wrap" style={{ margin: 0 }}>
+                {bldata?.fpdAgent}
+              </pre>
+            </div>
+            <div style={{ width: "50%" }}>
+              <div style={{ height: "100%" }}>
+                <div style={{ height: "50%" }}><p className="ml-4 ">Tank Freetime:</p><p className="ml-4 ">{bldata?.grentFreeDays}</p>  </div>
+                <div style={{ height: "50%" }}>
+                  <div className="flex" style={{ width: "100%" }}>
+                    <div style={{ width: "50%" }}><p className="ml-4 ">Tank DemurrageCharge @ </p><p className="ml-4 ">{bldata?.originDemurrageRate}</p></div>
+                    <div style={{ width: "50%" }}><p className="ml-4 ">Per Day Per Tank</p><p className="ml-4 ">{bldata?.destinationDemurrageFreeDays}</p></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="text-center border-b border-black" style={{ height: "35%", width: "100%" }}>
+            <div className="flex " style={{ height: "30%", width: "100%" }}>
+              <div
+                className="border-r  border-b border-black "
+                style={{ width: "20%" }}
+              >
+                FREIGHT & CHARGES{" "}
+              </div>
+              <div
+                className="border-r  border-b border-black"
+                style={{ width: "20%" }}
+              >
+                CHARGEABLE UNITS
+              </div>
+              <div
+                className="border-r  border-b border-black"
+                style={{ width: "17%" }}
+              >
+                RATE
+              </div>
+              <div
+                className="border-r border-b border-black"
+                style={{ width: "13%" }}
+              >
+                PREPAID
+              </div>
+              <div className="border-b border-black" style={{ width: "30%" }}>
+                COLLECT
+              </div>
+            </div>
+            <div className="flex" style={{ height: "70%", width: "100%" }}>
+              <div className="border-r border-black" style={{ width: "20%" }}>
+                <p className="p-1">{bldata?.freightpayableAtText} </p>
+              </div>
+              <div className="border-r border-black" style={{ width: "20%" }}>
+                <p className="p-1" style={{ fontSize: "9px", margin: 0 }}>
+                  {bldata?.freightPrepaidCollectId}
+                </p>
+              </div>
+              <div className="border-r border-black" style={{ width: "17%" }}>
+                <p className="p-1" style={{ fontSize: "9px", margin: 0 }}>
+                  {bldata?.freightPrepaidCollectId}
+                </p>
+              </div>
+              <div className=" border-r  border-black" style={{ width: "13%" }}>
+                <p className="text-center  p-1" style={{ fontSize: "9px" }}>
+                  {bldata?.freightPrepaidCollectId}
+                </p>
+              </div>
+              <div className="" style={{ width: "30%" }}>
+                <p className="text-center  p-1" style={{ fontSize: "9px" }}>
+                  {bldata?.freightPrepaidCollect}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div style={{ height: "15%", fontSize: "9px" }}>
+            In witness whereof 3 original bills of lading unless otherwise stated above have been issued one of which accomplished the others to be void. <br></br>
+            The Carrier: Merlion Holdings Pte Ltd
+          </div>
+        </div>
+      </div>
     );
   };
 
@@ -24316,9 +26082,8 @@ function rptAirwayBill() {
                   <div
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
-                    className={`bg-white ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    }`}
+                    className={`bg-white ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      }`}
                     style={{
                       width: "297mm", // A4 landscape width
                       height: "210mm", // A4 landscape height
@@ -24369,13 +26134,13 @@ function rptAirwayBill() {
 
               // Clean empty lines so blank strings don't create phantom pages
               const containerLines = nonEmpty(
-                splitLines(jd.containerDetailsAttach)
+                splitLines(jd.containerDetailsAttach),
               );
               const marksLines = nonEmpty(
-                splitLines(jd.marksAndNosDetailsAttach)
+                splitLines(jd.marksAndNosDetailsAttach),
               );
               const goodsLines = nonEmpty(
-                splitLines(jd.goodsDescDetailsAttach)
+                splitLines(jd.goodsDescDetailsAttach),
               );
 
               const cChunks = chunkArray(containerLines, LINES_PER_PAGE);
@@ -24394,7 +26159,7 @@ function rptAirwayBill() {
                 cChunks.length,
                 mChunks.length,
                 gChunks.length,
-                0
+                0,
               );
 
               // If no text attachments but we DO have grid rows, still create ONE attach page
@@ -24409,7 +26174,7 @@ function rptAirwayBill() {
                 usedOnLast = Math.max(
                   (cChunks[last] || []).length,
                   (mChunks[last] || []).length,
-                  (gChunks[last] || []).length
+                  (gChunks[last] || []).length,
                 );
               }
 
@@ -24542,8 +26307,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -24630,7 +26395,7 @@ function rptAirwayBill() {
                                               {render(c)}
                                             </pre>
                                           </div>
-                                        )
+                                        ),
                                       )}
                                     </div>
                                   ))}
@@ -24745,13 +26510,13 @@ function rptAirwayBill() {
 
               // Clean empty lines so blank strings don't create phantom pages
               const containerLines = nonEmpty(
-                splitLines(jd.containerDetailsAttach)
+                splitLines(jd.containerDetailsAttach),
               );
               const marksLines = nonEmpty(
-                splitLines(jd.marksAndNosDetailsAttach)
+                splitLines(jd.marksAndNosDetailsAttach),
               );
               const goodsLines = nonEmpty(
-                splitLines(jd.goodsDescDetailsAttach)
+                splitLines(jd.goodsDescDetailsAttach),
               );
 
               const cChunks = chunkArray(containerLines, LINES_PER_PAGE);
@@ -24770,7 +26535,7 @@ function rptAirwayBill() {
                 cChunks.length,
                 mChunks.length,
                 gChunks.length,
-                0
+                0,
               );
 
               // If no text attachments but we DO have grid rows, still create ONE attach page
@@ -24785,7 +26550,7 @@ function rptAirwayBill() {
                 usedOnLast = Math.max(
                   (cChunks[last] || []).length,
                   (mChunks[last] || []).length,
-                  (gChunks[last] || []).length
+                  (gChunks[last] || []).length,
                 );
               }
 
@@ -24918,8 +26683,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -25006,7 +26771,7 @@ function rptAirwayBill() {
                                               {render(c)}
                                             </pre>
                                           </div>
-                                        )
+                                        ),
                                       )}
                                     </div>
                                   ))}
@@ -25107,7 +26872,7 @@ function rptAirwayBill() {
                 if (!Array.isArray(arr) || size <= 0) return [];
                 const chunks = [];
                 for (let i = 0; i < arr.length; i += size) {
-                  chunks.push(arr.slice(i, i + size)); // correct slice
+                  chunks.push(arr.slice(i, i + size));
                 }
                 return chunks;
               };
@@ -25121,24 +26886,31 @@ function rptAirwayBill() {
 
               // Clean empty lines so blank strings don't create phantom pages
               const containerLines = nonEmpty(
-                splitLines(jd.containerDetailsAttach)
+                splitLines(jd.containerDetailsAttach),
               );
               const marksLines = nonEmpty(
-                splitLines(jd.marksAndNosDetailsAttach)
+                splitLines(jd.marksAndNosDetailsAttach),
               );
               const goodsLines = nonEmpty(
-                splitLines(jd.goodsDescDetailsAttach)
+                splitLines(jd.goodsDescDetailsAttach),
               );
 
               const cChunks = chunkArray(containerLines, LINES_PER_PAGE);
               const mChunks = chunkArray(marksLines, LINES_PER_PAGE);
               const gChunks = chunkArray(goodsLines, LINES_PER_PAGE);
 
-              // GRID should begin from container #3 on attach sheets (skip first two printed on main page)
+              // ✅ GRID should begin from container #3 on attach sheets (skip first two printed on main page)
               const gridSrc = jd.tblBlContainer || jd.tblblContainer || [];
               const allGridRows = Array.isArray(gridSrc) ? gridSrc : [];
-              const attachStartIndex = 0; // skip 0 & 1 -> start at #3
-              const attachRows = allGridRows.slice(attachStartIndex);
+
+              // ✅ Attachments should appear ONLY if 3rd container exists (i.e. total containers > 2)
+              const hasThirdContainer = allGridRows.length > 2;
+
+              // ✅ start from index 2 => container #3 onwards
+              const attachStartIndex = 3;
+              const attachRows = hasThirdContainer
+                ? allGridRows.slice(attachStartIndex)
+                : [];
               const hasGrid = attachRows.length > 0;
 
               // Base pages from text attachments
@@ -25146,13 +26918,15 @@ function rptAirwayBill() {
                 cChunks.length,
                 mChunks.length,
                 gChunks.length,
-                0
+                0,
               );
 
-              // If no text attachments but we DO have grid rows, still create ONE attach page
+              // If no text attachments but we DO have grid rows (after 3rd container), still create ONE attach page
               const attachPages =
                 baseAttachPages > 0 ? baseAttachPages : hasGrid ? 1 : 0;
-              const includeAttachments = attachPages > 0;
+
+              // ✅ IMPORTANT: include attachments only when 3rd container exists
+              const includeAttachments = hasThirdContainer && attachPages > 0;
 
               // Used lines on last text-attachment page (0 if we only created a page for grid spill)
               let usedOnLast = 0;
@@ -25161,7 +26935,7 @@ function rptAirwayBill() {
                 usedOnLast = Math.max(
                   (cChunks[last] || []).length,
                   (mChunks[last] || []).length,
-                  (gChunks[last] || []).length
+                  (gChunks[last] || []).length,
                 );
               }
 
@@ -25176,7 +26950,7 @@ function rptAirwayBill() {
 
               const restRows = includeAttachments
                 ? attachRows.slice(firstGridCap)
-                : attachRows;
+                : [];
               const restChunks = chunkArray(restRows, LINES_PER_PAGE);
 
               const basePre = {
@@ -25218,9 +26992,7 @@ function rptAirwayBill() {
                   key: "No of Packages",
                   header: "Packages",
                   render: (c) =>
-                    `${c.noOfPackages || ""}${" "}${
-                      c.packageCode || ""
-                    }`.trim(),
+                    `${c.noOfPackages || ""} ${c.packageCode || ""}`.trim(),
                   align: "center",
                 },
                 {
@@ -25291,17 +27063,19 @@ function rptAirwayBill() {
                       {rptBillOfLadingSBX()}
                     </div>
                   </div>
+
                   <div className="bg-gray-300 h-2 no-print" />
 
-                  {/* ATTACHMENT PAGES (render if text lines exist OR tblBlContainer has rows) */}
+                  {/* ✅ ATTACHMENT PAGES: ONLY render when container #3 exists */}
                   {includeAttachments &&
                     Array.from({ length: attachPages }).map((_, p) => {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
+
                       const showThisPage =
                         pageHasLines ||
                         (p === attachPages - 1 && firstRows.length > 0);
@@ -25387,7 +27161,7 @@ function rptAirwayBill() {
                                               {render(c)}
                                             </pre>
                                           </div>
-                                        )
+                                        ),
                                       )}
                                     </div>
                                   ))}
@@ -25395,91 +27169,97 @@ function rptAirwayBill() {
                               </div>
                             )}
                           </div>
+
                           <div className="bg-gray-300 h-2 no-print" />
                         </React.Fragment>
                       );
                     })}
 
-                  {/* REMAINING GRID PAGES */}
-                  {restChunks.map((rows, gi) => (
-                    <React.Fragment key={`seaway-grid-${gi}`}>
-                      <div
-                        className="second-page bg-white mainPadding"
-                        style={{
-                          width: "210mm",
-                          height: "297mm",
-                          margin: "auto",
-                          boxSizing: "border-box",
-                          display: "flex",
-                          flexDirection: "column",
-                        }}
-                      >
-                        {/* Grid Header */}
-                        <div className="flex border border-black mr-2 ml-2 text-center bg-gray-200">
-                          {columns.map(({ key, header }, colIdx) => (
-                            <div
-                              key={key}
-                              className="flex-1"
-                              style={{
-                                padding: "2px",
-                                borderRight:
-                                  colIdx < columns.length - 1
-                                    ? "1px solid black"
-                                    : "none",
-                              }}
-                            >
-                              <p
-                                className="text-black font-normal"
+                  {/* ✅ REMAINING GRID PAGES (container #3 onwards) */}
+                  {includeAttachments &&
+                    restChunks.map((rows, gi) => (
+                      <React.Fragment key={`seaway-grid-${gi}`}>
+                        <div
+                          className="second-page bg-white mainPadding"
+                          style={{
+                            width: "210mm",
+                            height: "297mm",
+                            margin: "auto",
+                            boxSizing: "border-box",
+                            display: "flex",
+                            flexDirection: "column",
+                          }}
+                        >
+                          {/* Grid Header */}
+                          <div className="flex border border-black mr-2 ml-2 text-center bg-gray-200">
+                            {columns.map(({ key, header }, colIdx) => (
+                              <div
+                                key={key}
+                                className="flex-1"
                                 style={{
-                                  fontWeight: "bold",
-                                  fontSize: "9px",
-                                  textAlign: "center",
+                                  padding: "2px",
+                                  borderRight:
+                                    colIdx < columns.length - 1
+                                      ? "1px solid black"
+                                      : "none",
                                 }}
                               >
-                                {header}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Grid Rows */}
-                        <div className="mr-2 ml-2 border-b border-black">
-                          {rows.map((c, i) => (
-                            <div
-                              key={i}
-                              className="flex border-l border-r border-black text-center"
-                            >
-                              {columns.map(({ key, render, align }, colIdx) => (
-                                <div
-                                  key={key}
-                                  className="flex-1"
+                                <p
+                                  className="text-black font-normal"
                                   style={{
-                                    padding: "1px",
-                                    borderRight:
-                                      colIdx < columns.length - 1
-                                        ? "1px solid black"
-                                        : "none",
-                                    textAlign: align,
+                                    fontWeight: "bold",
+                                    fontSize: "9px",
+                                    textAlign: "center",
                                   }}
                                 >
-                                  <pre
-                                    className="text-black font-normal"
-                                    style={{ ...basePre }}
-                                  >
-                                    {render(c)}
-                                  </pre>
-                                </div>
-                              ))}
-                            </div>
-                          ))}
+                                  {header}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Grid Rows */}
+                          <div className="mr-2 ml-2 border-b border-black">
+                            {rows.map((c, i) => (
+                              <div
+                                key={i}
+                                className="flex border-l border-r border-black text-center"
+                              >
+                                {columns.map(
+                                  ({ key, render, align }, colIdx) => (
+                                    <div
+                                      key={key}
+                                      className="flex-1"
+                                      style={{
+                                        padding: "1px",
+                                        borderRight:
+                                          colIdx < columns.length - 1
+                                            ? "1px solid black"
+                                            : "none",
+                                        textAlign: align,
+                                      }}
+                                    >
+                                      <pre
+                                        className="text-black font-normal"
+                                        style={{ ...basePre }}
+                                      >
+                                        {render(c)}
+                                      </pre>
+                                    </div>
+                                  ),
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      <div className="bg-gray-300 h-2 no-print" />
-                    </React.Fragment>
-                  ))}
+
+                        <div className="bg-gray-300 h-2 no-print" />
+                      </React.Fragment>
+                    ))}
                 </div>
               );
             }
+
             case "BL Print SBX": {
               // --- utilities (inline) ---
               const splitLines = (txt) =>
@@ -25502,13 +27282,13 @@ function rptAirwayBill() {
 
               // Clean empty lines so blank strings don't create phantom pages
               const containerLines = nonEmpty(
-                splitLines(jd.containerDetailsAttach)
+                splitLines(jd.containerDetailsAttach),
               );
               const marksLines = nonEmpty(
-                splitLines(jd.marksAndNosDetailsAttach)
+                splitLines(jd.marksAndNosDetailsAttach),
               );
               const goodsLines = nonEmpty(
-                splitLines(jd.goodsDescDetailsAttach)
+                splitLines(jd.goodsDescDetailsAttach),
               );
 
               const cChunks = chunkArray(containerLines, LINES_PER_PAGE);
@@ -25527,7 +27307,7 @@ function rptAirwayBill() {
                 cChunks.length,
                 mChunks.length,
                 gChunks.length,
-                0
+                0,
               );
 
               // If no text attachments but we DO have grid rows, still create ONE attach page
@@ -25542,7 +27322,7 @@ function rptAirwayBill() {
                 usedOnLast = Math.max(
                   (cChunks[last] || []).length,
                   (mChunks[last] || []).length,
-                  (gChunks[last] || []).length
+                  (gChunks[last] || []).length,
                 );
               }
 
@@ -25599,9 +27379,8 @@ function rptAirwayBill() {
                   key: "No of Packages",
                   header: "Packages",
                   render: (c) =>
-                    `${c.noOfPackages || ""}${" "}${
-                      c.packageCode || ""
-                    }`.trim(),
+                    `${c.noOfPackages || ""}${" "}${c.packageCode || ""
+                      }`.trim(),
                   align: "center",
                 },
                 {
@@ -25686,8 +27465,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -25774,7 +27553,7 @@ function rptAirwayBill() {
                                               {render(c)}
                                             </pre>
                                           </div>
-                                        )
+                                        ),
                                       )}
                                     </div>
                                   ))}
@@ -25882,13 +27661,13 @@ function rptAirwayBill() {
 
               // Clean empty lines so blank strings don't create phantom pages
               const containerLines = nonEmpty(
-                splitLines(jd.containerDetailsAttach)
+                splitLines(jd.containerDetailsAttach),
               );
               const marksLines = nonEmpty(
-                splitLines(jd.marksAndNosDetailsAttach)
+                splitLines(jd.marksAndNosDetailsAttach),
               );
               const goodsLines = nonEmpty(
-                splitLines(jd.goodsDescDetailsAttach)
+                splitLines(jd.goodsDescDetailsAttach),
               );
 
               const cChunks = chunkArray(containerLines, LINES_PER_PAGE);
@@ -25907,7 +27686,7 @@ function rptAirwayBill() {
                 cChunks.length,
                 mChunks.length,
                 gChunks.length,
-                0
+                0,
               );
 
               // If no text attachments but we DO have grid rows, still create ONE attach page
@@ -25922,7 +27701,7 @@ function rptAirwayBill() {
                 usedOnLast = Math.max(
                   (cChunks[last] || []).length,
                   (mChunks[last] || []).length,
-                  (gChunks[last] || []).length
+                  (gChunks[last] || []).length,
                 );
               }
 
@@ -26055,8 +27834,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -26143,7 +27922,7 @@ function rptAirwayBill() {
                                               {render(c)}
                                             </pre>
                                           </div>
-                                        )
+                                        ),
                                       )}
                                     </div>
                                   ))}
@@ -26258,13 +28037,13 @@ function rptAirwayBill() {
 
               // Clean empty lines so blank strings don't create phantom pages
               const containerLines = nonEmpty(
-                splitLines(jd.containerDetailsAttach)
+                splitLines(jd.containerDetailsAttach),
               );
               const marksLines = nonEmpty(
-                splitLines(jd.marksAndNosDetailsAttach)
+                splitLines(jd.marksAndNosDetailsAttach),
               );
               const goodsLines = nonEmpty(
-                splitLines(jd.goodsDescDetailsAttach)
+                splitLines(jd.goodsDescDetailsAttach),
               );
 
               const cChunks = chunkArray(containerLines, LINES_PER_PAGE);
@@ -26283,7 +28062,7 @@ function rptAirwayBill() {
                 cChunks.length,
                 mChunks.length,
                 gChunks.length,
-                0
+                0,
               );
 
               // If no text attachments but we DO have grid rows, still create ONE attach page
@@ -26298,7 +28077,7 @@ function rptAirwayBill() {
                 usedOnLast = Math.max(
                   (cChunks[last] || []).length,
                   (mChunks[last] || []).length,
-                  (gChunks[last] || []).length
+                  (gChunks[last] || []).length,
                 );
               }
 
@@ -26431,8 +28210,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -26519,7 +28298,7 @@ function rptAirwayBill() {
                                               {render(c)}
                                             </pre>
                                           </div>
-                                        )
+                                        ),
                                       )}
                                     </div>
                                   ))}
@@ -26634,13 +28413,13 @@ function rptAirwayBill() {
 
               // Clean empty lines so blank strings don't create phantom pages
               const containerLines = nonEmpty(
-                splitLines(jd.containerDetailsAttach)
+                splitLines(jd.containerDetailsAttach),
               );
               const marksLines = nonEmpty(
-                splitLines(jd.marksAndNosDetailsAttach)
+                splitLines(jd.marksAndNosDetailsAttach),
               );
               const goodsLines = nonEmpty(
-                splitLines(jd.goodsDescDetailsAttach)
+                splitLines(jd.goodsDescDetailsAttach),
               );
 
               const cChunks = chunkArray(containerLines, LINES_PER_PAGE);
@@ -26659,7 +28438,7 @@ function rptAirwayBill() {
                 cChunks.length,
                 mChunks.length,
                 gChunks.length,
-                0
+                0,
               );
 
               // If no text attachments but we DO have grid rows, still create ONE attach page
@@ -26674,7 +28453,7 @@ function rptAirwayBill() {
                 usedOnLast = Math.max(
                   (cChunks[last] || []).length,
                   (mChunks[last] || []).length,
-                  (gChunks[last] || []).length
+                  (gChunks[last] || []).length,
                 );
               }
 
@@ -26807,8 +28586,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -26895,7 +28674,7 @@ function rptAirwayBill() {
                                               {render(c)}
                                             </pre>
                                           </div>
-                                        )
+                                        ),
                                       )}
                                     </div>
                                   ))}
@@ -27036,6 +28815,163 @@ function rptAirwayBill() {
                     }}
                   >
                     {YMSBL()}
+                  </div>
+
+                  {/* ✅ show attachments only when data exists */}
+                  {containers.length > 0 && (
+                    <>
+                      <div className="bg-gray-300 h-2 no-print" />
+
+                      {pages.map((pageRows, pageIdx) => (
+                        <div
+                          key={pageIdx}
+                          className="page bg-white text-black"
+                          style={{
+                            width: "210mm",
+                            minHeight: "297mm", // ✅ minHeight not fixed height
+                            boxSizing: "border-box",
+                            padding: "5mm",
+                            fontFamily: "Arial, sans-serif",
+                          }}
+                        >
+                          <YMSBLAttachMent
+                            tblBlContainer={pageRows}
+                            pageNo={pageIdx + 1}
+                            totalPages={totalPages}
+                          />
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              );
+            }
+            case "YMSBLREPORTS": {
+              const containers = Array.isArray(bldata?.tblBlContainer)
+                ? bldata.tblBlContainer
+                : [];
+              const PER_PAGE = 20;
+
+              const pages = [];
+              for (let i = 0; i < containers.length; i += PER_PAGE) {
+                pages.push(containers.slice(i, i + PER_PAGE));
+              }
+              const totalPages = pages.length;
+
+              return (
+                // ✅ SINGLE WRAPPER REF — captures main + all attachment pages
+                <div
+                  key={index}
+                  ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                  data-report={`seaway-${index}`}
+                  style={{ width: "210mm", margin: "auto" }}
+                  className="mt-5"
+                >
+                  <style jsx global>{`
+                    @media print {
+                      .page {
+                        page-break-after: always;
+                      }
+                      .page:last-child {
+                        page-break-after: auto;
+                      }
+                      .no-print {
+                        display: none !important;
+                      }
+                    }
+                  `}</style>
+
+                  {/* ================= MAIN PAGE ================= */}
+                  <div
+                    className="page bg-white"
+                    style={{
+                      width: "210mm",
+                      minHeight: "297mm", // ✅ use minHeight (avoid hiding content)
+                      boxSizing: "border-box",
+                      padding: "5mm",
+                      fontFamily: "Arial, sans-serif",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    {YMSBLREPORTS()}
+                  </div>
+
+                  {/* ✅ show attachments only when data exists */}
+                  {containers.length > 0 && (
+                    <>
+                      <div className="bg-gray-300 h-2 no-print" />
+
+                      {pages.map((pageRows, pageIdx) => (
+                        <div
+                          key={pageIdx}
+                          className="page bg-white text-black"
+                          style={{
+                            width: "210mm",
+                            minHeight: "297mm", // ✅ minHeight not fixed height
+                            boxSizing: "border-box",
+                            padding: "5mm",
+                            fontFamily: "Arial, sans-serif",
+                          }}
+                        >
+                          <YMSBLAttachMent
+                            tblBlContainer={pageRows}
+                            pageNo={pageIdx + 1}
+                            totalPages={totalPages}
+                          />
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              );
+            }
+            case "YMSBLRPT": {
+              const containers = Array.isArray(bldata?.tblBlContainer)
+                ? bldata.tblBlContainer
+                : [];
+              const PER_PAGE = 20;
+
+              const pages = [];
+              for (let i = 0; i < containers.length; i += PER_PAGE) {
+                pages.push(containers.slice(i, i + PER_PAGE));
+              }
+              const totalPages = pages.length;
+
+              return (
+                // ✅ SINGLE WRAPPER REF — captures main + all attachment pages
+                <div
+                  key={index}
+                  ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                  data-report={`seaway-${index}`}
+                  style={{ width: "210mm", margin: "auto" }}
+                  className="mt-5"
+                >
+                  <style jsx global>{`
+                    @media print {
+                      .page {
+                        page-break-after: always;
+                      }
+                      .page:last-child {
+                        page-break-after: auto;
+                      }
+                      .no-print {
+                        display: none !important;
+                      }
+                    }
+                  `}</style>
+
+                  {/* ================= MAIN PAGE ================= */}
+                  <div
+                    className="page bg-white"
+                    style={{
+                      width: "210mm",
+                      minHeight: "297mm", // ✅ use minHeight (avoid hiding content)
+                      boxSizing: "border-box",
+                      padding: "5mm",
+                      fontFamily: "Arial, sans-serif",
+                    }}
+                  >
+                    {YMSBLRPT()}
                   </div>
 
                   {/* ✅ show attachments only when data exists */}

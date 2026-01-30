@@ -28,7 +28,7 @@ import {
 } from "@/services/auth/FormControl.services.js";
 import { ButtonPanel } from "@/components/Buttons/customeButton.jsx";
 import { CustomSpinner } from "@/components/Spinner/spinner";
-import CustomeInputFields from "@/components/Inputs/customeInputFields";
+import { CustomeInputFieldsDynamicReports } from "@/components/Inputs/customeInputFieldsDynamicReports";
 import { toast } from "react-toastify";
 import PropTypes from "prop-types";
 import { useSearchParams } from "next/navigation";
@@ -97,6 +97,7 @@ import {
   displayTablePaperStyles,
   displayTableRowStylesNoHover,
 } from "@/app/globalCss";
+import { image } from "d3";
 
 export default function AddEditFormControll({ reportData }) {
   const router = useRouter();
@@ -175,10 +176,10 @@ export default function AddEditFormControll({ reportData }) {
   const [isDataFromStoredProcedure, setIsDataFromStoredProcedure] =
     useState(false);
   const [pivotRowFields, setPivotRowFields] = useState(
-    "Invoice No,BL No,Invoicing Party,Voyage No,Container No,Free Days,Invoice Amount,Tax"
+    "Invoice No,BL No,Invoicing Party,Voyage No,Container No,Free Days,Invoice Amount,Tax",
   );
   const [pivotColFields, setPivotColFields] = useState(
-    "Container Type,Vessel Name,Charge Name"
+    "Container Type,Vessel Name,Charge Name",
   );
   const [pivotValueFields, setPivotValueFields] = useState("Charge Amount");
   const [pivotRowTable, setPivotRowTotal] = useState("y");
@@ -207,12 +208,16 @@ export default function AddEditFormControll({ reportData }) {
   const [ledgerLocalForeignRadio, setLocalForeignRadio] = useState(null);
   const [ledgerVoucherGroupingRadio, setVoucherGroupingRadio] = useState(null);
   const [ledgerReportTypeRadio, setReportTypeRadio] = useState(null);
+  const [fileNameUploaded, setFileNameUploaded] = useState(null);
   const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
   const header = BackEndUrl + headerLogoPath;
+
+  console.log("akash=>", newState);
+
   useEffect(() => {
     // Set first non-empty array as default active table
     const firstKey = Object.entries(analysisData || {}).find(
-      ([key, value]) => Array.isArray(value) && value.length > 0
+      ([key, value]) => Array.isArray(value) && value.length > 0,
     )?.[0];
 
     if (firstKey && !activeTableKey) {
@@ -245,37 +250,14 @@ export default function AddEditFormControll({ reportData }) {
     setLabelName(labelValue);
   };
   useEffect(() => {
-    const fetchHeader = async () => {
-      const requestBody = {
-        tableName: "tblCompanyBranchParameter",
-        whereCondition: {
-          status: 1,
-          companyBranchId: branchId,
-          clientId: clientId,
-        },
-        projection: {
-          tblCompanyBranchParameterDetails: 1,
-        },
-      };
-      try {
-        const dataURl = await fetchDataAPI(requestBody);
-        const response = dataURl.data;
-        if (
-          response &&
-          response.length > 0 &&
-          response[0].tblCompanyBranchParameterDetails.length > 0
-        ) {
-          const headerUrl =
-            response[0].tblCompanyBranchParameterDetails[0].header;
-          setImageUrl(headerUrl);
-        } else {
-          console.error("No valid data received");
-        }
-      } catch (error) {
-        console.error("Error fetching initial data:", error);
-      }
-    };
-    fetchHeader();
+    const storedUserData = localStorage.getItem("userData");
+    let imageHeader = null;
+    if (storedUserData) {
+      const decryptedData = decrypt(storedUserData);
+      const userData = JSON.parse(decryptedData);
+      imageHeader = userData[0]?.headerLogoPath;
+      setImageUrl(baseUrlNext + imageHeader);
+    }
   }, []);
 
   useEffect(() => {
@@ -309,7 +291,7 @@ export default function AddEditFormControll({ reportData }) {
       const groupedData = preprocessDataForGrouping(
         sortedData,
         grid,
-        groupingDepth
+        groupingDepth,
       );
 
       // Use deep equality check to avoid infinite update loop
@@ -329,7 +311,7 @@ export default function AddEditFormControll({ reportData }) {
 
   const handleFileAndUpdateState = (file, updateState) => {
     const reader = new FileReader();
-
+    setFileNameUploaded(file?.name || "");
     reader.onload = (e) => {
       const result = e.target.result;
 
@@ -371,6 +353,25 @@ export default function AddEditFormControll({ reportData }) {
       file.type === "text/xml" ||
       file.name.endsWith(".XML")
     ) {
+      reader.readAsText(file);
+    } else if (
+      file?.name.toLowerCase().includes("coarri") ||
+      file?.name.toLowerCase().includes("codeco") ||
+      file.type.toLowerCase().includes(".dat") ||
+      file.type.toLowerCase().includes(".edi")
+    ) {
+      reader.onload = (e) => {
+        const text = String(e.target.result || "");
+        const lines = text
+          .replace(/\r\n/g, "\n")
+          .replace(/\r/g, "\n")
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .map((l) => l.replace(/'+$/, ""));
+        const arr = lines.map((line) => ({ ROW1: line }));
+        updateState(arr);
+      };
       reader.readAsText(file);
     } else {
       reader.readAsArrayBuffer(file);
@@ -577,6 +578,72 @@ export default function AddEditFormControll({ reportData }) {
     return Number.isFinite(n) ? n : null; // NaN → null
   };
 
+  const removeDropdownFields = (obj) => {
+    const newObj = { ...obj };
+    Object.keys(newObj).forEach((key) => {
+      if (key.endsWith("dropdown")) {
+        delete newObj[key];
+      }
+    });
+    return newObj;
+  };
+
+  const updateFieldNames = async (filterCondition) => {
+    const updatedFilterCondition = {
+      ...filterCondition,
+      companyId,
+      branchId,
+      financialYear,
+      userId,
+      clientId,
+    };
+
+    for (const key in filterCondition) {
+      // Skip fields with an empty string or null value
+      if (filterCondition[key] === "" || filterCondition[key] === null) {
+        delete updatedFilterCondition[key];
+        continue;
+      }
+
+      const requestBodyGrid = {
+        columns: "af.id,af.fieldname,af.label",
+        tableName:
+          "tblApiDefinition ad Left join tblApiFields af on af.apiDefinitionId = ad.id",
+        whereCondition: `af.id = ${key} and af.status = 1`,
+        clientIdCondition: `ad.status = 1 FOR JSON PATH`,
+      };
+
+      try {
+        const data = await fetchReportData(requestBodyGrid);
+        if (data && data.data && data.data[0] && data.data[0].fieldname) {
+          const apiField = data.data[0].fieldname;
+          const newFieldName = apiField;
+
+          // Add the new fieldname with the old value
+          updatedFilterCondition[newFieldName] = updatedFilterCondition[key];
+          // Remove the old fieldname
+          delete updatedFilterCondition[key];
+        } else {
+          console.error("No data returned for key:", key);
+        }
+      } catch (error) {
+        console.error("Error fetching report types for key:", key, error);
+      }
+    }
+
+    // Filter out null or empty string values before returning the result
+    for (const key in updatedFilterCondition) {
+      if (
+        updatedFilterCondition[key] === "" ||
+        updatedFilterCondition[key] === null
+      ) {
+        delete updatedFilterCondition[key];
+      }
+    }
+
+    return updatedFilterCondition;
+  };
+
   const handleButtonClick = {
     handleSubmit: async () => {
       setCurrentPage(1);
@@ -584,7 +651,7 @@ export default function AddEditFormControll({ reportData }) {
       for (const [section, fields] of Object.entries(parentsFields)) {
         const missingField = Object.entries(fields).find(
           ([, { isRequired, fieldname, yourlabel }]) =>
-            isRequired && !newState[fieldname]
+            isRequired && !newState[fieldname],
         );
 
         if (missingField) {
@@ -682,7 +749,7 @@ export default function AddEditFormControll({ reportData }) {
       } else if (isDefaultDataShow === false && outputFileFormat === "Json") {
         const fetchData = await fetchDynamicReportSpData(
           spName,
-          filterCondition
+          filterCondition,
         );
         console.log("fetchData =>>", fetchData);
 
@@ -703,64 +770,86 @@ export default function AddEditFormControll({ reportData }) {
         }
         setIsLoading(false);
       } else if (isDefaultDataShow === false && outputFileFormat === "CSV") {
-        const fetchData = await fetchDynamicReportSpData(
-          spName,
-          filterCondition
-        );
-        console.log("fetchData =>>", fetchData);
+        try {
+          setIsLoading(true);
 
-        if (fetchData && fetchData.data.length > 0) {
-          // Initialize CSV content
-          let csvContent = "data:text/csv;charset=utf-8,";
+          const fetchData = await fetchDynamicReportSpData(spName, {
+            ...filterCondition,
+            clientId,
+            companyId,
+            companyBranchId: branchId,
+            financialYearId: financialYear,
+            userId,
+          });
+          console.log("fetchData =>>", fetchData);
 
-          // Iterate over each dataset in fetchData
-          fetchData.data.forEach((outerArray, index) => {
-            // Since the data is doubly nested, iterate through the outer array
-            outerArray.forEach((dataset, dataSetIndex) => {
-              const key = Object.keys(dataset)[0]; // e.g., 'tblCompanyCode'
-              const data = dataset[key]; // This is the array of data
+          const rows = Array.isArray(fetchData?.data) ? fetchData.data : [];
 
-              if (data.length > 0) {
-                if (dataSetIndex === 0 && index === 0) {
-                  // Create headers from the keys of the first item in the array
-                  const headers = Object.keys(data[0]).join(",");
-                  csvContent += headers + "\r\n"; // Adding header row
-                }
+          if (rows.length === 0) {
+            console.log("No data available to export.");
+            return;
+          }
 
-                // Add data rows
-                data.forEach((item) => {
-                  const row = Object.keys(data[0])
-                    .map((header) => {
-                      const value = item[header];
-                      // Check if the value is an object and handle it appropriately
-                      if (value && typeof value === "object") {
-                        // If it's an object, convert it to a string or handle differently
-                        return `"${value.toString().replace(/"/g, '""')}"`;
-                      }
-                      return `"${(value || "")
-                        .toString()
-                        .replace(/"/g, '""')}"`; // Ensure null or undefined becomes an empty string and escape quotes
-                    })
-                    .join(",");
-                  csvContent += row + "\r\n"; // Add each row with a new line
-                });
+          // ✅ headers (union of keys) — handles spaces like "Sr No"
+          const headerSet = new Set();
+          rows.forEach((r) => {
+            if (r && typeof r === "object") {
+              Object.keys(r).forEach((k) => headerSet.add(k));
+            }
+          });
+          const headers = Array.from(headerSet);
+
+          const escapeCsv = (value) => {
+            if (value === null || value === undefined) return "";
+            if (typeof value === "object") {
+              try {
+                return JSON.stringify(value);
+              } catch {
+                return String(value);
               }
-            });
+            }
+            return String(value);
+          };
+
+          const csvLines = [];
+          // header row
+          csvLines.push(
+            headers.map((h) => `"${h.replace(/"/g, '""')}"`).join(","),
+          );
+
+          // data rows
+          rows.forEach((row) => {
+            const line = headers
+              .map((h) => {
+                const v = escapeCsv(row?.[h]);
+                return `"${v.replace(/"/g, '""')}"`;
+              })
+              .join(",");
+            csvLines.push(line);
           });
 
-          // Encode the CSV content so it can be parsed as a URI
-          const encodedUri = encodeURI(csvContent);
-          // Create a link and trigger the download
+          const csvString = csvLines.join("\r\n");
+
+          // ✅ Blob download (most reliable)
+          const blob = new Blob([csvString], {
+            type: "text/csv;charset=utf-8;",
+          });
+          const url = window.URL.createObjectURL(blob);
+
           const link = document.createElement("a");
-          link.setAttribute("href", encodedUri);
-          link.setAttribute("download", `${spName}.csv`);
-          document.body.appendChild(link); // Required for Firefox
+          link.href = url;
+          link.download = `${spName || "report"}.csv`;
+          document.body.appendChild(link);
           link.click();
-          document.body.removeChild(link); // Clean up
-        } else {
-          console.log("No data available to export.");
+          document.body.removeChild(link);
+
+          // cleanup
+          window.URL.revokeObjectURL(url);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setIsLoading(false);
         }
-        setIsLoading(false);
       } else {
         try {
           // Clear previous data
@@ -773,7 +862,7 @@ export default function AddEditFormControll({ reportData }) {
           for (const [section, fields] of Object.entries(parentsFields)) {
             const missingField = Object.entries(fields).find(
               ([, { isRequired, fieldname, yourlabel }]) =>
-                isRequired && !newState[fieldname]
+                isRequired && !newState[fieldname],
             );
 
             if (missingField) {
@@ -845,7 +934,7 @@ export default function AddEditFormControll({ reportData }) {
                 console.error(
                   "Error fetching report types for key:",
                   key,
-                  error
+                  error,
                 );
               }
             }
@@ -867,7 +956,7 @@ export default function AddEditFormControll({ reportData }) {
           const filterConditionWithoutDropdowns =
             removeDropdownFields(filterCondition);
           const updatedConditionWithFieldNames = await updateFieldNames(
-            filterConditionWithoutDropdowns
+            filterConditionWithoutDropdowns,
           );
 
           const requestBodyForMenuReportDetails = {
@@ -883,7 +972,7 @@ export default function AddEditFormControll({ reportData }) {
           let responseData = await dynamicReportFilter(
             updatedConditionWithFieldNames,
             clientId,
-            getSpName
+            getSpName,
           );
 
           if (menuType === "L") {
@@ -897,7 +986,7 @@ export default function AddEditFormControll({ reportData }) {
                 NewpivotRowFields, // row field
                 NewpivotColFields, // column field
                 NewpivotAggregateField,
-                NewpivotAggregateFunction
+                NewpivotAggregateFunction,
               );
             }
 
@@ -906,7 +995,7 @@ export default function AddEditFormControll({ reportData }) {
 
             const fieldNamesFormattedArray = keys
               .filter(
-                (key) => key !== "groupSpans" && key !== "startIndexForGroup"
+                (key) => key !== "groupSpans" && key !== "startIndexForGroup",
               )
               .map((key) => ({
                 fieldname: key,
@@ -921,7 +1010,7 @@ export default function AddEditFormControll({ reportData }) {
             const processedData = preprocessDataForGrouping(
               responseData.data,
               grid.length > 0 ? grid : fieldNamesFormattedArray,
-              groupingDepth
+              groupingDepth,
             );
 
             if (isDataFromStoredProcedure) {
@@ -931,7 +1020,7 @@ export default function AddEditFormControll({ reportData }) {
                 const fieldNamesFormattedArray = keys
                   .filter(
                     (key) =>
-                      key !== "groupSpans" && key !== "startIndexForGroup"
+                      key !== "groupSpans" && key !== "startIndexForGroup",
                   )
                   .map((key) => ({
                     fieldname: key,
@@ -977,7 +1066,7 @@ export default function AddEditFormControll({ reportData }) {
                     console.error(
                       "Error fetching report types for key:",
                       key,
-                      error
+                      error,
                     );
                   }
                 }
@@ -995,7 +1084,7 @@ export default function AddEditFormControll({ reportData }) {
             // Filter out rows with all null or empty fields
             const filteredTableData = processedData.filter((data) => {
               return Object.values(data).some(
-                (value) => value !== null && value !== ""
+                (value) => value !== null && value !== "",
               );
             });
 
@@ -1026,7 +1115,7 @@ export default function AddEditFormControll({ reportData }) {
           const fetchedData = search;
           let { allErrors, filteredObjectIds } = await handleExcelUploadFunc(
             fetchedData,
-            newState
+            newState,
           );
 
           // Check if errors array is empty or not
@@ -1062,7 +1151,7 @@ export default function AddEditFormControll({ reportData }) {
                 `${
                   response.rowsAffected[0].message ||
                   response.rowsAffected.message
-                }`
+                }`,
               );
             } else {
               setAllErrors(response.rowsAffected[0].errors);
@@ -1119,7 +1208,7 @@ export default function AddEditFormControll({ reportData }) {
           };
 
           const reportData = await fetchReportData(
-            requestBodyForMenuReportDetails
+            requestBodyForMenuReportDetails,
           );
           const spName = reportData.data[0].spName;
 
@@ -1160,10 +1249,12 @@ export default function AddEditFormControll({ reportData }) {
           const response = await fetchExcelDataInsert(spName, formatJson);
 
           console.log("response", response);
-          if (response?.success) {
+          if (response.rowsAffected?.success) {
             return toast.success(`${response?.rowsAffected?.message}`);
           } else {
             setAllErrors(response?.rowsAffected?.errors);
+            setEditableErrors(true);
+            setEditableErrorsData(response?.rowsAffected?.errors);
             return toast.error(`${response?.rowsAffected?.message}`);
           }
         } else {
@@ -1179,7 +1270,7 @@ export default function AddEditFormControll({ reportData }) {
       if (isDefaultDataShow === false && outputFileFormat === "Excel") {
         const fetchData = await fetchDynamicReportSpData(
           spName,
-          filterCondition
+          filterCondition,
         );
 
         const workbook = new ExcelJS.Workbook();
@@ -1265,7 +1356,7 @@ export default function AddEditFormControll({ reportData }) {
 
               try {
                 const controlData = await fetchReportData(
-                  controlNameRequestBody
+                  controlNameRequestBody,
                 );
                 if (controlData?.data?.length > 0) {
                   const controlNameData = controlData.data[0].name;
@@ -1297,7 +1388,7 @@ export default function AddEditFormControll({ reportData }) {
                 ) {
                   const dropdownArray = newState[`${fieldname}dropdown`];
                   const selectedOption = dropdownArray.find(
-                    (option) => option.value === value
+                    (option) => option.value === value,
                   );
                   if (selectedOption) value = selectedOption.label;
                 }
@@ -1317,6 +1408,7 @@ export default function AddEditFormControll({ reportData }) {
             const worksheet = workbook.addWorksheet("Report");
 
             // Add an image if required
+            console.log("imageUrl", imageUrl);
             const response = await fetch(imageUrl);
             const arrayBuffer = await response.arrayBuffer();
             const imageId = workbook.addImage({
@@ -1325,7 +1417,7 @@ export default function AddEditFormControll({ reportData }) {
             });
             worksheet.addImage(imageId, {
               tl: { col: 0, row: 0 },
-              ext: { width: 500, height: 100 },
+              ext: { width: 1000, height: 100 },
             });
 
             // Spacer rows for the image
@@ -1345,7 +1437,7 @@ export default function AddEditFormControll({ reportData }) {
               fgColor: { argb: "0766AD" },
             };
             worksheet.mergeCells(
-              `A${reportNameRow.number}:B${reportNameRow.number}`
+              `A${reportNameRow.number}:B${reportNameRow.number}`,
             );
             worksheet.addRow([]);
 
@@ -1391,11 +1483,11 @@ export default function AddEditFormControll({ reportData }) {
             const dataToExport = paginatedData.map((row) =>
               gridHeader.map((header) => {
                 const gridItem = grid.find(
-                  (g) => g?.fieldname === header.fieldname
+                  (g) => g?.fieldname === header.fieldname,
                 );
                 if (!gridItem) {
                   console.warn(
-                    `No grid item found for fieldname: ${header?.fieldname}`
+                    `No grid item found for fieldname: ${header?.fieldname}`,
                   );
                 }
                 let value = row[gridItem?.fieldname] ?? ""; // Use nullish coalescing
@@ -1403,7 +1495,7 @@ export default function AddEditFormControll({ reportData }) {
                   value = moment(value).format("DD-MM-YYYY");
                 }
                 return value;
-              })
+              }),
             );
             // Group rows based on `groupingDepth`
             for (let colIndex = 0; colIndex <= groupingDepth; colIndex++) {
@@ -1470,7 +1562,7 @@ export default function AddEditFormControll({ reportData }) {
 
               // 2) If MOST non-empty cells are long-integer-only -> don't total
               const nonEmpty = columnData.filter(
-                (v) => v !== null && v !== undefined && String(v).trim() !== ""
+                (v) => v !== null && v !== undefined && String(v).trim() !== "",
               );
               if (!nonEmpty.length) return false;
 
@@ -1501,7 +1593,7 @@ export default function AddEditFormControll({ reportData }) {
                   }, 0);
 
                   return total.toFixed(2);
-                })
+                }),
               );
 
               // Style the grand total row
@@ -1721,7 +1813,7 @@ export default function AddEditFormControll({ reportData }) {
           10,
           10,
           280,
-          50
+          50,
         );
       } catch (error) {
         console.error("Error adding image to PDF:", error);
@@ -1809,7 +1901,7 @@ export default function AddEditFormControll({ reportData }) {
           doc.text(
             `Page ${pageCount}`,
             data.settings.margin.left,
-            pageHeight - 10
+            pageHeight - 10,
           );
         },
         willDrawCell: function (data) {
@@ -1845,7 +1937,7 @@ export default function AddEditFormControll({ reportData }) {
           10,
           10,
           280,
-          50
+          50,
         );
       } catch (error) {
         console.error("Error adding image to PDF:", error);
@@ -1933,7 +2025,7 @@ export default function AddEditFormControll({ reportData }) {
           doc.text(
             `Page ${pageCount}`,
             data.settings.margin.left,
-            pageHeight - 10
+            pageHeight - 10,
           );
         },
         willDrawCell: function (data) {
@@ -2055,7 +2147,7 @@ export default function AddEditFormControll({ reportData }) {
           if (subMap === null) {
             const header = {
               ...Object.fromEntries(
-                parentKeys.map((val, idx) => ["level" + (idx + 1), val])
+                parentKeys.map((val, idx) => ["level" + (idx + 1), val]),
               ),
               ["level" + (parentKeys.length + 1)]: key,
               key: [...parentKeys, key].join("||"),
@@ -2071,7 +2163,7 @@ export default function AddEditFormControll({ reportData }) {
                 [...parentKeys, key].map((val, idx) => [
                   "level" + (idx + 1),
                   val,
-                ])
+                ]),
               ),
               ["level" + (parentKeys.length + 2)]: "Subtotal",
               key: subtotalKey,
@@ -2108,11 +2200,12 @@ export default function AddEditFormControll({ reportData }) {
             const prefix = h.key.replace(/\|\|Subtotal$/, "");
             const matching = structuredHeaders.filter(
               (x) =>
-                x.key.startsWith(prefix + "||") && !x.key.endsWith("||Subtotal")
+                x.key.startsWith(prefix + "||") &&
+                !x.key.endsWith("||Subtotal"),
             );
             rowObj[h.key] = matching.reduce(
               (sum, x) => sum + (rowObj[x.key] || 0),
-              0
+              0,
             );
           }
         }
@@ -2120,7 +2213,7 @@ export default function AddEditFormControll({ reportData }) {
         if (pivotRowTable === "y") {
           rowObj["Row Total"] = structuredHeaders.reduce(
             (sum, h) => sum + (rowObj[h.key] || 0),
-            0
+            0,
           );
         }
 
@@ -2134,13 +2227,13 @@ export default function AddEditFormControll({ reportData }) {
         structuredHeaders.forEach((h) => {
           subtotalRow[h.key] = rows.reduce(
             (sum, r) => sum + (r[h.key] || 0),
-            0
+            0,
           );
         });
         if (pivotRowTable === "y") {
           subtotalRow["Row Total"] = structuredHeaders.reduce(
             (sum, h) => sum + (subtotalRow[h.key] || 0),
-            0
+            0,
           );
         }
         pivotData.push(subtotalRow);
@@ -2149,25 +2242,25 @@ export default function AddEditFormControll({ reportData }) {
       if (pivotGrandTotal === "y") {
         const grandTotalRow = {};
         rowFields.forEach(
-          (f, idx) => (grandTotalRow[f] = idx === 0 ? "Grand Total" : "")
+          (f, idx) => (grandTotalRow[f] = idx === 0 ? "Grand Total" : ""),
         );
         structuredHeaders.forEach((h) => {
           grandTotalRow[h.key] = pivotData.reduce(
             (sum, row) => sum + (row[h.key] || 0),
-            0
+            0,
           );
         });
         if (pivotRowTable === "y") {
           grandTotalRow["Row Total"] = structuredHeaders.reduce(
             (sum, h) => sum + (grandTotalRow[h.key] || 0),
-            0
+            0,
           );
         }
         pivotData.push(grandTotalRow);
       }
 
       const pivotValues = pivotData.map((row) =>
-        finalHeaders.map((h) => row[h] ?? "")
+        finalHeaders.map((h) => row[h] ?? ""),
       );
       setFullPivotValues(pivotValues);
       setPivotHeader(structuredHeaders);
@@ -2179,11 +2272,11 @@ export default function AddEditFormControll({ reportData }) {
         lastItemIndexPagination - itemsPerPaginatedPage;
       const currentItemsPagination = pivotValues.slice(
         firstItemIndexPagination,
-        lastItemIndexPagination
+        lastItemIndexPagination,
       );
 
       setLastPagePagination(
-        Math.ceil(pivotValues.length / itemsPerPaginatedPage)
+        Math.ceil(pivotValues.length / itemsPerPaginatedPage),
       );
       setPivotGrid(currentItemsPagination);
     },
@@ -2216,10 +2309,11 @@ export default function AddEditFormControll({ reportData }) {
         const response = await fetchAnaylsisData(spName, filterCondition);
         setAnalysisData(response?.data);
         setIsShowHeader(true);
-        console.log("response", response?.data);
         if (response?.data?.success) {
+          setReportCalled(true);
           return toast.success(`${response?.data?.message}`);
         } else {
+          setReportCalled(false);
           setAllErrors(response?.rowsAffected?.errors);
           return toast.error(`${response?.rowsAffected?.message}`);
         }
@@ -2228,12 +2322,496 @@ export default function AddEditFormControll({ reportData }) {
         throw new Error("Failed to fetch data");
       }
     },
+    handleAnaylsisPdf: async () => {
+      try {
+        // -----------------------------
+        // 1) Guard
+        // -----------------------------
+        if (!reportCalled) {
+          toast?.error?.("Please generate report first");
+          return;
+        }
+
+        // -----------------------------
+        // 2) Debug toggle
+        // -----------------------------
+        const DBG = true;
+        const dlog = (...a) => DBG && console.log("[ANALYSIS_PDF]", ...a);
+
+        // -----------------------------
+        // 3) Helpers (ALL inside)
+        // -----------------------------
+        const safeToStr = (v) => {
+          if (v === null || v === undefined) return "";
+          if (typeof v === "string") return v;
+          if (typeof v === "number" || typeof v === "boolean") return String(v);
+          try {
+            return JSON.stringify(v);
+          } catch {
+            return "";
+          }
+        };
+
+        const toNum = (v) => {
+          if (v === null || v === undefined || v === "") return NaN;
+          if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
+          const s = String(v).trim();
+          if (!s) return NaN;
+          const n = Number(s.replace(/,/g, "").replace(/\s+/g, ""));
+          return Number.isFinite(n) ? n : NaN;
+        };
+
+        const isIsoDateLike = (val) => {
+          if (typeof val !== "string") return false;
+          const s = val.trim();
+          if (!/^\d{4}-\d{2}-\d{2}/.test(s) && !/^\d{2}\/\d{2}\/\d{4}/.test(s))
+            return false;
+          const d = new Date(s);
+          return !Number.isNaN(d.getTime());
+        };
+
+        const formatDate = (val) => {
+          try {
+            if (typeof moment !== "undefined") {
+              return moment(val).format(DateFormat || "DD-MM-YYYY");
+            }
+          } catch {}
+          const d = new Date(val);
+          if (Number.isNaN(d.getTime())) return safeToStr(val);
+          const dd = String(d.getDate()).padStart(2, "0");
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const yyyy = d.getFullYear();
+          return `${dd}-${mm}-${yyyy}`;
+        };
+
+        // detailList -> Detail List, country_port_wise -> Country Port Wise, ABCValue -> ABC Value
+        const prettifyHeader = (k) => {
+          const s0 = String(k ?? "").trim();
+          if (!s0) return "";
+          const s = s0
+            .replace(/_/g, " ")
+            .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+            .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+            .replace(/\s+/g, " ")
+            .trim();
+          return s.charAt(0).toUpperCase() + s.slice(1);
+        };
+
+        // Browser-safe base64 (NO Buffer)
+        const bufferToBase64 = async (arrayBuffer) => {
+          const bytes = new Uint8Array(arrayBuffer);
+          let binary = "";
+          const chunkSize = 0x8000;
+          for (let i = 0; i < bytes.length; i += chunkSize) {
+            binary += String.fromCharCode.apply(
+              null,
+              bytes.subarray(i, i + chunkSize),
+            );
+          }
+          return btoa(binary);
+        };
+
+        // Pull rows from many possible shapes
+        const getRows = (src) => {
+          if (!src) return [];
+          if (Array.isArray(src))
+            return src.filter((x) => x !== null && x !== undefined);
+          if (Array.isArray(src?.data))
+            return src.data.filter((x) => x !== null && x !== undefined);
+          if (Array.isArray(src?.rows))
+            return src.rows.filter((x) => x !== null && x !== undefined);
+          if (Array.isArray(src?.result))
+            return src.result.filter((x) => x !== null && x !== undefined);
+          return [];
+        };
+        const extractTables = (src) => {
+          const tables = [];
+
+          // direct array => single table
+          if (Array.isArray(src)) {
+            const rows = getRows(src);
+            if (rows.length)
+              tables.push({ title: reportName || "Report", rows });
+            return tables;
+          }
+
+          // if src.data is a plain object of arrays (multi-table)
+          const multiCandidates = [];
+          if (src && typeof src === "object") multiCandidates.push(src);
+          if (
+            src?.data &&
+            typeof src.data === "object" &&
+            !Array.isArray(src.data)
+          )
+            multiCandidates.push(src.data);
+
+          for (const obj of multiCandidates) {
+            // If it looks like { CountryWise: [...], DetailList: [...] }
+            const keys = Object.keys(obj || {});
+            let foundAny = false;
+            for (const k of keys) {
+              const v = obj[k];
+              if (Array.isArray(v)) {
+                const rows = getRows(v);
+                if (rows.length) {
+                  tables.push({ title: prettifyHeader(k), rows });
+                  foundAny = true;
+                }
+              }
+            }
+            if (foundAny) return tables;
+          }
+
+          // fallback: treat src as single table by looking for .data/.rows/.result
+          const rows = getRows(src);
+          if (rows.length) tables.push({ title: reportName || "Report", rows });
+          return tables;
+        };
+
+        // Prefer gridHeader shape (but it may be per-table; if it’s global, we’ll still use it)
+        const buildHeaders = (objectRows) => {
+          let headerKeys = [];
+          let headerLabels = [];
+
+          const hasGridHeader =
+            typeof gridHeader !== "undefined" &&
+            Array.isArray(gridHeader) &&
+            gridHeader.length > 0;
+
+          if (hasGridHeader) {
+            const keys = [];
+            const labels = [];
+            gridHeader.forEach((h) => {
+              if (typeof h === "string") {
+                keys.push(h);
+                labels.push(prettifyHeader(h));
+              } else if (h && typeof h === "object") {
+                const k =
+                  h.field ?? h.key ?? h.name ?? h.column ?? h.accessor ?? h.id;
+                if (k) {
+                  keys.push(k);
+                  labels.push(
+                    h.headerName ?? h.label ?? h.title ?? prettifyHeader(k),
+                  );
+                }
+              }
+            });
+
+            headerKeys = keys.length ? keys : Object.keys(objectRows[0] || {});
+            headerLabels = labels.length
+              ? labels
+              : headerKeys.map(prettifyHeader);
+          } else {
+            const seen = new Set();
+            const keys = [];
+            for (const r of objectRows) {
+              if (!r || typeof r !== "object") continue;
+              for (const k of Object.keys(r)) {
+                if (!seen.has(k)) {
+                  seen.add(k);
+                  keys.push(k);
+                }
+              }
+            }
+            headerKeys = keys.length ? keys : Object.keys(objectRows[0] || {});
+            headerLabels = headerKeys.map(prettifyHeader);
+          }
+
+          return { headerKeys, headerLabels };
+        };
+
+        const detectNumericCols = (headerKeys, objectRows) => {
+          return headerKeys.map((key) => {
+            let hits = 0;
+            let checked = 0;
+            for (let i = 0; i < objectRows.length; i++) {
+              const v = objectRows[i]?.[key];
+              if (v === null || v === undefined || v === "") continue;
+              checked++;
+              const n = toNum(v);
+              if (Number.isFinite(n)) hits++;
+              if (checked >= 20) break;
+            }
+            return checked > 0 && hits / checked >= 0.7;
+          });
+        };
+
+        const buildBody = (headerKeys, numericCol, objectRows) => {
+          return objectRows.map((row) => {
+            return headerKeys.map((key, idx) => {
+              let value = row?.[key];
+
+              if (typeof value === "string" && isIsoDateLike(value))
+                value = formatDate(value);
+              else if (value && typeof value === "object")
+                value = safeToStr(value);
+
+              const n = toNum(value);
+              if (numericCol[idx] && Number.isFinite(n)) return n;
+
+              return value !== undefined && value !== null ? value : "";
+            });
+          });
+        };
+
+        // -----------------------------
+        // 4) Determine tables from analysisData
+        // -----------------------------
+        dlog("analysisData (top-level):", analysisData);
+        const tables = extractTables(analysisData);
+        dlog(
+          "tables found:",
+          tables.map((t) => ({ title: t.title, rows: t.rows?.length })),
+        );
+
+        if (!tables.length) {
+          toast?.error?.("No data to export");
+          dlog("No tables extracted. Debug tips:", {
+            analysisDataType: typeof analysisData,
+            isArray: Array.isArray(analysisData),
+            keys:
+              analysisData && typeof analysisData === "object"
+                ? Object.keys(analysisData)
+                : [],
+            dataKeys:
+              analysisData?.data &&
+              typeof analysisData.data === "object" &&
+              !Array.isArray(analysisData.data)
+                ? Object.keys(analysisData.data)
+                : [],
+          });
+          return;
+        }
+
+        // -----------------------------
+        // 5) Create PDF
+        // -----------------------------
+        const doc = new jsPDF("landscape");
+
+        // -----------------------------
+        // 6) Header image (repeat every page)
+        //    Using your direct URL: BackEndUrl + headerLogoPath
+        // -----------------------------
+        let headerImgDataUrl = null;
+        try {
+          const headerUrl =
+            (typeof BackEndUrl !== "undefined" ? BackEndUrl : "") +
+            (typeof headerLogoPath !== "undefined" ? headerLogoPath : "");
+          dlog("header image url:", headerUrl);
+
+          if (headerUrl && headerUrl.trim()) {
+            const res = await fetch(headerUrl);
+            if (!res.ok)
+              throw new Error(`Header image fetch failed (${res.status})`);
+            const ab = await res.arrayBuffer();
+            const b64 = await bufferToBase64(ab);
+
+            // try jpeg first; if your logo is png, this still works in many cases,
+            // but if not, change to data:image/png and addImage type "PNG"
+            headerImgDataUrl = `data:image/jpeg;base64,${b64}`;
+          }
+        } catch (e) {
+          console.error("Error preparing header image:", e);
+          headerImgDataUrl = null;
+        }
+
+        // Layout constants
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+        const marginLeft = 10;
+        const marginRight = 10;
+        const marginBottom = 10;
+
+        const headerImgH = headerImgDataUrl ? 33 : 0; // ✅ increase height
+        const headerImgY = 6;
+        const headerReserveTop = headerImgH ? headerImgY + headerImgH + 8 : 10; // ✅ keep spacing
+
+        // Main heading: ONLY first page, centered
+        const mainTitle = safeToStr(reportName || "Analysis Report");
+        const mainTitleY = headerReserveTop; // below header image
+        const afterMainTitleY = mainTitleY + 8; // next content start
+
+        // -----------------------------
+        // 7) Draw main heading ONLY once (first page)
+        // -----------------------------
+        // Draw header image (page 1 too) will be done in didDrawPage of tables,
+        // but we also need it before title. So draw it now.
+        if (headerImgDataUrl) {
+          try {
+            const imgX = marginLeft;
+            const imgW = pageW - marginLeft - marginRight;
+            doc.addImage(
+              headerImgDataUrl,
+              "JPEG",
+              imgX,
+              headerImgY,
+              imgW,
+              headerImgH,
+            );
+          } catch (e) {
+            console.error(
+              "Error drawing header image on first page:",
+              e.message,
+            );
+          }
+        }
+
+        doc.setFontSize(13);
+        doc.setFont(undefined, "bold");
+        doc.text(mainTitle, pageW / 2, mainTitleY, { align: "center" });
+        doc.setFont(undefined, "normal");
+
+        let cursorY = afterMainTitleY;
+
+        // -----------------------------
+        // 8) Print ALL tables
+        // -----------------------------
+        for (let tIndex = 0; tIndex < tables.length; tIndex++) {
+          const tbl = tables[tIndex];
+          const rows = getRows(tbl.rows);
+
+          if (!rows.length) {
+            dlog("Skipping empty table:", tbl.title);
+            continue;
+          }
+
+          // Normalize rows
+          const objectRows = rows.map((r) =>
+            r && typeof r === "object" ? r : { value: r },
+          );
+
+          // Headers
+          const { headerKeys, headerLabels } = buildHeaders(objectRows);
+          if (!headerKeys.length) {
+            dlog("Skipping table due to no columns:", tbl.title);
+            continue;
+          }
+
+          // Numeric detection
+          const numericCol = detectNumericCols(headerKeys, objectRows);
+
+          // Body
+          const body = buildBody(headerKeys, numericCol, objectRows);
+
+          // If we're too close to the bottom, start on new page (avoid random blank pages)
+          const minNeeded = 16; // space for section title + some rows
+          if (cursorY + minNeeded > pageH - marginBottom) {
+            doc.addPage();
+            cursorY = headerReserveTop; // top content area on new page (no main title!)
+          }
+
+          // Section/table title (center aligned)
+          const sectionTitle =
+            tbl.title && tbl.title !== mainTitle ? safeToStr(tbl.title) : "";
+          if (sectionTitle) {
+            doc.setFontSize(11);
+            doc.setFont(undefined, "bold");
+            doc.text(sectionTitle, pageW / 2, cursorY, { align: "center" });
+            doc.setFont(undefined, "normal");
+            cursorY += 6;
+          }
+
+          // Column styles (body alignment)
+          const columnStyles = {};
+          for (let i = 0; i < headerKeys.length; i++) {
+            columnStyles[i] = {
+              halign: numericCol[i] ? "right" : "left",
+              valign: "middle",
+              cellWidth: "wrap",
+            };
+          }
+
+          // autoTable (NO grand total, ONLY table headers repeat, no main title repeat)
+          doc.autoTable({
+            startY: cursorY,
+            head: [headerLabels],
+            body,
+            theme: "grid",
+            showHead: "everyPage",
+            pageBreak: "auto",
+            rowPageBreak: "auto",
+            margin: {
+              top: headerReserveTop, // IMPORTANT: prevents overlap with header image on every page
+              left: marginLeft,
+              right: marginRight,
+              bottom: marginBottom,
+            },
+            styles: {
+              fontSize: 7, // smaller reduces overlap
+              cellPadding: 1.6,
+              overflow: "linebreak",
+              lineColor: [0, 0, 0],
+              lineWidth: 0.1,
+              valign: "middle",
+            },
+            headStyles: {
+              fillColor: [7, 102, 173],
+              textColor: [255, 255, 255],
+              fontStyle: "bold",
+              halign: "center", // table headings centered
+              valign: "middle",
+            },
+            columnStyles,
+
+            didDrawPage: function (data) {
+              // Header image on EVERY page
+              if (headerImgDataUrl) {
+                try {
+                  const imgX = data.settings.margin.left;
+                  const imgW =
+                    pageW -
+                    data.settings.margin.left -
+                    data.settings.margin.right;
+                  doc.addImage(
+                    headerImgDataUrl,
+                    "JPEG",
+                    imgX,
+                    headerImgY,
+                    imgW,
+                    headerImgH,
+                  );
+                } catch {
+                  // ignore
+                }
+              }
+              // NOTE: No main title here (you asked: don't repeat main heading)
+            },
+          });
+
+          // Move cursor below this table (with gap)
+          const finalY = doc.lastAutoTable?.finalY || cursorY;
+          cursorY = finalY + 8;
+
+          dlog("Rendered table:", {
+            title: tbl.title,
+            rows: rows.length,
+            cols: headerKeys.length,
+            finalY,
+          });
+        }
+
+        // If nothing printed (all tables empty)
+        if (!doc.lastAutoTable) {
+          toast?.error?.("No data to export");
+          return;
+        }
+
+        // -----------------------------
+        // 9) Save
+        // -----------------------------
+        const fileName = `${(reportName || "analysis_report").replace(/[\\/:*?"<>|]/g, "_")}.pdf`;
+        doc.save(fileName);
+      } catch (err) {
+        console.error(err);
+        toast?.error?.(err?.message || "PDF download failed");
+      }
+    },
     handleGoExcelSecondRow: async () => {
       try {
         for (const [section, fields] of Object.entries(parentsFields)) {
           const missingField = Object.entries(fields).find(
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -2315,7 +2893,7 @@ export default function AddEditFormControll({ reportData }) {
         const filterConditionWithoutDropdowns =
           removeDropdownFields(filterCondition);
         const updatedConditionWithFieldNames = await updateFieldNames(
-          filterConditionWithoutDropdowns
+          filterConditionWithoutDropdowns,
         );
 
         const requestBodyForMenuReportDetails = {
@@ -2330,7 +2908,7 @@ export default function AddEditFormControll({ reportData }) {
         let responseData = await dynamicReportFilter(
           updatedConditionWithFieldNames,
           clientId,
-          getSpName
+          getSpName,
         );
         await exportVerticalHeaderThenDataExcel(responseData, getSpName);
         console.log("Go responseData =>:", responseData);
@@ -2345,7 +2923,7 @@ export default function AddEditFormControll({ reportData }) {
 
       const raw = Array.isArray(ledgerReportData) ? ledgerReportData : [];
       const blocks = raw.filter(
-        (b) => Array.isArray(b?.glData) && b.glData.length
+        (b) => Array.isArray(b?.glData) && b.glData.length,
       );
 
       if (!blocks.length) {
@@ -2479,7 +3057,7 @@ export default function AddEditFormControll({ reportData }) {
 
       const styleRow = (
         row,
-        { bold, fillArgb, fontColor, alignments } = {}
+        { bold, fillArgb, fontColor, alignments } = {},
       ) => {
         row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
           cell.font = {
@@ -2704,7 +3282,7 @@ export default function AddEditFormControll({ reportData }) {
 
       const raw = Array.isArray(ledgerReportData) ? ledgerReportData : [];
       const blocks = raw.filter(
-        (b) => Array.isArray(b?.glData) && b.glData.length
+        (b) => Array.isArray(b?.glData) && b.glData.length,
       );
 
       if (!blocks.length) {
@@ -3011,7 +3589,7 @@ export default function AddEditFormControll({ reportData }) {
         };
 
         const reportData = await fetchReportData(
-          requestBodyForMenuReportDetails
+          requestBodyForMenuReportDetails,
         );
 
         const spName = reportData?.data?.[0]?.spName;
@@ -3031,26 +3609,20 @@ export default function AddEditFormControll({ reportData }) {
         };
 
         const filterCondition = removeSingleQuotes(json);
+        const filterConditionWithoutDropdowns =
+          removeDropdownFields(filterCondition);
 
         // ✅ 3) Call SP
         const response = await fetchDynamicReportSpData(
           spName,
-          filterCondition
+          filterConditionWithoutDropdowns,
         );
-        // response expected:
-        // { success:true, data:[ { Summary:[...], Aging:[...], Ledger:[...] } ] }
 
+        // ✅ Use your main (excelDataArray)
         const main = response?.data?.[0];
+
         if (!main || typeof main !== "object") {
           toast.error("No data found to export.");
-          return;
-        }
-
-        const sheetNames = Object.keys(main).filter((k) =>
-          Array.isArray(main[k])
-        );
-        if (sheetNames.length === 0) {
-          toast.error("No sheet arrays found in response.");
           return;
         }
 
@@ -3059,45 +3631,72 @@ export default function AddEditFormControll({ reportData }) {
         workbook.creator = "Syscon Infotech";
         workbook.created = new Date();
 
-        // --- small helpers ---
-        const safeSheetName = (name) => {
-          // Excel sheet name rules: max 31, no : \ / ? * [ ]
-          return (
-            String(name)
-              .replace(/[:\\/?*\[\]]/g, " ")
-              .slice(0, 31)
-              .trim() || "Sheet"
-          );
+        // -----------------------------
+        // Helpers + Styles (ExcelJS)
+        // -----------------------------
+        const BORDER_THIN = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
         };
 
-        const isIsoDateLike = (v) => {
-          if (v === null || v === undefined) return false;
-          if (typeof v !== "string") return false;
-          // handles "2025-12-01" and full ISO
-          const d = new Date(v);
-          return !Number.isNaN(d.getTime()) && /^\d{4}-\d{2}-\d{2}/.test(v);
+        const safeSheetName = (name) =>
+          String(name)
+            .replace(/[:\\/?*\[\]]/g, " ")
+            .slice(0, 31)
+            .trim() || "Sheet";
+
+        const styleBlueCell = (cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "0766AD" },
+          };
+          cell.font = { bold: true, color: { argb: "FFFFFF" } };
+          cell.alignment = {
+            horizontal: "center",
+            vertical: "middle",
+            wrapText: false,
+          };
+          cell.border = BORDER_THIN;
         };
 
-        const fmtDate = (v) => {
-          // Prefer moment if you already use it in project
-          try {
-            if (typeof moment !== "undefined" && moment) {
-              const m = moment(v);
-              if (m.isValid()) return m.format("DD-MM-YYYY");
-            }
-          } catch (e) {}
-          // fallback
-          const d = new Date(v);
-          if (Number.isNaN(d.getTime())) return v;
-          const dd = String(d.getDate()).padStart(2, "0");
-          const mm = String(d.getMonth() + 1).padStart(2, "0");
-          const yyyy = d.getFullYear();
-          return `${dd}-${mm}-${yyyy}`;
+        const styleBlueRow = (row) => {
+          row.eachCell({ includeEmpty: true }, (cell) => styleBlueCell(cell));
+        };
+
+        const stylePeachHeader = (row) => {
+          row.eachCell({ includeEmpty: true }, (cell) => {
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "F8CBAD" },
+            };
+            cell.font = { bold: true, color: { argb: "000000" } };
+            cell.alignment = {
+              horizontal: "center",
+              vertical: "middle",
+              wrapText: true,
+            };
+            cell.border = BORDER_THIN;
+          });
+        };
+
+        const styleNormalRow = (row) => {
+          row.eachCell({ includeEmpty: true }, (cell) => {
+            cell.alignment = {
+              horizontal: "center",
+              vertical: "middle",
+              wrapText: true,
+            };
+            cell.border = BORDER_THIN;
+          });
         };
 
         const collectHeaders = (rows) => {
           const set = new Set();
-          rows.forEach((r) => {
+          (rows || []).forEach((r) => {
             if (r && typeof r === "object" && !Array.isArray(r)) {
               Object.keys(r).forEach((k) => set.add(k));
             }
@@ -3105,108 +3704,187 @@ export default function AddEditFormControll({ reportData }) {
           return Array.from(set);
         };
 
-        const applyHeaderStyle = (row) => {
-          row.eachCell((cell) => {
-            cell.fill = {
-              type: "pattern",
-              pattern: "solid",
-              fgColor: { argb: "0766AD" },
-            };
-            cell.font = { bold: true, color: { argb: "FFFFFF" } };
-            cell.alignment = { horizontal: "center", vertical: "center" };
-            cell.border = {
-              top: { style: "thin" },
-              left: { style: "thin" },
-              bottom: { style: "thin" },
-              right: { style: "thin" },
-            };
-          });
+        const isDateLike = (v) => {
+          if (v === null || v === undefined) return false;
+          if (v instanceof Date) return !Number.isNaN(v.getTime());
+          if (typeof v !== "string") return false;
+
+          const s = v.trim();
+          if (!s) return false;
+
+          if (/^\d{4}-\d{2}-\d{2}/.test(s))
+            return !Number.isNaN(new Date(s).getTime());
+          if (/^\d{1,2}-[A-Za-z]{3}-\d{4}$/.test(s))
+            return !Number.isNaN(new Date(s).getTime());
+          if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(s))
+            return !Number.isNaN(new Date(s).getTime());
+          return false;
         };
 
-        const applyCellStyle = (row) => {
-          row.eachCell((cell) => {
-            cell.alignment = { horizontal: "center", vertical: "center" };
-            cell.border = {
-              top: { style: "thin" },
-              left: { style: "thin" },
-              bottom: { style: "thin" },
-              right: { style: "thin" },
-            };
-          });
+        const fmtDate = (v) => {
+          try {
+            if (typeof moment !== "undefined" && moment) {
+              const m = moment(
+                v,
+                [moment.ISO_8601, "DD-MMM-YYYY", "DD-MM-YYYY", "DD/MM/YYYY"],
+                true,
+              );
+              if (m.isValid()) return m.format("DD-MM-YYYY");
+            }
+          } catch (e) {}
+
+          const d = new Date(v);
+          if (Number.isNaN(d.getTime())) return v;
+
+          const dd = String(d.getDate()).padStart(2, "0");
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const yyyy = d.getFullYear();
+          return `${dd}-${mm}-${yyyy}`;
         };
 
-        const autoWidth = (worksheet, headerLabels) => {
-          worksheet.columns.forEach((column, colIndex) => {
-            let maxLength = 0;
-            column.eachCell({ includeEmpty: true }, (cell) => {
-              const val = cell.value;
-              const len =
-                val === null || val === undefined ? 0 : String(val).length;
-              if (len > maxLength) maxLength = len;
+        const autoWidth = (ws) => {
+          ws.columns.forEach((col) => {
+            let max = 10;
+            col.eachCell({ includeEmpty: true }, (cell) => {
+              const v = cell.value;
+              const len = v === null || v === undefined ? 0 : String(v).length;
+              if (len > max) max = len;
             });
-
-            const headerLen = headerLabels?.[colIndex]
-              ? String(headerLabels[colIndex]).length
-              : 0;
-
-            column.width = Math.max(headerLen, maxLength) + 2;
-          });
-
-          // ensure border even on empty
-          worksheet.eachRow((r) => {
-            r.eachCell({ includeEmpty: true }, (cell) => {
-              if (!cell.border) {
-                cell.border = {
-                  top: { style: "thin" },
-                  left: { style: "thin" },
-                  bottom: { style: "thin" },
-                  right: { style: "thin" },
-                };
-              }
-            });
+            col.width = Math.min(max + 2, 60);
           });
         };
 
-        // ✅ 5) Add each array as a sheet
-        sheetNames.forEach((sheetKey) => {
-          const rows = Array.isArray(main[sheetKey]) ? main[sheetKey] : [];
-          const sheetTitle = safeSheetName(sheetKey);
+        const buildGstrSectionSheet = (sheetKey, sectionObj) => {
+          const ws = workbook.addWorksheet(safeSheetName(sheetKey));
 
-          const worksheet = workbook.addWorksheet(sheetTitle);
+          const heading = sectionObj?.heading || sheetKey;
+          const headingRowArr = Array.isArray(sectionObj?.headingRow)
+            ? sectionObj.headingRow
+            : [];
+          const dataRows = Array.isArray(sectionObj?.data)
+            ? sectionObj.data
+            : [];
 
-          const headers = collectHeaders(rows);
-          if (headers.length === 0) {
-            // If empty array, still create header placeholder
-            const headerRow = worksheet.addRow(["No Data"]);
-            applyHeaderStyle(headerRow);
-            autoWidth(worksheet, ["No Data"]);
+          const headers = collectHeaders(dataRows);
+
+          const colCount = Math.max(headers.length || 1, 12);
+          ws.columns = new Array(colCount)
+            .fill(null)
+            .map(() => ({ width: 12 }));
+
+          // -------------------------
+          // Row 1: Heading (BLUE block on left only)
+          // -------------------------
+          const r1 = ws.addRow(new Array(colCount).fill(""));
+          r1.height = 20;
+
+          const headingMergeEnd = Math.min(4, colCount);
+          ws.mergeCells(r1.number, 1, r1.number, headingMergeEnd);
+
+          const hCell = ws.getCell(r1.number, 1);
+          hCell.value = heading;
+          hCell.alignment = {
+            horizontal: "left",
+            vertical: "middle",
+            wrapText: false,
+          };
+          styleBlueCell(hCell);
+
+          for (let c = headingMergeEnd + 1; c <= colCount; c++) {
+            r1.getCell(c).border = BORDER_THIN;
+          }
+
+          // ---------------------------------------------
+          // ✅ Row 2-3: headingRow EXACTLY like you want
+          // - Every index creates a column (even {})
+          // - Row 2 is FULL BLUE STRIP
+          // - Row 3 is WHITE (values) with borders
+          // - NO MERGE anywhere
+          // ---------------------------------------------
+          const labelRow = ws.addRow(new Array(colCount).fill(""));
+          const valueRow = ws.addRow(new Array(colCount).fill(""));
+          labelRow.height = 18;
+          valueRow.height = 18;
+
+          // FULL blue strip on Row 2 (including empty cells)
+          styleBlueRow(labelRow);
+
+          // Borders + alignment on Row 3 (white)
+          for (let c = 1; c <= colCount; c++) {
+            const vc = valueRow.getCell(c);
+            vc.border = BORDER_THIN;
+            vc.alignment = {
+              horizontal: "center",
+              vertical: "middle",
+              wrapText: false,
+            };
+          }
+
+          // Fill by index
+          for (let i = 0; i < Math.min(headingRowArr.length, colCount); i++) {
+            const obj = headingRowArr[i];
+            const keys = obj && typeof obj === "object" ? Object.keys(obj) : [];
+
+            if (keys.length) {
+              const k = keys[0];
+              const v = obj[k];
+
+              // Row2 label
+              labelRow.getCell(i + 1).value = k;
+
+              // Row3 value
+              valueRow.getCell(i + 1).value = v ?? "";
+            } else {
+              // {} => keep empty cells (already blue in row2, already bordered in row3)
+              labelRow.getCell(i + 1).value = "";
+              valueRow.getCell(i + 1).value = "";
+            }
+          }
+
+          // -------------------------
+          // Row 4: Table header (peach)
+          // -------------------------
+          if (!headers.length) {
+            const noDataHeader = ws.addRow(
+              ["No Data"].concat(new Array(colCount - 1).fill("")),
+            );
+            stylePeachHeader(noDataHeader);
+            autoWidth(ws);
             return;
           }
 
-          // Header row
-          const headerRow = worksheet.addRow(headers);
-          applyHeaderStyle(headerRow);
+          const headerRow = ws.addRow(
+            headers.concat(new Array(colCount - headers.length).fill("")),
+          );
+          stylePeachHeader(headerRow);
 
+          // -------------------------
           // Data rows
-          rows.forEach((obj) => {
-            const dataRow = headers.map((h) => {
+          // -------------------------
+          dataRows.forEach((obj) => {
+            const rowVals = headers.map((h) => {
               let v = obj?.[h];
-
-              // Date formatting (same vibe as your example)
-              if (isIsoDateLike(v)) v = fmtDate(v);
-
+              if (isDateLike(v)) v = fmtDate(v);
               return v === undefined || v === null ? "" : v;
             });
 
-            const row = worksheet.addRow(dataRow);
-            applyCellStyle(row);
+            const padded = rowVals.concat(
+              new Array(colCount - rowVals.length).fill(""),
+            );
+            const r = ws.addRow(padded);
+            styleNormalRow(r);
           });
 
-          autoWidth(worksheet, headers);
+          autoWidth(ws);
+        };
+
+        // ✅ 5) Create multiple sheets
+        Object.keys(main || {}).forEach((sheetKey) => {
+          buildGstrSectionSheet(sheetKey, main[sheetKey]);
         });
 
         // ✅ 6) Download
-        const fileName = `${spName || "SOA"}.xlsx`;
+        const fileName = `${spName || "GSTR1"}.xlsx`;
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -3215,6 +3893,28 @@ export default function AddEditFormControll({ reportData }) {
       } catch (err) {
         console.error("handleMultipleExcel error:", err);
         toast.error(err?.message || "Excel export failed.");
+      }
+    },
+    handleCoarriCodecoUpload: async () => {
+      try {
+        const payload = {
+          clientId,
+          companyId,
+          companyBranchId: branchId,
+          financialYearId: financialYear,
+          userId,
+          fileName:fileNameUploaded,
+          data: newState?.null || newState || [],
+        };
+        const res = await fetchDynamicReportSpData(spName, payload);
+        const data = res?.data ?? res?.recordset ?? res?.recordsets?.[0] ?? res;
+        console.log("COARRI/CODECO upload response =>", data);
+        toast.success("uploaded successfully");
+        return data;
+      } catch (error) {
+        console.error("handleCoarriCodecoUpload error =>", error);
+        toast.error("upload failed");
+        throw error;
       }
     },
   };
@@ -3384,7 +4084,7 @@ export default function AddEditFormControll({ reportData }) {
     // Row 2 → Header instructions
     // -------------------------
     const headerRow = ws.addRow(
-      columns.map((c) => cleanHeaderText(headerObj[c]))
+      columns.map((c) => cleanHeaderText(headerObj[c])),
     );
     headerRow.alignment = {
       vertical: "top",
@@ -3507,7 +4207,7 @@ export default function AddEditFormControll({ reportData }) {
       new Blob([buf], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       }),
-      `${getSpName}.xlsx`
+      `${getSpName}.xlsx`,
     );
   };
 
@@ -3543,7 +4243,7 @@ export default function AddEditFormControll({ reportData }) {
     const currentItemsPagination = fullPivotValues?.slice(startIndex, endIndex);
     const lastPagePagination = Math.ceil(
       (fullPivotValues?.length || paginatedData?.length) /
-        (tableData?.length > 0 ? itemsPerPage : itemsPerPaginatedPage)
+        (tableData?.length > 0 ? itemsPerPage : itemsPerPaginatedPage),
     );
     setPivotGrid(currentItemsPagination);
     setLastPagePagination(lastPagePagination);
@@ -3571,7 +4271,7 @@ export default function AddEditFormControll({ reportData }) {
     // Sort each group by 'sectionOrder'
     Object.keys(groupedFields).forEach((section) => {
       groupedFields[section].sort(
-        (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0)
+        (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0),
       );
     });
 
@@ -3618,13 +4318,13 @@ export default function AddEditFormControll({ reportData }) {
             };
             try {
               const apiResponseDefaultValue = await dynamicDropDownFieldsData(
-                requestBodyDefaultValue
+                requestBodyDefaultValue,
               );
               field.controlDefaultValue = apiResponseDefaultValue.data[0].id;
             } catch (error) {
               console.error(
                 `Error fetching data for referenceTable: ${field.referenceTable}, referenceColumn: ${field.referenceColumn}`,
-                error
+                error,
               );
             }
           }
@@ -3676,7 +4376,7 @@ export default function AddEditFormControll({ reportData }) {
 
               try {
                 const dataControlName = await fetchReportData(
-                  requestBodyControlName
+                  requestBodyControlName,
                 );
                 if (dataControlName && dataControlName.data.length > 0) {
                   let isMatchFound = false;
@@ -3689,7 +4389,7 @@ export default function AddEditFormControll({ reportData }) {
 
                   if (!isMatchFound) {
                     console.error(
-                      "No matching ID found in dataControlName.data"
+                      "No matching ID found in dataControlName.data",
                     );
                   }
                 } else {
@@ -3722,7 +4422,7 @@ export default function AddEditFormControll({ reportData }) {
 
                   if (!isMatchFound) {
                     console.error(
-                      "No matching ID found for updatedField.type in dataType.data"
+                      "No matching ID found for updatedField.type in dataType.data",
                     );
                   }
                 } else {
@@ -3733,7 +4433,7 @@ export default function AddEditFormControll({ reportData }) {
               }
             }
             return updatedField;
-          })
+          }),
         );
 
         setFormControlData({ ...fetchedData, fields: updatedFields });
@@ -3744,7 +4444,7 @@ export default function AddEditFormControll({ reportData }) {
         setButtonsData(fetchedData.buttons);
         setOriginalData(fetchedData.grid);
         setFetchedDataFromAPI(fetchedData.grid);
-        const apiGrid = fetchedData.grid;
+        const apiGrid = fetchedData?.grid;
         setApiGRidDataNew(apiGrid);
         setApiGridData(apiGrid);
         const apiId = fetchedData.apiUrl;
@@ -3795,7 +4495,7 @@ export default function AddEditFormControll({ reportData }) {
               console.error(
                 "Error fetching report types for key:",
                 field._id,
-                error
+                error,
               );
             }
           });
@@ -3807,7 +4507,7 @@ export default function AddEditFormControll({ reportData }) {
             .filter(
               (key) =>
                 updatedFilterCondition[key] !== null &&
-                updatedFilterCondition[key] !== ""
+                updatedFilterCondition[key] !== "",
             )
             .reduce((obj, key) => {
               obj[key] = updatedFilterCondition[key];
@@ -3817,9 +4517,8 @@ export default function AddEditFormControll({ reportData }) {
         };
 
         setFilterCondition(filterCondition);
-        const updatedConditionWithFieldNames = await updateFieldNames(
-          updatedFields
-        );
+        const updatedConditionWithFieldNames =
+          await updateFieldNames(updatedFields);
         setFilterCondition(updatedConditionWithFieldNames);
         const apiEndPointValue = `${apiEndPoint}`;
         const updatedFilterCondition = updatedConditionWithFieldNames;
@@ -3842,10 +4541,10 @@ export default function AddEditFormControll({ reportData }) {
             getSpName = reportData.data[0].spName;
             setIsDataFromStoredProcedure(reportData.data[0].isSp);
             setIsDefaultDataShow(
-              reportData?.data[0]?.isDefaultDataShow === false ? false : true
+              reportData?.data[0]?.isDefaultDataShow === false ? false : true,
             );
             setOutputFileType(
-              reportData?.data[0]?.outputFileType === null ? true : false
+              reportData?.data[0]?.outputFileType === null ? true : false,
             );
             setOutputFileFormat(reportData?.data[0]?.outputFileType);
             setIsDisplayGrandTotal(reportData?.data[0]?.isDisplayGrandTotal);
@@ -3863,7 +4562,7 @@ export default function AddEditFormControll({ reportData }) {
           let responseData = await dynamicReportFilter(
             updatedFilterCondition,
             clientId,
-            getSpName
+            getSpName,
           );
 
           if (responseData && responseData.success) {
@@ -3872,7 +4571,7 @@ export default function AddEditFormControll({ reportData }) {
 
               const fieldNamesFormattedArray = keys
                 .filter(
-                  (key) => key !== "groupSpans" && key !== "startIndexForGroup"
+                  (key) => key !== "groupSpans" && key !== "startIndexForGroup",
                 )
                 .map((key) => ({
                   fieldname: key,
@@ -3887,7 +4586,7 @@ export default function AddEditFormControll({ reportData }) {
             const processedData = preprocessDataForGrouping(
               responseData.data,
               grid,
-              groupingDepth
+              groupingDepth,
             );
             if (isDataFromStoredProcedure) {
               if (processedData.length > 0) {
@@ -3896,7 +4595,7 @@ export default function AddEditFormControll({ reportData }) {
                 const fieldNamesFormattedArray = keys
                   .filter(
                     (key) =>
-                      key !== "groupSpans" && key !== "startIndexForGroup"
+                      key !== "groupSpans" && key !== "startIndexForGroup",
                   )
                   .map((key) => ({
                     fieldname: key,
@@ -3942,7 +4641,7 @@ export default function AddEditFormControll({ reportData }) {
                     console.error(
                       "Error fetching report types for key:",
                       key,
-                      error
+                      error,
                     );
                   }
                 }
@@ -4127,11 +4826,11 @@ export default function AddEditFormControll({ reportData }) {
         ) {
           const totalInvoice = currentGroup.reduce(
             (sum, d) => sum + Number(d["Invoice Amount"] || 0),
-            0
+            0,
           );
           const totalOutstanding = currentGroup.reduce(
             (sum, d) => sum + Number(d["Outstanding Amount"] || 0),
-            0
+            0,
           );
 
           finalData.push({
@@ -4160,11 +4859,11 @@ export default function AddEditFormControll({ reportData }) {
       ) {
         const totalInvoice = currentGroup.reduce(
           (sum, d) => sum + Number(d["Invoice Amount"] || 0),
-          0
+          0,
         );
         const totalOutstanding = currentGroup.reduce(
           (sum, d) => sum + Number(d["Outstanding Amount"] || 0),
-          0
+          0,
         );
 
         finalData.push({
@@ -4230,7 +4929,7 @@ export default function AddEditFormControll({ reportData }) {
       if (!data.isTotalRow && data.groupSpans[colIndex] === 0) {
         return null; // skip rendering only for grouped cells, not totals
       }
-
+      // Date time fixes for grouped cells
       if (!DateFormat && typeof content === "string" && isValidDate(content)) {
         content = moment(content).format("DD-MM-YYYY");
       } else if (
@@ -4365,7 +5064,7 @@ export default function AddEditFormControll({ reportData }) {
       sortedData = sortJsonDataByDate(
         filteredSortData,
         dataKey,
-        newSortDirection
+        newSortDirection,
       );
     } else {
       sortedData = sortJsonData(filteredSortData, dataKey, newSortDirection);
@@ -4419,7 +5118,7 @@ export default function AddEditFormControll({ reportData }) {
     const sortedData = sortJsonData(
       filteredSortData,
       dataKey,
-      newSortDirection
+      newSortDirection,
     );
 
     // Updating state
@@ -4441,7 +5140,7 @@ export default function AddEditFormControll({ reportData }) {
     const sortedData = _.orderBy(
       data,
       sortColumns,
-      Array(sortColumns.length).fill("asc")
+      Array(sortColumns.length).fill("asc"),
     ); // 'asc' for ascending order
     return sortedData;
   };
@@ -4515,7 +5214,7 @@ export default function AddEditFormControll({ reportData }) {
     pivotRowField,
     pivotColumnField,
     pivotAggregateField,
-    pivotAggregateFunction = "sum"
+    pivotAggregateFunction = "sum",
   ) => {
     try {
       const rowSet = new Set();
@@ -4623,7 +5322,7 @@ export default function AddEditFormControll({ reportData }) {
                     >
                       {/* Custom Input Fields */}
 
-                      <CustomeInputFields
+                      <CustomeInputFieldsDynamicReports
                         inputFieldData={parentsFields[section]}
                         values={newState}
                         onValuesChange={handleFieldValuesChange}
@@ -4641,6 +5340,7 @@ export default function AddEditFormControll({ reportData }) {
                         getLabelValue={() => {
                           console.log("sample");
                         }}
+                        setFileNameUploaded={setFileNameUploaded}
                       />
 
                       {/*  Button Grid */}
@@ -4724,7 +5424,7 @@ export default function AddEditFormControll({ reportData }) {
                                           setSortingFieldName(item.fieldname);
                                           handleSort(
                                             item?.fieldname,
-                                            item?.label
+                                            item?.label,
                                           );
                                         }
                                       }}
@@ -4791,7 +5491,7 @@ export default function AddEditFormControll({ reportData }) {
                                   {renderTableData(
                                     data,
                                     rowIndex,
-                                    data.colorCodeNew
+                                    data.colorCodeNew,
                                   )}
                                 </TableRow>
                               ))}
@@ -4817,7 +5517,7 @@ export default function AddEditFormControll({ reportData }) {
                                       const correspondingApiData =
                                         apiGridData?.find(
                                           (apiItem) =>
-                                            apiItem.fieldname === item.id
+                                            apiItem.fieldname === item.id,
                                         );
                                       displayGrandTotal = correspondingApiData
                                         ? correspondingApiData.displayGrandTotal
@@ -4845,8 +5545,8 @@ export default function AddEditFormControll({ reportData }) {
                                             ? index === 0
                                               ? "Grand Total"
                                               : grandTotalValue !== undefined
-                                              ? grandTotalValue
-                                              : ""
+                                                ? grandTotalValue
+                                                : ""
                                             : ""}
                                         </TableCell>
                                       );
@@ -4862,15 +5562,12 @@ export default function AddEditFormControll({ reportData }) {
                         <Typography variant="h6">Data Not Found</Typography>
                       </div>
                     ) : null)}
-
                   {/* Render a static table if menuType is "E" */}
                   {editableErrors &&
-                    editableErrorsData.length > 0 &&
-                    menuType === "E" && (
+                    editableErrorsData?.length > 0 &&
+                    (menuType === "E" || menuType === "X") && (
                       <Paper
-                        sx={{
-                          ...displayReportTablePaperStyles,
-                        }}
+                        sx={{ ...displayReportTablePaperStyles }}
                         className={`${styles.pageBackground} `}
                       >
                         <TableContainer
@@ -4881,12 +5578,11 @@ export default function AddEditFormControll({ reportData }) {
                             position: "relative !important",
                           }}
                         >
-                          {/* Table */}
                           <Table
                             stickyHeader
                             aria-label="sticky table"
                             style={{
-                              tableLayout: "auto", // Fixed layout prevents expansion
+                              tableLayout: "auto",
                               width: "100%",
                               border: "1px solid grey",
                               borderCollapse: "collapse",
@@ -4894,12 +5590,9 @@ export default function AddEditFormControll({ reportData }) {
                             }}
                             className={`min-w-full text-xs overflow-auto ${styles.hideScrollbar} ${styles.thinScrollBar}`}
                           >
-                            {/* Table Head (dynamic from JSON keys) */}
                             <TableHead
                               className="text-white"
-                              sx={{
-                                ...displaytableHeadStyles,
-                              }}
+                              sx={{ ...displaytableHeadStyles }}
                             >
                               <TableRow className={`${styles.tblHead}`}>
                                 <TableCell
@@ -4914,8 +5607,10 @@ export default function AddEditFormControll({ reportData }) {
                                 >
                                   Sr No
                                 </TableCell>
+
                                 {errorColumns.map((col) => (
                                   <TableCell
+                                    key={col}
                                     style={{
                                       position: "sticky",
                                       whiteSpace: "nowrap",
@@ -4924,7 +5619,6 @@ export default function AddEditFormControll({ reportData }) {
                                         : "default",
                                     }}
                                     className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
-                                    key={col}
                                   >
                                     {formatHeader(col)}
                                   </TableCell>
@@ -4932,10 +5626,10 @@ export default function AddEditFormControll({ reportData }) {
                               </TableRow>
                             </TableHead>
 
-                            {/* Table Body (cells also dynamic) */}
                             <TableBody>
                               {editableErrorsData.map((row, index) => (
                                 <TableRow
+                                  key={index}
                                   style={{ border: "1px solid grey" }}
                                   className={`${styles.tableCellHoverEffect} ${styles.hh} rounded-lg p-0 opacity-1 z-0`}
                                   sx={{
@@ -4943,7 +5637,6 @@ export default function AddEditFormControll({ reportData }) {
                                       ? displayTableRowStylesNoHover
                                       : displaytableRowStyles),
                                   }}
-                                  key={index}
                                 >
                                   <TableCell
                                     className={`pt-1 pb-1 ps-4 text-xs`}
@@ -5030,7 +5723,7 @@ export default function AddEditFormControll({ reportData }) {
                                   ...new Set(pivotHeader.map((h) => h.level1)),
                                 ].map((group, idx) => {
                                   const colSpan = pivotHeader.filter(
-                                    (h) => h.level1 === group
+                                    (h) => h.level1 === group,
                                   ).length;
                                   return (
                                     <TableCell
@@ -5073,14 +5766,14 @@ export default function AddEditFormControll({ reportData }) {
                                   {[
                                     ...new Set(
                                       pivotHeader.map(
-                                        (h) => `${h.level1}||${h.level2}`
-                                      )
+                                        (h) => `${h.level1}||${h.level2}`,
+                                      ),
                                     ),
                                   ].map((key, idx) => {
                                     const [lvl1, lvl2] = key.split("||");
                                     const colSpan = pivotHeader.filter(
                                       (h) =>
-                                        h.level1 === lvl1 && h.level2 === lvl2
+                                        h.level1 === lvl1 && h.level2 === lvl2,
                                     ).length;
                                     return (
                                       <TableCell
@@ -5181,8 +5874,8 @@ export default function AddEditFormControll({ reportData }) {
                                             backgroundColor: isSubtotalColumn
                                               ? "#F5F5F5"
                                               : isSubtotalRow
-                                              ? "#DDDDDD"
-                                              : "",
+                                                ? "#DDDDDD"
+                                                : "",
                                             color:
                                               rowData[0] === "Grand Total"
                                                 ? toggledThemeValue
@@ -5202,7 +5895,6 @@ export default function AddEditFormControll({ reportData }) {
                           </Table>
                         </TableContainer>
                       </Paper>
-
                       <div className="flex items-center justify-between pt-2 px-4 text-black">
                         <div className="flex items-end ml-auto">
                           <div className="mr-5">
@@ -5248,7 +5940,7 @@ export default function AddEditFormControll({ reportData }) {
                             onChange={(e) => {
                               const newItemsPerPage = parseInt(
                                 e.target.value,
-                                10
+                                10,
                               );
                               if (newItemsPerPage > 0) {
                                 setItemsPerPaginatedPage(newItemsPerPage);
@@ -5292,7 +5984,7 @@ export default function AddEditFormControll({ reportData }) {
                         {Object.entries(analysisData || {})
                           .filter(
                             ([, value]) =>
-                              Array.isArray(value) && value.length > 0
+                              Array.isArray(value) && value.length > 0,
                           )
                           .map(([key, rows]) => {
                             const columns = Object.keys(rows[0] || {});
@@ -5507,6 +6199,64 @@ export default function AddEditFormControll({ reportData }) {
           />
         )}
       </div>
+      <div className="flex items-center justify-between pt-2 px-4 text-black">
+        <div className="flex items-end ml-auto">
+          {/* Pagination Buttons */}
+          <div className="mr-5">
+            <Stack>
+              <Pagination
+                count={lastPagePagination}
+                showFirstButton
+                showLastButton
+                sx={{
+                  ...paginationStyle,
+                }}
+                onChange={(event, value) => {
+                  handleChange(value);
+                  handleSortPagination(sortingFieldName, value);
+                }}
+                renderItem={(item) => {
+                  const { type } = item;
+                  // Check if the button should be disabled
+                  const isDisabled =
+                    ((type === "first" || type === "previous") &&
+                      currentItems === 1) ||
+                    ((type === "last" || type === "next") &&
+                      currentItems === lastPage);
+                  return (
+                    <PaginationItem
+                      {...item}
+                      className={`${paginationStyles.txtColorDark}`}
+                      sx={{
+                        fontSize: 10,
+                        height: 21,
+                        width: 21,
+                        minWidth: 0,
+                        color: isDisabled ? "grey" : "var(--text-color-dark)", // Change color if disabled
+                      }}
+                    />
+                  );
+                }}
+              />
+            </Stack>
+          </div>
+          <input
+            type="number"
+            value={itemsPerPage}
+            onChange={(e) => {
+              const newItemsPerPage = parseInt(e.target.value, 10);
+              if (newItemsPerPage > 0) {
+                setItemsPerPage(newItemsPerPage);
+                setCurrentPage(1);
+              }
+            }}
+            className={`border ${styles.txtColorDark} ${styles.pageBackground} border-gray-300 rounded-md p-2 h-[17px] w-14 text-[10px] mr-[15px] outline-gray-300 outline-0`}
+          />
+          <p className={`text-[10px] ${styles.txtColorDark}`}>
+            {currentPage} of {lastPagePagination} Pages
+          </p>
+        </div>
+      </div>
     </React.Fragment>
   );
 }
@@ -5538,7 +6288,7 @@ function CustomizedInputBase({
   setSortedData,
 }) {
   const [searchInputGridData, setSearchInputGridData] = useState(
-    prevSearchInput || ""
+    prevSearchInput || "",
   );
 
   // Custom filter logic

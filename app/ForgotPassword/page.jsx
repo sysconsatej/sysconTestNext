@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import CustomeModal from "@/components/Modal/customModal";
 const changePasswordApi = `${baseUrl}/api/userControl/changePassword`;
 import { verifyEmail, sendEmail } from "@/services/auth/Auth.services.js";
+import { passwordValidator } from "@/helper";
 const page = () => {
   const [edit, setEdit] = useState(false);
   const [email, setEmail] = useState("");
@@ -128,6 +129,14 @@ const page = () => {
     }
   };
   const handleResetPassword = async () => {
+    const passwordError = passwordValidator(newPassword);
+    if (passwordError) {
+      setOpenModal(true);
+      setParaText(passwordError);
+      setError(true);
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       setOpenModal(true);
       setParaText("Passwords do not match.");

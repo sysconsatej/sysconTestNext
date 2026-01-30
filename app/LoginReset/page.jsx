@@ -1,4 +1,4 @@
-"use client"
+"use client";
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL_SQL;
 
 import React, { useEffect, useState } from "react";
@@ -6,11 +6,13 @@ import { decrypt } from "@/helper/security";
 import { Paper, TextField, Typography, IconButton } from "@mui/material";
 import { textInputStyle3 } from "@/app/globalCss";
 import styles from "@/app/app.module.css";
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import CustomeModal from "@/components/Modal/customModal";
 const resetPasswordApi = `${baseUrl}/api/userControl/resetPassword`;
 import { useRouter } from "next/navigation";
+import { passwordValidator } from "@/helper";
+import Cookies from "js-cookie";
 
 const page = () => {
   const [newPassword, setNewPassword] = React.useState("");
@@ -29,15 +31,19 @@ const page = () => {
 
   useEffect(() => {
     const storedUserData = localStorage.getItem("userData");
-   // console.log("stored", storedUserData);
+    // console.log("stored", storedUserData);
     if (storedUserData) {
       const userData = JSON.parse(decrypt(storedUserData));
       setUserDetails(userData);
 
       // Calculate the date difference
-      const passwordLastUpdateDate = new Date(userData[0].passwordLastUpdateDate);
+      const passwordLastUpdateDate = new Date(
+        userData[0].passwordLastUpdateDate,
+      );
       const currentDate = new Date();
-      const dateDifference = Math.floor((currentDate - passwordLastUpdateDate) / (1000 * 60 * 60 * 24));
+      const dateDifference = Math.floor(
+        (currentDate - passwordLastUpdateDate) / (1000 * 60 * 60 * 24),
+      );
       // Show the message if 60 days have passed
       if (dateDifference >= 60) {
         setShowSecurityMessage(true);
@@ -45,16 +51,14 @@ const page = () => {
     }
   }, []);
 
-
   useEffect(() => {
     const storedUserData = localStorage.getItem("userData");
     if (storedUserData) {
       setUserDetails(JSON.parse(decrypt(storedUserData)));
 
-      console.log(userDetails)
+      console.log(userDetails);
     }
   }, []);
-
 
   useEffect(() => {
     if (userDetails && Object.keys(userDetails).length !== 0) {
@@ -65,7 +69,22 @@ const page = () => {
     }
   }, []);
 
+
+  function clearToken() {
+        localStorage.clear();
+        Cookies.remove("token");
+        push("/login");
+      }
+
   const handleResetPassword = async () => {
+    const passwordError = passwordValidator(newPassword);
+    if (passwordError) {
+      setOpenModal(true);
+      setParaText(passwordError);
+      setError(true);
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       setOpenModal(true);
       setParaText("Passwords do not match.");
@@ -95,17 +114,16 @@ const page = () => {
         setParaText(result?.error);
         setError(true);
         return;
-      }else{
+      } else {
         setOpenModal(true);
         setParaText("Password changed successfully");
         setError(true);
+        clearToken();
         return;
       }
-
     } catch (error) {
       console.error("Network or other error", error);
     }
-
   };
 
   const handleModalClose = () => {
@@ -120,13 +138,17 @@ const page = () => {
     <>
       <div className="text-black flex items-center justify-center w-full  min-h-screen">
         <Paper className="h-auto w-[500px] pb-6">
-          <Typography className="pt-6 text-2xl text-center" style={{ fontWeight: 'bold' }}>
+          <Typography
+            className="pt-6 text-2xl text-center"
+            style={{ fontWeight: "bold" }}
+          >
             Reset Password
           </Typography>
 
           {showSecurityMessage && (
             <Typography className="pt-4 px-6 text-xs text-center">
-              To enhance your account security! Please update your password, as it has been 60 days since your last change.
+              To enhance your account security! Please update your password, as
+              it has been 60 days since your last change.
             </Typography>
           )}
 
@@ -143,7 +165,8 @@ const page = () => {
                 required={true}
                 type={showOldPassword ? "text" : "password"}
                 size="small"
-                InputProps={{ // Add visibility toggle button
+                InputProps={{
+                  // Add visibility toggle button
                   endAdornment: (
                     <IconButton
                       onClick={() => setShowOldPassword(!showOldPassword)}
@@ -165,7 +188,8 @@ const page = () => {
                 required={true}
                 type={showNewPassword ? "text" : "password"}
                 size="small"
-                InputProps={{ // Add visibility toggle button
+                InputProps={{
+                  // Add visibility toggle button
                   endAdornment: (
                     <IconButton
                       onClick={() => setShowNewPassword(!showNewPassword)}
@@ -187,10 +211,13 @@ const page = () => {
                 required={true}
                 type={showConfirmPassword ? "text" : "password"}
                 size="small"
-                InputProps={{ // Add visibility toggle button
+                InputProps={{
+                  // Add visibility toggle button
                   endAdornment: (
                     <IconButton
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                       edge="end"
                     >
                       {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
@@ -219,7 +246,7 @@ const page = () => {
         paraText={paraText}
       />
     </>
-  )
-}
+  );
+};
 
-export default page
+export default page;

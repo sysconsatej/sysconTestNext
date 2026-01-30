@@ -21,6 +21,7 @@ import {
 import { ButtonPanel } from "@/components/Buttons/customeButton.jsx";
 import { CustomSpinner } from "@/components/Spinner/spinner";
 import CustomeInputFields from "@/components/Inputs/customeInputFields";
+import { CustomeInputFieldsDynamicReports } from "@/components/Inputs/customeInputFieldsDynamicReports";
 import { toast } from "react-toastify";
 import PropTypes from "prop-types";
 import { useSearchParams } from "next/navigation";
@@ -209,11 +210,11 @@ export default function AddEditFormControll({ reportData }) {
             null;
           return key != null ? [String(key), rec] : null;
         })
-        .filter(Boolean)
+        .filter(Boolean),
     );
 
     const rowsArray = Array.from(
-      selectedRow?.values ? selectedRow.values() : selectedRow
+      selectedRow?.values ? selectedRow.values() : selectedRow,
     );
 
     // Selected IDs
@@ -390,7 +391,7 @@ export default function AddEditFormControll({ reportData }) {
       const groupedData = preprocessDataForGrouping(
         sortedData,
         grid,
-        groupingDepth
+        groupingDepth,
       );
 
       // Use deep equality check to avoid infinite update loop
@@ -538,7 +539,7 @@ export default function AddEditFormControll({ reportData }) {
       };
 
       const generatedFileNameData = await fetchReportData(
-        generatedFileNameRequestBody
+        generatedFileNameRequestBody,
       );
       if (
         Array.isArray(generatedFileNameData?.data) &&
@@ -644,7 +645,7 @@ export default function AddEditFormControll({ reportData }) {
         const filterCondition = null;
         const fetchData = await fetchDynamicReportSpData(
           spName,
-          filterCondition
+          filterCondition,
         );
         console.log("fetchData =>>", fetchData);
 
@@ -712,7 +713,7 @@ export default function AddEditFormControll({ reportData }) {
           for (const [section, fields] of Object.entries(parentsFields)) {
             const missingField = Object.entries(fields).find(
               ([, { isRequired, fieldname, yourlabel }]) =>
-                isRequired && !newState[fieldname]
+                isRequired && !newState[fieldname],
             );
 
             if (missingField) {
@@ -784,7 +785,7 @@ export default function AddEditFormControll({ reportData }) {
                 console.error(
                   "Error fetching report types for key:",
                   key,
-                  error
+                  error,
                 );
               }
             }
@@ -806,19 +807,19 @@ export default function AddEditFormControll({ reportData }) {
           const filterConditionWithoutDropdowns =
             removeDropdownFields(filterCondition);
           const updatedConditionWithFieldNames = await updateFieldNames(
-            filterConditionWithoutDropdowns
+            filterConditionWithoutDropdowns,
           );
 
           let responseData = await dynamicReportFilter(
             updatedConditionWithFieldNames,
             clientId,
-            spName
+            spName,
           );
           if (responseData && responseData.success) {
             const processedData = preprocessDataForGrouping(
               responseData.data,
               grid,
-              groupingDepth
+              groupingDepth,
             );
 
             if (isDataFromStoredProcedure) {
@@ -828,7 +829,7 @@ export default function AddEditFormControll({ reportData }) {
                 const fieldNamesFormattedArray = keys
                   .filter(
                     (key) =>
-                      key !== "groupSpans" && key !== "startIndexForGroup"
+                      key !== "groupSpans" && key !== "startIndexForGroup",
                   )
                   .map((key) => ({
                     fieldname: key,
@@ -840,7 +841,7 @@ export default function AddEditFormControll({ reportData }) {
                 setGrid(fieldNamesFormattedArray);
                 let fieldNamesFormattedArrayWithOutId =
                   fieldNamesFormattedArray.filter(
-                    (item) => item?.fieldname?.toLowerCase() !== "id"
+                    (item) => item?.fieldname?.toLowerCase() !== "id",
                   );
                 setGridHeader(fieldNamesFormattedArrayWithOutId);
               } else {
@@ -878,7 +879,7 @@ export default function AddEditFormControll({ reportData }) {
                     console.error(
                       "Error fetching report types for key:",
                       key,
-                      error
+                      error,
                     );
                   }
                 }
@@ -897,7 +898,7 @@ export default function AddEditFormControll({ reportData }) {
             // Filter out rows with all null or empty fields
             const filteredTableData = processedData.filter((data) => {
               return Object.values(data).some(
-                (value) => value !== null && value !== ""
+                (value) => value !== null && value !== "",
               );
             });
 
@@ -934,7 +935,7 @@ export default function AddEditFormControll({ reportData }) {
           const fetchedData = search;
           const { allErrors, filteredObjectIds } = await handleExcelUploadFunc(
             fetchedData,
-            newState
+            newState,
           );
 
           // Check if errors array is empty or not
@@ -957,7 +958,7 @@ export default function AddEditFormControll({ reportData }) {
             const response = await insertExcelDataInDatabase(insertData);
 
             toast.success(
-              `${response.rowsAffected} Rows Inserted Successfully`
+              `${response.rowsAffected} Rows Inserted Successfully`,
             );
           } else {
             toast.error("Upload Failed ! File contains Error");
@@ -979,7 +980,7 @@ export default function AddEditFormControll({ reportData }) {
         const filterCondition = null;
         const fetchData = await fetchDynamicReportSpData(
           spName,
-          filterCondition
+          filterCondition,
         );
         console.log("fetchData =>>", fetchData);
         console.log("fetchData =>>", fetchData.data.length);
@@ -1067,7 +1068,7 @@ export default function AddEditFormControll({ reportData }) {
 
               try {
                 const controlData = await fetchReportData(
-                  controlNameRequestBody
+                  controlNameRequestBody,
                 );
                 if (controlData?.data?.length > 0) {
                   const controlNameData = controlData.data[0].name;
@@ -1099,7 +1100,7 @@ export default function AddEditFormControll({ reportData }) {
                 ) {
                   const dropdownArray = newState[`${fieldname}dropdown`];
                   const selectedOption = dropdownArray.find(
-                    (option) => option.value === value
+                    (option) => option.value === value,
                   );
                   if (selectedOption) value = selectedOption.label;
                 }
@@ -1147,7 +1148,7 @@ export default function AddEditFormControll({ reportData }) {
               fgColor: { argb: "0766AD" },
             };
             worksheet.mergeCells(
-              `A${reportNameRow.number}:B${reportNameRow.number}`
+              `A${reportNameRow.number}:B${reportNameRow.number}`,
             );
             worksheet.addRow([]);
 
@@ -1193,11 +1194,11 @@ export default function AddEditFormControll({ reportData }) {
             const dataToExport = paginatedData.map((row) =>
               gridHeader.map((header) => {
                 const gridItem = grid.find(
-                  (g) => g.id === parseInt(header.fieldname)
+                  (g) => g.id === parseInt(header.fieldname),
                 );
                 if (!gridItem) {
                   console.warn(
-                    `No grid item found for fieldname: ${header.fieldname}`
+                    `No grid item found for fieldname: ${header.fieldname}`,
                   );
                 }
                 let value = row[gridItem?.fieldname] ?? ""; // Use nullish coalescing
@@ -1205,7 +1206,7 @@ export default function AddEditFormControll({ reportData }) {
                   value = moment(value).format("DD-MM-YYYY");
                 }
                 return value;
-              })
+              }),
             );
             // Group rows based on `groupingDepth`
             for (let colIndex = 0; colIndex <= groupingDepth; colIndex++) {
@@ -1257,7 +1258,7 @@ export default function AddEditFormControll({ reportData }) {
                 const isNumericColumn = !isNaN(
                   dataToExport
                     .map((row) => parseFloat(row[colIndex]))
-                    .find((val) => !isNaN(val))
+                    .find((val) => !isNaN(val)),
                 );
 
                 if (isNumericColumn) {
@@ -1268,14 +1269,14 @@ export default function AddEditFormControll({ reportData }) {
 
                   const columnTotal = columnData.reduce(
                     (acc, num) => acc + num,
-                    0
+                    0,
                   );
                   return columnTotal.toFixed(2); // Return total formatted to two decimal places
                 }
 
                 // If not numeric, leave the cell blank
                 return "";
-              })
+              }),
             );
 
             // Style the grand total row
@@ -1488,7 +1489,7 @@ export default function AddEditFormControll({ reportData }) {
           10,
           10,
           280,
-          50
+          50,
         );
       } catch (error) {
         console.error("Error adding image to PDF:", error);
@@ -1576,7 +1577,7 @@ export default function AddEditFormControll({ reportData }) {
           doc.text(
             `Page ${pageCount}`,
             data.settings.margin.left,
-            pageHeight - 10
+            pageHeight - 10,
           );
         },
         willDrawCell: function (data) {
@@ -1612,7 +1613,7 @@ export default function AddEditFormControll({ reportData }) {
           10,
           10,
           280,
-          50
+          50,
         );
       } catch (error) {
         console.error("Error adding image to PDF:", error);
@@ -1700,7 +1701,7 @@ export default function AddEditFormControll({ reportData }) {
           doc.text(
             `Page ${pageCount}`,
             data.settings.margin.left,
-            pageHeight - 10
+            pageHeight - 10,
           );
         },
         willDrawCell: function (data) {
@@ -1806,7 +1807,7 @@ export default function AddEditFormControll({ reportData }) {
         if (menuName === "Update Nominated Area" && selectedIds?.length > 0) {
           const selectedIdsSet = new Set(selectedIds.map((obj) => obj.id));
           const selectedRows = finalPaginatedData.filter((row) =>
-            selectedIdsSet.has(row.id)
+            selectedIdsSet.has(row.id),
           );
           console.log("Selected Rows:", selectedRows);
           let response = await saveEditedReport({
@@ -1823,7 +1824,7 @@ export default function AddEditFormControll({ reportData }) {
         if (menuName === "Bank Reconciliation" && selectedIds?.length > 0) {
           const selectedIdsSet = new Set(selectedIds.map((obj) => obj.id));
           const selectedRows = finalPaginatedData.filter((row) =>
-            selectedIdsSet.has(row?.id)
+            selectedIdsSet.has(row?.id),
           );
           console.log("Selected Rows:", selectedRows);
           let response = await saveEditedReport({
@@ -1846,7 +1847,7 @@ export default function AddEditFormControll({ reportData }) {
           // ------------------ helpers ------------------
 
           const buildCriteriaArrayFromFilterCondition = (
-            filterCondition = {}
+            filterCondition = {},
           ) => {
             const fc = filterCondition || {};
             const out = [];
@@ -1953,7 +1954,7 @@ export default function AddEditFormControll({ reportData }) {
           // ✅ Auto-fit column widths (increase width nicely)
           const autoFitColumns = (
             sheet,
-            { min = 12, max = 55, padding = 2 } = {}
+            { min = 12, max = 55, padding = 2 } = {},
           ) => {
             const colCount = sheet.actualColumnCount || sheet.columnCount || 1;
 
@@ -2001,23 +2002,23 @@ export default function AddEditFormControll({ reportData }) {
 
               const criteriaArr =
                 buildCriteriaArrayFromFilterCondition(filterCondition);
-              const hasCriteria =
-                Array.isArray(criteriaArr) && criteriaArr.length > 0;
+              const hasCriteria = false;
+              //Array.isArray(criteriaArr) && criteriaArr.length > 0;
 
               const buildSheet = async (sheet, rows) => {
                 // 1) Criteria at A1
                 if (hasCriteria) addCriteriaRowToSheet(sheet, criteriaArr);
                 else {
                   // still keep one blank row (row1)
-                  if (sheet.rowCount === 0) sheet.addRow([]);
-                  if (sheet.rowCount < 2) sheet.addRow([]); // row2 blank
+                  // if (sheet.rowCount === 0) sheet.addRow([]);
+                  // if (sheet.rowCount < 2) sheet.addRow([]); // row2 blank
                 }
 
                 // 2) Keep one more blank line before header
-                if (sheet.rowCount < 3) sheet.addRow([]); // row3 blank
+                // if (sheet.rowCount < 3) sheet.addRow([]); // row3 blank
 
                 // 3) Header row ALWAYS row 4
-                const headerRowNo = 4;
+                const headerRowNo = 1;
 
                 if (Array.isArray(rows) && rows.length > 0) {
                   const headers = Object.keys(rows[0]);
@@ -2235,17 +2236,17 @@ export default function AddEditFormControll({ reportData }) {
               if (s == null) return "";
               let out = String(s);
               out = out.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) =>
-                String.fromCharCode(parseInt(h, 16))
+                String.fromCharCode(parseInt(h, 16)),
               );
               out = out.replace(/\\x([0-9a-fA-F]{2})/g, (_, h) =>
-                String.fromCharCode(parseInt(h, 16))
+                String.fromCharCode(parseInt(h, 16)),
               );
               out = out.replace(/\u001d/g, US);
               out = out.replace(/&#x([0-9a-fA-F]+);/gi, (_, h) =>
-                String.fromCodePoint(parseInt(h, 16))
+                String.fromCodePoint(parseInt(h, 16)),
               );
               out = out.replace(/&#([0-9]+);/g, (_, d) =>
-                String.fromCodePoint(parseInt(d, 10))
+                String.fromCodePoint(parseInt(d, 10)),
               );
               return out;
             };
@@ -2259,7 +2260,7 @@ export default function AddEditFormControll({ reportData }) {
                   return decodeEscapes(
                     Object.values(row)
                       .map((v) => (v == null ? "" : String(v)))
-                      .join(US)
+                      .join(US),
                   );
                 }
                 return decodeEscapes(row);
@@ -2310,7 +2311,7 @@ export default function AddEditFormControll({ reportData }) {
             const download = (
               bytesOrBlob,
               filename,
-              mime = "application/octet-stream"
+              mime = "application/octet-stream",
             ) => {
               const blob =
                 bytesOrBlob instanceof Blob
@@ -2333,7 +2334,7 @@ export default function AddEditFormControll({ reportData }) {
             download(
               bytes,
               `${generatedFileName || saveSpName}.txt`,
-              "application/octet-stream"
+              "application/octet-stream",
             );
 
             // Optional: human-readable preview (US -> |) for copy/paste/QA
@@ -2474,8 +2475,8 @@ export default function AddEditFormControll({ reportData }) {
 
           const updatedSelectedRows = finalPaginatedData.filter((row) =>
             selectedRows.some(
-              (selected) => getRowId(selected) === getRowId(row)
-            )
+              (selected) => getRowId(selected) === getRowId(row),
+            ),
           );
 
           let cleanSelectedRows = updatedSelectedRows.map((row) => {
@@ -2536,7 +2537,7 @@ export default function AddEditFormControll({ reportData }) {
 
       sessionStorage.setItem(
         "selectedReportIds",
-        JSON.stringify("Import General Manifest")
+        JSON.stringify("Import General Manifest"),
       );
 
       const url = `/htmlReports/rptIGM?recordId=${selectedReportIds}&reportId=1396`;
@@ -2545,7 +2546,7 @@ export default function AddEditFormControll({ reportData }) {
       } else {
         console.error(
           "Unable to open the report: URL or ID is not defined.",
-          report
+          report,
         );
       }
 
@@ -2720,7 +2721,7 @@ export default function AddEditFormControll({ reportData }) {
     // Sort each group by 'sectionOrder'
     Object.keys(groupedFields).forEach((section) => {
       groupedFields[section].sort(
-        (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0)
+        (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0),
       );
     });
 
@@ -2767,13 +2768,13 @@ export default function AddEditFormControll({ reportData }) {
             };
             try {
               const apiResponseDefaultValue = await dynamicDropDownFieldsData(
-                requestBodyDefaultValue
+                requestBodyDefaultValue,
               );
               field.controlDefaultValue = apiResponseDefaultValue.data[0].id;
             } catch (error) {
               console.error(
                 `Error fetching data for referenceTable: ${field.referenceTable}, referenceColumn: ${field.referenceColumn}`,
-                error
+                error,
               );
             }
           }
@@ -2829,7 +2830,7 @@ export default function AddEditFormControll({ reportData }) {
 
               try {
                 const dataControlName = await fetchReportData(
-                  requestBodyControlName
+                  requestBodyControlName,
                 );
                 if (dataControlName && dataControlName.data.length > 0) {
                   let isMatchFound = false;
@@ -2842,7 +2843,7 @@ export default function AddEditFormControll({ reportData }) {
 
                   if (!isMatchFound) {
                     console.error(
-                      "No matching ID found in dataControlName.data"
+                      "No matching ID found in dataControlName.data",
                     );
                   }
                 } else {
@@ -2875,7 +2876,7 @@ export default function AddEditFormControll({ reportData }) {
 
                   if (!isMatchFound) {
                     console.error(
-                      "No matching ID found for updatedField.type in dataType.data"
+                      "No matching ID found for updatedField.type in dataType.data",
                     );
                   }
                 } else {
@@ -2886,7 +2887,7 @@ export default function AddEditFormControll({ reportData }) {
               }
             }
             return updatedField;
-          })
+          }),
         );
 
         setFormControlData({ ...fetchedData, fields: updatedFields });
@@ -2946,7 +2947,7 @@ export default function AddEditFormControll({ reportData }) {
               console.error(
                 "Error fetching report types for key:",
                 field._id,
-                error
+                error,
               );
             }
           });
@@ -2958,7 +2959,7 @@ export default function AddEditFormControll({ reportData }) {
             .filter(
               (key) =>
                 updatedFilterCondition[key] !== null &&
-                updatedFilterCondition[key] !== ""
+                updatedFilterCondition[key] !== "",
             )
             .reduce((obj, key) => {
               obj[key] = updatedFilterCondition[key];
@@ -2968,9 +2969,8 @@ export default function AddEditFormControll({ reportData }) {
         };
 
         setFilterCondition(filterCondition);
-        const updatedConditionWithFieldNames = await updateFieldNames(
-          updatedFields
-        );
+        const updatedConditionWithFieldNames =
+          await updateFieldNames(updatedFields);
         setFilterCondition(updatedConditionWithFieldNames);
         const apiEndPointValue = `${apiEndPoint}`;
         const updatedFilterCondition = updatedConditionWithFieldNames;
@@ -2993,10 +2993,10 @@ export default function AddEditFormControll({ reportData }) {
             getSpName = reportData.data[0].spName;
             setIsDataFromStoredProcedure(reportData.data[0].isSp);
             setIsDefaultDataShow(
-              reportData?.data[0]?.isDefaultDataShow === false ? false : true
+              reportData?.data[0]?.isDefaultDataShow === false ? false : true,
             );
             setOutputFileType(
-              reportData?.data[0]?.outputFileType === null ? true : false
+              reportData?.data[0]?.outputFileType === null ? true : false,
             );
             setOutputFileFormat(reportData?.data[0]?.outputFileType);
           } else {
@@ -3013,14 +3013,14 @@ export default function AddEditFormControll({ reportData }) {
           let responseData = await dynamicReportFilter(
             updatedFilterCondition,
             clientId,
-            getSpName
+            getSpName,
           );
 
           if (responseData && responseData.success) {
             const processedData = preprocessDataForGrouping(
               responseData.data,
               grid,
-              groupingDepth
+              groupingDepth,
             );
             if (isDataFromStoredProcedure) {
               if (processedData.length > 0) {
@@ -3029,7 +3029,7 @@ export default function AddEditFormControll({ reportData }) {
                 const fieldNamesFormattedArray = keys
                   .filter(
                     (key) =>
-                      key !== "groupSpans" && key !== "startIndexForGroup"
+                      key !== "groupSpans" && key !== "startIndexForGroup",
                   )
                   .map((key) => ({
                     fieldname: key,
@@ -3041,7 +3041,7 @@ export default function AddEditFormControll({ reportData }) {
                 setGrid(fieldNamesFormattedArray);
                 let fieldNamesFormattedArrayWithOutId =
                   fieldNamesFormattedArray.filter(
-                    (item) => item?.fieldname?.toLowerCase() !== "id"
+                    (item) => item?.fieldname?.toLowerCase() !== "id",
                   );
                 setGridHeader(fieldNamesFormattedArrayWithOutId);
               } else {
@@ -3079,7 +3079,7 @@ export default function AddEditFormControll({ reportData }) {
                     console.error(
                       "Error fetching report types for key:",
                       key,
-                      error
+                      error,
                     );
                   }
                 }
@@ -3430,7 +3430,7 @@ export default function AddEditFormControll({ reportData }) {
                 toast.error(
                   `Range [${currentFrom} - ${currentTo}] overlaps with row ${
                     i + 1
-                  } range [${otherFrom} - ${otherTo}]`
+                  } range [${otherFrom} - ${otherTo}]`,
                 );
                 currentRow[fieldKey] = null;
                 if (fieldKey === "From") currentRow.To = ""; // Clear To as well if From is invalid
@@ -3482,13 +3482,13 @@ export default function AddEditFormControll({ reportData }) {
 
         setselectedRows((prevSelectedRows) => {
           const isAlreadySelected = prevSelectedRows.some(
-            (row) => getRowId(row) === selectedRowId
+            (row) => getRowId(row) === selectedRowId,
           );
 
           if (isAlreadySelected) {
             // ✅ DO NOT clear enriched values from finalPaginatedData
             return prevSelectedRows.filter(
-              (row) => getRowId(row) !== selectedRowId
+              (row) => getRowId(row) !== selectedRowId,
             );
           } else {
             const latestRow = finalPaginatedData[rowIndex];
@@ -3539,13 +3539,13 @@ export default function AddEditFormControll({ reportData }) {
       } else if (menuName === "Bank Reconciliation") {
         setselectedRows((prevSelectedRows) => {
           const isAlreadySelected = prevSelectedRows.some(
-            (row) => getRowId(row) === selectedRowId
+            (row) => getRowId(row) === selectedRowId,
           );
 
           if (isAlreadySelected) {
             // ✅ DO NOT clear reconciledDate from finalPaginatedData
             return prevSelectedRows.filter(
-              (row) => getRowId(row) !== selectedRowId
+              (row) => getRowId(row) !== selectedRowId,
             );
           } else {
             const latestRow = finalPaginatedData[rowIndex];
@@ -3586,12 +3586,12 @@ export default function AddEditFormControll({ reportData }) {
 
         setselectedRows((prevSelectedRows) => {
           const isAlreadySelected = prevSelectedRows.some(
-            (row) => getRowId(row) === selectedRowId
+            (row) => getRowId(row) === selectedRowId,
           );
 
           if (isAlreadySelected) {
             return prevSelectedRows.filter(
-              (row) => getRowId(row) !== selectedRowId
+              (row) => getRowId(row) !== selectedRowId,
             );
           } else {
             return [...prevSelectedRows, enrichedRow];
@@ -3602,12 +3602,12 @@ export default function AddEditFormControll({ reportData }) {
 
         setselectedRows((prevSelectedRows) => {
           const isAlreadySelected = prevSelectedRows.some(
-            (row) => getRowId(row) === selectedRowId
+            (row) => getRowId(row) === selectedRowId,
           );
 
           if (isAlreadySelected) {
             return prevSelectedRows.filter(
-              (row) => getRowId(row) !== selectedRowId
+              (row) => getRowId(row) !== selectedRowId,
             );
           } else {
             return [...prevSelectedRows, latestRow];
@@ -3621,7 +3621,7 @@ export default function AddEditFormControll({ reportData }) {
 
       if (from > to) {
         toast.error(
-          `Row ${rowIndex + 1}: 'From' must be less than or equal to 'To'`
+          `Row ${rowIndex + 1}: 'From' must be less than or equal to 'To'`,
         );
         return false;
       }
@@ -3634,7 +3634,7 @@ export default function AddEditFormControll({ reportData }) {
               rowIndex + 1
             }: 'From' must be greater than all previous rows' 'To' (conflict with Row ${
               i + 1
-            })`
+            })`,
           );
           return false;
         }
@@ -3855,7 +3855,7 @@ export default function AddEditFormControll({ reportData }) {
       sortedData = sortJsonDataByDate(
         filteredSortData,
         dataKey,
-        newSortDirection
+        newSortDirection,
       );
     } else {
       sortedData = sortJsonData(filteredSortData, dataKey, newSortDirection);
@@ -3909,7 +3909,7 @@ export default function AddEditFormControll({ reportData }) {
     const sortedData = sortJsonData(
       filteredSortData,
       dataKey,
-      newSortDirection
+      newSortDirection,
     );
 
     // Updating state
@@ -3931,7 +3931,7 @@ export default function AddEditFormControll({ reportData }) {
     const sortedData = _.orderBy(
       data,
       sortColumns,
-      Array(sortColumns.length).fill("asc")
+      Array(sortColumns.length).fill("asc"),
     ); // 'asc' for ascending order
     return sortedData;
   };
@@ -4004,7 +4004,7 @@ export default function AddEditFormControll({ reportData }) {
 
   const handleReportClick = (reportId) => {
     const selectedReport = ReportNames.find(
-      (report) => report.ReportName === reportId
+      (report) => report.ReportName === reportId,
     );
 
     if (selectedReport) {
@@ -4021,12 +4021,12 @@ export default function AddEditFormControll({ reportData }) {
         const selectedReportIds = reportIdsArray;
         sessionStorage.setItem(
           "selectedReportIds",
-          JSON.stringify(selectedReportIds)
+          JSON.stringify(selectedReportIds),
         );
 
         sessionStorage.setItem(
           "selectedReportsMenuId",
-          JSON.stringify(selectedReport.reportMenuId)
+          JSON.stringify(selectedReport.reportMenuId),
         );
 
         // If objectId is referring to reportId, ensure it's properly set
@@ -4087,7 +4087,7 @@ export default function AddEditFormControll({ reportData }) {
                     >
                       {/* Custom Input Fields */}
 
-                      <CustomeInputFields
+                      <CustomeInputFieldsDynamicReports
                         inputFieldData={parentsFields[section]}
                         values={newState}
                         onValuesChange={handleFieldValuesChange}
@@ -4194,8 +4194,8 @@ export default function AddEditFormControll({ reportData }) {
                                                     dataToGetSelectedRowData.map(
                                                       //finalPaginatedData.map(
                                                       // (_, idx) => idx
-                                                      (_, idx) => _?.rowIndex
-                                                    )
+                                                      (_, idx) => _?.rowIndex,
+                                                    ),
                                                   );
                                                   setselectedRow(allIndexes);
                                                 } else {
@@ -4222,7 +4222,7 @@ export default function AddEditFormControll({ reportData }) {
                                           onContextMenu={(event) =>
                                             handleRightClick(
                                               event,
-                                              item.fieldname
+                                              item.fieldname,
                                             )
                                           }
                                         >
@@ -4230,11 +4230,11 @@ export default function AddEditFormControll({ reportData }) {
                                             onClick={() => {
                                               if (isSortingEnabled) {
                                                 setSortingFieldName(
-                                                  item.fieldname
+                                                  item.fieldname,
                                                 );
                                                 handleSort(
                                                   item?.fieldname,
-                                                  item?.label
+                                                  item?.label,
                                                 );
                                               }
                                             }}
@@ -4302,7 +4302,7 @@ export default function AddEditFormControll({ reportData }) {
                                         onContextMenu={(event) =>
                                           handleRightClick(
                                             event,
-                                            item.fieldname
+                                            item.fieldname,
                                           )
                                         }
                                       >
@@ -4310,11 +4310,11 @@ export default function AddEditFormControll({ reportData }) {
                                           onClick={() => {
                                             if (isSortingEnabled) {
                                               setSortingFieldName(
-                                                item.fieldname
+                                                item.fieldname,
                                               );
                                               handleSort(
                                                 item?.fieldname,
-                                                item?.label
+                                                item?.label,
                                               );
                                             }
                                           }}
@@ -4388,7 +4388,7 @@ export default function AddEditFormControll({ reportData }) {
                                     data,
                                     rowIndex,
                                     data.colorCodeNew,
-                                    data?.rowIndex
+                                    data?.rowIndex,
                                   )}
                                 </TableRow>
                               ))}
@@ -4694,7 +4694,7 @@ function CustomizedInputBase({
   setCurrentPage, // Reset to first page after filtering
 }) {
   const [searchInputGridData, setSearchInputGridData] = useState(
-    prevSearchInput || ""
+    prevSearchInput || "",
   );
 
   // Custom filter logic

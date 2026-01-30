@@ -11,214 +11,197 @@ import Typography from "@mui/material/Typography";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LightTooltip from "@/components/Tooltip/customToolTip";
 import {
-  parentAccordionSection,
-  SummaryStyles,
-  searchInputStyling,
-  childTableHeaderStyle,
-  childAccordionSection,
-  createAddEditPaperStyles,
-  gridEditIconStyles,
-  accordianDetailsStyleForm,
-  childTableRowStyles,
-  totalSumChildStyle,
-  expandIconStyle,
+    parentAccordionSection,
+    SummaryStyles,
+    searchInputStyling,
+    childTableHeaderStyle,
+    childAccordionSection,
+    createAddEditPaperStyles,
+    gridEditIconStyles,
+    accordianDetailsStyleForm,
+    childTableRowStyles,
+    totalSumChildStyle,
+    expandIconStyle,
 } from "@/app/globalCss";
 
 const formdata = {
     "Entity Details": [
         {
-                id: 1004,
-                fieldname: "exporterStateId",
-                yourlabel: "Type",
-                controlname: "dropdown",
-                referenceTable: "tblState",
-                referenceColumn: "name",
-                type: 6653,
-                typeValue: "number",
-                ordering: 4,
-                isControlShow: true,
-                isGridView: false,
-                isEditable: true,
-                isRequired: false,
-                sectionHeader: "General",
-                sectionOrder: 1,
-            },
-            {
-                id: 1012,
-                fieldname: "consigneeCountryName",
-                yourlabel: "Cons Country",
-                controlname: "text",
-                type: 6902,
-                typeValue: "string",
-                ordering: 12,
-                isControlShow: true,
-                isGridView: false,
-                isEditable: true,
-                isRequired: false,
-                sectionHeader: "General",
-                sectionOrder: 1,
-            },
-            {
-                id: 1004,
-                fieldname: "exporterStateId",
-                yourlabel: "State",
-                controlname: "dropdown",
-                referenceTable: "tblState",
-                referenceColumn: "name",
-                type: 6653,
-                typeValue: "number",
-                ordering: 4,
-                isControlShow: true,
-                isGridView: false,
-                isEditable: true,
-                isRequired: false,
-                sectionHeader: "General",
-                sectionOrder: 1,
-            },
-            
-            {
-                id: 1003,
-                fieldname: "branchSNo",
-                yourlabel: "Name",
-                controlname: "text",
-                type: 6902,
-                typeValue: "string",
-                ordering: 3,
-                isControlShow: true,
-                isGridView: false,
-                isEditable: true,
-                isRequired: false,
-                sectionHeader: "General",
-                sectionOrder: 1,
-            },
-            
-            {
-                id: 1005,
-                fieldname: "ieCodeNo",
-                yourlabel: "Postal Code",
-                controlname: "text",
-                type: 6902,
-                typeValue: "string",
-                ordering: 5,
-                isControlShow: true,
-                isGridView: false,
-                isEditable: true,
-                isRequired: false,
-                sectionHeader: "General",
-                sectionOrder: 1,
-            },
-            {
-                id: 1002,
-                fieldname: "exporterAddress",
-                yourlabel: "Address",
-                controlname: "textarea",
-                type: 6902,
-                typeValue: "string",
-                ordering: 2,
-                isControlShow: true,
-                isGridView: false,
-                isEditable: true,
-                isRequired: false,
-                sectionHeader: "General",
-                sectionOrder: 1,
-            },
-            {
-                id: 1007,
-                fieldname: "dbkBankName",
-                yourlabel: "Telephone",
-                controlname: "textarea",
-                type: 6902,
-                typeValue: "string",
-                ordering: 7,
-                isControlShow: true,
-                isGridView: false,
-                isEditable: true,
-                isRequired: false,
-                sectionHeader: "General",
-                sectionOrder: 1,
-            },
-            {
-                id: 1008,
-                fieldname: "dbkAccountNo",
-                yourlabel: "Fax",
-                controlname: "text",
-                type: 6902,
-                typeValue: "string",
-                ordering: 8,
-                isControlShow: true,
-                isGridView: false,
-                isEditable: true,
-                isRequired: false,
-                sectionHeader: "General",
-                sectionOrder: 1,
-            },
-            {
-                id: 1009,
-                fieldname: "dbkEdiAccountNo",
-                yourlabel: "Contact Person",
-                controlname: "text",
-                type: 6902,
-                typeValue: "string",
-                ordering: 9,
-                isControlShow: true,
-                isGridView: false,
-                isEditable: true,
-                isRequired: false,
-                sectionHeader: "General",
-                sectionOrder: 1,
-            },
-            {
-                id: 1010,
-                fieldname: "consigneeName",
-                yourlabel: "Email",
-                controlname: "text",
-                type: 6902,
-                typeValue: "string",
-                ordering: 10,
-                isControlShow: true,
-                isGridView: false,
-                isEditable: true,
-                isRequired: false,
-                sectionHeader: "General",
-                sectionOrder: 1,
-            },
-            {
-                id: 1011,
-                fieldname: "consigneeAddress",
-                yourlabel: "Mobile",
-                controlname: "textarea",
-                type: 6902,
-                typeValue: "string",
-                ordering: 11,
-                isControlShow: true,
-                isGridView: false,
-                isEditable: true,
-                isRequired: false,
-                sectionHeader: "General",
-                sectionOrder: 1,
-            },
+            id: 1004,
+            fieldname: "exporterTypeId",
+            yourlabel: "Type",
+            controlname: "dropdown",
+            referenceTable: "tblState",
+            referenceColumn: "name",
+            type: 6653,
+            typeValue: "number",
+            ordering: 4,
+            isControlShow: true,
+            isGridView: false,
+            isEditable: true,
+            isRequired: false,
+            sectionHeader: "General",
+            sectionOrder: 1,
+        },
+        {
+            id: 1012,
+            fieldname: "consigneeCountryName",
+            yourlabel: "Cons Country",
+            controlname: "text",
+            type: 6902,
+            typeValue: "string",
+            ordering: 12,
+            isControlShow: true,
+            isGridView: false,
+            isEditable: true,
+            isRequired: false,
+            sectionHeader: "General",
+            sectionOrder: 1,
+        },
+        {
+            id: 1004,
+            fieldname: "exporterStateId",
+            yourlabel: "State",
+            controlname: "dropdown",
+            referenceTable: "tblState",
+            referenceColumn: "name",
+            type: 6653,
+            typeValue: "number",
+            ordering: 4,
+            isControlShow: true,
+            isGridView: false,
+            isEditable: true,
+            isRequired: false,
+            sectionHeader: "General",
+            sectionOrder: 1,
+        },
+        {
+            id: 1003,
+            fieldname: "branchSNo",
+            yourlabel: "Name",
+            controlname: "text",
+            type: 6902,
+            typeValue: "string",
+            ordering: 3,
+            isControlShow: true,
+            isGridView: false,
+            isEditable: true,
+            isRequired: false,
+            sectionHeader: "General",
+            sectionOrder: 1,
+        },
+        {
+            id: 1005,
+            fieldname: "ieCodeNo",
+            yourlabel: "Postal Code",
+            controlname: "text",
+            type: 6902,
+            typeValue: "string",
+            ordering: 5,
+            isControlShow: true,
+            isGridView: false,
+            isEditable: true,
+            isRequired: false,
+            sectionHeader: "General",
+            sectionOrder: 1,
+        },
+        {
+            id: 1002,
+            fieldname: "exporterAddress",
+            yourlabel: "Address",
+            controlname: "textarea",
+            type: 6902,
+            typeValue: "string",
+            ordering: 2,
+            isControlShow: true,
+            isGridView: false,
+            isEditable: true,
+            isRequired: false,
+            sectionHeader: "General",
+            sectionOrder: 1,
+        },
+        {
+            id: 1007,
+            fieldname: "dbkBankName",
+            yourlabel: "Telephone",
+            controlname: "textarea",
+            type: 6902,
+            typeValue: "string",
+            ordering: 7,
+            isControlShow: true,
+            isGridView: false,
+            isEditable: true,
+            isRequired: false,
+            sectionHeader: "General",
+            sectionOrder: 1,
+        },
+        {
+            id: 1008,
+            fieldname: "dbkAccountNo",
+            yourlabel: "Fax",
+            controlname: "text",
+            type: 6902,
+            typeValue: "string",
+            ordering: 8,
+            isControlShow: true,
+            isGridView: false,
+            isEditable: true,
+            isRequired: false,
+            sectionHeader: "General",
+            sectionOrder: 1,
+        },
+        {
+            id: 1009,
+            fieldname: "dbkEdiAccountNo",
+            yourlabel: "Contact Person",
+            controlname: "text",
+            type: 6902,
+            typeValue: "string",
+            ordering: 9,
+            isControlShow: true,
+            isGridView: false,
+            isEditable: true,
+            isRequired: false,
+            sectionHeader: "General",
+            sectionOrder: 1,
+        },
+        {
+            id: 1010,
+            fieldname: "consigneeName",
+            yourlabel: "Email",
+            controlname: "text",
+            type: 6902,
+            typeValue: "string",
+            ordering: 10,
+            isControlShow: true,
+            isGridView: false,
+            isEditable: true,
+            isRequired: false,
+            sectionHeader: "General",
+            sectionOrder: 1,
+        },
+        {
+            id: 1011,
+            fieldname: "consigneeAddress",
+            yourlabel: "Mobile",
+            controlname: "textarea",
+            type: 6902,
+            typeValue: "string",
+            ordering: 11,
+            isControlShow: true,
+            isGridView: false,
+            isEditable: true,
+            isRequired: false,
+            sectionHeader: "General",
+            sectionOrder: 1,
+        },
     ]
 }
 
-export default function GeneralSheet({
-    values = {},
-    onValuesChange,
-    // clearFlag,
-    inEditMode = { isEditMode: false, isCopy: false },
-    newState,
-    setStateVariable,
-}) {
-    const fields = useMemo(
-        () => [
-            
-        ],
-        []
-    );
-
+export default function EntitySheet({ value, onChange }) {
     const [parentsFields, setParentsFields] = useState(formdata);
     const [expandAll, setExpandAll] = useState(true);
     const [expandedAccordion, setExpandedAccordion] = useState([]);
-    const [newStateData, setNewState] = useState({ routeName: "mastervalue" });
     const [openModal, setOpenModal] = useState(false);
     const [paraText, setParaText] = useState("");
     const [isError, setIsError] = useState(false);
@@ -234,12 +217,15 @@ export default function GeneralSheet({
     const [formControlData, setFormControlData] = useState([]);
 
     const getLabelValue = (labelValue) => {
-        //    console.log(labelValue, "labelValue");
         setLabelName(labelValue);
     };
     const [hideFieldName, setHideFieldName] = useState([]);
     const [labelName, setLabelName] = useState("");
-    const handleFieldValuesChange = (updatedValues) => {
+
+    const newState = value;
+    const setNewState = onChange;
+
+    const handleFieldValuesChange = (updatedValues = {}) => {
         const entries = Object.entries(updatedValues);
         const hasFile = entries.some(([, value]) => value instanceof File);
 
@@ -391,29 +377,6 @@ export default function GeneralSheet({
         }
     };
 
-    const orderedFields = useMemo(
-        () => [...fields].sort((a, b) => (a.ordering ?? 0) - (b.ordering ?? 0)),
-        [fields]
-    );
-
-    const ui = useMemo(
-        () => ({
-            wrap: {
-                width: "100%",
-                display: "flex",
-                justifyContent: "center",
-            },
-            panel: {
-                width: "100%",
-                border: "1px solid var(--inputBorderColor)",
-                background: "var(--page-bg-color)",
-                borderRadius: 4,
-                padding: 10,
-            },
-        }),
-        []
-    );
-
     return (
         <>
             <div
@@ -456,16 +419,6 @@ export default function GeneralSheet({
         </>
     );
 }
-
-GeneralSheet.propTypes = {
-    values: PropTypes.object,
-    onValuesChange: PropTypes.func,
-    clearFlag: PropTypes.object,
-    inEditMode: PropTypes.object,
-    newState: PropTypes.object,
-    setStateVariable: PropTypes.func,
-};
-
 
 ParentAccordianComponent.propTypes = {
     section: PropTypes.any,
@@ -585,25 +538,16 @@ function ParentAccordianComponent({
         <React.Fragment key={indexValue}>
             <Accordion
                 expanded={isParentAccordionOpen}
-                sx={{
-                    ...parentAccordionSection,
-                    // border: isParentAccordionOpen ? "  red" : "none",
-                }}
-                key={indexValue}
+                onChange={() => setIsParentAccordionOpen((p) => !p)}
+                sx={{ ...parentAccordionSection }}
             >
                 <AccordionSummary
-                    className="relative left-[11px]"
                     sx={{ ...SummaryStyles }}
                     expandIcon={
                         <LightTooltip title={isParentAccordionOpen ? "Collapse" : "Expand"}>
-                            <ExpandMoreIcon
-                                sx={{ ...expandIconStyle }}
-                                onClick={() => setIsParentAccordionOpen((prev) => !prev)}
-                            />
+                            <ExpandMoreIcon sx={{ ...expandIconStyle }} />
                         </LightTooltip>
                     }
-                    aria-controls={`panel${indexValue + 1}-content`}
-                    id={`panel${indexValue + 1}-header`}
                 >
                     <Typography className="relative right-[11px]" key={indexValue}>
                         {section}

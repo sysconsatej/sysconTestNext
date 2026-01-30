@@ -98,7 +98,7 @@ export default function LoginPage() {
     const combinedHash = encrypt(combined);
 
     const activationLink = `${activeUrl}/active/${encodeURIComponent(
-      combinedHash
+      combinedHash,
     )}`;
 
     const emailBody = `<pre>Dear ${data?.[0]?.name || ""},
@@ -132,7 +132,7 @@ Syscon Infotech Pvt Ltd Support Team</pre>`;
             userName: formData.userName,
             password: formData.password,
             rememberMe: true,
-          })
+          }),
         );
         localStorage.setItem("loginCredentials", payload);
       } else {
@@ -150,7 +150,7 @@ Syscon Infotech Pvt Ltd Support Team</pre>`;
       const setLoginData = { ...formData, clientCode };
       const { result, token, emailId } = await getLocationAndLogin(
         setLoginData,
-        rememberMe
+        rememberMe,
       );
 
       if (result === "60DaysResetPassword") {
@@ -163,7 +163,7 @@ Syscon Infotech Pvt Ltd Support Team</pre>`;
       if (result === "active") {
         setTypeofModal("onClose");
         setLoginMessage(
-          "The user is already logged in. Are you sure you want to log in on this device?"
+          "The user is already logged in. Are you sure you want to log in on this device?",
         );
         setOpenModal(true);
         setUserData({ token, emailId });
@@ -200,6 +200,27 @@ Syscon Infotech Pvt Ltd Support Team</pre>`;
       setErrorMessage("Something went wrong. Please try again.");
     }
   };
+
+  // useEffect(() => {
+  //   const isUserExist = () => {
+  //     const token = localStorage.getItem("token") && Cookies.get("token");
+
+  //     if (token) {
+  //       push("/dashboard");
+  //     } else {
+  //       localStorage.clear();
+  //     }
+  //     const storedUserData = localStorage.getItem("loginCredentials");
+  //     if (storedUserData) {
+  //       const loginCredentials = JSON.parse(decrypt(storedUserData));
+  //       console.log("loginCredentials", loginCredentials);
+  //       setRememberMe(loginCredentials?.rememberMe);
+  //       setValue("userName", loginCredentials?.userName);
+  //       setValue("password", loginCredentials?.password);
+  //     }
+  //   };
+  //   isUserExist();
+  // }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("token") && Cookies.get("token");

@@ -15,6 +15,7 @@ import { applyTheme } from "@/utils";
 import { getUserDetails } from "@/helper/userDetails";
 import moment from "moment";
 import { data } from "react-router-dom";
+import { warehouseData } from "@/services/auth/FormControl.services";
 
 const rptJobs = () => {
   const searchParams = useSearchParams();
@@ -28,6 +29,7 @@ const rptJobs = () => {
   const [ImageUrl, setImageUrl] = useState("");
   const [html2pdf, setHtml2pdf] = useState(null);
   const { clientId } = getUserDetails();
+  const [printName, setPrintName] = useState([]);
 
   useEffect(() => {
     const loadHtml2pdf = async () => {
@@ -125,7 +127,22 @@ const rptJobs = () => {
           if (!response.ok) throw new Error("Failed to fetch job data");
           const data = await response.json();
           setJobData(data?.data);
-          setCompanyHeader(data?.data[0]?.brachId);
+          const storedReportIds = sessionStorage.getItem("selectedReportIds");
+
+          if (storedReportIds) {
+            let reportIds = JSON.parse(storedReportIds);
+            reportIds = Array.isArray(reportIds) ? reportIds : [reportIds];
+
+            const jobNo = data?.data?.[0]?.jobNo;
+
+            const finalString = jobNo
+              ? [jobNo, ...reportIds].join("-")
+              : reportIds.join("-");
+
+            setPrintName(finalString);
+          } else {
+            console.log("No Report IDs found in sessionStorage");
+          }
         } catch (error) {
           console.error("Error fetching job data:", error);
         }
@@ -276,7 +293,7 @@ const rptJobs = () => {
         }
       } else {
         console.error(
-          `Report with ID ${emailId} not found or not rendered yet.`
+          `Report with ID ${emailId} not found or not rendered yet.`,
         );
       }
     });
@@ -310,7 +327,7 @@ const rptJobs = () => {
       const data = await response.json();
       if (!response.ok)
         throw new Error(
-          `Failed to send email: ${data.message || "Unknown error"}`
+          `Failed to send email: ${data.message || "Unknown error"}`,
         );
       toast.success("Email sent successfully!");
     } catch (error) {
@@ -339,7 +356,7 @@ const rptJobs = () => {
       const data = await response.json();
       if (!response.ok)
         throw new Error(
-          `Failed to send email: ${data.message || "Unknown error"}`
+          `Failed to send email: ${data.message || "Unknown error"}`,
         );
       toast.success("PDF sent successfully!");
     } catch (error) {
@@ -1430,7 +1447,7 @@ const rptJobs = () => {
                     <td style={thTdStyle}>{container.grossWt || ""}</td>
                     <td style={thTdStyle}>{container.noOfPackages || ""}</td>
                   </tr>
-                ))
+                )),
             )}
         </tbody>
       </table>
@@ -4163,7 +4180,7 @@ const rptJobs = () => {
                             </td>
                           </tr>
                         ))
-                      : null
+                      : null,
                   )
                 : null}
             </tbody>
@@ -5312,7 +5329,7 @@ const rptJobs = () => {
                           {/* < {totalRevenueActual} , {totalCostActual} , {totalProfitActual}  > */}
                         </tr>
                       );
-                    })
+                    }),
                 )}
             </tbody>
             <tfoot>
@@ -6258,7 +6275,9 @@ const rptJobs = () => {
                 }}
               >
                 {jobData && jobData.length > 0 ? jobData[0].volume : ""}{" "}
-                {jobData && jobData.length > 0 ? jobData[0].volumeUnitName : ""}{" "}
+                {jobData && jobData.length > 0
+                  ? jobData[0].volumeUnitName
+                  : ""}{" "}
               </pre>
             </div>
           </div>
@@ -6801,7 +6820,7 @@ const rptJobs = () => {
                 <p style={{ width: "65%" }} className="text-left">
                   {getValidTillDate(
                     jobData?.[0]?.jobDate,
-                    jobData?.[0]?.croValidDays
+                    jobData?.[0]?.croValidDays,
                   )}
                 </p>
               </div>
@@ -6844,8 +6863,8 @@ const rptJobs = () => {
                 const targetDepot = Array.isArray(depotData)
                   ? depotData[0]?.depot
                   : typeof depotData === "string"
-                  ? depotData
-                  : depotData?.depot;
+                    ? depotData
+                    : depotData?.depot;
 
                 // build filtered rows
                 const rows = (Array.isArray(jobData) ? jobData : []).flatMap(
@@ -6857,7 +6876,7 @@ const rptJobs = () => {
                       .filter((container) =>
                         targetDepot
                           ? norm(container.depot) === norm(targetDepot)
-                          : true
+                          : true,
                       )
                       .map((container, containerIndex) => (
                         <tr
@@ -6885,7 +6904,7 @@ const rptJobs = () => {
                             90%(+-5%)
                           </td>
                         </tr>
-                      ))
+                      )),
                 );
 
                 // fallback if no matching rows
@@ -7069,8 +7088,8 @@ const rptJobs = () => {
     const targetDepot = Array.isArray(depotData)
       ? depotData[0]?.depot
       : typeof depotData === "string"
-      ? depotData
-      : depotData?.depot;
+        ? depotData
+        : depotData?.depot;
 
     // Build filtered rows from jobData
     const rows = (Array.isArray(jobData) ? jobData : []).flatMap(
@@ -7078,13 +7097,13 @@ const rptJobs = () => {
         (Array.isArray(job.tblJobContainer) ? job.tblJobContainer : [])
           // keep only containers whose depot matches the selected depot
           .filter((container) =>
-            targetDepot ? norm(container.depot) === norm(targetDepot) : true
+            targetDepot ? norm(container.depot) === norm(targetDepot) : true,
           )
           .map((container, containerIndex) => ({
             key: `${jobIndex}-${containerIndex}`,
             job,
             container,
-          }))
+          })),
     );
 
     return (
@@ -7150,7 +7169,7 @@ const rptJobs = () => {
                 <p style={{ width: "65%" }} className="text-left">
                   {getValidTillDate(
                     jobData?.[0]?.jobDate,
-                    jobData?.[0]?.croValidDays
+                    jobData?.[0]?.croValidDays,
                   )}
                 </p>
               </div>
@@ -7206,8 +7225,8 @@ const rptJobs = () => {
                       {job?.pickupDate
                         ? formatDateToYMD(job.pickupDate)
                         : jobData?.[0]?.pickupDate
-                        ? formatDateToYMD(jobData[0].pickupDate)
-                        : ""}
+                          ? formatDateToYMD(jobData[0].pickupDate)
+                          : ""}
                     </td>
                   </tr>
                 ))
@@ -7468,7 +7487,7 @@ const rptJobs = () => {
                         <td style={tdStyle}>
                           {container.grossWt
                             ? `${parseFloat(
-                                container.grossWt
+                                container.grossWt,
                               ).toLocaleString()} KGS`
                             : ""}
                         </td>
@@ -7482,7 +7501,7 @@ const rptJobs = () => {
                         </td>
                       </tr>
                     ))
-                  : null
+                  : null,
               )}
           </tbody>
         </table>
@@ -7621,7 +7640,7 @@ const rptJobs = () => {
                       <td style={cellStyle}>0.00</td>
                     </tr>
                   );
-                }
+                },
               )}
             </tbody>
             <tfoot>
@@ -7649,7 +7668,7 @@ const rptJobs = () => {
 
   const mergeQtyDepotFlatWithContainers = (
     tblJobQty = [],
-    tblJobContainer = []
+    tblJobContainer = [],
   ) => {
     const normDepot = (s) => (s == null ? "Unknown" : String(s).trim());
 
@@ -7710,7 +7729,7 @@ const rptJobs = () => {
   const J = Array.isArray(jobData) ? jobData[0] : jobData;
   const rows = mergeQtyDepotFlatWithContainers(
     J?.tblJobQty || [],
-    J?.tblJobContainer || []
+    J?.tblJobContainer || [],
   );
 
   console.log("data =>", jobData && jobData.length > 0 ? jobData[0].jobNo : "");
@@ -7730,7 +7749,7 @@ const rptJobs = () => {
             className="uppercase text-center font-bold underline"
             style={{ fontSize: "14px" }}
           >
-            Container Release Order 
+            Container Release Order
           </h1>
         </div>
 
@@ -7805,7 +7824,7 @@ const rptJobs = () => {
                   <td style={{ width: "70%", fontSize: "10px" }}>
                     {getValidTillDatePlane(
                       jobData?.[0]?.jobDate,
-                      jobData?.[0]?.croValidDays
+                      jobData?.[0]?.croValidDays,
                     )}
                   </td>
                 </tr>
@@ -7935,7 +7954,7 @@ const rptJobs = () => {
                   <td style={{ width: "70%", fontSize: "10px" }}>
                     {getValidTillDatePlane(
                       jobData?.[0]?.jobDate,
-                      jobData?.[0]?.croValidDays
+                      jobData?.[0]?.croValidDays,
                     )}
                   </td>
                 </tr>
@@ -8079,20 +8098,20 @@ const rptJobs = () => {
             <th style={thStyle}>Vessel ETA</th>
             <td style={tdStyle}>
               {formatDateToYMD(
-                jobData && jobData.length > 0 ? jobData[0]?.etaAtPod : ""
+                jobData && jobData.length > 0 ? jobData[0]?.etaAtPod : "",
               )}
             </td>
           </tr>
-           <tr>
-                <th align="left" style={thStyle}>
-                  Commodity :
-                </th>
-                <td align="left" style={tdStyle}>
-                  {jobData && jobData.length > 0
-                    ? jobData[0].commodityTypeName
-                    : ""}
-                </td>
-              </tr>
+          <tr>
+            <th align="left" style={thStyle}>
+              Commodity :
+            </th>
+            <td align="left" style={tdStyle}>
+              {jobData && jobData.length > 0
+                ? jobData[0].commodityTypeName
+                : ""}
+            </td>
+          </tr>
           <tr>
             <th style={thStyle}>Cargo</th>
             <td style={tdStyle}>
@@ -8104,7 +8123,7 @@ const rptJobs = () => {
             <td style={tdStyle}>
               {getValidTillDatePlane(
                 jobData?.[0]?.jobDate,
-                jobData?.[0]?.croValidDays
+                jobData?.[0]?.croValidDays,
               )}
             </td>
           </tr>
@@ -8649,7 +8668,7 @@ const rptJobs = () => {
 
     // 2) Ensure each "n." starts a new line if it doesn't already
     s = s.replace(/(^|[^\n])\s*(\d+\.\s)/g, (m, prev, numdot) =>
-      prev === "" ? `${numdot}` : `${prev}\n${numdot}`
+      prev === "" ? `${numdot}` : `${prev}\n${numdot}`,
     );
 
     // 3) Compress multiple blank lines
@@ -8692,7 +8711,8 @@ const rptJobs = () => {
       <Print
         //key={reportId}
         enquiryModuleRefs={enquiryModuleRefs}
-        reportIds={reportIds}
+        //reportIds={reportIds}
+        reportIds={printName?.length > 0 ? [printName] : reportIds}
         printOrientation="portrait"
       />
       <div>
@@ -9686,13 +9706,13 @@ const rptJobs = () => {
               const attachPages = Math.max(
                 cChunks.length,
                 mChunks.length,
-                gChunks.length
+                gChunks.length,
               );
 
               const usedOnLast = Math.max(
                 (cChunks[attachPages - 1] || []).length,
                 (mChunks[attachPages - 1] || []).length,
-                (gChunks[attachPages - 1] || []).length
+                (gChunks[attachPages - 1] || []).length,
               );
               const firstGridCap = Math.max(0, LINES_PER_PAGE - usedOnLast);
               const allGridRows = jobData?.[0]?.tblJobContainer || [];
@@ -9869,7 +9889,7 @@ const rptJobs = () => {
                                             {render(c)}
                                           </pre>
                                         </div>
-                                      )
+                                      ),
                                     )}
                                   </div>
                                 ))}
@@ -9948,7 +9968,7 @@ const rptJobs = () => {
                                         {render(c)}
                                       </pre>
                                     </div>
-                                  )
+                                  ),
                                 )}
                               </div>
                             ))}
@@ -9971,11 +9991,11 @@ const rptJobs = () => {
                     jobData[0].tblJobQty
                       .map((job) => job.depot) // Extract depot names from tblJobQty
                       .filter(
-                        (value, index, self) => self.indexOf(value) === index
+                        (value, index, self) => self.indexOf(value) === index,
                       ) // Remove duplicates to get unique depots
                       .map((depot, depotIndex) => {
                         const depotData = jobData[0].tblJobQty.filter(
-                          (job) => job.depot === depot
+                          (job) => job.depot === depot,
                         ); // Filter job data for the current depot
 
                         return (
@@ -10030,11 +10050,11 @@ const rptJobs = () => {
                     jobData[0].tblJobQty
                       .map((job) => job.depot) // Extract depot names from tblJobQty
                       .filter(
-                        (value, index, self) => self.indexOf(value) === index
+                        (value, index, self) => self.indexOf(value) === index,
                       ) // Remove duplicates to get unique depots
                       .map((depot, depotIndex) => {
                         const depotData = jobData[0].tblJobQty.filter(
-                          (job) => job.depot === depot
+                          (job) => job.depot === depot,
                         ); // Filter job data for the current depot
 
                         return (

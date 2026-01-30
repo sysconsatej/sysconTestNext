@@ -32,6 +32,7 @@ export default async function middleware(request) {
   // 3) Login route handling
   if (pathname === "/login") {
     if (isValid) return NextResponse.redirect(new URL("/dashboard", request.url));
+    // return NextResponse.next();
     const res = NextResponse.next();
     res.cookies.delete("token");
     return res;

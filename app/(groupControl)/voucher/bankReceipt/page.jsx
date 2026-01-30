@@ -634,11 +634,10 @@ export default function StickyHeadTable() {
             columns: "id",
             tableName: "tblVoucher",
             whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} and voucherTypeId= (select id from tblVoucherType where name='BANK RECEIPT')`,
-            clientIdCondition: `status = 1 ${
-              columnSearchKeyName === ""
-                ? ""
-                : `and ${columnSearchKeyName} like '%${columnSearchKeyValue}%'`
-            } FOR JSON PATH, INCLUDE_NULL_VALUES`,
+            clientIdCondition: `status = 1 ${columnSearchKeyName === ""
+              ? ""
+              : `and ${columnSearchKeyName} like '%${columnSearchKeyValue}%'`
+              } FOR JSON PATH, INCLUDE_NULL_VALUES`,
           };
           let Count = null;
           const VoucherDataCount = await fetchReportData(getVoucherDataCount);
@@ -694,11 +693,10 @@ export default function StickyHeadTable() {
             columns: "id",
             tableName: "tblVoucher",
             whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} and voucherTypeId= (select id from tblVoucherType where name='BANK RECEIPT')`,
-            clientIdCondition: `status = 1 ${
-              columnSearchKeyName === ""
-                ? ""
-                : `and ${columnSearchKeyName} like '%${columnSearchKeyValue}%'`
-            } FOR JSON PATH, INCLUDE_NULL_VALUES`,
+            clientIdCondition: `status = 1 ${columnSearchKeyName === ""
+              ? ""
+              : `and ${columnSearchKeyName} like '%${columnSearchKeyValue}%'`
+              } FOR JSON PATH, INCLUDE_NULL_VALUES`,
           };
           let Count = null;
           const VoucherDataCount = await fetchReportData(getVoucherDataCount);
@@ -964,7 +962,7 @@ export default function StickyHeadTable() {
   // var headers = headerFields?.filter((field) => field.isGridView);
   var headers =
     formControlData?.gridConfig &&
-    typeof formControlData?.gridConfig === "string"
+      typeof formControlData?.gridConfig === "string"
       ? JSON.parse(formControlData.gridConfig)
       : headerFields?.filter((field) => field.isGridView);
 
@@ -1312,17 +1310,17 @@ export default function StickyHeadTable() {
         prev.map((item, i) =>
           i === index
             ? {
-                ...item,
-                fromDate: formattedDate,
-                advanceSearch: {
-                  ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
-                  [name]: {
-                    // Update or add the new key within advanceSearch
-                    ...item.advanceSearch?.[name], // Spread existing values under this key, if any
-                    $gte: formattedDate, // Update or add the $lte key under the specified name
-                  },
+              ...item,
+              fromDate: formattedDate,
+              advanceSearch: {
+                ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
+                [name]: {
+                  // Update or add the new key within advanceSearch
+                  ...item.advanceSearch?.[name], // Spread existing values under this key, if any
+                  $gte: formattedDate, // Update or add the $lte key under the specified name
                 },
-              }
+              },
+            }
             : item
         )
       );
@@ -1337,17 +1335,17 @@ export default function StickyHeadTable() {
         prev.map((item, i) =>
           i === index
             ? {
-                ...item,
-                toDate: formattedDate,
-                advanceSearch: {
-                  ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
-                  [name]: {
-                    // Update or add the new key within advanceSearch
-                    ...item.advanceSearch?.[name], // Spread existing values under this key, if any
-                    $lte: formattedDate, // Update or add the $lte key under the specified name
-                  },
+              ...item,
+              toDate: formattedDate,
+              advanceSearch: {
+                ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
+                [name]: {
+                  // Update or add the new key within advanceSearch
+                  ...item.advanceSearch?.[name], // Spread existing values under this key, if any
+                  $lte: formattedDate, // Update or add the $lte key under the specified name
                 },
-              }
+              },
+            }
             : item
         )
       );
@@ -1831,8 +1829,8 @@ export default function StickyHeadTable() {
                         onMenuOpen={() => {
                           setScrollPosition(0);
                         }}
-                        onMenuClose={() => {}}
-                        onFocus={() => {}}
+                        onMenuClose={() => { }}
+                        onFocus={() => { }}
                         onChange={(newValue) => {
                           callInputChangeFunc = false;
                           if (newValue) {
@@ -2430,11 +2428,11 @@ export default function StickyHeadTable() {
                           `}
                                 >
                                   {typeof row[fieldName.id] === "object" &&
-                                  row[fieldName.id] !== null
+                                    row[fieldName.id] !== null
                                     ? getNestedValue(
-                                        row[fieldName.id],
-                                        fieldName.refkey
-                                      )
+                                      row[fieldName.id],
+                                      fieldName.refkey
+                                    )
                                     : isDateFormat(row[fieldName.id])}
                                 </TableCell>
                               )}
@@ -2445,13 +2443,13 @@ export default function StickyHeadTable() {
                                 <TableCell align="left" className="">
                                   {fieldName.dummyField == "comma"
                                     ? getCommaSeparatedValuesCountFromNestedKeys(
-                                        row[fieldName.id],
-                                        fieldName.refkey
-                                      ).values
+                                      row[fieldName.id],
+                                      fieldName.refkey
+                                    ).values
                                     : getCommaSeparatedValuesCountFromNestedKeys(
-                                        row[fieldName.id],
-                                        fieldName.refkey
-                                      ).count}
+                                      row[fieldName.id],
+                                      fieldName.refkey
+                                    ).count}
                                 </TableCell>
                               )}
                             {typeof row[fieldName.id] !==
@@ -2522,7 +2520,7 @@ export default function StickyHeadTable() {
                                     hoverIcon={attachmentIcon} // Your hovered icon source
                                     altText="Attachment"
                                     title={"Attachment"}
-                                    // style={{ visibility:'hidden'}}
+                                  // style={{ visibility:'hidden'}}
                                   />
 
                                   <GridHoverIcon
@@ -2596,7 +2594,7 @@ export default function StickyHeadTable() {
                                       hoverIcon={attachmentIcon} // Your hovered icon source
                                       altText="Attachment"
                                       title={"Attachment"}
-                                      // style={{ visibility:'hidden'}}
+                                    // style={{ visibility:'hidden'}}
                                     />
                                   )}
                                   {isPrintVisible && (

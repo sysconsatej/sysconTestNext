@@ -1,99 +1,98 @@
-@page {
-  size: A4;
-  margin: 1mm 10mm 10mm 10mm;
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #f0f0f0 !important;
+}
+
+.a4-size {
+  width: 210mm;
+  height: 297mm;
+  margin: 1rem auto;
+  background: white;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+  page-break-after: always;
+  padding: 5mm; /* creates spacing inside the page */
+}
+
+.main-border {
+  border: 1px solid #000;
+  height: calc(100%); /* fill height minus the padding */
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5mm;
 }
 
 @media print {
-  .bodyColour {
-    background: none !important;
+  .report-spacing {
+    page-break-after: always;
+    break-after: page;
   }
 
-  .container {
-    width: 100% !important;
-    padding: 0 !important;
+  body {
     margin: 0 !important;
   }
+}
 
-  .custom-table {
-    width: 100% !important;
-    table-layout: fixed; /* Ensure the table doesn't exceed the container */
+.page-break {
+  page-break-after: always;
+}
+
+svg {
+  width: 4.5em !important;
+  height: 2.5em !important;
+}
+
+/* Print styles */
+@media print {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
   }
 
-  .custom-table th,
-  .custom-table td {
-    padding: 4px; /* Adjusted padding for less space */
-    word-wrap: break-word; /* Ensure long text wraps within the cell */
+  .a4-size {
+    width: 210mm;
+    height: 297mm;
+    box-shadow: none;
+    padding: 5mm;
+    page-break-after: always;
   }
 
-  .auto-adjust-table th,
-  .auto-adjust-table td {
-    padding: 4px; /* Adjusted padding for less space */
-    word-wrap: break-word; /* Ensure long text wraps within the cell */
+  .main-border {
+    border: 1px solid #000;
+    height: calc(100%);
+    padding: 5mm;
+    box-sizing: border-box;
   }
 
-  th,
-  td {
-    padding-bottom: 4px; /* Adjusted padding for less space */
+  @page {
+    size: A4;
+    margin: 0;
   }
-
-  .hrRow {
-    border: 1px solid black;
-  }
-
-  .report-spacing {
-    margin-bottom: 10px; /* Adjusted margin */
-  }
-
-  .heading {
-    font-size: 15px;
-  }
-
-  .hrRow {
-    border: 1px solid black;
-  }
-
-  hr {
-    border: 0;
-    border-top: 1px solid black;
-    margin: 0.5rem 0; /* Adjust margin as needed */
+  .no-print {
+    display: none !important;
   }
 }
 
-.table-container {
-  width: 100%;
-  border: 1px solid black;
+.min-height-custom {
+  min-height: 125px !important;
 }
 
-.table-container table {
-  width: 100%;
-  border-collapse: collapse;
+.min-height-grid2 {
+  min-height: 40px !important;
 }
 
-.table-container th,
-.table-container td {
-  border: 1px solid black;
-  padding: 4px; /* Adjusted padding for less space */
-  text-align: center; /* Ensuring text alignment for better readability */
+.min-height-grid3 {
+  min-height: 160px !important;
 }
 
-.flex-container {
-  display: flex;
-  flex-wrap: wrap;
+.min-height-table {
+  min-height: 250px !important;
 }
 
-.flex-item {
-  width: 33.33%;
-  padding: 0;
-  margin: 0;
-  box-sizing: border-box;
-  border-right: 1px solid black;
-}
-
-.flex-item:last-child {
-  border-right: none;
-}
-
-.table-no-border th,
-.table-no-border td {
-  border: none;
+.min-height-attachment {
+  min-height: 70px !important;
 }

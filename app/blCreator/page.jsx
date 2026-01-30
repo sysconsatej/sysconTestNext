@@ -3,26 +3,14 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { decrypt } from "@/helper/security";
-
-/**
- * ✅ FULLY FIXED (Single-file)
- *
- * FIXES INCLUDED:
- * 1) ✅ Text element BG + Border now works (Canvas + Print)
- *    - Previously text render forced background:transparent & border:none (both in canvas + print)
- *    - Now text uses style.bg + style.borderWidth/borderColor/borderStyle + borderRadius
- *
- * 2) ✅ Print text positioning now matches canvas much better
- *    - Previously wrapper used flex justify/align but inner was 100% width/height => alignment ineffective / shifted
- *    - Now:
- *      - Wrapper: display:flex + vertical align ONLY
- *      - Inner: width:100%, height:auto, text-align handles horizontal alignment
- *    - Also padding/letterSpacing convert px -> pt in print so layout is consistent
- *
- * 3) ✅ Print/PDF still reliable (iframe + document.write + fonts/layout wait + onload race fallback)
- * 4) ✅ History correctness for drag/resize/rotate/table resize
- * 5) ✅ Text edit stability (single click edit without drag + double click)
- */
+import {
+  fetchReportData,
+  insertReportData,
+} from "@/services/auth/FormControl.services.js";
+import { getUserDetails } from "@/helper/userDetails";
+import { Box, Button, MenuItem, TextField, Tooltip } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import ArrowDropDownRoundedIcon from "@mui/icons-material/ArrowDropDownRounded";
 
 const LS_KEY = "blCreator.template.v2";
 const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
@@ -41,7 +29,7 @@ const PAPER_SIZES = [
 ];
 
 /** mm to px at 96dpi */
-const MM_TO_PX = 96 / 25.4; // ~3.7795
+const MM_TO_PX = 96 / 25.4;
 
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -83,15 +71,30 @@ function makeElement(type, x, y) {
     },
   };
 
+  if (type === "image") {
+    return {
+      ...base,
+      w: 100,
+      h: 50,
+      src: "",
+      fit: "contain",
+      opacity: 1,
+      style: {
+        ...base.style,
+        bg: "transparent",
+        borderWidth: 0,
+      },
+    };
+  }
+
   if (type === "text") {
     return {
       ...base,
-      w: 220,
-      h: 60,
+      w: 49,
+      h: 8,
       text: "Text",
       textMode: "fixed",
       maxWidthMm: 120,
-      // default: text has NO border, NO bg unless user sets it
       style: {
         ...base.style,
         bg: "transparent",
@@ -103,8 +106,8 @@ function makeElement(type, x, y) {
   if (type === "box") {
     return {
       ...base,
-      w: 220,
-      h: 100,
+      w: 100,
+      h: 50,
       style: {
         ...base.style,
         bg: "#ffffff",
@@ -117,7 +120,7 @@ function makeElement(type, x, y) {
   if (type === "lineH") {
     return {
       ...base,
-      w: 240,
+      w: 80,
       h: 8,
       style: {
         ...base.style,
@@ -133,7 +136,7 @@ function makeElement(type, x, y) {
     return {
       ...base,
       w: 8,
-      h: 200,
+      h: 100,
       style: {
         ...base.style,
         borderWidth: 0,
@@ -147,8 +150,6 @@ function makeElement(type, x, y) {
   if (type === "table") {
     const rows = 4;
     const cols = 5;
-
-    // internal "px-like" weights for table layout
     const colW = Array(cols).fill(Math.floor(520 / cols));
     const rowH = Array(rows).fill(32);
 
@@ -275,6 +276,15 @@ function Icon({ name, size = 16 }) {
     strokeLinecap: "round",
     strokeLinejoin: "round",
   };
+
+  if (name === "image")
+    return (
+      <svg {...common}>
+        <rect x="3" y="5" width="18" height="14" rx="2" {...stroke} />
+        <circle cx="9" cy="10" r="1.5" {...stroke} />
+        <path {...stroke} d="M21 15l-5-5-7 7" />
+      </svg>
+    );
 
   if (name === "cursor")
     return (
@@ -564,9 +574,6 @@ function cssFromStyle(style = {}) {
   if (style.padding != null)
     parts.push(`padding:${pxToPt(Number(style.padding))}pt;`);
   else parts.push(`padding:0pt;`);
-
-  // background & border typically applied on outer frame for text,
-  // but keep support for other uses.
   if (style.bg) parts.push(`background:${style.bg};`);
 
   const bw = style.borderWidth ?? 0;
@@ -586,7 +593,7 @@ function cssFromStyle(style = {}) {
 
 function templateToPrintableHTML({ wMm, hMm, elementsHtml, header }) {
   const showHeader = Boolean(
-    header?.enabled && header?.src && header?.heightMm
+    header?.enabled && header?.src && header?.heightMm,
   );
 
   return `<!doctype html>
@@ -676,6 +683,25 @@ function renderElementsToHtml(elements = []) {
         transform-origin:center center;
       `;
 
+      if (el.type === "image") {
+        return `
+    <img
+      src="${el.src}"
+      style="
+        ${commonBox}
+        object-fit:${el.fit || "contain"};
+        opacity:${el.opacity ?? 1};
+        border:${
+          (s.borderWidth ?? 0) > 0
+            ? `${s.borderWidth}px ${s.borderStyle || "solid"} ${s.borderColor}`
+            : "none"
+        };
+        border-radius:${Number(s.borderRadius || 0)}px;
+      "
+    />
+  `;
+      }
+
       if (el.type === "text") {
         // ✅ FIX: text border/bg MUST be applied in PRINT
         const bw = Number(s.borderWidth ?? 0);
@@ -712,7 +738,7 @@ function renderElementsToHtml(elements = []) {
         `;
 
         return `<div style="${wrapCss}"><div style="${innerCss}">${escapeHtml(
-          el.text || ""
+          el.text || "",
         )}</div></div>`;
       }
 
@@ -751,7 +777,6 @@ function renderElementsToHtml(elements = []) {
       }
 
       if (el.type === "table") return renderTableToHtml(el);
-
       return "";
     })
     .join("");
@@ -769,19 +794,15 @@ function renderTableToHtml(el) {
     Array.isArray(t.colW) && t.colW.length ? t.colW : Array(cols).fill(100);
   const rowH =
     Array.isArray(t.rowH) && t.rowH.length ? t.rowH : Array(rows).fill(32);
-
   const totalW = colW.reduce((a, b) => a + (Number(b) || 0), 0) || 1;
   const totalH = rowH.reduce((a, b) => a + (Number(b) || 0), 0) || 1;
-
   const colPct = colW.map((w) => ((Number(w) || 0) / totalW) * 100);
   const rowPct = rowH.map((h) => ((Number(h) || 0) / totalH) * 100);
-
   const left = `${Number(el.x || 0)}mm`;
   const top = `${Number(el.y || 0)}mm`;
   const width = `${Number(el.w || 10)}mm`;
   const height = `${Number(el.h || 10)}mm`;
   const rotate = Number(el.rotate || 0);
-
   const border = `${t.borderWidth ?? 1}px solid ${t.borderColor || "#111827"}`;
 
   function isCovered(r, c) {
@@ -789,9 +810,7 @@ function renderTableToHtml(el) {
     if (!m) return false;
     return !(m.r0 === r && m.c0 === c);
   }
-
   const colgroupHtml = colPct.map((p) => `<col style="width:${p}%">`).join("");
-
   let tbodyHtml = "";
   for (let r = 0; r < rows; r++) {
     let rowCells = "";
@@ -801,14 +820,11 @@ function renderTableToHtml(el) {
       const m = findMergeAt(merges, r, c);
       const rs = m ? m.rs : 1;
       const cs = m ? m.cs : 1;
-
       const k = cellKey(r, c);
       const b = bindings[k];
-
       let label = "";
       if (b && b.label) label = b.label;
       else if (b && b.columnKey) label = `{{${b.columnKey}}}`;
-
       const csx = cellStyle[k] || {};
       const pad = csx.padding ?? t.cellPadding ?? 6;
       const bg = csx.bg ?? "#fff";
@@ -819,7 +835,6 @@ function renderTableToHtml(el) {
       const vAlign = csx.vAlign ?? "top";
       const bc = csx.borderColor ?? t.gridColor ?? "#111827";
       const bw = csx.borderWidth ?? t.gridWidth ?? 1;
-
       const outer = `
         border:${bw}px solid ${bc};
         box-sizing:border-box;
@@ -853,7 +868,7 @@ function renderTableToHtml(el) {
       `;
 
       rowCells += `<td rowspan="${rs}" colspan="${cs}" style="${outer}"><div style="${inner}">${escapeHtml(
-        label
+        label,
       )}</div></td>`;
     }
     tbodyHtml += `<tr style="height:${rowPct[r]}%">${rowCells}</tr>`;
@@ -892,22 +907,13 @@ export default function BlCreatorPage() {
   const containerRef = useRef(null);
   const canvasStageRef = useRef(null);
   const canvasRef = useRef(null);
-  const pageRef = useRef(null);
-
-  // single-click edit support
   const pendingTextEditRef = useRef(null);
   const pointerMovedRef = useRef(false);
   const DRAG_THRESHOLD_PX = 4;
-
-  // hidden measurer for auto-size text
   const measureRef = useRef(null);
-
   const [headerLogo, setHeaderLogo] = useState(null);
-
-  // history for undo/redo
   const historyRef = useRef({ stack: [], idx: -1 });
-
-  // interaction state
+  const [blData, setBlData] = useState([]);
   const interactionRef = useRef({
     mode: null,
     start: null,
@@ -920,22 +926,25 @@ export default function BlCreatorPage() {
     pan: null,
     pendingId: null,
   });
+  const [storedTemplate, setStoredTemplate] = useState([]);
+  const { clientId } = getUserDetails();
+  const { companyId } = getUserDetails();
+  const { userId } = getUserDetails();
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [newTemplateName, setNewTemplateName] = useState("");
+  const columns = useMemo(() => {
+    const arr = Array.isArray(blData) ? blData : [];
 
-  const [columns] = useState(() => [
-    { key: "blNo", label: "BL No" },
-    { key: "shipperName", label: "Shipper Name" },
-    { key: "consigneeName", label: "Consignee Name" },
-    { key: "notifyName", label: "Notify Party" },
-    { key: "pol", label: "POL" },
-    { key: "pod", label: "POD" },
-    { key: "fpd", label: "FPD" },
-    { key: "vessel", label: "Vessel" },
-    { key: "voyage", label: "Voyage" },
-    { key: "goodsDesc", label: "Goods Description" },
-    { key: "marks", label: "Marks & Nos" },
-    { key: "packages", label: "Packages" },
-    { key: "grossWeight", label: "Gross Weight" },
-  ]);
+    // keep first occurrence of each key (prevents duplicate column keys)
+    const seen = new Set();
+    return arr
+      .filter((c) => c?.key && c?.label)
+      .filter((c) => {
+        if (seen.has(c.key)) return false;
+        seen.add(c.key);
+        return true;
+      });
+  }, [blData]);
 
   useEffect(() => {
     const storedUserData = localStorage.getItem("userData");
@@ -952,7 +961,61 @@ export default function BlCreatorPage() {
     }
   }, []);
 
-  console.log("Header Logo:", headerLogo);
+  useEffect(() => {
+    const fetchData = async () => {
+      const requestBodyMenu = {
+        columns: "af.fieldname as [key],af.label",
+        tableName:
+          "tblApiDefinition ad Left join tblApiFields af on af.apiDefinitionId = ad.id",
+        whereCondition: `ad.apiName = 'blCreator'`,
+        clientIdCondition: `af.status = 1 FOR JSON PATH`,
+      };
+      try {
+        const data = await fetchReportData(requestBodyMenu);
+        console.log("Bl data:", data);
+        if (data && data.data && data.data.length > 0) {
+          setBlData(data.data);
+        } else {
+          console.error("No data found");
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchBlPrintTemplateData = async () => {
+      const requestBodyMenu = {
+        columns: "id,name,blPrintTemplateJson",
+        tableName: "tblBlPrintTemplate",
+        whereCondition: `blOfId = '${companyId}' and clientId = ${clientId}`,
+        clientIdCondition: `status = 1 FOR JSON PATH`,
+      };
+
+      try {
+        const data = await fetchReportData(requestBodyMenu);
+        const rows = Array.isArray(data?.data) ? data.data : [];
+        setStoredTemplate(rows);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setStoredTemplate([]); // ✅ keep it safe even on error
+      }
+    };
+
+    fetchBlPrintTemplateData();
+  }, [companyId, clientId]);
+
+  // useEffect(() => {
+  //   if (
+  //     !selectedTemplateId &&
+  //     Array.isArray(storedTemplate) &&
+  //     storedTemplate.length
+  //   ) {
+  //     setSelectedTemplateId(String(storedTemplate[0].id));
+  //   }
+  // }, [storedTemplate, selectedTemplateId]);
 
   const [template, setTemplate] = useState(() => {
     const paper = PAPER_SIZES.find((p) => p.id === "A4") || PAPER_SIZES[4];
@@ -961,18 +1024,9 @@ export default function BlCreatorPage() {
       name: "BL Template (Draft)",
       paper: { ...paper, orientation: "P" },
       margin: { t: 10, r: 10, b: 10, l: 10 },
-
-      // ✅ NEW
       header: {
-        enabled: true,
-        heightMm: 22,
-        logoSrc: "", // existing
-        logo: {
-          x: 6,
-          y: 3,
-          w: 32,
-          h: 14,
-        },
+        enabled: false,
+        heightMm: 25,
       },
       elements: [],
       groups: {},
@@ -1000,21 +1054,16 @@ export default function BlCreatorPage() {
 
   const [leftTab, setLeftTab] = useState("elements");
   const [rightTab, setRightTab] = useState("inspect");
-
   const [activeTool, setActiveTool] = useState("select");
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [hoverId, setHoverId] = useState(null);
-
   const selected = useMemo(() => {
     const set = selectedIds;
     return template.elements.filter((e) => set.has(e.id));
   }, [template.elements, selectedIds]);
-
   const primarySelected = selected.length
     ? selected[selected.length - 1]
     : null;
-
-  // guides
   const [guides, setGuides] = useState({ x: null, y: null });
 
   /** ---------- Paper sizing ---------- */
@@ -1030,10 +1079,6 @@ export default function BlCreatorPage() {
       h: paperMM.h * MM_TO_PX * ui.scale,
     };
   }, [paperMM, ui.scale]);
-
-  const HEADER_LOGO_ID = "__HEADER_LOGO__";
-  const header = template.header || {};
-  const logo = header.logo || { x: 6, y: 3, w: 32, h: 14 };
 
   /** ---------- History helpers ---------- */
   function pushHistory(next) {
@@ -1107,7 +1152,7 @@ export default function BlCreatorPage() {
     a.href = URL.createObjectURL(blob);
     a.download = `${(templateRef.current.name || "bl-template").replaceAll(
       " ",
-      "_"
+      "_",
     )}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
@@ -1127,6 +1172,54 @@ export default function BlCreatorPage() {
     reader.readAsText(file);
   }
 
+  const makeId = () =>
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : String(Date.now() + Math.random());
+
+  const loadTemplate = (tpl) => {
+    if (!tpl) return;
+
+    // tpl can be string/object
+    const raw = typeof tpl === "string" ? JSON.parse(tpl) : tpl;
+
+    // ✅ normalize minimum structure so editor doesn't break
+    const next = {
+      ...raw,
+      elements: Array.isArray(raw?.elements) ? raw.elements : [],
+      header: raw?.header ?? { enabled: false, heightMm: 0 },
+    };
+
+    // ✅ ensure each element has an id (many templates miss it)
+    next.elements = next.elements.map((el) => ({
+      ...el,
+      id: el?.id ?? makeId(),
+    }));
+
+    // ✅ clear any current interaction state (important)
+    if (interactionRef.current) {
+      interactionRef.current.mode = null;
+      interactionRef.current.start = null;
+      interactionRef.current.marquee = null;
+    }
+
+    // ✅ clear selection (optional but recommended)
+    clearSelection?.();
+
+    // ✅ THIS is what actually refreshes canvas + history
+    commit(next);
+  };
+
+  const getEmptyTemplate = () => ({
+    id: crypto.randomUUID(),
+    name: "Blank",
+    paper: { id: "A4", name: "A4", w: 210, h: 297, orientation: "P" },
+    margin: { t: 10, r: 10, b: 10, l: 10 },
+    header: { enabled: false, heightMm: 20 },
+    elements: [],
+    groups: {},
+  });
+
   /** ---------- Selection helpers ---------- */
   function setOnlySelected(id) {
     setSelectedIds(new Set([id]));
@@ -1142,6 +1235,125 @@ export default function BlCreatorPage() {
   function clearSelection() {
     setSelectedIds(new Set());
   }
+
+  // ✅ Select all (visible) elements
+  function selectAllVisible() {
+    const next = new Set(
+      (templateRef.current.elements || [])
+        .filter((e) => !e.hidden)
+        .map((e) => e.id),
+    );
+    setSelectedIds(next);
+    toast(next.size ? `Selected ${next.size} items` : "No elements to select");
+  }
+
+  // ✅ Select all (visible + unlocked) elements (optional convenience)
+  function selectAllVisibleUnlocked() {
+    const next = new Set(
+      (templateRef.current.elements || [])
+        .filter((e) => !e.hidden && !e.locked)
+        .map((e) => e.id),
+    );
+    setSelectedIds(next);
+    toast(next.size ? `Selected ${next.size} unlocked` : "No unlocked items");
+  }
+
+  // ✅ Apply style patch to ALL selected elements (works with multi-select)
+  const applyStyleToSelection = React.useCallback(
+    (stylePatch = {}) => {
+      if (!stylePatch || typeof stylePatch !== "object") return;
+
+      const selected =
+        selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
+      if (!selected.size) return;
+
+      const next = JSON.parse(JSON.stringify(templateRef.current));
+      let changed = false;
+
+      next.elements = (next.elements || []).map((el) => {
+        if (!selected.has(el.id)) return el;
+        if (el.locked) return el; // keep locked safe
+
+        // ✅ Typography-only keys should apply only to text (and optionally table)
+        const typographyKeys = new Set([
+          "fontSize",
+          "fontWeight",
+          "align",
+          "vAlign",
+          "lineHeight",
+          "letterSpacing",
+        ]);
+
+        const isTypographyPatch = Object.keys(stylePatch).some((k) =>
+          typographyKeys.has(k),
+        );
+
+        if (isTypographyPatch && el.type !== "text") {
+          return el;
+        }
+
+        const prev = el.style || {};
+        const merged = { ...prev, ...stylePatch };
+        const same = Object.keys(stylePatch).every(
+          (k) => (prev?.[k] ?? null) === (merged?.[k] ?? null),
+        );
+
+        if (same) return el;
+
+        changed = true;
+        return { ...el, style: merged };
+      });
+
+      if (!changed) return;
+      commit(next);
+    },
+    [selectedIds, commit],
+  );
+
+  const applyPatchToSelection = React.useCallback(
+    (patch = {}) => {
+      const selected =
+        selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
+      if (!selected.size) return;
+
+      const next = JSON.parse(JSON.stringify(templateRef.current));
+      let changed = false;
+
+      next.elements = (next.elements || []).map((el) => {
+        if (!selected.has(el.id)) return el;
+        if (el.locked) return el;
+        changed = true;
+        return { ...el, ...patch };
+      });
+
+      if (changed) commit(next);
+    },
+    [selectedIds, commit],
+  );
+
+  const getCommonStyleValue = React.useCallback(
+    (key, fallback, onlyType = null) => {
+      const selected =
+        selectedIds instanceof Set ? selectedIds : new Set(selectedIds || []);
+      if (!selected.size) return { value: String(fallback), mixed: false };
+
+      let els = (templateRef.current?.elements || []).filter((e) =>
+        selected.has(e.id),
+      );
+      if (onlyType) {
+        els = els.filter((e) => e.type === onlyType);
+      }
+      if (!els.length) return { value: String(fallback), mixed: false };
+      const values = els.map((e) => {
+        const v = (e.style || {})[key];
+        return String(v ?? fallback);
+      });
+      const first = values[0];
+      const mixed = !values.every((v) => v === first);
+      return { value: mixed ? "__MIXED__" : first, mixed };
+    },
+    [selectedIds],
+  );
 
   function bringToFront() {
     if (!selected.length) return;
@@ -1182,7 +1394,7 @@ export default function BlCreatorPage() {
     toast("Grouped");
   }
 
-  function ungroupSelected() {
+  function unGroupSelected() {
     const next = deepClone(templateRef.current);
     const gids = new Set();
     for (const el of next.elements)
@@ -1227,16 +1439,11 @@ export default function BlCreatorPage() {
   }
 
   function canvasPointMmFromClient(e) {
-    const el = canvasRef.current;
-    if (!el) return { x: 0, y: 0 };
-
-    const rect = el.getBoundingClientRect();
+    const rect = canvasRef.current.getBoundingClientRect();
     const xPx = e.clientX - rect.left;
     const yPx = e.clientY - rect.top;
-
-    const xMm = xPx / (ui.scale * MM_TO_PX);
-    const yMm = yPx / (ui.scale * MM_TO_PX);
-
+    const xMm = xPx / ui.scale / MM_TO_PX;
+    const yMm = yPx / ui.scale / MM_TO_PX;
     return { x: xMm, y: yMm };
   }
 
@@ -1246,29 +1453,35 @@ export default function BlCreatorPage() {
     const toolType = e.dataTransfer.getData("application/x-bltool");
     if (!toolType) return;
 
-    const { x: xMm, y: yMmRaw } = canvasPointMmFromClient(e);
+    const { x: xMm, y: yMm } = canvasPointMmFromClient(e);
 
     const elType =
       toolType === "Text"
         ? "text"
         : toolType === "LineH"
-        ? "lineH"
-        : toolType === "LineV"
-        ? "lineV"
-        : toolType === "Box"
-        ? "box"
-        : "table";
+          ? "lineH"
+          : toolType === "LineV"
+            ? "lineV"
+            : toolType === "Box"
+              ? "box"
+              : toolType === "Image"
+                ? "image"
+                : "table";
 
     const headerOffset = templateRef.current.header?.enabled
       ? templateRef.current.header.heightMm
       : 0;
 
-    // ✅ y must respect header area
-    const yMm = clamp(yMmRaw, headerOffset, paperMM.h - 10);
-    const x = clamp(xMm, 0, paperMM.w - 10);
-
     const next = deepClone(templateRef.current);
-    next.elements.push(makeElement(elType, x, yMm)); // ✅ only once
+
+    next.elements.push(
+      makeElement(
+        elType,
+        clamp(xMm, 0, paperMM.w - 10),
+        clamp(yMm, headerOffset, paperMM.h - 10),
+      ),
+    );
+
     commit(next);
   }
 
@@ -1333,7 +1546,7 @@ export default function BlCreatorPage() {
 
   function selectedBoundsMm(elements, selSet) {
     const els = elements.filter(
-      (x) => selSet.has(x.id) && !x.locked && !x.hidden
+      (x) => selSet.has(x.id) && !x.locked && !x.hidden,
     );
     if (!els.length) return null;
     let x0 = Infinity,
@@ -1457,9 +1670,7 @@ export default function BlCreatorPage() {
   function startRotate(e, id) {
     const el = templateRef.current.elements.find((x) => x.id === id);
     if (!el || el.locked) return;
-
     if (!selectedIds.has(id)) setOnlySelected(id);
-
     const start = getPointerMM(e);
     const cx = el.x + el.w / 2;
     const cy = el.y + el.h / 2;
@@ -1475,7 +1686,6 @@ export default function BlCreatorPage() {
       ang0,
       startRot: el.rotate || 0,
     };
-
     e.preventDefault();
     e.stopPropagation();
   }
@@ -1483,12 +1693,47 @@ export default function BlCreatorPage() {
   /** ---------- Marquee selection ---------- */
   function startMarquee(e) {
     if (activeTool === "hand") return startPan(e);
-    if (e.target !== e.currentTarget) return; // ✅ safer
+    if (e.target !== canvasRef.current) return;
+
+    // ---- Image drop handling (unchanged) ----
+    if (e.dataTransfer?.files?.length) {
+      const file = e.dataTransfer.files[0];
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const { x, y } = canvasPointMmFromClient(e);
+          const next = deepClone(templateRef.current);
+          const el = makeElement("image", x, y);
+          el.src = reader.result;
+          next.elements.push(el);
+          commit(next);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
 
     const p = getPointerMM(e);
-    interactionRef.current.mode = "marquee";
-    interactionRef.current.start = p;
-    interactionRef.current.marquee = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+
+    // ✅ ENSURE interactionRef.current is always an object
+    if (!interactionRef.current) {
+      interactionRef.current = {
+        mode: null,
+        start: null,
+        marquee: null,
+        dragging: null,
+        resizing: null,
+        rotating: null,
+        panning: null,
+      };
+    }
+    if (!interactionRef.current) interactionRef.current = {};
+    const ref = interactionRef.current;
+    if (!ref) return;
+
+    // ---- Start marquee safely ----
+    ref.mode = "marquee";
+    ref.start = p;
+    ref.marquee = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
 
     if (!e.ctrlKey && !e.metaKey) clearSelection();
     e.preventDefault();
@@ -1538,7 +1783,7 @@ export default function BlCreatorPage() {
     }
 
     function onMove(e) {
-      const mode = interactionRef.current.mode;
+      const mode = interactionRef.current?.mode;
       if (!mode) return;
 
       if (mode === "pending") {
@@ -1610,13 +1855,10 @@ export default function BlCreatorPage() {
       if (interactionRef.current.mode === "drag") {
         const startEls = interactionRef.current.startEls || [];
         const sel = new Set(selectedIds);
-
         const next = deepClone(templateRef.current);
         const startMap = new Map(startEls.map((x) => [x.id, x]));
-
         const bounds = selectedBoundsMm(startEls, sel);
         if (!bounds) return;
-
         let nx0 = bounds.x0 + dx;
         let ny0 = bounds.y0 + dy;
         let nx1 = bounds.x1 + dx;
@@ -1641,7 +1883,7 @@ export default function BlCreatorPage() {
           const sRight = snapValue(nx1, xCandidates, threshold);
           const sCenter = snapValue(cx, xCandidates, threshold);
           const bestX = [sLeft, sRight, sCenter].sort(
-            (a, b) => a.delta - b.delta
+            (a, b) => a.delta - b.delta,
           )[0];
 
           if (bestX.delta !== Infinity) {
@@ -1666,7 +1908,7 @@ export default function BlCreatorPage() {
           const sBottom = snapValue(ny1, yCandidates, threshold);
           const sCenterY = snapValue(cy, yCandidates, threshold);
           const bestY = [sTop, sBottom, sCenterY].sort(
-            (a, b) => a.delta - b.delta
+            (a, b) => a.delta - b.delta,
           )[0];
 
           if (bestY.delta !== Infinity) {
@@ -1697,11 +1939,7 @@ export default function BlCreatorPage() {
           if (!sel.has(el.id) || el.locked) continue;
           const s0 = startMap.get(el.id) || el;
           el.x = clamp(round2(s0.x + finalDx), 0, paperMM.w - 1);
-          const headerOffset = templateRef.current.header?.enabled
-            ? templateRef.current.header.heightMm
-            : 0;
-
-          el.y = clamp(round2(s0.y + finalDy), headerOffset, paperMM.h - 1);
+          el.y = clamp(round2(s0.y + finalDy), 0, paperMM.h - 1);
         }
 
         setTemplateLive(next);
@@ -1752,12 +1990,7 @@ export default function BlCreatorPage() {
         }
 
         el.x = clamp(round2(x), 0, paperMM.w - 1);
-        const headerOffset = templateRef.current.header?.enabled
-          ? templateRef.current.header.heightMm
-          : 0;
-
-        el.y = clamp(round2(y), headerOffset, paperMM.h - 1);
-
+        el.y = clamp(round2(y), 0, paperMM.h - 1);
         el.w = clamp(round2(w), 1, paperMM.w);
         el.h = clamp(round2(h), 1, paperMM.h);
 
@@ -1772,14 +2005,11 @@ export default function BlCreatorPage() {
         const { id, cx, cy, ang0, startRot } = rot;
         const ang = (Math.atan2(p.y - cy, p.x - cx) * 180) / Math.PI;
         let nextDeg = startRot + (ang - ang0);
-
         if (e.shiftKey) nextDeg = Math.round(nextDeg / 15) * 15;
-
         const next = deepClone(templateRef.current);
         const el = next.elements.find((x) => x.id === id);
         if (!el || el.locked) return;
         el.rotate = Math.round(nextDeg * 10) / 10;
-
         setTemplateLive(next);
         return;
       }
@@ -1790,23 +2020,18 @@ export default function BlCreatorPage() {
         const startEls = interactionRef.current.startEls || [];
         const startEl = startEls.find((x) => x.id === id);
         if (!startEl) return;
-
         const next = deepClone(templateRef.current);
         const el = next.elements.find((x) => x.id === id);
         if (!el || el.type !== "table" || el.locked) return;
-
         const t = el.table;
         const minCol = 20;
-
         const deltaPx = dx * MM_TO_PX;
         t.colW[colIdx] = Math.max(
           minCol,
-          (startEl.table.colW[colIdx] || 60) + deltaPx
+          (startEl.table.colW[colIdx] || 60) + deltaPx,
         );
-
         const totalWpx = t.colW.reduce((a, b) => a + b, 0);
         el.w = Math.max(10, totalWpx / MM_TO_PX);
-
         setTemplateLive(next);
         return;
       }
@@ -1820,33 +2045,27 @@ export default function BlCreatorPage() {
         const next = deepClone(templateRef.current);
         const el = next.elements.find((x) => x.id === id);
         if (!el || el.type !== "table" || el.locked) return;
-
         const t = el.table;
         const minRow = 18;
-
         const deltaPx = dy * MM_TO_PX;
         t.rowH[rowIdx] = Math.max(
           minRow,
-          (startEl.table.rowH[rowIdx] || 28) + deltaPx
+          (startEl.table.rowH[rowIdx] || 28) + deltaPx,
         );
-
         const totalHpx = t.rowH.reduce((a, b) => a + b, 0) + 2;
         el.h = Math.max(10, totalHpx / MM_TO_PX);
-
         setTemplateLive(next);
         return;
       }
     }
 
     function onUp() {
-      const mode = interactionRef.current.mode;
+      const mode = interactionRef.current?.mode;
       if (!mode) return;
-
       if (mode === "pending") {
         const pending = pendingTextEditRef.current;
         const id = pending?.id;
         pendingTextEditRef.current = null;
-
         resetInteraction();
 
         if (!pointerMovedRef.current && id) {
@@ -1883,7 +2102,7 @@ export default function BlCreatorPage() {
     activeTool,
   ]);
 
-  /** ---------- Keyboard shortcuts + spacebar pan ---------- */
+  /** ---------- Keyboard shortcuts + spaceBar pan ---------- */
   const [spaceDown, setSpaceDown] = useState(false);
 
   useEffect(() => {
@@ -1898,6 +2117,19 @@ export default function BlCreatorPage() {
           setActiveTool("hand");
           e.preventDefault();
         }
+      }
+
+      // ✅ Ctrl/Cmd + A => Select All (only when NOT typing in inputs)
+      if (mod && e.key.toLowerCase() === "a") {
+        const tag = document.activeElement?.tagName?.toLowerCase();
+        if (tag === "input" || tag === "textarea") return; // don't hijack typing
+        e.preventDefault();
+
+        // Option: hold Shift to select only unlocked
+        if (e.shiftKey) selectAllVisibleUnlocked();
+        else selectAllVisible();
+
+        return;
       }
 
       if (mod && e.key.toLowerCase() === "z" && !e.shiftKey) {
@@ -1919,7 +2151,7 @@ export default function BlCreatorPage() {
         groupSelected();
       } else if (mod && e.key.toLowerCase() === "u") {
         e.preventDefault();
-        ungroupSelected();
+        unGroupSelected();
       } else if (e.key === "Escape") {
         setEditingId(null);
         setActiveTool("select");
@@ -1950,7 +2182,6 @@ export default function BlCreatorPage() {
       if (!stage) return;
       if (!e.ctrlKey) return;
       e.preventDefault();
-
       const delta = e.deltaY > 0 ? -0.06 : 0.06;
       setUi((s) => ({
         ...s,
@@ -1999,7 +2230,6 @@ export default function BlCreatorPage() {
 
           await new Promise((r) => requestAnimationFrame(r));
           await new Promise((r) => setTimeout(r, 50));
-
           iframe.contentWindow?.focus();
           iframe.contentWindow?.print();
         } catch (e) {
@@ -2015,17 +2245,12 @@ export default function BlCreatorPage() {
       };
 
       iframe.onload = () => setTimeout(doPrint, 30);
-
       document.body.appendChild(iframe);
-
       const doc = iframe.contentDocument;
       if (!doc) return;
-
       doc.open();
       doc.write(html);
       doc.close();
-
-      // ✅ If onload doesn't fire, still print.
       setTimeout(() => {
         try {
           if (iframe.isConnected) doPrint();
@@ -2045,11 +2270,9 @@ export default function BlCreatorPage() {
   function alignSelected(mode) {
     const ids = [...selectedIds];
     if (ids.length < 2) return toast("Select 2+ to align");
-
     const next = deepClone(templateRef.current);
     const items = next.elements.filter((e) => ids.includes(e.id) && !e.locked);
     if (!items.length) return;
-
     const left = Math.min(...items.map((e) => e.x));
     const right = Math.max(...items.map((e) => e.x + e.w));
     const top = Math.min(...items.map((e) => e.y));
@@ -2111,18 +2334,13 @@ export default function BlCreatorPage() {
     const next = deepClone(templateRef.current);
     const el = next.elements.find((x) => x.id === elId);
     if (!el || el.type !== "table" || el.locked) return;
-
     setOnlySelected(elId);
-
     const t = el.table;
     const cell = { r, c };
-
     if (e.shiftKey && t.activeCell)
       t.range = normalizeRange(t.activeCell, cell);
     else t.range = null;
-
     t.activeCell = cell;
-
     commit(next);
   }
 
@@ -2132,7 +2350,6 @@ export default function BlCreatorPage() {
     if (!t?.range) return toast("Shift+Click another cell to select a range");
     if (!canMergeRange(t, t.range))
       return toast("Cannot merge: overlaps existing merge");
-
     const { r0, c0, r1, c1 } = t.range;
     const next = deepClone(templateRef.current);
     const el = next.elements.find((x) => x.id === primarySelected.id);
@@ -2148,11 +2365,9 @@ export default function BlCreatorPage() {
     const t = primarySelected.table;
     if (!t?.activeCell) return;
     const { r, c } = t.activeCell;
-
     const next = deepClone(templateRef.current);
     const el = next.elements.find((x) => x.id === primarySelected.id);
     if (!el || el.type !== "table") return;
-
     const merges = el.table.merges || [];
     const m = findMergeAt(merges, r, c);
     if (!m) return toast("No merge at this cell");
@@ -2196,18 +2411,23 @@ export default function BlCreatorPage() {
   }, [template.elements]);
 
   /** ---------- Marquee UI ---------- */
-  const marquee = interactionRef.current.marquee;
+  const marquee = interactionRef.current?.marquee ?? null;
+
   const marqueePx = useMemo(() => {
     if (!marquee) return null;
+
     const x0 = Math.min(marquee.x0, marquee.x1);
     const y0 = Math.min(marquee.y0, marquee.y1);
     const x1 = Math.max(marquee.x0, marquee.x1);
     const y1 = Math.max(marquee.y0, marquee.y1);
+
+    const scalePx = MM_TO_PX * ui.scale;
+
     return {
-      left: x0 * MM_TO_PX * ui.scale,
-      top: y0 * MM_TO_PX * ui.scale,
-      width: (x1 - x0) * MM_TO_PX * ui.scale,
-      height: (y1 - y0) * MM_TO_PX * ui.scale,
+      left: x0 * scalePx,
+      top: y0 * scalePx,
+      width: (x1 - x0) * scalePx,
+      height: (y1 - y0) * scalePx,
     };
   }, [marquee, ui.scale]);
 
@@ -2300,15 +2520,15 @@ export default function BlCreatorPage() {
       cursor: el.locked
         ? "not-allowed"
         : editingId === el.id
-        ? "text"
-        : activeTool === "hand"
-        ? "grab"
-        : "move",
+          ? "text"
+          : activeTool === "hand"
+            ? "grab"
+            : "move",
       outline: isSelected
         ? "2px solid #2563eb"
         : isHovered
-        ? "1px solid rgba(37,99,235,.55)"
-        : "none",
+          ? "1px solid rgba(37,99,235,.55)"
+          : "none",
       outlineOffset: 1,
       boxShadow: isSelected ? "0 0 0 3px rgba(37,99,235,.12)" : "none",
       zIndex: 10 + Math.floor(el.z || 0),
@@ -2359,8 +2579,8 @@ export default function BlCreatorPage() {
           s.vAlign === "middle"
             ? "center"
             : s.vAlign === "bottom"
-            ? "flex-end"
-            : "flex-start",
+              ? "flex-end"
+              : "flex-start",
       };
 
       const contentStyle = {
@@ -2465,6 +2685,35 @@ export default function BlCreatorPage() {
       );
     }
 
+    if (el.type === "image") {
+      const s = el.style || {};
+      return (
+        <div style={baseBox} {...commonEvents}>
+          <img
+            src={el.src}
+            draggable={false}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: el.fit || "contain",
+              opacity: el.opacity ?? 1,
+              borderRadius: (s.borderRadius || 0) * ui.scale,
+              border:
+                (s.borderWidth ?? 0) > 0
+                  ? `${s.borderWidth}px ${s.borderStyle || "solid"} ${
+                      s.borderColor || "#111827"
+                    }`
+                  : "none",
+              background: s.bg || "transparent",
+              pointerEvents: "none",
+              userSelect: "none",
+            }}
+          />
+          {selectionHandles}
+        </div>
+      );
+    }
+
     if (el.type === "box") {
       const boxStyle = {
         background: s.bg || "transparent",
@@ -2545,8 +2794,8 @@ export default function BlCreatorPage() {
             cursor: el.locked
               ? "not-allowed"
               : activeTool === "hand"
-              ? "grab"
-              : "move",
+                ? "grab"
+                : "move",
           }}
           {...commonEvents}
         >
@@ -2625,10 +2874,10 @@ export default function BlCreatorPage() {
                 p.k === "n" || p.k === "s"
                   ? "ns-resize"
                   : p.k === "e" || p.k === "w"
-                  ? "ew-resize"
-                  : p.k === "ne" || p.k === "sw"
-                  ? "nesw-resize"
-                  : "nwse-resize",
+                    ? "ew-resize"
+                    : p.k === "ne" || p.k === "sw"
+                      ? "nesw-resize"
+                      : "nwse-resize",
               zIndex: 9999,
             }}
           />
@@ -2646,12 +2895,10 @@ export default function BlCreatorPage() {
     const cellStyle = t.cellStyle || {};
     const active = t.activeCell;
     const range = t.range;
-
     const totalW = t.colW.reduce((a, b) => a + b, 0) || 1;
     const totalH = t.rowH.reduce((a, b) => a + b, 0) || 1;
     const colPct = t.colW.map((w) => (w / totalW) * 100);
     const rowPct = t.rowH.map((h) => (h / totalH) * 100);
-
     const border = `${t.borderWidth ?? 1}px solid ${
       t.borderColor || "#111827"
     }`;
@@ -2713,8 +2960,8 @@ export default function BlCreatorPage() {
                   const label = b?.label
                     ? b.label
                     : b?.columnKey
-                    ? `{{${b.columnKey}}}`
-                    : "";
+                      ? `{{${b.columnKey}}}`
+                      : "";
 
                   const csx = cellStyle[cellKey(r, c)] || {};
                   const cellPad =
@@ -2728,11 +2975,9 @@ export default function BlCreatorPage() {
                   const cellV = csx.vAlign ?? "top";
                   const cellBc = csx.borderColor ?? t.gridColor ?? "#111827";
                   const cellBw = csx.borderWidth ?? t.gridWidth ?? 1;
-
                   const selectedBorder = showCellSelected(r, c)
                     ? "2px solid #2563eb"
                     : `${cellBw}px solid ${cellBc}`;
-
                   return (
                     <td
                       key={c}
@@ -2866,18 +3111,12 @@ export default function BlCreatorPage() {
 
       <div className="blc-ui" style={styles.topbar}>
         <div style={styles.brand}>
-          <div style={styles.brandDot} />
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1 }}>
               BL Creator
             </div>
-            <div style={{ fontSize: 11, opacity: 0.65, lineHeight: 1.1 }}>
-              Figma-like • Print-ready
-            </div>
           </div>
-
           <div style={styles.sep} />
-
           <select
             value={template.paper.id}
             onChange={(e) => setPaper(e.target.value)}
@@ -2902,7 +3141,18 @@ export default function BlCreatorPage() {
         <div style={styles.topActions}>
           <IconButton title="Undo (Ctrl+Z)" icon="undo" onClick={undo} />
           <IconButton title="Redo (Ctrl+Y)" icon="redo" onClick={redo} />
-
+          {/* <IconButton
+            title="Select All (Ctrl+A)"
+            icon="mag"
+            onClick={selectAllVisible}
+          /> */}
+          {/* <button
+            onClick={selectAllVisibleUnlocked}
+            style={styles.softBtn}
+            title="Select All Unlocked (Ctrl+Shift+A)"
+          >
+            Select Unlocked
+          </button> */}
           <div style={styles.sep} />
 
           <IconButton
@@ -2913,7 +3163,7 @@ export default function BlCreatorPage() {
           <IconButton
             title="Ungroup (Ctrl+U)"
             icon="ungroup"
-            onClick={ungroupSelected}
+            onClick={unGroupSelected}
           />
           <IconButton
             title="Lock"
@@ -2931,9 +3181,228 @@ export default function BlCreatorPage() {
             danger
             onClick={deleteSelected}
           />
-
           <div style={styles.sep} />
+          <TextField
+            size="small"
+            label="New Template"
+            value={newTemplateName}
+            onChange={(e) => setNewTemplateName(e.target.value)}
+            placeholder="Enter template"
+            InputLabelProps={{
+              shrink: true,
+              sx: { fontSize: 10 },
+            }}
+            sx={{
+              minWidth: 100,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "10px",
+                background: "var(--inputBg)",
+                color: "var(--text)",
+                minHeight: 32,
+                fontSize: 11,
+              },
+              "& .MuiOutlinedInput-input": {
+                padding: "6px 10px",
+              },
+            }}
+          />
+          <Button
+            size="small"
+            variant="contained"
+            disabled={!newTemplateName.trim()}
+            onClick={async () => {
+              if (!newTemplateName.trim()) return;
 
+              // ✅ get current editor template JSON
+              const templateJson = templateRef.current; // or your template state
+
+              const payload = {
+                TableName: "tblBlPrintTemplate",
+                Record: {
+                  name: newTemplateName.trim(),
+                  blOfId: companyId,
+                  clientId: clientId,
+                  draftFinal: "D",
+                  blPrintTemplateJson: JSON.stringify(templateJson),
+                  status: 1,
+                  createdBy: userId,
+                },
+                WhereCondition: null,
+              };
+
+              try {
+                if (historyRef.current?.stack?.length > 1) {
+                  const ok = window.confirm(
+                    "Loading a template will replace the current design. Continue?",
+                  );
+                  if (!ok) return;
+                }
+                await insertReportData(payload);
+
+                // refresh dropdown
+                setNewTemplateName("");
+              } catch (err) {
+                console.error("Error saving template", err);
+              }
+            }}
+            sx={{
+              height: 32,
+              ml: 1,
+              borderRadius: "10px",
+              textTransform: "none",
+              fontSize: 11,
+            }}
+          >
+            Save
+          </Button>
+
+          <Box sx={{ position: "relative", display: "inline-block" }}>
+            <TextField
+              select
+              size="small"
+              label="Load Template"
+              value={selectedTemplateId || ""}
+              onChange={(e) => {
+                const id = e.target.value;
+                if (!id) return; // ✅ disabled placeholder, force manual selection
+
+                setSelectedTemplateId(id);
+
+                const picked = (storedTemplate ?? []).find(
+                  (t) => String(t.id) === String(id),
+                );
+                if (!picked) return;
+
+                try {
+                  const jsonStr = picked.blPrintTemplateJson;
+                  const tpl =
+                    typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
+
+                  loadTemplate(tpl); // ✅ now template will load
+                } catch (err) {
+                  console.warn(
+                    "Template JSON invalid:",
+                    picked.blPrintTemplateJson,
+                    err,
+                  );
+                }
+              }}
+              SelectProps={{
+                displayEmpty: true,
+                IconComponent: ArrowDropDownRoundedIcon, // ✅ arrow on far right
+                renderValue: (val) => {
+                  if (!val) return "Select template";
+                  const picked = (storedTemplate ?? []).find(
+                    (t) => String(t.id) === String(val),
+                  );
+                  return picked?.name || "Select template";
+                },
+                MenuProps: {
+                  PaperProps: {
+                    sx: {
+                      mt: 0.5,
+                      "& .MuiMenuItem-root": {
+                        fontSize: 11,
+                        minHeight: 28,
+                        py: 0.5, // ✅ less top/bottom padding
+                      },
+                    },
+                  },
+                },
+              }}
+              InputLabelProps={{
+                shrink: true,
+                sx: { fontSize: 10 }, // ✅ small label like your screenshot
+              }}
+              sx={{
+                minWidth: 100,
+                maxWidth: 160,
+                // input root
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "10px",
+                  background: "var(--inputBg)",
+                  color: "var(--text)",
+                  minHeight: 32,
+                  fontSize: 11,
+                  pr: "52px", // ✅ space for X + arrow (very important)
+                },
+
+                // selected text area
+                "& .MuiSelect-select": {
+                  py: "6px",
+                  pl: "10px",
+                  pr: "0px",
+                  display: "flex",
+                  alignItems: "center",
+                },
+
+                // arrow position
+                "& .MuiSelect-icon": {
+                  right: 8,
+                  fontSize: 18,
+                },
+              }}
+              // ✅ This is the key: place clear button BEFORE arrow INSIDE the input
+              InputProps={{
+                endAdornment: selectedTemplateId ? (
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      right: 30, // ✅ just before arrow (arrow is at ~8)
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      zIndex: 2,
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Tooltip title="Clear">
+                      <CloseIcon
+                        onMouseDown={(e) => {
+                          e.preventDefault(); // ✅ stop select opening
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedTemplateId("");
+                          loadTemplate(getEmptyTemplate());
+                          // optional: clear anything else related to template load
+                          // clearSelection();
+                          // setTemplateLive(emptyTemplate);
+                        }}
+                        sx={{
+                          fontSize: 34,
+                          color: "#000 !important",
+                          padding: "2px",
+                          cursor: "pointer",
+                        }}
+                      />
+                    </Tooltip>
+                  </Box>
+                ) : null,
+              }}
+            >
+              {/* ✅ disabled placeholder (forces manual selection) */}
+              <MenuItem
+                value=""
+                disabled
+                sx={{ fontSize: 11, minHeight: 28, py: 0.5 }}
+              >
+                <em>Select template</em>
+              </MenuItem>
+
+              {(storedTemplate ?? []).map((t) => (
+                <MenuItem
+                  key={t.id}
+                  value={String(t.id)}
+                  sx={{ fontSize: 11, minHeight: 28, py: 0.5 }}
+                >
+                  {t.name}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Box>
           <IconButton title="Save (local)" icon="save" onClick={saveLocal} />
           <IconButton title="Load (local)" icon="folder" onClick={loadLocal} />
           <IconButton
@@ -2954,22 +3423,22 @@ export default function BlCreatorPage() {
               }}
             />
           </label>
-          <IconButton
+          {/* <IconButton
             title="DB Fields (tab)"
             icon="db"
             onClick={() => setRightTab("fields")}
-          />
+          /> */}
 
           <div style={styles.sep} />
 
           <IconButton title="Print" icon="print" onClick={printTemplate} />
-          <button
+          {/* <button
             onClick={exportPDF}
             style={styles.softBtn}
             title="PDF (print to PDF)"
           >
             PDF
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -2991,7 +3460,8 @@ export default function BlCreatorPage() {
                 <ToolIcon name="Box" icon="box" draggableType="Box" />
                 <ToolIcon name="H" icon="lineH" draggableType="LineH" />
                 <ToolIcon name="V" icon="lineV" draggableType="LineV" />
-                <ToolIcon name="Table" icon="table" draggableType="Table" />
+                {/* <ToolIcon name="Table" icon="table" draggableType="Table" /> */}
+                <ToolIcon name="Image" icon="image" draggableType="Image" />
               </div>
 
               <div style={styles.divider} />
@@ -3017,18 +3487,6 @@ export default function BlCreatorPage() {
                 >
                   <Icon name="hand" />
                 </button>
-              </div>
-
-              <div
-                style={{
-                  marginTop: 10,
-                  fontSize: 11,
-                  opacity: 0.7,
-                  lineHeight: 1.2,
-                }}
-              >
-                Tip: Single click text to edit (don’t drag). Double click also
-                works.
               </div>
             </div>
           ) : (
@@ -3110,7 +3568,7 @@ export default function BlCreatorPage() {
 
           <div ref={canvasStageRef} style={styles.canvasStage}>
             <div
-              ref={pageRef} // ✅ pageRef added
+              ref={canvasRef}
               className={ui.showGrid ? "blc-grid" : ""}
               style={{
                 ...styles.canvas,
@@ -3236,7 +3694,6 @@ export default function BlCreatorPage() {
               >
                 <Icon name="mag" />
               </button>
-
               <div style={styles.bottomPill}>
                 <span style={{ fontSize: 11, fontWeight: 900, opacity: 0.7 }}>
                   Zoom
@@ -3264,7 +3721,6 @@ export default function BlCreatorPage() {
                 </button>
               </div>
             </div>
-
             <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.7 }}>
               {paperMM.w}×{paperMM.h}mm • {ui.snap ? "Snap" : "No snap"} •{" "}
               {activeTool === "hand" ? "Hand" : "Select"}
@@ -3282,9 +3738,17 @@ export default function BlCreatorPage() {
               { id: "fields", label: "Fields", icon: "db" },
             ]}
           />
-
           {rightTab === "layers" ? (
             <div style={styles.panelBody}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <button style={styles.softBtn} onClick={selectAllVisible}>
+                  Select All
+                </button>
+                <button style={styles.softBtn} onClick={clearSelection}>
+                  Clear
+                </button>
+              </div>
+
               <div style={styles.layers}>
                 {layerItems.length === 0 ? (
                   <div style={{ fontSize: 12, opacity: 0.6 }}>No elements</div>
@@ -3318,8 +3782,8 @@ export default function BlCreatorPage() {
                                 el.type === "lineH"
                                   ? "lineH"
                                   : el.type === "lineV"
-                                  ? "lineV"
-                                  : el.type
+                                    ? "lineV"
+                                    : el.type
                               }
                               size={16}
                             />
@@ -3336,7 +3800,6 @@ export default function BlCreatorPage() {
                             </div>
                           </div>
                         </div>
-
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -3357,7 +3820,6 @@ export default function BlCreatorPage() {
               </div>
             </div>
           ) : null}
-
           {rightTab === "fields" ? (
             <div style={styles.panelBody}>
               <div style={styles.columns}>
@@ -3392,7 +3854,6 @@ export default function BlCreatorPage() {
               </div>
             </div>
           ) : null}
-
           {rightTab === "inspect" ? (
             <div style={styles.panelBody}>
               <div style={styles.inspector}>
@@ -3406,13 +3867,27 @@ export default function BlCreatorPage() {
                     header={template.header}
                     onUpdateHeader={(patch) => {
                       const next = JSON.parse(
-                        JSON.stringify(templateRef.current)
+                        JSON.stringify(templateRef.current),
                       );
                       next.header = { ...(next.header || {}), ...patch };
                       commit(next);
                     }}
-                    onPatch={(p) => updateEl(primarySelected.id, p)}
-                    onStyle={(p) => updateElStyle(primarySelected.id, p)}
+                    onPatch={(p) => {
+                      const selected =
+                        selectedIds instanceof Set
+                          ? selectedIds
+                          : new Set(selectedIds || []);
+                      if (selected.size > 1) applyPatchToSelection(p);
+                      else updateEl(primarySelected.id, p);
+                    }}
+                    onStyle={(p) => {
+                      const selected =
+                        selectedIds instanceof Set
+                          ? selectedIds
+                          : new Set(selectedIds || []);
+                      if (selected.size > 1) applyStyleToSelection(p);
+                      else updateElStyle(primarySelected.id, p);
+                    }}
                     onTable={(p) => updateTable(primarySelected.id, p)}
                     onCellStyle={(cellK, p) =>
                       updateTableCellStyle(primarySelected.id, cellK, p)
@@ -3421,6 +3896,7 @@ export default function BlCreatorPage() {
                     onBindCell={bindActiveTableCellToColumn}
                     onMerge={mergeSelectedCells}
                     onUnmerge={unmergeCell}
+                    getCommonStyleValue={getCommonStyleValue}
                   />
                 )}
               </div>
@@ -3428,7 +3904,6 @@ export default function BlCreatorPage() {
           ) : null}
         </div>
       </div>
-
       {toastMsg ? <div style={styles.toast}>{toastMsg}</div> : null}
     </div>
   );
@@ -3441,6 +3916,7 @@ function Inspector({
   onUpdateHeader,
   onPatch,
   onStyle,
+  getCommonStyleValue,
   onTable,
   onCellStyle,
   columns,
@@ -3452,13 +3928,24 @@ function Inspector({
   const isTable = el.type === "table";
   const isLine = el.type === "lineH" || el.type === "lineV";
   const isText = el.type === "text";
+  const isImage = el.type === "image";
 
   const t = el.table;
   const activeCellKey =
     isTable && t?.activeCell ? `${t.activeCell.r},${t.activeCell.c}` : null;
   const cellSX =
     (isTable && activeCellKey && t?.cellStyle?.[activeCellKey]) || {};
+  const [uiFontSize, setUiFontSize] = React.useState(
+    String(el?.style?.fontSize ?? 12),
+  );
 
+  React.useEffect(() => {
+    setUiFontSize(String(el?.style?.fontSize ?? 12));
+  }, [el?.id, el?.style?.fontSize]);
+  const uiFontSizeNum = (() => {
+    const n = Number(String(uiFontSize || "").trim());
+    return Number.isFinite(n) && n > 0 ? n : 12;
+  })();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={stylesKV.block}>
@@ -3495,6 +3982,7 @@ function Inspector({
           </KV>
         </div>
       </div>
+
       <div style={stylesKV.block}>
         <div style={stylesKV.title}>Header</div>
 
@@ -3510,14 +3998,13 @@ function Inspector({
         >
           <input
             type="checkbox"
-            checked={header?.enabled ?? true}
+            checked={header?.enabled ?? false}
             onChange={(e) => {
               onUpdateHeader({ enabled: e.target.checked });
             }}
           />
           Show Header Image
         </label>
-
         {header?.enabled && (
           <div style={{ marginTop: 10 }}>
             <KV label="Height (mm)">
@@ -3532,7 +4019,6 @@ function Inspector({
           </div>
         )}
       </div>
-
       {isText ? (
         <div style={stylesKV.block}>
           <div style={stylesKV.title}>Text Mode</div>
@@ -3576,61 +4062,234 @@ function Inspector({
               <div />
             </div>
           ) : null}
-          <div style={{ marginTop: 8, fontSize: 11, opacity: 0.7 }}>
-            Tip: single click to edit. Shift-resize scales font.
-          </div>
         </div>
       ) : null}
+
+      {isImage && (
+        <div style={stylesKV.block}>
+          <div style={stylesKV.title}>Image</div>
+          <KV label="Fit">
+            <select
+              value={el.fit || "contain"}
+              onChange={(e) => onPatch({ fit: e.target.value })}
+              style={stylesKV.select}
+            >
+              <option value="contain">Contain</option>
+              <option value="cover">Cover</option>
+              <option value="fill">Fill</option>
+            </select>
+          </KV>
+          <KV label="Opacity">
+            <Num
+              value={el.opacity ?? 1}
+              step={0.05}
+              min={0}
+              max={1}
+              onChange={(v) => onPatch({ opacity: v })}
+            />
+          </KV>
+          <button
+            className="mt-2"
+            style={stylesKV.actionBtn}
+            onClick={() => {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "image/*";
+              input.onchange = (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                const r = new FileReader();
+                r.onload = () => onPatch({ src: r.result });
+                r.readAsDataURL(f);
+              };
+              input.click();
+            }}
+          >
+            Choose Image
+          </button>
+        </div>
+      )}
 
       {!isLine ? (
-        <div style={stylesKV.block}>
-          <div style={stylesKV.title}>Style</div>
-          <div style={stylesKV.row}>
-            <KV label="Text">
-              <Color
-                value={s.color || "#0f172a"}
-                onChange={(v) => onStyle({ color: v })}
-              />
-            </KV>
-            <KV label="BG">
-              <Color
-                value={s.bg || "#ffffff"}
-                onChange={(v) => onStyle({ bg: v })}
-              />
-            </KV>
-          </div>
-          <div style={stylesKV.row}>
-            <KV label="Border">
-              <Color
-                value={s.borderColor || "#111827"}
-                onChange={(v) => onStyle({ borderColor: v })}
-              />
-            </KV>
-            <KV label="BW">
-              <Num
-                value={s.borderWidth ?? 1}
-                step={1}
-                onChange={(v) => onStyle({ borderWidth: v })}
-              />
-            </KV>
-          </div>
-          <div style={stylesKV.row}>
-            <KV label="B Style">
-              <select
-                value={s.borderStyle || "solid"}
-                onChange={(e) => onStyle({ borderStyle: e.target.value })}
-                style={stylesKV.select}
-              >
-                <option value="solid">Solid</option>
-                <option value="dashed">Dashed</option>
-                <option value="dotted">Dotted</option>
-              </select>
-            </KV>
-            <KV label=" ">{/* spacer */}</KV>
-          </div>
-        </div>
-      ) : null}
+        <>
+          {/* ===================== Style (Color / BG / Border) ===================== */}
+          <div style={stylesKV.block}>
+            <div style={stylesKV.title}>Style</div>
 
+            <div style={stylesKV.row}>
+              <KV label="Text">
+                <Color
+                  value={s.color || "#0f172a"}
+                  onChange={(v) => onStyle({ color: v })}
+                />
+              </KV>
+              <KV label="BG">
+                <Color
+                  value={s.bg || "#ffffff"}
+                  onChange={(v) => onStyle({ bg: v })}
+                />
+              </KV>
+            </div>
+            <div style={stylesKV.row}>
+              <KV label="Border">
+                <Color
+                  value={s.borderColor || "#111827"}
+                  onChange={(v) => onStyle({ borderColor: v })}
+                />
+              </KV>
+              <KV label="BW">
+                <Num
+                  value={Number(s.borderWidth ?? 1)}
+                  step={1}
+                  min={0}
+                  onChange={(v) => onStyle({ borderWidth: v })}
+                />
+              </KV>
+            </div>
+            <div style={stylesKV.row}>
+              <KV label="B Style">
+                {(() => {
+                  const bs = getCommonStyleValue("borderStyle", "solid");
+                  return (
+                    <select
+                      value={bs.mixed ? "" : bs.value}
+                      onChange={(e) => onStyle({ borderStyle: e.target.value })}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      style={stylesKV.select}
+                    >
+                      {bs.mixed && <option value="">— Mixed —</option>}
+                      <option value="solid">Solid</option>
+                      <option value="dashed">Dashed</option>
+                      <option value="dotted">Dotted</option>
+                    </select>
+                  );
+                })()}
+              </KV>
+              <KV label=" " />
+            </div>
+          </div>
+
+          {/* ===================== Typography (Font / Align etc.) ===================== */}
+          <div style={stylesKV.block}>
+            <div style={stylesKV.title}>Typography</div>
+            <div style={stylesKV.row}>
+              <KV label="Size">
+                <Num
+                  value={Number(s.fontSize ?? 12)}
+                  step={1}
+                  min={1}
+                  onChange={(v) => onStyle({ fontSize: v })}
+                />
+              </KV>
+              <KV label="Weight">
+                {(() => {
+                  const fw = getCommonStyleValue("fontWeight", 500, "text");
+                  return (
+                    <select
+                      value={fw.value}
+                      onChange={(e) => {
+                        if (e.target.value === "__MIXED__") return;
+                        onStyle({ fontWeight: Number(e.target.value) });
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      style={stylesKV.select}
+                    >
+                      {fw.mixed && <option value="__MIXED__">— Mixed —</option>}
+                      {[300, 400, 500, 600, 700, 800, 900].map((w) => (
+                        <option key={w} value={String(w)}>
+                          {w}
+                        </option>
+                      ))}
+                    </select>
+                  );
+                })()}
+              </KV>
+            </div>
+            <div style={stylesKV.row}>
+              <KV label="Align">
+                {(() => {
+                  const al = getCommonStyleValue("align", "left", "text");
+                  return (
+                    <select
+                      value={al.value}
+                      onChange={(e) => {
+                        if (e.target.value === "__MIXED__") return;
+                        onStyle({
+                          align: e.target.value,
+                          textAlign: e.target.value,
+                        });
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      style={stylesKV.select}
+                    >
+                      {al.mixed && <option value="__MIXED__">— Mixed —</option>}
+                      <option value="left">Left</option>
+                      <option value="center">Center</option>
+                      <option value="right">Right</option>
+                    </select>
+                  );
+                })()}
+              </KV>
+              <KV label="V Align">
+                {(() => {
+                  const va = getCommonStyleValue("vAlign", "top", "text");
+                  return (
+                    <select
+                      value={va.value}
+                      onChange={(e) => {
+                        if (e.target.value === "__MIXED__") return;
+                        onStyle({
+                          vAlign: e.target.value,
+                          verticalAlign: e.target.value,
+                        });
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      style={stylesKV.select}
+                    >
+                      {va.mixed && <option value="__MIXED__">— Mixed —</option>}
+                      <option value="top">Top</option>
+                      <option value="middle">Middle</option>
+                      <option value="bottom">Bottom</option>
+                    </select>
+                  );
+                })()}
+              </KV>
+            </div>
+            <div style={stylesKV.row}>
+              <KV label="Padding">
+                <Num
+                  value={Number(s.padding ?? 6)}
+                  step={1}
+                  min={0}
+                  onChange={(v) => onStyle({ padding: v })}
+                />
+              </KV>
+              <KV label="Line H">
+                <Num
+                  value={Number(s.lineHeight ?? 1.2)}
+                  step={0.05}
+                  min={0}
+                  onChange={(v) => onStyle({ lineHeight: v })}
+                />
+              </KV>
+            </div>
+            <div style={stylesKV.row}>
+              <KV label="Letter Sp.">
+                <Num
+                  value={Number(s.letterSpacing ?? 0)}
+                  step={0.2}
+                  onChange={(v) => onStyle({ letterSpacing: v })}
+                />
+              </KV>
+              <KV label=" " />
+            </div>
+          </div>
+        </>
+      ) : null}
       {isLine ? (
         <div style={stylesKV.block}>
           <div style={stylesKV.title}>Line</div>
@@ -3651,90 +4310,6 @@ function Inspector({
           </div>
         </div>
       ) : null}
-
-      {!isLine ? (
-        <div style={stylesKV.block}>
-          <div style={stylesKV.title}>Typography</div>
-          <div style={stylesKV.row}>
-            <KV label="Size">
-              <Num
-                value={s.fontSize || 12}
-                step={1}
-                onChange={(v) => onStyle({ fontSize: v })}
-              />
-            </KV>
-            <KV label="Weight">
-              <select
-                value={s.fontWeight || 500}
-                onChange={(e) =>
-                  onStyle({ fontWeight: Number(e.target.value) })
-                }
-                style={stylesKV.select}
-              >
-                {[300, 400, 500, 600, 700, 800, 900].map((w) => (
-                  <option key={w} value={w}>
-                    {w}
-                  </option>
-                ))}
-              </select>
-            </KV>
-          </div>
-
-          <div style={stylesKV.row}>
-            <KV label="Align">
-              <select
-                value={s.align || "left"}
-                onChange={(e) => onStyle({ align: e.target.value })}
-                style={stylesKV.select}
-              >
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-                <option value="right">Right</option>
-              </select>
-            </KV>
-            <KV label="V Align">
-              <select
-                value={s.vAlign || "top"}
-                onChange={(e) => onStyle({ vAlign: e.target.value })}
-                style={stylesKV.select}
-              >
-                <option value="top">Top</option>
-                <option value="middle">Middle</option>
-                <option value="bottom">Bottom</option>
-              </select>
-            </KV>
-          </div>
-
-          <div style={stylesKV.row}>
-            <KV label="Padding">
-              <Num
-                value={s.padding ?? 6}
-                step={1}
-                onChange={(v) => onStyle({ padding: v })}
-              />
-            </KV>
-            <KV label="Line H">
-              <Num
-                value={s.lineHeight ?? 1.2}
-                step={0.05}
-                onChange={(v) => onStyle({ lineHeight: v })}
-              />
-            </KV>
-          </div>
-
-          <div style={stylesKV.row}>
-            <KV label="Letter Sp.">
-              <Num
-                value={s.letterSpacing ?? 0}
-                step={0.2}
-                onChange={(v) => onStyle({ letterSpacing: v })}
-              />
-            </KV>
-            <KV label=" " />
-          </div>
-        </div>
-      ) : null}
-
       {isTable ? (
         <div style={stylesKV.block}>
           <div style={stylesKV.title}>Table</div>
@@ -3769,7 +4344,6 @@ function Inspector({
               />
             </KV>
           </div>
-
           <div style={stylesKV.row}>
             <KV label="Border">
               <Color
@@ -3785,7 +4359,6 @@ function Inspector({
               />
             </KV>
           </div>
-
           <div style={stylesKV.row}>
             <KV label="Grid">
               <Color
@@ -3801,7 +4374,6 @@ function Inspector({
               />
             </KV>
           </div>
-
           <div style={stylesKV.row}>
             <KV label="Cell Pad">
               <Num
@@ -3818,7 +4390,6 @@ function Inspector({
               />
             </KV>
           </div>
-
           <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
             <button onClick={onMerge} style={stylesKV.actionBtn}>
               Merge
@@ -3871,7 +4442,6 @@ function Inspector({
                     />
                   </KV>
                 </div>
-
                 <div
                   style={{
                     display: "grid",
@@ -3899,7 +4469,6 @@ function Inspector({
                     />
                   </KV>
                 </div>
-
                 <div
                   style={{
                     display: "grid",
@@ -3928,7 +4497,6 @@ function Inspector({
                     />
                   </KV>
                 </div>
-
                 <div
                   style={{
                     display: "grid",
@@ -3967,7 +4535,6 @@ function Inspector({
               </>
             )}
           </div>
-
           <div
             style={{
               marginTop: 10,
@@ -3990,9 +4557,6 @@ function Inspector({
                 </button>
               ))}
             </div>
-            <div style={{ marginTop: 6, opacity: 0.65, fontSize: 11 }}>
-              Tip: click a cell, then click a column.
-            </div>
           </div>
         </div>
       ) : null}
@@ -4010,15 +4574,57 @@ function KV({ label, children }) {
 }
 
 function Num({ value, onChange, step = 0.5, min = -999999, max = 999999 }) {
+  const [draft, setDraft] = React.useState(
+    value === null || value === undefined ? "" : String(value),
+  );
+
+  // ✅ keep input in sync when external value changes (selection/style changes)
+  React.useEffect(() => {
+    setDraft(value === null || value === undefined ? "" : String(value));
+  }, [value]);
+
+  const commit = () => {
+    const raw = String(draft).trim();
+    if (raw === "") {
+      setDraft(value === null || value === undefined ? "" : String(value));
+      return;
+    }
+
+    let n = Number(raw);
+    if (!Number.isFinite(n)) {
+      setDraft(value === null || value === undefined ? "" : String(value));
+      return;
+    }
+    if (n < min) n = min;
+    if (n > max) n = max;
+    setDraft(String(n));
+    onChange(n);
+  };
+
   return (
     <input
       type="number"
-      value={Number.isFinite(Number(value)) ? value : 0}
+      value={draft}
       step={step}
       min={min}
       max={max}
-      onChange={(e) => onChange(Number(e.target.value))}
-      style={stylesKV.input}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setDraft(value === null || value === undefined ? "" : String(value));
+          e.currentTarget.blur();
+        }
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      style={stylesKV.num}
     />
   );
 }
@@ -4143,6 +4749,7 @@ const styles = {
     borderBottom: "1px solid #e5e7eb",
     backdropFilter: "blur(10px)",
     flexShrink: 0,
+    fontSize: 24,
   },
   brand: { display: "flex", alignItems: "center", gap: 10 },
   brandDot: {
@@ -4159,7 +4766,7 @@ const styles = {
     background: "#fff",
     padding: "0 10px",
     fontSize: 12,
-    fontWeight: 800,
+    fontWeight: 500,
     outline: "none",
   },
   softBtn: {
@@ -4196,7 +4803,6 @@ const styles = {
     color: "#b91c1c",
     background: "#fff5f5",
   },
-
   body: {
     display: "grid",
     gridTemplateColumns: "260px 1fr 360px",
@@ -4206,7 +4812,6 @@ const styles = {
     minHeight: 0,
     overflow: "hidden",
   },
-
   left: {
     background: "rgba(255,255,255,.92)",
     border: "1px solid #e5e7eb",
@@ -4225,7 +4830,6 @@ const styles = {
     display: "flex",
     flexDirection: "column",
   },
-
   tabs: {
     display: "flex",
     gap: 8,
@@ -4250,7 +4854,6 @@ const styles = {
     borderColor: "rgba(37,99,235,.45)",
     boxShadow: "0 0 0 3px rgba(37,99,235,.12)",
   },
-
   leftSection: { padding: 12, minHeight: 0, overflow: "auto" },
   toolsRow: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 },
   toolIcon: {
@@ -4265,9 +4868,7 @@ const styles = {
     userSelect: "none",
   },
   toolIconLabel: { fontSize: 12, fontWeight: 900, opacity: 0.8 },
-
   divider: { height: 1, background: "#e5e7eb", margin: "12px 0" },
-
   pill: {
     width: 40,
     height: 36,
@@ -4283,7 +4884,6 @@ const styles = {
     borderColor: "rgba(37,99,235,.45)",
     boxShadow: "0 0 0 3px rgba(37,99,235,.12)",
   },
-
   iconGrid: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 },
   iconPill: {
     height: 38,
@@ -4295,13 +4895,10 @@ const styles = {
     justifyContent: "center",
     cursor: "pointer",
   },
-
   center: { position: "relative", minHeight: 0, overflow: "hidden" },
-
   rulers: { position: "absolute", inset: 0, pointerEvents: "none", zIndex: 5 },
   rulerTop: { position: "absolute", left: 36, top: 0, right: 0, height: 28 },
   rulerLeft: { position: "absolute", left: 0, top: 28, bottom: 0, width: 36 },
-
   canvasStage: {
     position: "absolute",
     inset: 0,
@@ -4324,7 +4921,6 @@ const styles = {
       "linear-gradient(to right, rgba(226,232,240,.9) 1px, transparent 1px), linear-gradient(to bottom, rgba(226,232,240,.9) 1px, transparent 1px)",
     backgroundSize: "24px 24px",
   },
-
   bottomBar: {
     position: "absolute",
     left: 12,
