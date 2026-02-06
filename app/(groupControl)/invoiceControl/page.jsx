@@ -2180,7 +2180,7 @@ export default function StickyHeadTable() {
                               )}
                               {isCopyVisible && (
                                 <GridHoverIcon
-                                  defaultIcon={copy} // Your default icon source
+                                  defaultIcon={copyDoc} // Your default icon source
                                   hoverIcon={CopyHover} // Your hovered icon source
                                   altText="Copy"
                                   title={"Copy"}

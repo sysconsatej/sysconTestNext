@@ -2510,8 +2510,8 @@ export default function AddEditFormControll({ reportData }) {
             spName: saveSpName,
           });
 
-          if (response?.data[0]?.success === true) {
-            return toast.success(response?.data[0]?.message);
+          if (response?.data[0]?.success === true || response?.data?.success === true) {
+            return toast.success(response?.data[0]?.message || response?.data?.message);
           }
           toast.error(response.data[0].message);
           setEditableErrors(true);

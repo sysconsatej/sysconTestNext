@@ -24,6 +24,7 @@ function rptInvoice() {
   const [reportIds, setReportIds] = useState([]);
   const [data, setData] = useState([]);
   const [charge, setCharge] = useState([]);
+  const [texInvoiceCharge, setTexInvoiceCharge] = useState([]);
   const [chargeAtt, setChargeAtt] = useState([]);
   const [chargeAttOfSubLeas, setChargeAttOfSubLeas] = useState([]);
   const [hsnSac, setHsnSac] = useState([]);
@@ -221,6 +222,53 @@ function rptInvoice() {
 
     return result;
   }
+
+  function splitIntoChunksWithExtraArrayWships(array = [], chunkSize = 10) {
+    // ✅ 1) sort by printSrNo numeric asc, nulls/invalids last
+    const sorted = [...array].sort((a, b) => {
+      const aRaw = a?.printSrNo;
+      const bRaw = b?.printSrNo;
+
+      const aNum = Number(aRaw);
+      const bNum = Number(bRaw);
+
+      const aBad =
+        aRaw === null ||
+        aRaw === undefined ||
+        aRaw === "" ||
+        Number.isNaN(aNum);
+      const bBad =
+        bRaw === null ||
+        bRaw === undefined ||
+        bRaw === "" ||
+        Number.isNaN(bNum);
+
+      // both bad => keep original relative order (stable-ish)
+      if (aBad && bBad) return 0;
+
+      // bad goes last
+      if (aBad) return 1;
+      if (bBad) return -1;
+
+      // both good => numeric compare
+      return aNum - bNum;
+    });
+
+    // ✅ 2) your chunking logic (unchanged)
+    let result = [];
+
+    if (sorted.length > 0 && sorted.length > 4 && sorted.length < 10) {
+      result.push(sorted);
+      result.push([]);
+    } else {
+      for (let i = 0; i < sorted.length; i += chunkSize) {
+        result.push(sorted.slice(i, i + chunkSize));
+      }
+    }
+
+    return result;
+  }
+
   function splitIntoChunks(array, chunkSize) {
     let result = [];
     for (let i = 0; i < array.length; i += chunkSize) {
@@ -272,14 +320,20 @@ function rptInvoice() {
             reportNames[0] === "Invoice" ||
             reportNames[0] === "Invoice YMS" ||
             reportNames[0] === "Tax Invoice Receipt" ||
-            reportNames[0] === "Credit Note"
+            reportNames[0] === "Credit Note" ||
+            reportNames[0] === "Tax Invoice Wships"
           ) {
             const result = splitIntoChunksWithExtraArray(
               data.data[0]?.tblInvoiceCharge,
               itemsPerPage,
             );
             console.log("Data received:", result);
+            const texInvoiceChargeData = splitIntoChunksWithExtraArrayWships(
+              data.data[0]?.tblInvoiceCharge ?? [],
+              itemsPerPage,
+            );
             setCharge(result);
+            setTexInvoiceCharge(texInvoiceChargeData);
 
             const allInvoiceDetails = data?.data[0]?.tblInvoiceCharge?.flatMap(
               (charge) => charge.tblInvoiceChargeDetails || [],
@@ -1729,8 +1783,9 @@ function rptInvoice() {
             {charge[index]?.map((chargeData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
-                  }`}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b" : ""
+                }`}
                 style={{ fontSize: "9px", width: "100%" }}
               >
                 <p
@@ -1803,8 +1858,8 @@ function rptInvoice() {
                 <p className="pb-1 text-center" style={{ width: "7%" }}>
                   {(
                     Number(chargeData?.qty || 0) *
-                    Number(chargeData?.rate || 0) *
-                    Number(chargeData?.exchangeRate || 1) +
+                      Number(chargeData?.rate || 0) *
+                      Number(chargeData?.exchangeRate || 1) +
                     Number(chargeData?.IGST || 0) +
                     Number(chargeData?.CGST || 0) +
                     Number(chargeData?.SGST || 0)
@@ -1952,14 +2007,15 @@ function rptInvoice() {
           <div
             className="border-black border-r border-l"
             style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-          // style={{ height: chargeGridHeight, overflow: "hidden" }}
+            // style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {!chargeAtt?.length &&
               charge[index]?.map((chargeData, idx, array) => (
                 <div
                   key={idx}
-                  className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                    }`}
+                  className={`flex w-full ${
+                    idx === array.length - 1 ? "border-b border-black" : ""
+                  }`}
                   style={{ fontSize: "9px", width: "100%" }}
                 >
                   <p
@@ -2006,8 +2062,9 @@ function rptInvoice() {
               charge[index]?.map((chargeData, idx, array) => (
                 <div
                   key={idx}
-                  className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                    }`}
+                  className={`flex w-full ${
+                    idx === array.length - 1 ? "border-b border-black" : ""
+                  }`}
                   style={{ fontSize: "9px", width: "100%" }}
                 >
                   <p
@@ -2146,8 +2203,9 @@ function rptInvoice() {
                   {chargeAtt[index]?.map((chargeAttData, idx, array) => (
                     <div
                       key={idx}
-                      className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
-                        }`}
+                      className={`flex w-full ${
+                        idx === array.length - 1 ? "border-b" : ""
+                      }`}
                       style={{ fontSize: "9px", width: "100%" }}
                     >
                       <p
@@ -2320,13 +2378,14 @@ function rptInvoice() {
           <div
             className="border-black border-r border-l"
             style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-          // style={{ height: chargeGridHeight, overflow: "hidden" }}
+            // style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {charge[index]?.map((chargeData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                  }`}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b border-black" : ""
+                }`}
                 style={{ fontSize: "9px", width: "100%" }}
               >
                 <p
@@ -2515,13 +2574,14 @@ function rptInvoice() {
           <div
             className="border-black border-r border-l"
             style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-          // style={{ height: chargeGridHeight, overflow: "hidden" }}
+            // style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {charge[index]?.map((chargeData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                  }`}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b border-black" : ""
+                }`}
                 style={{ fontSize: "9px", width: "100%" }}
               >
                 <p
@@ -3389,6 +3449,334 @@ function rptInvoice() {
     );
   };
 
+  const taxInvoiceWships = (index) => (
+    <div>
+      <div className="mx-auto !text-black">
+        <CompanyImgModule data={data} />
+        <TaxInvoiceHeader data={data} />
+        <TaxInvoiceBillingDetails data={data} />
+        {index === 0 && <TaxInvoiceJobDetails data={data} />}
+        <TaxInvoiceRemarks data={data} />
+        <TaxInvoiceChargeDetailsWships
+          data={data}
+          //charge={charge}
+          charge={texInvoiceCharge}
+          index={index}
+          hsnSac={hsnSac}
+        />
+        {index === 0 && (
+          <TaxInvoiceTermsAndConditionWships
+            data={data}
+            index={index}
+            termsAndConditions={termsAndConditions}
+          />
+        )}
+      </div>
+    </div>
+  );
+
+  const TaxInvoiceChargeDetailsWships = ({ data, charge, index, hsnSac }) => {
+    let totalAmount = 0;
+    charge.forEach((group) => {
+      group.forEach((item) => {
+        if (!isNaN(item.totalAmount) && item.totalAmount !== null) {
+          totalAmount += Number(item.totalAmount);
+        }
+      });
+    });
+    const gridTotal = data[0]?.tblInvoiceCharge?.reduce((acc, curr) => {
+      const qty = Number(curr.qty || 0);
+      const rate = Number(curr.rate || 0);
+      const exchangeRate = Number(curr.exchangeRate || 1);
+      const IGST = Number(curr.IGST || 0);
+      const CGST = Number(curr.CGST || 0);
+      const SGST = Number(curr.SGST || 0);
+
+      const rowTotal = qty * rate * exchangeRate + IGST + CGST + SGST;
+      return acc + rowTotal;
+    }, 0);
+
+    const totalAmountInWords = numberToWords(parseFloat(gridTotal), "INR");
+
+    // Calculate the number of charges on the current page
+    const currentPageLength = charge[index]?.length || 0;
+    const nextPageLength = charge[index + 1]?.length || 0;
+    const lastPageIndex = charge.length - 1;
+
+    const totalPages = charge.length;
+    // Determine if it's the last page
+    const isLastPage =
+      index === lastPageIndex ||
+      (index === lastPageIndex - 1 && nextPageLength < 4);
+
+    // Condition to check if there is only one page
+    const isSinglePage = charge.length === 1;
+
+    // Adjust the charge grid height based on whether it's a single page or not
+
+    const chargeGridHeight = isSinglePage ? "200px" : "260px";
+    //const chargeGridHeight = isSinglePage ? "115px" : "260px";   previously we we having this hight
+    // Show the second grid only if it's the last page or if more than 4 charges exist
+    const showHsnGrid =
+      isLastPage || (currentPageLength > 4 && currentPageLength < 10);
+
+    return (
+      <>
+        {/* First Grid: Charge Details */}
+
+        {currentPageLength > 0 && (
+          <div
+            className="flex w-full border-black border-r border-l border-b text-center font-bold"
+            style={{ fontSize: "9px", width: "100%" }}
+          >
+            <p className="p-1 border-r border-black" style={{ width: "30%" }}>
+              DESCRIPTION
+            </p>
+            <p className="p-1 border-r border-black" style={{ width: "13%" }}>
+              HSN / SAC Code
+            </p>
+            <p className="p-1 border-r border-black" style={{ width: "4%" }}>
+              Qty
+            </p>
+            <p className="p-1 border-r border-black" style={{ width: "6%" }}>
+              Rate
+            </p>
+            <p className="p-1 border-r border-black" style={{ width: "4%" }}>
+              Curr
+            </p>
+            <p className="p-1 border-r border-black" style={{ width: "7%" }}>
+              Ex. Rate
+            </p>
+            <p className="p-1 border-r border-black" style={{ width: "7%" }}>
+              Taxable Amount
+            </p>
+            <p className="p-1 border-r border-black" style={{ width: "7%" }}>
+              Tax Rate
+            </p>
+            <p className="p-1 border-r border-black" style={{ width: "5%" }}>
+              IGST
+            </p>
+            <p className="p-1 border-r border-black" style={{ width: "5%" }}>
+              CGST
+            </p>
+            <p className="p-1 border-r border-black" style={{ width: "5%" }}>
+              SGST
+            </p>
+            <p className="p-1 text-center" style={{ width: "7%" }}>
+              Amount in {data[0]?.currency || ""}
+            </p>
+          </div>
+        )}
+        {/* Charge Grid */}
+        {currentPageLength > 0 && (
+          <div
+            className="border-black border-r border-l border-b"
+            style={{ height: chargeGridHeight, overflow: "hidden" }}
+          >
+            {charge[index]?.map((chargeData, idx, array) => (
+              <div
+                key={idx}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b" : ""
+                }`}
+                style={{ fontSize: "9px", width: "100%" }}
+              >
+                <p
+                  className="pb-1 pl-2 border-r border-black ps-1"
+                  style={{ width: "30%" }}
+                >
+                  {chargeData?.description || chargeData?.chargeGl || ""}
+                </p>
+                <p
+                  className="pb-1 border-r border-black text-center ps-1"
+                  style={{ width: "13%" }}
+                >
+                  {chargeData?.hsn || ""} {chargeData?.sac || ""}
+                </p>
+                <p
+                  className="pb-1 border-r border-black text-center ps-1"
+                  style={{ width: "4%" }}
+                >
+                  {chargeData?.qty || ""}
+                </p>
+                <p
+                  className="pb-1 border-r border-black text-center ps-1"
+                  style={{ width: "6%" }}
+                >
+                  {chargeData?.rate || ""}
+                </p>
+                <p
+                  className="pb-1 border-r border-black text-center ps-1"
+                  style={{ width: "4%" }}
+                >
+                  {chargeData?.chargeCurrency || ""}
+                </p>
+                <p
+                  className="pb-1 border-r border-black text-center ps-1"
+                  style={{ width: "7%" }}
+                >
+                  {chargeData?.exchangeRate || ""}
+                </p>
+                <p
+                  className="pb-1 border-r border-black text-center ps-1"
+                  style={{ width: "7%" }}
+                >
+                  {chargeData?.totalAmountHc || ""}
+                  {/* {data[0]?.invoiceAmountFc || ""} */}
+                </p>
+                <p
+                  className="pb-1 border-r border-black text-center ps-1"
+                  style={{ width: "7%" }}
+                >
+                  {chargeData?.taxAmount || ""}
+                </p>
+                <p
+                  className="pb-1 border-r border-black text-center ps-1"
+                  style={{ width: "5%" }}
+                >
+                  {chargeData?.IGST || "0.00"}
+                </p>
+                <p
+                  className="pb-1 border-r border-black text-center"
+                  style={{ width: "5%" }}
+                >
+                  {chargeData?.CGST || "0.00"}
+                </p>
+                <p
+                  className="pb-1 border-r border-black text-center"
+                  style={{ width: "5%" }}
+                >
+                  {chargeData?.SGST || "0.00"}
+                </p>
+                <p className="pb-1 text-center" style={{ width: "7%" }}>
+                  {(
+                    Number(chargeData?.qty || 0) *
+                      Number(chargeData?.rate || 0) *
+                      Number(chargeData?.exchangeRate || 1) +
+                    Number(chargeData?.IGST || 0) +
+                    Number(chargeData?.CGST || 0) +
+                    Number(chargeData?.SGST || 0)
+                  ).toFixed(2)}
+                </p>
+              </div>
+            ))}
+
+            {/* Final row - Amount in Words */}
+            <div
+              className="flex w-full border-t border-b border-black"
+              style={{ fontSize: "9px", width: "100%" }}
+            >
+              <p
+                className="p-1 uppercase"
+                style={{ width: "85%", paddingRight: "15px" }}
+              >
+                <span className="font-bold">Amount in Words </span>
+                {data[0]?.currency || ""} {totalAmountInWords || ""} Only
+              </p>
+              <p className="p-1" style={{ width: "8%" }}>
+                Total {data[0]?.currency || ""}
+              </p>
+              <p className="p-1" style={{ width: "7%" }}>
+                {gridTotal?.toFixed(2)}
+              </p>
+            </div>
+          </div>
+        )}
+        {/* Show HSN grid only if it's the last page and more than 4 charges */}
+        {showHsnGrid && index === totalPages - 1 && (
+          <div>
+            <TaxInvoiceHsnSummaryGrid hsnSac={hsnSac} data={data} />
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const TaxInvoiceTermsAndConditionWships = ({
+    data,
+    index,
+    termsAndConditions,
+  }) => {
+    const companyName = data[0]?.company || "";
+
+    // Helper to turn a newline or array into a sequence of lines
+    const renderTerms = (tc) => {
+      if (Array.isArray(tc)) {
+        return tc.map((line, i) => (
+          <React.Fragment key={i}>
+            {line}
+            <br />
+          </React.Fragment>
+        ));
+      }
+      if (typeof tc === "string") {
+        return tc.split(/\r?\n/).map((line, i) => (
+          <React.Fragment key={i}>
+            {line.trim()}
+            <br />
+          </React.Fragment>
+        ));
+      }
+      return null;
+    };
+
+    return (
+      <>
+        <div
+          className="flex border-r border-l border-b border-black p-2"
+          //style={{ fontSize: "9px", height: "205px" }}
+          style={{ fontSize: "9px", height: "140px" }}
+        >
+          <div style={{ width: "60%" }}>
+            <p className="font-bold">Terms And Condition :</p>
+            <p className="mt-2" style={{ lineHeight: 1.4 }}>
+              {termsAndConditions ? (
+                renderTerms(termsAndConditions)
+              ) : (
+                <p>
+                  a) All payments should be in favour of {companyName}
+                  <br />
+                  b) If any discrepancy is noticed in the invoice, kindly inform
+                  us in writing within 7 days else the same will be considered
+                  as correct.
+                  <br />
+                  c) If payment is delayed beyond agreed credit terms, it will
+                  attract interest @18% per annum.
+                  <br />
+                  d) Please check your GST Details. If the same needs
+                  modification kindly notify us within 3 working days.
+                  <br />
+                  e) Kindly settle the tax component of the invoice within 7
+                  days.
+                  <br />
+                  f) Jurisdiction: Dispute if any shall be subject to the
+                  jurisdiction of Pune (India) Courts only.
+                  <br />
+                </p>
+              )}
+            </p>
+          </div>
+          <div style={{ width: "40%" }}>
+            <p className="font-bold text-right pr-4" style={{ height: "56%" }}>
+              For {companyName}
+            </p>
+            <p className="font-bold text-right pr-4">Authorized Signatory</p>
+          </div>
+        </div>
+        <div className="p-2 border-r border-l border-b border-black flex">
+          <div className="font-bold" style={{ width: "90%", fontSize: "9px" }}>
+            This is a computer generated invoice no stamp and signature is
+            required.
+          </div>
+          <div style={{ width: "10%", fontSize: "9px" }}>
+            Page {index + 1} of{" "}
+            {Math.ceil(data[0]?.tblInvoiceCharge?.length / itemsPerPage || 1)}
+          </div>
+        </div>
+      </>
+    );
+  };
+
   const taxInvoice = (index) => (
     <div>
       <div className="mx-auto !text-black">
@@ -3684,10 +4072,10 @@ function rptInvoice() {
     // compute once (before render or above your return)
     const lastAvailableIndex = Array.isArray(chargeAtt)
       ? chargeAtt.reduce(
-        (last, inner, idx) =>
-          Array.isArray(inner) && inner.length > 0 ? idx : last,
-        -1, // → -1 if none are non-empty
-      )
+          (last, inner, idx) =>
+            Array.isArray(inner) && inner.length > 0 ? idx : last,
+          -1, // → -1 if none are non-empty
+        )
       : -1;
 
     console.log("lastAvailableIndex", lastAvailableIndex);
@@ -3873,8 +4261,9 @@ function rptInvoice() {
             {currentChargeAtt.map((chargeAttData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
-                  }`}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b" : ""
+                }`}
                 style={{ fontSize: "9px", width: "100%", color: "black" }}
               >
                 <p
@@ -6114,7 +6503,7 @@ function rptInvoice() {
     );
   };
 
-  const HeadingGrid = ({ }) => {
+  const HeadingGrid = ({}) => {
     const containerDetails = data[0]?.tblInvoiceCharge;
 
     // One function: build "count X size+type" label(s) using `type` (not typeCode)
@@ -6536,7 +6925,7 @@ function rptInvoice() {
     );
   };
 
-  const HeadingGridYms = ({ }) => {
+  const HeadingGridYms = ({}) => {
     const containerDetails = data[0]?.tblInvoiceCharge;
 
     // One function: build "count X size+type" label(s) using `type` (not typeCode)
@@ -6958,7 +7347,7 @@ function rptInvoice() {
     );
   };
 
-  const BankDetailsGrid = ({ }) => {
+  const BankDetailsGrid = ({}) => {
     const banks = data[0]?.tblInvoiceBank ?? []; // or just use your array directly
 
     const hasValue = (v) =>
@@ -7025,8 +7414,9 @@ function rptInvoice() {
               <div
                 key={idx}
                 style={{ width: `${100 / banks?.length}%`, minWidth: 0 }}
-                className={`print:break-inside-avoid border-black ${isLast ? "" : "border-r"
-                  }`}
+                className={`print:break-inside-avoid border-black ${
+                  isLast ? "" : "border-r"
+                }`}
               >
                 <table
                   className="w-full text-[10px] text-black border-collapse"
@@ -7046,8 +7436,9 @@ function rptInvoice() {
                         )}
                         <td
                           // className=${p-1 break-words text-center}`
-                          className={`p-1 break-words ${isLast ? "text-center" : ""
-                            }`}
+                          className={`p-1 break-words ${
+                            isLast ? "text-center" : ""
+                          }`}
                           style={{ fontSize: "9px" }}
                           colSpan={isLast ? 2 : 1}
                         >
@@ -8580,8 +8971,8 @@ function rptInvoice() {
                 >
                   {item?.discountAmount
                     ? `${data[0]?.currency} ${parseFloat(
-                      item.discountAmount,
-                    ).toFixed(2)}`
+                        item.discountAmount,
+                      ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
                 <div
@@ -8596,8 +8987,8 @@ function rptInvoice() {
                 >
                   {item?.tblInvoiceChargeTax?.[0]?.taxAmountHc
                     ? `${data[0]?.currency} ${parseFloat(
-                      item.tblInvoiceChargeTax[0].taxAmountHc,
-                    ).toFixed(2)}`
+                        item.tblInvoiceChargeTax[0].taxAmountHc,
+                      ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
                 <div
@@ -8611,8 +9002,8 @@ function rptInvoice() {
                 >
                   {item?.totalAmount
                     ? `${data[0]?.currency} ${parseFloat(
-                      item.totalAmount,
-                    ).toFixed(2)}`
+                        item.totalAmount,
+                      ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
               </div>
@@ -8734,8 +9125,8 @@ function rptInvoice() {
             >
               {discountAmount
                 ? `${data[0]?.currency} ${parseFloat(discountAmount).toFixed(
-                  2,
-                )}`
+                    2,
+                  )}`
                 : `${data[0]?.currency}  0.00`}
             </td>
           </tr>
@@ -8764,8 +9155,8 @@ function rptInvoice() {
             >
               {grossTotalAmount
                 ? `${data[0]?.currency} ${parseFloat(grossTotalAmount).toFixed(
-                  2,
-                )}`
+                    2,
+                  )}`
                 : `${data[0]?.currency}  0.00`}
             </td>
           </tr>
@@ -9140,9 +9531,9 @@ function rptInvoice() {
           const amount =
             typeof amountRaw === "number"
               ? amountRaw.toLocaleString("en-IN", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })
               : safe(amountRaw);
 
           return (
@@ -9297,7 +9688,78 @@ function rptInvoice() {
                   </div>
                 </>
               );
-
+            case "Tax Invoice Wships":
+              return (
+                <>
+                  <div
+                    ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                    id="TaxInvoice"
+                  >
+                    {charge?.length > 0 ? (
+                      // Render taxInvoice if there are charges
+                      Array.from({
+                        length: charge?.length,
+                      }).map((_, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            width: "210mm",
+                            height: "297mm",
+                            margin: "auto",
+                            boxSizing: "border-box",
+                            pageBreakAfter:
+                              index < data[0]?.tblInvoiceCharge?.length - 1
+                                ? "always"
+                                : "auto", // Ensure the correct page break setting
+                            padding: "5mm", // space between page edge and inner border
+                            display: "flex",
+                            flexDirection: "column",
+                            marginBottom: "22px",
+                          }}
+                          className="bgTheme removeFontSize"
+                        >
+                          <div
+                            style={{
+                              flex: 1,
+                              width: "100%",
+                              boxSizing: "border-box",
+                              fontFamily: "Arial sans-serif !important",
+                            }}
+                          >
+                            {taxInvoiceWships(index)}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      // Render taxInvoiceWithoutCharges if there are no charges
+                      <div
+                        style={{
+                          width: "210mm",
+                          height: "297mm",
+                          margin: "auto",
+                          boxSizing: "border-box",
+                          padding: "5mm", // space between page edge and inner border
+                          display: "flex",
+                          flexDirection: "column",
+                          marginBottom: "22px",
+                        }}
+                        className="bgTheme removeFontSize"
+                      >
+                        <div
+                          style={{
+                            flex: 1,
+                            width: "100%",
+                            boxSizing: "border-box",
+                            fontFamily: "Arial sans-serif !important",
+                          }}
+                        >
+                          {taxInvoiceWithoutCharges()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
             case "Proforma Invoice":
               return (
                 <>

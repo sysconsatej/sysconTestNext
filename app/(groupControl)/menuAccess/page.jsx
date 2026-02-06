@@ -95,7 +95,7 @@ const MenuAccess = () => {
 
     setSelectedUserName(user);
     const requestBodyMenuAccess = {
-      columns: "menuId,isEdit,isView,isAdd,isDelete,isExport,isAccess",
+      columns: "menuId,isEdit,isView,isAdd,isDelete,isCopy,isExport,isAccess",
       tableName: "tblMenuAccess",
       whereCondition: `userId = ${selectedUserId} and companyId = ${companyId}`,
       clientIdCondition: `status = 1 FOR JSON PATH, include_null_values`,
@@ -147,7 +147,7 @@ const MenuAccess = () => {
               expandAll,
               KeyboardDoubleArrowDownIcon,
               KeyboardDoubleArrowUpIcon,
-              setExpandAll
+              setExpandAll,
             )}
           </div>
         </LightTooltip>

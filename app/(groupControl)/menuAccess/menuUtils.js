@@ -1,6 +1,14 @@
 import React from "react";
 
-const menuAccessArr = ["Edit", "View", "Add", "Delete", "Export", "Access"];
+const menuAccessArr = [
+  "Edit",
+  "View",
+  "Add",
+  "Delete",
+  "Copy",
+  "Export",
+  "Access",
+];
 
 const dropdownFieldData = [
   {
@@ -48,6 +56,7 @@ function buildTree(data, parentId = null) {
       isView: false,
       isAdd: false,
       isDelete: false,
+      isCopy: false,
       isExport: false,
       isAccess: false,
     }));
@@ -62,6 +71,7 @@ function updateCheckStatus(tree, id, checked) {
       isView: checked,
       isAdd: checked,
       isDelete: checked,
+      isCopy: checked,
       isExport: checked,
       isAccess: checked,
       children: updateChildren(child.children),
@@ -76,6 +86,7 @@ function updateCheckStatus(tree, id, checked) {
         isView: checked,
         isAdd: checked,
         isDelete: checked,
+        isCopy: checked,
         isExport: checked,
         isAccess: checked,
         children: updateChildren(item.children),
@@ -121,6 +132,7 @@ function markParentsChecked(tree, id) {
           parent.isView = true;
           parent.isAdd = true;
           parent.isDelete = true;
+          parent.isCopy = true;
           parent.isExport = true;
           parent.isAccess = true;
         }
@@ -149,6 +161,7 @@ function getMenuSubmitValues(menuData, userObj) {
         isView: Number(item.isView),
         isAdd: Number(item.isAdd),
         isDelete: Number(item.isDelete),
+        isCopy: Number(item.isCopy),
         isExport: Number(item.isExport),
         isAccess: Number(item.isAccess),
       });
@@ -179,6 +192,7 @@ function getMenuDataByUser(menusData, selectedMenus) {
         isView: matchedMenu.isView,
         isAdd: matchedMenu.isAdd,
         isDelete: matchedMenu.isDelete,
+        isCopy: matchedMenu.isCopy,
         isExport: matchedMenu.isExport,
         isAccess: matchedMenu.isAccess,
         children: getMenuDataByUser(item.children || [], selectedMenus),
@@ -191,6 +205,7 @@ function getMenuDataByUser(menusData, selectedMenus) {
       isView: false,
       isAdd: false,
       isDelete: false,
+      isCopy: false,
       isExport: false,
       isAccess: false,
       children: getMenuDataByUser(item.children || [], selectedMenus),
