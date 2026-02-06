@@ -10,8 +10,7 @@ import { fontFamilyStyles } from "@/app/globalCss";
 import CustomeInputFields from "@/components/Inputs/customeInputFields";
 import { getContainerData } from "@/services/auth/FormControl.services";
 import { getUserDetails } from "@/helper/userDetails";
-import GeneralSheet from "@/components/sheets/GeneralSheet";
-import EntitySheet from "@/components/sheets/EntitySheet";
+// import EntitySheet from "@/components/sheets/EntitySheet";
 import "./exportChaJob.css";
 import JobSheet from "@/components/sheets/GeneralSheet";
 import ShipmentSheet from "@/components/sheets/ShipmentSheet";
@@ -19,7 +18,9 @@ import InvoiceSheet from "@/components/sheets/InvoiceSheet";
 import ItemSheet from "@/components/sheets/ProductSheet";
 import ContainerSheet from "@/components/sheets/ContainerSheet";
 
-const TABS = ["Job", "Entity", "Shipment", "Invoice", "Item", "Container"];
+const TABS = ["Job",
+    //  "Entity",
+    "Shipment", "Invoice", "Item", "Container"];
 
 const PARENT_FIELDS = [
     {
@@ -97,7 +98,7 @@ const PARENT_FIELDS = [
                 isEditable: false,
                 isEditableMode: "e",
                 position: "top",
-                controlDefaultValue: "2026-01-05",
+                controlDefaultValue: "currentdate",
                 sectionHeader: "Job Details",
                 sectionOrder: 1,
                 isCopy: false,
@@ -145,7 +146,7 @@ const DEFAULT_STATE = {
     routeName: "mastervalue",
     businessSegmentId: null,
     jobNo: "",
-    jobDate: "2026-01-05",
+    jobDate: "currentdate",
     createdBy: null,
     tblContainerMovement: [],
 };
@@ -197,19 +198,20 @@ const initialJobState = {
     quotationNo: null,
 };
 
-const initialEntityDetailsState = {
-    exporterStateId: null,
-    exporterTypeId: null,
-    consigneeCountryName: null,
-    branchSNo: null,
-    ieCodeNo: null,
-    exporterAddress: null,
-    dbkBankName: null,
-    dbkAccountNo: null,
-    dbkEdiAccountNo: null,
-    consigneeName: null,
-    consigneeAddress: null,
-};
+
+// const initialEntityDetailsState = {
+//     exporterStateId: null,
+//     exporterTypeId: null,
+//     consigneeCountryName: null,
+//     branchSNo: null,
+//     ieCodeNo: null,
+//     exporterAddress: null,
+//     dbkBankName: null,
+//     dbkAccountNo: null,
+//     dbkEdiAccountNo: null,
+//     consigneeName: null,
+//     consigneeAddress: null,
+// };
 
 const shipment = {
     // ===== Main =====
@@ -266,13 +268,13 @@ const shipment = {
     sbBottomText: null,
 
     // ===== Ex-Bond Details =====
-    voyage: null,
-    igmNo: null,
-    igmDate: null,
-    noOfPkg: null,
-    bondNo: null,
-    bondDate: null,
-    warehouse: null,
+    // voyage: null,
+    // igmNo: null,
+    // igmDate: null,
+    // noOfPkg: null,
+    // bondNo: null,
+    // bondDate: null,
+    // warehouse: null,
 
     // ===== Annex C1 Details =====
     ieCodeOfEou: null,
@@ -288,6 +290,8 @@ const shipment = {
     verifiedByExaminingOfficer: false,
     sampleForwarded: false,
     sealNumber: null,
+
+    tblExBondDetails: [],
 };
 
 const invoice = {
@@ -332,22 +336,15 @@ const item = {
     unitPrice: null,
     pricePer: null,
     amount: null,
-
-    // ========= General =========
-    // NOTE: in your formdata one field has fieldname: "" (Exim Code) -> can't map.
-    // If you want, rename that fieldname in formdata to "eximCodeId" and then keep below:
     eximCodeId: null,
-
     endUse: null,
     ptaFtaInfoId: null,
     medicinalPlantId: null,
     labGrownDiamondId: null,
     nfeiCategoryId: null,
     originDistrictId: null,
-
     alternateQty: null,
-    alternateQtyUnit: null, // you had duplicate alternateQty in formdata, keep separate key here
-
+    alternateQtyUnit: null,
     formulation: null,
     rewardItem: null,
     isStrCode: false,
@@ -383,6 +380,55 @@ const item = {
     tblDucInfo: [],
     tblDocInfo: [],
     tblAreDetails: [],
+
+    // ========= Re-export =========
+    beNumber: null,
+    beDate: null,
+    invoiceSNo: null,
+    itemSNo: null,
+    importPortCodeId: null,
+    isManualBe: false,
+    beItemDesc: null,
+    qtyImported: null,
+    assessableValue: null,
+    totalDutyPaid: null,
+    totalDutyPaidDate: null,
+
+    qtyExported: null,
+    technicalDetails: null,
+    isInputCreditAvailed: false,
+    isPersonalUseItem: false,
+    otherIdentifyingParameters: null,
+
+    isAgainstExportObligation: false,
+    obligationNo: null,
+    drawbackAmtClaimed: null,
+    isItemUnUsed: false,
+    isCommissionerPermission: false,
+    boardNumber: null,
+    boardDate: null,
+    isModvatAvailed: false,
+    isModvatReversed: false,
+
+    // ========= Other Details =========
+    accessoriesId: null,
+    accessoriesRemarks: null,
+
+    isThirdPartyExport: false,
+    thirdPartyName: null,
+    thirdPartyIeCode: null,
+    thirdPartyBranchSNo: null,
+    thirdPartyRegnNo: null,
+    thirdPartyAddress: null,
+
+    mpgName: null,
+    mpgCode: null,
+    mpgAddress: null,
+    mpgCountryId: null,
+    mpgStateProvince: null,
+    mpgPostalCode: null,
+    mpgSourceStateId: null,
+    mpgTransitCountryId: null,
 
     // ========= CESS / CENVAT accordion =========
     cessLeviable: false,
@@ -437,7 +483,7 @@ export default function JobDetailsSectionPage() {
     const [newState, setNewState] = useState(DEFAULT_STATE);
     const [clearFlag, setClearFlag] = useState({ isClear: false, fieldName: "" });
     const [jobState, setJobState] = useState(initialJobState)
-    const [entityState, setEntityState] = useState(initialEntityDetailsState)
+    // const [entityState, setEntityState] = useState(initialEntityDetailsState)
     const [shipmentState, setShipmentState] = useState(shipment);
     const [invoiceState, setInvoiceState] = useState(invoice);
     const [containerState, setContainerState] = useState(container);
@@ -445,15 +491,45 @@ export default function JobDetailsSectionPage() {
     const [finalState, setFinalState] = useState(null);
 
     useEffect(() => {
+        const header = {
+            businessSegmentId: newState?.businessSegmentId ?? null,
+            jobNo: newState?.jobNo ?? "",
+            jobDate: newState?.jobDate ?? null,
+            createdBy: newState?.createdBy ?? null,
+        };
+
+        // force arrays (so later multiple rows will still work)
+        const invoiceArr = Array.isArray(invoiceState) ? invoiceState : [invoiceState];
+        const itemArr = Array.isArray(itemState) ? itemState : [itemState];
+
+        const shipmentArr = Array.isArray(shipmentState) ? shipmentState : [shipmentState];
+        const containerArr = Array.isArray(containerState) ? containerState : [containerState];
+
         setFinalState({
-            ...jobState,
-            tblJobEntity: entityState,
-            tblJobShipment: shipmentState,
-            tblJobInvoice: invoiceState,
-            tblJobContainer: containerState,
-            tblJobItem: itemState,
+            tblJob:
+            {
+                ...jobState,
+                ...header,
+
+                tblJobInvoice: invoiceArr.map((inv) => ({
+                    ...inv,
+
+                    tblJobItem: Array.isArray(inv?.tblJobItem) ? inv.tblJobItem : itemArr,
+                })),
+
+                tblJobShipment: shipmentArr.map((shp) => ({
+                    ...shp,
+
+                    tblJobContainer: Array.isArray(shp?.tblJobContainer)
+                        ? shp.tblJobContainer
+                        : containerArr,
+                })),
+            },
+
         });
-    }, [jobState, entityState, shipmentState, invoiceState, containerState, itemState]);
+    }, [newState, jobState, shipmentState, invoiceState, containerState, itemState]);
+
+
 
     console.log('finalState=>', finalState)
 
@@ -578,18 +654,56 @@ export default function JobDetailsSectionPage() {
         setNewState(DEFAULT_STATE);
         setClearFlag({ isClear: true, fieldName: "" });
     }, []);
-    const handleSubmit = useCallback(async () => {
-        try {
-            const payload = { ...newState, clientId, userId };
-            const result = await getContainerData(payload);
 
-            if (result?.success) toast.success("Saved successfully.");
-            else toast.error(result?.message || "Save failed.");
+    const handleSubmit = async () => {
+        try {
+            if (!finalState?.tblJob) {
+                toast.error("Final payload not ready.");
+                return;
+            }
+            const payload = {
+                ...finalState,
+                clientId,
+                userId,
+            };
+
+            console.log("SUBMIT PAYLOAD =>", payload);
+
+            const res = await insertExportChaJob(payload);
+
+            if (res?.success) {
+                toast.success(res?.message || "Saved successfully.");
+                setClearFlag({ isClear: true, fieldName: "" });
+                setNewState(DEFAULT_STATE);
+                return;
+            }
+
+            if (res?.rowsAffected?.success === false && Array.isArray(res?.rowsAffected?.errors)) {
+                toast.error(res?.rowsAffected?.message || "Error Found !");
+                console.log("Row Errors =>", res.rowsAffected.errors);
+                return;
+            }
+
+            toast.error(res?.message || "Something went wrong.");
         } catch (err) {
             console.error(err);
-            toast.error("Error submitting form.");
+            toast.error(err?.message || "Failed to save.");
         }
-    }, [newState, clientId, userId]);
+    };
+
+
+    // const handleSubmit = useCallback(async () => {
+    //     try {
+    //         const payload = { ...newState, clientId, userId };
+    //         const result = await getContainerData(payload);
+
+    //         if (result?.success) toast.success("Saved successfully.");
+    //         else toast.error(result?.message || "Save failed.");
+    //     } catch (err) {
+    //         console.error(err);
+    //         toast.error("Error submitting form.");
+    //     }
+    // }, [newState, clientId, userId]);
     return (
         <>
             <div className="flex space-x-4 p-2 mb-5">
@@ -644,12 +758,12 @@ export default function JobDetailsSectionPage() {
                     onChange={setJobState}
                 />
             ) : null}
-            {activeTab === "Entity" ? (
+            {/* {activeTab === "Entity" ? (
                 <EntitySheet
                     value={entityState}
                     onChange={setEntityState}
                 />
-            ) : null}
+            ) : null} */}
             {activeTab === "Shipment" ? (
                 <ShipmentSheet
                     value={shipmentState}

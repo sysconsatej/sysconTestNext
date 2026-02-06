@@ -161,6 +161,12 @@ function rptAirwayBill() {
           if (!response.ok) throw new Error("Failed to fetch BL data");
           const data = await response.json();
           setBldata(data.data[0]);
+          console.log("marksAndNos", data.data[0].marksNos);
+          console.log("marksAndNosDetails", data.data[0].marksAndNosDetails);
+          console.log(
+            "marksAndNosDetailsAttach",
+            data.data[0].marksAndNosDetailsAttach,
+          );
           console.log("Test BL", data.data[0]);
         } catch (error) {
           console.error("Error fetching BL data:", error);
@@ -288,6 +294,208 @@ function rptAirwayBill() {
       .trim();
   }
 
+  const DEBUG_CUT = true; // <-- set false in production
+
+  const normBreaks = (s = "") =>
+    String(s || "")
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n");
+
+  const splitNonEmptyLines = (s = "") =>
+    normBreaks(s)
+      .split("\n")
+      .map((x) => x.trim())
+      .filter(Boolean);
+
+  const softNorm = (s = "") =>
+    String(s || "")
+      .toUpperCase()
+      .replace(/[“”]/g, '"')
+      .replace(/[’]/g, "'")
+      .replace(/[–—]/g, "-")
+      .replace(/\s+/g, " ")
+      .replace(/[^A-Z0-9]/g, ""); // remove punctuation & spaces for fuzzy contains
+
+  const cutTextDynamic = (fullText = "", keyText = "", mode = "main") => {
+    const full = normBreaks(fullText);
+    const keyLines = splitNonEmptyLines(keyText);
+    const modeLower = String(mode).toLowerCase();
+
+    if (DEBUG_CUT) {
+      console.log("=====================================");
+      console.log("[cutTextDynamic] mode =", modeLower);
+      console.log("[cutTextDynamic] full length =", full.length);
+      console.log(
+        "[cutTextDynamic] key length  =",
+        String(keyText || "").length,
+      );
+      console.log("[cutTextDynamic] keyLines count =", keyLines.length);
+      console.log("[cutTextDynamic] keyLines last(3) =", keyLines.slice(-3));
+    }
+
+    // ✅ if no key => empty (your requirement)
+    if (!full.trim() || keyLines.length === 0) {
+      if (DEBUG_CUT) {
+        console.warn("[cutTextDynamic] RETURN EMPTY because full/key missing");
+      }
+      return "";
+    }
+
+    // -----------------------------
+    // ATTACHMENT MODE
+    // -----------------------------
+    if (modeLower === "attachment") {
+      const out = [];
+      for (let i = 0; i < keyLines.length; i++) {
+        let cur = keyLines[i];
+        let next = keyLines[i + 1];
+
+        if (DEBUG_CUT) console.log("[attach] cur =", cur, " next =", next);
+
+        // rule 1: endsWith ":" => merge with next
+        if (cur.endsWith(":") && next) {
+          const merged = `${cur} ${next}`.replace(/\s+/g, " ").trim();
+          if (DEBUG_CUT) console.log("[attach] merge ':' =>", merged);
+          out.push(merged);
+          i += 1;
+          continue;
+        }
+
+        // rule 2: very short token => merge with next
+        const isVeryShort =
+          cur.length <= 8 && /^[A-Z0-9/&.-]+$/i.test(cur) && next;
+
+        if (isVeryShort) {
+          const merged = `${cur} ${next}`.replace(/\s+/g, " ").trim();
+          if (DEBUG_CUT) console.log("[attach] merge short =>", merged);
+          out.push(merged);
+          i += 1;
+          continue;
+        }
+
+        out.push(cur);
+      }
+
+      const result = out
+        .join("\n")
+        .replace(/\n\s*\n+/g, "\n")
+        .trim();
+      if (DEBUG_CUT) console.log("[attach] RESULT:\n", result);
+      return result;
+    }
+
+    // -----------------------------
+    // MAIN MODE
+    // -----------------------------
+    const fullLines = splitNonEmptyLines(full);
+
+    if (DEBUG_CUT) {
+      console.log("[main] fullLines count =", fullLines.length);
+      console.log("[main] fullLines first(5) =", fullLines.slice(0, 5));
+      console.log("[main] fullLines last(5)  =", fullLines.slice(-5));
+    }
+
+    if (fullLines.length === 0) {
+      if (DEBUG_CUT)
+        console.warn("[cutTextDynamic] RETURN EMPTY because fullLines=0");
+      return "";
+    }
+
+    // end marker is last key line
+    const endMarker = keyLines[keyLines.length - 1];
+    const endMarkerU = endMarker.toUpperCase();
+
+    if (DEBUG_CUT) {
+      console.log("[main] endMarker =", endMarker);
+      console.log("[main] endMarkerU =", endMarkerU);
+    }
+
+    // 1) strict contains
+    let endLineIdx = -1;
+    const matches = [];
+    for (let i = 0; i < fullLines.length; i++) {
+      const lineU = fullLines[i].toUpperCase();
+      if (lineU.includes(endMarkerU)) {
+        endLineIdx = i;
+        matches.push({ i, line: fullLines[i] });
+      }
+    }
+
+    if (DEBUG_CUT) {
+      console.log("[main] strict matches count =", matches.length);
+      console.log("[main] strict matches sample =", matches.slice(0, 5));
+      console.log("[main] endLineIdx =", endLineIdx);
+    }
+
+    // 2) fuzzy fallback if strict fails (common in Goods when spaces/punct differ)
+    if (endLineIdx < 0) {
+      const endSoft = softNorm(endMarker);
+      if (DEBUG_CUT)
+        console.warn("[main] strict failed, trying fuzzy. endSoft =", endSoft);
+
+      let fuzzyIdx = -1;
+      const fuzzyMatches = [];
+      for (let i = 0; i < fullLines.length; i++) {
+        const lineSoft = softNorm(fullLines[i]);
+        if (lineSoft.includes(endSoft) || endSoft.includes(lineSoft)) {
+          fuzzyIdx = i;
+          fuzzyMatches.push({ i, line: fullLines[i] });
+        }
+      }
+
+      if (DEBUG_CUT) {
+        console.log("[main] fuzzy matches count =", fuzzyMatches.length);
+        console.log("[main] fuzzy matches sample =", fuzzyMatches.slice(0, 5));
+        console.log("[main] fuzzyIdx =", fuzzyIdx);
+      }
+
+      endLineIdx = fuzzyIdx;
+    }
+
+    // ✅ if cannot locate end marker in full => empty
+    if (endLineIdx < 0) {
+      if (DEBUG_CUT) {
+        console.error(
+          "[main] RETURN EMPTY because end marker not found in full",
+        );
+        console.log("[main] endMarker =", endMarker);
+        console.log("[main] fullLines sample(0..20):", fullLines.slice(0, 20));
+      }
+      return "";
+    }
+
+    const resultLines = fullLines.slice(0, endLineIdx + 1);
+
+    const looksLikeId =
+      /[0-9]/.test(endMarker) ||
+      endMarker.includes("/") ||
+      endMarker.includes("#");
+
+    const markerIsPartial =
+      endMarker.length <= 15 && !endMarker.includes(":") && !looksLikeId;
+
+    if (DEBUG_CUT) {
+      console.log("[main] looksLikeId =", looksLikeId);
+      console.log("[main] markerIsPartial =", markerIsPartial);
+      console.log(
+        "[main] last full line before override =",
+        resultLines[resultLines.length - 1],
+      );
+    }
+
+    if (markerIsPartial) {
+      resultLines[resultLines.length - 1] = endMarker;
+      if (DEBUG_CUT) console.log("[main] last line overridden to =", endMarker);
+    }
+
+    const result = resultLines
+      .join("\n")
+      .replace(/\n\s*\n+/g, "\n")
+      .trim();
+    if (DEBUG_CUT) console.log("[main] RESULT:\n", result);
+
+    return result;
+  };
   const AirwayBillPrintCharge = () => {
     console.log("data", reportData);
     return (
@@ -3684,7 +3892,6 @@ function rptAirwayBill() {
       </div>
     );
   };
-
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -3693,7 +3900,6 @@ function rptAirwayBill() {
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
   };
-
   const rptAirwayBillPrintCharge = () => (
     <div>
       <div id="156" className="mx-auto text-black">
@@ -3701,7 +3907,6 @@ function rptAirwayBill() {
       </div>
     </div>
   );
-
   console.log("bldata", bldata);
   const rptSeawayBillOfLadingDraft = () => (
     <div className="pr-2 pl-2">
@@ -4388,7 +4593,6 @@ function rptAirwayBill() {
       </div>
     </div>
   );
-
   const rptSeawayBillOfLading = () => (
     <div className="pr-2 pl-2">
       <div id="156" className="mx-auto text-black mt-1">
@@ -5075,7 +5279,6 @@ function rptAirwayBill() {
       </div>
     </div>
   );
-
   const AirwayBillPrintChargeCopies = ({ index }) => {
     console.log("data", reportData);
     console.log("index - ", index);
@@ -8443,7 +8646,6 @@ function rptAirwayBill() {
       </div>
     );
   };
-
   const AirwayBillPrintAsAgreed = () => {
     console.log("data", reportData);
     return (
@@ -11805,7 +12007,6 @@ function rptAirwayBill() {
       </div>
     </div>
   );
-
   const AirwayBillPrintASAgreedCopies = ({ index }) => {
     console.log("data", reportData);
     console.log("index - ", index);
@@ -15173,7 +15374,6 @@ function rptAirwayBill() {
       </div>
     );
   };
-
   const AirwayBillPrintShipperCopy = () => {
     console.log("data", reportData);
     return (
@@ -18537,7 +18737,6 @@ function rptAirwayBill() {
       </div>
     </div>
   );
-
   const AirCargoMainfest = ({ index }) => {
     console.log("data", Cargodata);
     console.log("index - ", index);
@@ -18578,7 +18777,6 @@ function rptAirwayBill() {
       </div>
     );
   };
-
   const BlPrint = ({ bldata }) => {
     console.log("=>>", bldata);
     return (
@@ -19638,7 +19836,6 @@ function rptAirwayBill() {
       </div>
     );
   };
-
   const BlAttachmentPrint = ({
     bldata,
     containerLines = [],
@@ -19837,7 +20034,6 @@ function rptAirwayBill() {
       </>
     );
   };
-
   const BlAttachmentPrintSBX = ({
     bldata,
     containerLines = [],
@@ -19966,18 +20162,24 @@ function rptAirwayBill() {
                   marginBottom: "20px",
                 }}
               >
-                <pre
-                  className="!text-black font-normal"
-                  style={{
-                    fontSize: "9px",
-                    whiteSpace: "pre-wrap",
-                    overflowWrap: "break-word",
-                    wordBreak: "break-word",
-                    margin: 0,
-                  }}
-                >
-                  {marksLines.join("\n")}
-                </pre>
+                {(bldata?.marksAndNosDetailsAttach || "").trim() ? (
+                  <pre
+                    className="!text-black font-normal"
+                    style={{
+                      fontSize: "9px",
+                      whiteSpace: "pre-wrap",
+                      overflowWrap: "break-word",
+                      wordBreak: "break-word",
+                      margin: 0,
+                    }}
+                  >
+                    {cutTextDynamic(
+                      bldata?.marksNos || "",
+                      bldata?.marksAndNosDetailsAttach || "",
+                      "attachment",
+                    )}
+                  </pre>
+                ) : null}
               </div>
               {/* Goods lines */}
               <div
@@ -19987,18 +20189,24 @@ function rptAirwayBill() {
                   marginBottom: "20px",
                 }}
               >
-                <pre
-                  className="!text-black font-normal"
-                  style={{
-                    fontSize: "9px",
-                    whiteSpace: "pre-wrap",
-                    overflowWrap: "break-word",
-                    wordBreak: "break-word",
-                    margin: 0,
-                  }}
-                >
-                  {goodsLines.join("\n")}
-                </pre>
+                {(bldata?.goodsDescDetailsAttach || "").trim() ? (
+                  <pre
+                    className="!text-black font-normal"
+                    style={{
+                      fontSize: "9px",
+                      whiteSpace: "pre-wrap",
+                      overflowWrap: "break-word",
+                      wordBreak: "break-word",
+                      margin: 0,
+                    }}
+                  >
+                    {cutTextDynamic(
+                      bldata?.goodsDesc || "",
+                      bldata?.goodsDescDetailsAttach || "",
+                      "attachment",
+                    )}
+                  </pre>
+                ) : null}
               </div>
               {/* Gross weight */}
               {/* <div
@@ -20028,7 +20236,6 @@ function rptAirwayBill() {
       </div>
     );
   };
-
   const BlAttachmentPrintSBXNoLines = ({
     bldata,
     containerLines = [],
@@ -20213,12 +20420,10 @@ function rptAirwayBill() {
       </div>
     );
   };
-
   console.log(
     "trimByWordCountBySup",
     trimByWordCountBySup(bldata?.blClause, 50),
   );
-
   const rptBillOfLadingSBX = () => (
     <div className="pr-2 pl-2">
       <div id="156" className="mx-auto text-black mt-1">
@@ -20226,7 +20431,7 @@ function rptAirwayBill() {
           className="flex border-t border-l border-r border-black"
           style={{ width: "100%" }}
         >
-          <div style={{ width: "90%" }}>
+          <div style={{ width: "88%" }}>
             <p
               className="text-black text-xs font-bold pt-1 ml-10 pb-1"
               style={{ textAlign: "center" }}
@@ -20234,7 +20439,7 @@ function rptAirwayBill() {
               MULTI-MODAL TRANSPORT DOCUMENT
             </p>
           </div>
-          <div style={{ width: "10%" }}>
+          <div style={{ width: "12%" }}>
             <p className="text-black text-xs font-bold text-right p-1">
               {bldata?.blType}
             </p>
@@ -20432,6 +20637,8 @@ function rptAirwayBill() {
                   </p>
                   <p className="text-black" style={{ fontSize: "9px" }}>
                     {bldata?.plr}
+                    {" - "}
+                    {bldata?.plrCountryName}
                   </p>
                 </div>
                 <div className="pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
@@ -20459,6 +20666,8 @@ function rptAirwayBill() {
                   </p>
                   <p className="text-black" style={{ fontSize: "9px" }}>
                     {bldata?.polName}
+                    {" - "}
+                    {bldata?.plrCountryName}
                   </p>
                 </div>
                 <div className="pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
@@ -20488,6 +20697,8 @@ function rptAirwayBill() {
                   </p>
                   <p className="text-black" style={{ fontSize: "9px" }}>
                     {bldata?.pod}
+                    {" - "}
+                    {bldata?.podCountryName}
                   </p>
                 </div>
                 <div className="pt-1 pb-1 pl-2 pr-2" style={{ height: "50%" }}>
@@ -20524,6 +20735,8 @@ function rptAirwayBill() {
                   </p>
                   <p className="text-black" style={{ fontSize: "9px" }}>
                     {bldata?.fpd}
+                    {" - "}
+                    {bldata?.fpdCountryName}
                   </p>
                 </div>
               </div>
@@ -20587,9 +20800,20 @@ function rptAirwayBill() {
                   className="pt-1 pb-1 pl-2 pr-2 align-top text-left whitespace-pre-wrap break-words border-r border-black"
                   style={{ fontSize: "9px", height: "240px" }}
                 >
-                  <pre className="text-left">
+                  {/* <pre className="text-left">
                     {bldata?.marksAndNosDetails || bldata?.marksNos || ""}
+                  </pre> */}
+                  <pre
+                    className="text-left whitespace-pre-wrap"
+                    style={{ fontSize: "9px" }}
+                  >
+                    {cutTextDynamic(
+                      bldata?.marksNos || "",
+                      bldata?.marksAndNosDetails || "",
+                      "main",
+                    )}
                   </pre>
+
                   {Array.isArray(bldata?.tblBlContainer) && (
                     <>
                       {bldata.tblBlContainer.length <= 4 ? (
@@ -20636,11 +20860,16 @@ function rptAirwayBill() {
                   <div className="flex flex-col " style={{ height: "100%" }}>
                     {/* Top 60% */}
                     <div style={{ height: "60%" }}>
-                      <p className="text-left align-top">
-                        {bldata?.goodsDescDetails}
-                        <br />
-                        {/* {"SHIPPER'S LOAD/STOW AND / COUNT"} */}
-                      </p>
+                      <pre
+                        className="text-left align-top"
+                        style={{ fontSize: "9px" }}
+                      >
+                        {cutTextDynamic(
+                          bldata?.goodsDesc || "",
+                          bldata?.goodsDescDetails || "",
+                          "main",
+                        )}
+                      </pre>
                     </div>
 
                     {/* Bottom 40% */}
@@ -20828,7 +21057,6 @@ function rptAirwayBill() {
       </div>
     </div>
   );
-
   const rptBillOfLadingPrintSBX = () => (
     <div className="pr-2 pl-2">
       <div id="156" className="mx-auto text-black mt-1">
@@ -21349,7 +21577,7 @@ function rptAirwayBill() {
               </div> */}
               <div>
                 {Array.isArray(bldata.tblBlContainer) &&
-                  bldata.tblBlContainer.length < 4 ? (
+                bldata.tblBlContainer.length < 4 ? (
                   <p></p>
                 ) : (
                   <p>– Continuing on Attach Sheet</p>
@@ -21957,7 +22185,6 @@ function rptAirwayBill() {
       </div>
     </div>
   );
-
   const SUPERIORFREIGHTSERVICESBLPRINT = () => (
     <div className="pr-2 pl-2">
       <div id="156" className="mx-auto text-black mt-1">
@@ -22552,7 +22779,6 @@ function rptAirwayBill() {
       </div>
     </div>
   );
-
   const VAARIDHILOGISTICSDRAFT = () => (
     <div className="px-2">
       <div id="156" className="mx-auto text-black mt-1">
@@ -22924,7 +23150,18 @@ function rptAirwayBill() {
 
                   <td className="align-top p-2">
                     <div style={{ minHeight: "240px" }}>
-                      <div>{bldata?.goodsDescDetails}</div>
+                      <div>
+                        <pre
+                          className="text-left align-top"
+                          style={{ fontSize: "9px" }}
+                        >
+                          {cutTextDynamic(
+                            bldata?.goodsDesc || "",
+                            bldata?.goodsDescDetails || "",
+                            "main",
+                          )}
+                        </pre>
+                      </div>
                       <div style={{ marginTop: "9px" }}>
                         {trimByWordCount
                           ? trimByWordCount(bldata?.blClause, 60)
@@ -25280,7 +25517,9 @@ function rptAirwayBill() {
                     fontWeight: "bold",
                     paddingTop: "3px",
                   }}
-                >SUBJECT TO CORRECTION</p>
+                >
+                  SUBJECT TO CORRECTION
+                </p>
               </div>
               <div style={{ width: "20%", borderRight: "1px solid black" }}>
                 <p
@@ -25291,7 +25530,9 @@ function rptAirwayBill() {
                     fontWeight: "bold",
                     paddingTop: "3px",
                   }}
-                >{bldata?.freightPrepaidCollect}</p>
+                >
+                  {bldata?.freightPrepaidCollect}
+                </p>
               </div>
               <div style={{ width: "20%" }}>
                 <p
@@ -25302,7 +25543,9 @@ function rptAirwayBill() {
                     fontWeight: "bold",
                     paddingTop: "3px",
                   }}
-                >{bldata?.freightPrepaidCollectId}</p>
+                >
+                  {bldata?.freightPrepaidCollectId}
+                </p>
               </div>
             </div>
             <div
@@ -25578,7 +25821,6 @@ function rptAirwayBill() {
                       {bldata?.fpd}
                     </p>
                   </div>
-
                 </div>
                 <div
                   className=" flex"
@@ -25602,7 +25844,6 @@ function rptAirwayBill() {
                       {bldata?.pod}
                     </p>
                   </div>
-
                 </div>
                 <div
                   className="flex "
@@ -25631,7 +25872,10 @@ function rptAirwayBill() {
             </div>
             <div className="" style={{ width: "50%" }}>
               <div className="" style={{ height: "100%" }}>
-                <div className="ml-4" style={{ height: "33%", fontSize: "14px" }}>
+                <div
+                  className="ml-4"
+                  style={{ height: "33%", fontSize: "14px" }}
+                >
                   B/L No.{bldata?.blNo}
                 </div>
                 <div style={{ height: "33%" }}>
@@ -25765,29 +26009,55 @@ function rptAirwayBill() {
             className=" flex border-b  border-t border-black  "
             style={{ height: "3%", width: "100%" }}
           >
-
-            <div className="text-center   border-r border-black" style={{ width: "50%" }}>DECLARATION OF HAZARDOUS/DANGEROUS MATERIALS</div>
-            <div className="text-center " style={{ width: "50%" }}>This is to certify that the above-named materials are property classified. described.</div>
+            <div
+              className="text-center   border-r border-black"
+              style={{ width: "50%" }}
+            >
+              DECLARATION OF HAZARDOUS/DANGEROUS MATERIALS
+            </div>
+            <div className="text-center " style={{ width: "50%" }}>
+              This is to certify that the above-named materials are property
+              classified. described.
+            </div>
           </div>
-          <div className="flex text-center" style={{ height: "9%", width: "100%" }}>
-
+          <div
+            className="flex text-center"
+            style={{ height: "9%", width: "100%" }}
+          >
             <div className="text-center " style={{ width: "50%" }}>
               <div className="flex " style={{ height: "33%", width: "100%" }}>
-                <div className="text-left " style={{ width: "50%" }}>IMOclass:<p >{bldata?.imo}</p> </div>
-                <div style={{ width: "50%" }}>UN No.<p >{bldata?.unno}</p> </div>
+                <div className="text-left " style={{ width: "50%" }}>
+                  IMOclass:<p>{bldata?.imo}</p>{" "}
+                </div>
+                <div style={{ width: "50%" }}>
+                  UN No.<p>{bldata?.unno}</p>{" "}
+                </div>
               </div>
               <div className="flex " style={{ height: "33%", width: "100%" }}>
-                <div className="text-left " style={{ width: "50%" }}>Flashpoint:<p >{bldata?.imo}</p></div>
-                <div style={{ width: "50%" }}>DOT 49 CFR Part. 172 Sub<p >{bldata?.imo}</p></div>
+                <div className="text-left " style={{ width: "50%" }}>
+                  Flashpoint:<p>{bldata?.imo}</p>
+                </div>
+                <div style={{ width: "50%" }}>
+                  DOT 49 CFR Part. 172 Sub<p>{bldata?.imo}</p>
+                </div>
               </div>
               <div className="flex " style={{ height: "34%", width: "100%" }}>
-                <div className="text-left " style={{ width: "50%" }}>Page:<p >{bldata?.imo}</p></div>
-                <div style={{ width: "50%" }}>Certified on behalf of shipperby:<p >{bldata?.imo}</p></div>
+                <div className="text-left " style={{ width: "50%" }}>
+                  Page:<p>{bldata?.imo}</p>
+                </div>
+                <div style={{ width: "50%" }}>
+                  Certified on behalf of shipperby:<p>{bldata?.imo}</p>
+                </div>
               </div>
             </div>
             <div className="text-center " style={{ width: "50%" }}>
-              <div className="flex " style={{ height: "33%", width: "100%", fontSize: "8px" }}>
-                packaged, marked and labeled, and are inproper condition fortransportation according to the applicable regulations of the Department of Transportation.
+              <div
+                className="flex "
+                style={{ height: "33%", width: "100%", fontSize: "8px" }}
+              >
+                packaged, marked and labeled, and are inproper condition
+                fortransportation according to the applicable regulations of the
+                Department of Transportation.
               </div>
               <div className="flex " style={{ height: "33%", width: "100%" }}>
                 <div style={{ width: "50%" }}> C Class/label:</div>
@@ -25795,14 +26065,21 @@ function rptAirwayBill() {
               </div>
               <div className="flex " style={{ height: "34%", width: "100%" }}>
                 <div style={{ width: "50%" }}></div>
-                <div style={{ width: "50%" }}>Date: SHIPPED ON BOARD DATE: 10/DEC/2025</div>
+                <div style={{ width: "50%" }}>
+                  Date: SHIPPED ON BOARD DATE: 10/DEC/2025
+                </div>
               </div>
             </div>
-
           </div>
         </div>
-        <div className="border-r border-l border-b border-black" style={{ height: "20%", fontSize: "9px" }}>
-          <div className="flex border-b border-black" style={{ height: "50%", fontSize: "9px", width: "100%" }}>
+        <div
+          className="border-r border-l border-b border-black"
+          style={{ height: "20%", fontSize: "9px" }}
+        >
+          <div
+            className="flex border-b border-black"
+            style={{ height: "50%", fontSize: "9px", width: "100%" }}
+          >
             <div className="border-r border-black " style={{ width: "50%" }}>
               <p className="mt-4">For Delivery of Goods apply toMessrs.</p>
               <pre className="whitespace-pre-wrap" style={{ margin: 0 }}>
@@ -25811,17 +26088,31 @@ function rptAirwayBill() {
             </div>
             <div style={{ width: "50%" }}>
               <div style={{ height: "100%" }}>
-                <div style={{ height: "50%" }}><p className="ml-4 ">Tank Freetime:</p><p className="ml-4 ">{bldata?.grentFreeDays}</p>  </div>
+                <div style={{ height: "50%" }}>
+                  <p className="ml-4 ">Tank Freetime:</p>
+                  <p className="ml-4 ">{bldata?.grentFreeDays}</p>{" "}
+                </div>
                 <div style={{ height: "50%" }}>
                   <div className="flex" style={{ width: "100%" }}>
-                    <div style={{ width: "50%" }}><p className="ml-4 ">Tank DemurrageCharge @ </p><p className="ml-4 ">{bldata?.originDemurrageRate}</p></div>
-                    <div style={{ width: "50%" }}><p className="ml-4 ">Per Day Per Tank</p><p className="ml-4 ">{bldata?.destinationDemurrageFreeDays}</p></div>
+                    <div style={{ width: "50%" }}>
+                      <p className="ml-4 ">Tank DemurrageCharge @ </p>
+                      <p className="ml-4 ">{bldata?.originDemurrageRate}</p>
+                    </div>
+                    <div style={{ width: "50%" }}>
+                      <p className="ml-4 ">Per Day Per Tank</p>
+                      <p className="ml-4 ">
+                        {bldata?.destinationDemurrageFreeDays}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <div className="text-center border-b border-black" style={{ height: "35%", width: "100%" }}>
+          <div
+            className="text-center border-b border-black"
+            style={{ height: "35%", width: "100%" }}
+          >
             <div className="flex " style={{ height: "30%", width: "100%" }}>
               <div
                 className="border-r  border-b border-black "
@@ -25878,7 +26169,9 @@ function rptAirwayBill() {
             </div>
           </div>
           <div style={{ height: "15%", fontSize: "9px" }}>
-            In witness whereof 3 original bills of lading unless otherwise stated above have been issued one of which accomplished the others to be void. <br></br>
+            In witness whereof 3 original bills of lading unless otherwise
+            stated above have been issued one of which accomplished the others
+            to be void. <br></br>
             The Carrier: Merlion Holdings Pte Ltd
           </div>
         </div>
@@ -26082,8 +26375,9 @@ function rptAirwayBill() {
                   <div
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
-                    className={`bg-white ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      }`}
+                    className={`bg-white ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    }`}
                     style={{
                       width: "297mm", // A4 landscape width
                       height: "210mm", // A4 landscape height
@@ -26307,8 +26601,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -26683,8 +26977,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -26926,7 +27220,7 @@ function rptAirwayBill() {
                 baseAttachPages > 0 ? baseAttachPages : hasGrid ? 1 : 0;
 
               // ✅ IMPORTANT: include attachments only when 3rd container exists
-              const includeAttachments = hasThirdContainer && attachPages > 0;
+              const includeAttachments = hasThirdContainer || attachPages > 0;
 
               // Used lines on last text-attachment page (0 if we only created a page for grid spill)
               let usedOnLast = 0;
@@ -27072,8 +27366,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
 
                       const showThisPage =
@@ -27259,7 +27553,6 @@ function rptAirwayBill() {
                 </div>
               );
             }
-
             case "BL Print SBX": {
               // --- utilities (inline) ---
               const splitLines = (txt) =>
@@ -27379,8 +27672,9 @@ function rptAirwayBill() {
                   key: "No of Packages",
                   header: "Packages",
                   render: (c) =>
-                    `${c.noOfPackages || ""}${" "}${c.packageCode || ""
-                      }`.trim(),
+                    `${c.noOfPackages || ""}${" "}${
+                      c.packageCode || ""
+                    }`.trim(),
                   align: "center",
                 },
                 {
@@ -27465,8 +27759,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -27834,8 +28128,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -28210,8 +28504,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -28429,7 +28723,7 @@ function rptAirwayBill() {
               // GRID should begin from container #3 on attach sheets (skip first two printed on main page)
               const gridSrc = jd.tblBlContainer || jd.tblblContainer || [];
               const allGridRows = Array.isArray(gridSrc) ? gridSrc : [];
-              const attachStartIndex = 2; // skip 0 & 1 -> start at #3
+              const attachStartIndex = 0; // skip 0 & 1 -> start at #3
               const attachRows = allGridRows.slice(attachStartIndex);
               const hasGrid = attachRows.length > 0;
 
@@ -28483,7 +28777,7 @@ function rptAirwayBill() {
                 {
                   key: "cno",
                   header: "Tank NOS.",
-                  render: (c) => c.containerNumber,
+                  render: (c) => c.containerNo,
                   align: "left",
                 },
                 {
@@ -28586,8 +28880,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -29003,7 +29297,6 @@ function rptAirwayBill() {
                 </div>
               );
             }
-
             default:
               return null;
           }

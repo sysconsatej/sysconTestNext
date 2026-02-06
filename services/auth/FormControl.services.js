@@ -2325,3 +2325,25 @@ export async function fetchBlPrintReportData(data) {
     return false;
   }
 }
+
+export async function getTariffChargeDetails(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${baseUrl}/Sql/api/spInvoice/getTariffChargeDetails`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(data),
+      },
+    ).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}

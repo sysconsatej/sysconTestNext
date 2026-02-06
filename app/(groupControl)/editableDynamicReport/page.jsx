@@ -3657,13 +3657,14 @@ export default function AddEditFormControll({ reportData }) {
           isValidDate(content)
         ) {
           content = moment(content).format("DD-MM-YYYY");
-        } else if (
-          DateFormat &&
-          typeof content === "string" &&
-          isValidDate(content)
-        ) {
-          content = moment(content).format(`${DateFormat}`);
-        }
+        } 
+        // else if (
+        //   DateFormat &&
+        //   typeof content === "string" &&
+        //   isValidDate(content)
+        // ) {
+        //   content = moment(content).format(`${DateFormat}`);
+        // }
         if (colIndex === 0) {
           return (
             <React.Fragment key={`${item.fieldname}-${rowIndex}-${colIndex}`}>

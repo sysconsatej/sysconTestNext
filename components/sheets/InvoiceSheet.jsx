@@ -1,17 +1,17 @@
 "use client";
 /* eslint-disable */
-
 import React, { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import CustomeInputFields from "@/components/Inputs/customeInputFields";
 import styles from "@/app/app.module.css";
-
 import { styled } from "@mui/material/styles";
 import Accordion from "@mui/material/Accordion";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import Typography from "@mui/material/Typography";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+
+import SearchEditGrid from "./SearchEditGrid";
 
 import {
   parentAccordionSection,
@@ -21,9 +21,7 @@ import {
   customTextFieldStyles,
   textInputStyle,
 } from "@/app/globalCss";
-
 import LightTooltip from "@/components/Tooltip/customToolTip";
-
 import Box from "@mui/material/Box";
 import {
   MenuItem,
@@ -36,9 +34,6 @@ import {
   TextField,
 } from "@mui/material";
 
-/* =========================
-   FORM DATA
-========================= */
 const formdata = {
   Main: [],
   "Buyer/Third Party Information": [
@@ -51,7 +46,7 @@ const formdata = {
       isGridView: false,
       isDataFlow: true,
       isDummy: true,
-      ordering: 25,
+      ordering: 1,
       isEditable: true,
       isBreak: true,
     },
@@ -60,7 +55,7 @@ const formdata = {
       fieldname: "exporterNameOne",
       yourlabel: "Name",
       controlname: "text",
-      ordering: 1,
+      ordering: 2,
       isControlShow: true,
       isGridView: false,
       isEditable: true,
@@ -70,7 +65,7 @@ const formdata = {
       fieldname: "exporterAddressOne",
       yourlabel: "Address",
       controlname: "textarea",
-      ordering: 2,
+      ordering: 3,
       isControlShow: true,
       isGridView: false,
       isEditable: true,
@@ -80,7 +75,7 @@ const formdata = {
       fieldname: "consigneeCountryNameOne",
       yourlabel: "City",
       controlname: "text",
-      ordering: 3,
+      ordering: 4,
       isControlShow: true,
       isGridView: false,
       isEditable: true,
@@ -90,7 +85,7 @@ const formdata = {
       fieldname: "ieCodeNo",
       yourlabel: "Pin",
       controlname: "text",
-      ordering: 4,
+      ordering: 5,
       isControlShow: true,
       isGridView: false,
       isEditable: true,
@@ -100,7 +95,7 @@ const formdata = {
       fieldname: "consigneeCountryNameOneCountry",
       yourlabel: "Country",
       controlname: "text",
-      ordering: 5,
+      ordering: 6,
       isControlShow: true,
       isGridView: false,
       isEditable: true,
@@ -112,86 +107,22 @@ const formdata = {
       controlname: "dropdown",
       referenceTable: "tblState",
       referenceColumn: "name",
-      ordering: 6,
+      ordering: 7,
       isControlShow: true,
       isGridView: false,
       isEditable: true,
       isBreak: true,
     },
-
     {
       id: 125712,
       fieldname: null,
       yourlabel: "Buyer Info",
-      controlname: "label",
+      controlname: "text",
       isControlShow: true,
       isGridView: false,
       isDataFlow: true,
       isDummy: true,
-      ordering: 26,
-      isEditable: true,
-      isBreak: true,
-    },
-    {
-      id: 2004,
-      fieldname: "exporterName",
-      yourlabel: "Name",
-      controlname: "text",
-      ordering: 1,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-    },
-    {
-      id: 2002,
-      fieldname: "exporterAddress",
-      yourlabel: "Address",
-      controlname: "textarea",
-      ordering: 2,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-    },
-    {
-      id: 2012,
-      fieldname: "consigneeCountryNameCity",
-      yourlabel: "City",
-      controlname: "text",
-      ordering: 3,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-    },
-    {
-      id: 2005,
-      fieldname: "buyerPin",
-      yourlabel: "Pin",
-      controlname: "text",
-      ordering: 4,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-    },
-    {
-      id: 20121,
-      fieldname: "buyerCountry",
-      yourlabel: "Country",
-      controlname: "text",
-      ordering: 5,
-      isControlShow: true,
-      isGridView: false,
-      isEditable: true,
-    },
-    {
-      id: 20041,
-      fieldname: "exporterStateId",
-      yourlabel: "State",
-      controlname: "dropdown",
-      referenceTable: "tblState",
-      referenceColumn: "name",
-      ordering: 6,
-      isControlShow: true,
-      isGridView: false,
+      ordering: 8,
       isEditable: true,
       isBreak: true,
     },
@@ -268,12 +199,119 @@ const formdata = {
   ],
 };
 
-/* ============================================================================
-  ✅ INVOICE SHEET (FIXED)
-  - Removed hooks from inside functions
-  - Fixed isParentAccordionOpen undefined by using local `isOpen`
-  - Safe merge updates to newState + optional onValuesChange callback
-============================================================================ */
+/* ============================================================
+   ✅ MAIN TABLE CONFIG (SearchEditGrid)
+   - You can rename columns/fields anytime, this just gives full working
+============================================================ */
+const TABLE_SECTIONS = new Set(["Main"]);
+
+const invoiceColumns = [
+  { field: "invoiceNo", headerName: "Invoice No", width: 180 },
+  { field: "invoiceDate", headerName: "Invoice Date", width: 130 },
+  { field: "currency", headerName: "Currency", width: 110 },
+  { field: "exchangeRate", headerName: "Exch. Rate", width: 110 },
+  { field: "invoiceValue", headerName: "Invoice Value", width: 140 },
+  { field: "fobValue", headerName: "FOB Value", width: 130 },
+  { field: "remarks", headerName: "Remarks", width: 260 },
+];
+
+const bottomFormdata = {
+  Main: [
+    {
+      id: 1,
+      fieldname: "invoiceNo",
+      yourlabel: "Invoice No",
+      controlname: "text",
+      ordering: 1,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: true,
+      sectionHeader: "General",
+      sectionOrder: 1,
+    },
+    {
+      id: 2,
+      fieldname: "invoiceDate",
+      yourlabel: "Invoice Date",
+      controlname: "date",
+      ordering: 2,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 1,
+    },
+    {
+      id: 3,
+      fieldname: "currency",
+      yourlabel: "Currency",
+      controlname: "text",
+      ordering: 3,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 1,
+    },
+    {
+      id: 4,
+      fieldname: "exchangeRate",
+      yourlabel: "Exchange Rate",
+      controlname: "number",
+      ordering: 4,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 1,
+    },
+    {
+      id: 5,
+      fieldname: "invoiceValue",
+      yourlabel: "Invoice Value",
+      controlname: "number",
+      ordering: 5,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 2,
+    },
+    {
+      id: 6,
+      fieldname: "fobValue",
+      yourlabel: "FOB Value",
+      controlname: "number",
+      ordering: 6,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 2,
+    },
+    {
+      id: 7,
+      fieldname: "remarks",
+      yourlabel: "Remarks",
+      controlname: "textarea",
+      ordering: 7,
+      isControlShow: true,
+      isGridView: false,
+      isEditable: true,
+      isRequired: false,
+      sectionHeader: "General",
+      sectionOrder: 2,
+      isBreak: 1,
+    },
+  ],
+};
+
 export default function InvoiceSheet({
   values = {},
   onValuesChange,
@@ -308,25 +346,20 @@ export default function InvoiceSheet({
   };
 
   const handleFieldValuesChange = (updatedValues = {}) => {
-    // merge into newState
     setStateSafe((prev) => {
       const base = prev || newState || {};
       const merged = { ...base, ...updatedValues };
       return merged;
     });
 
-    // keep your submit object synced
     setSubmitNewState((prev) => ({ ...(prev || {}), ...updatedValues }));
 
-    // optional callback (if parent wants values)
     if (typeof onValuesChange === "function") {
       onValuesChange(updatedValues);
     }
   };
 
-  const handleFieldValuesChange2 = async () => {
-    // keep as-is (you can implement mapping logic later)
-  };
+  const handleFieldValuesChange2 = async () => { };
 
   return (
     <div
@@ -359,6 +392,7 @@ export default function InvoiceSheet({
         />
       ))}
 
+      {/* ✅ keep your existing table-style accordion below */}
       <CessCenvatAccordion />
     </div>
   );
@@ -372,10 +406,6 @@ InvoiceSheet.propTypes = {
   setStateVariable: PropTypes.any,
 };
 
-/* ============================================================================
-  ✅ PARENT ACCORDION (FIXED)
-  - Uses `isOpen` state (no undefined isParentAccordionOpen)
-============================================================================ */
 function ParentAccordianComponent({
   section,
   indexValue,
@@ -398,6 +428,25 @@ function ParentAccordianComponent({
   getLabelValue,
   hideColumnsId,
 }) {
+  // ✅ same pattern like ItemSheet
+  const SECTION_TO_STATE_KEY = {
+    Main: "tblInvoice", // <--- change here if your array key is different
+  };
+
+  const getArr = (sec, state) => {
+    const key = SECTION_TO_STATE_KEY[sec];
+    const arr = state?.[key];
+    return Array.isArray(arr) ? arr : [];
+  };
+
+  const setArr = (sec, next) => {
+    const key = SECTION_TO_STATE_KEY[sec];
+    if (typeof setNewState === "function") {
+      setNewState((prev) => ({ ...(prev || {}), [key]: next }));
+    }
+    setSubmitNewState?.((prev) => ({ ...(prev || {}), [key]: next }));
+  };
+
   const [isOpen, setIsOpen] = useState(false);
   const [fieldId, setFieldId] = useState([]);
 
@@ -446,23 +495,67 @@ function ParentAccordianComponent({
         className={`overflow-hidden p-0 ${styles.thinScrollBar}`}
         sx={{ ...accordianDetailsStyleForm }}
       >
-        <CustomeInputFields
-          inputFieldData={parentsFields?.[section] || []}
-          values={newState}
-          onValuesChange={handleFieldValuesChange}
-          handleFieldValuesChange2={handleFieldValuesChange2}
-          inEditMode={{ isEditMode: false, isCopy: true }}
-          onChangeHandler={(result) => applyResultToState(result, "change")}
-          onBlurHandler={(result) => applyResultToState(result, "blur")}
-          clearFlag={clearFlag}
-          newState={newState}
-          tableName={parentTableName}
-          formControlData={formControlData}
-          setFormControlData={setFormControlData}
-          setStateVariable={setNewState}
-          getLabelValue={getLabelValue}
-          hideColumnsId={fieldId}
-        />
+        {TABLE_SECTIONS.has(section) ? (
+          <Box sx={{ p: 1, display: "flex", flexDirection: "column", gap: 1 }}>
+            <SearchEditGrid
+              title="Invoice Details"
+              columns={invoiceColumns}
+              editorFields={bottomFormdata?.Main || []}
+              rowIdField="id"
+              fetchPayload={{ jobId: newState?.jobId }}
+              height={240}
+              fetchRows={async () => {
+                const data = getArr("Main", newState).map((r, idx) => ({
+                  ...r,
+                  id: r?.id ?? idx + 1,
+                }));
+                return { data, totalCount: data.length };
+              }}
+              onSave={async (row) => {
+                const prev = getArr("Main", newState);
+
+                // insert
+                if (!row?.id) {
+                  const newId = Date.now();
+                  const next = [{ ...row, id: newId }, ...prev];
+                  setArr("Main", next);
+                  return { ...row, id: newId };
+                }
+
+                // update
+                const next = prev.map((x) =>
+                  String(x.id) === String(row.id) ? { ...x, ...row } : x
+                );
+                setArr("Main", next);
+                return row;
+              }}
+              onDelete={async (row) => {
+                const prev = getArr("Main", newState);
+                const next = prev.filter((x) => String(x.id) !== String(row?.id));
+                setArr("Main", next);
+                return true;
+              }}
+            />
+          </Box>
+        ) : (
+          <CustomeInputFields
+            inputFieldData={parentsFields?.[section] || []}
+            values={newState}
+            onValuesChange={handleFieldValuesChange}
+            handleFieldValuesChange2={handleFieldValuesChange2}
+            inEditMode={{ isEditMode: false, isCopy: true }}
+            onChangeHandler={(result) => applyResultToState(result, "change")}
+            onBlurHandler={(result) => applyResultToState(result, "blur")}
+            clearFlag={clearFlag}
+            newState={newState}
+            tableName={parentTableName}
+            formControlData={formControlData}
+            setFormControlData={setFormControlData}
+            setStateVariable={setNewState}
+            getLabelValue={getLabelValue}
+            hideColumnsId={fieldId}
+          />
+        )}
       </AccordionDetails>
     </Accordion>
   );
@@ -491,9 +584,9 @@ ParentAccordianComponent.propTypes = {
   getLabelValue: PropTypes.any,
 };
 
-/* ============================================================================
-  ✅ CESS / CENVAT ACCORDION (your table, kept)
-============================================================================ */
+/* ============================================================
+   ✅ Your existing CessCenvatAccordion (unchanged)
+============================================================ */
 function CessCenvatAccordion({
   section = "Freight Insurance and Other Charges",
   indexValue = 0,
@@ -603,7 +696,13 @@ function CessCenvatAccordion({
     },
   });
 
-  const SmallText = ({ k, label, width = 120, type = "text", disabled = false }) => (
+  const SmallText = ({
+    k,
+    label,
+    width = 120,
+    type = "text",
+    disabled = false,
+  }) => (
     <LightTooltip title={label || ""}>
       <CustomeTextField
         autoComplete="off"

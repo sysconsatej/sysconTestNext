@@ -36,8 +36,123 @@ const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const round2 = (n) => Math.round(n * 100) / 100;
 
 function deepClone(v) {
-  return JSON.parse(JSON.stringify(v));
+  // Prefer structuredClone when available; fall back safely.
+  if (v === undefined) return undefined;
+  if (v === null) return null;
+
+  try {
+    // Most modern browsers + Node 17+
+    // eslint-disable-next-line no-undef
+    if (typeof structuredClone === "function") return structuredClone(v);
+  } catch {}
+
+  try {
+    const s = JSON.stringify(v);
+    if (s === undefined) {
+      // JSON can't represent this value (e.g. function); do a shallow-ish clone fallback
+      if (Array.isArray(v)) return v.map((x) => deepClone(x));
+      if (typeof v === "object") return { ...v };
+      return v;
+    }
+    return JSON.parse(s);
+  } catch {
+    if (Array.isArray(v)) return v.slice();
+    if (typeof v === "object") return { ...v };
+    return v;
+  }
 }
+
+
+/* =========================================================
+   MULTI-PAGE HELPERS (Main + Attachments)
+   Backward-compat: keep `template.elements` pointing to ACTIVE page elements.
+========================================================= */
+
+function getPages(tpl) {
+  return Array.isArray(tpl?.pages) ? tpl.pages : [];
+}
+
+function ensurePages(tpl) {
+  const pages = getPages(tpl);
+  if (pages.length) return tpl;
+
+  const mainId = uid();
+  const elements = Array.isArray(tpl?.elements) ? tpl.elements : [];
+  const groups = tpl?.groups || {};
+
+  return {
+    ...(tpl || {}),
+    pages: [{ id: mainId, name: "Main", elements, groups }],
+    elements,
+    groups,
+  };
+}
+
+function getActivePageIndex(tpl, pageId) {
+  const pages = getPages(tpl);
+  if (!pages.length) return -1;
+  const id = pageId || pages[0].id;
+  const idx = pages.findIndex((p) => p.id === id);
+  return Math.max(0, idx === -1 ? 0 : idx);
+}
+
+function getActivePage(tpl, pageId) {
+  const pages = getPages(tpl);
+  if (!pages.length) return null;
+  const idx = getActivePageIndex(tpl, pageId);
+  return pages[idx] || pages[0];
+}
+
+function attachActiveElementsAlias(tpl, pageId) {
+  const next = ensurePages(tpl);
+  const pages = getPages(next);
+  if (!pages.length) return next;
+
+  const idx = getActivePageIndex(next, pageId);
+  const p = pages[idx] || pages[0];
+
+  const elements = Array.isArray(p?.elements) ? p.elements : [];
+  const groups = p?.groups || {};
+
+  return { ...next, elements, groups };
+}
+
+function syncActiveAliasesToPages(tpl, pageId) {
+  const next = ensurePages(tpl);
+  const pages = getPages(next);
+  if (!pages.length) return next;
+
+  const idx = getActivePageIndex(next, pageId);
+  const cur = pages[idx] || pages[0] || { id: uid(), name: "Main", elements: [], groups: {} };
+
+  // If legacy code updated next.elements/next.groups (active-page aliases),
+  // persist them back into the active page. Otherwise keep existing page data.
+  const aliasEls = Array.isArray(next.elements) ? next.elements : (Array.isArray(cur.elements) ? cur.elements : []);
+  const aliasGroups = next.groups || cur.groups || {};
+
+  const p = { ...cur, elements: aliasEls, groups: aliasGroups };
+  const newPages = pages.slice();
+  newPages[idx] = p;
+
+  return { ...next, pages: newPages };
+}
+
+function updateActivePage(tpl, pageId, updaterFn) {
+  let next = attachActiveElementsAlias(deepClone(tpl), pageId);
+
+  const pages = getPages(next);
+  const idx = getActivePageIndex(next, pageId);
+  const p = deepClone(pages[idx] || pages[0]);
+
+  const updated = updaterFn(p) || p;
+
+  const newPages = pages.slice();
+  newPages[idx] = updated;
+
+  next = { ...next, pages: newPages };
+  return attachActiveElementsAlias(next, updated.id);
+}
+
 
 /** ---------- Element defaults ---------- */
 function makeElement(type, x, y) {
@@ -59,7 +174,7 @@ function makeElement(type, x, y) {
       borderWidth: 1,
       borderStyle: "solid",
       borderRadius: 0,
-      color: "#0f172a",
+      color: "#111827",
       fontSize: 12,
       fontWeight: 500,
       fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial",
@@ -617,6 +732,11 @@ function templateToPrintableHTML({ wMm, hMm, elementsHtml, header }) {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+  table{border-collapse:collapse;table-layout:fixed;width:100%;}
+  td,th{display:table-cell;vertical-align:top;white-space:pre-wrap;word-break:break-word;padding:0;margin:0;}
+  table *{box-sizing:border-box;}
+  td>div,th>div{display:flex;}
+  tr{page-break-inside:avoid;}
   .page {
     position: relative;
     width:${wMm}mm;
@@ -794,24 +914,31 @@ function renderTableToHtml(el) {
     Array.isArray(t.colW) && t.colW.length ? t.colW : Array(cols).fill(100);
   const rowH =
     Array.isArray(t.rowH) && t.rowH.length ? t.rowH : Array(rows).fill(32);
+
   const totalW = colW.reduce((a, b) => a + (Number(b) || 0), 0) || 1;
   const totalH = rowH.reduce((a, b) => a + (Number(b) || 0), 0) || 1;
-  const colPct = colW.map((w) => ((Number(w) || 0) / totalW) * 100);
-  const rowPct = rowH.map((h) => ((Number(h) || 0) / totalH) * 100);
+
   const left = `${Number(el.x || 0)}mm`;
   const top = `${Number(el.y || 0)}mm`;
-  const width = `${Number(el.w || 10)}mm`;
-  const height = `${Number(el.h || 10)}mm`;
+  const widthMm = Number(el.w || 10);
+  const heightMm = Number(el.h || 10);
+  const width = `${widthMm}mm`;
+  const height = `${heightMm}mm`;
   const rotate = Number(el.rotate || 0);
   const border = `${t.borderWidth ?? 1}px solid ${t.borderColor || "#111827"}`;
+
+  const colMm = colW.map((w) => (Number(w) || 0) / totalW * widthMm);
+  const rowMm = rowH.map((h) => (Number(h) || 0) / totalH * heightMm);
 
   function isCovered(r, c) {
     const m = findMergeAt(merges, r, c);
     if (!m) return false;
     return !(m.r0 === r && m.c0 === c);
   }
-  const colgroupHtml = colPct.map((p) => `<col style="width:${p}%">`).join("");
+
+  const colgroupHtml = colMm.map((mmw) => `<col style="width:${mmw}mm">`).join("");
   let tbodyHtml = "";
+
   for (let r = 0; r < rows; r++) {
     let rowCells = "";
     for (let c = 0; c < cols; c++) {
@@ -822,9 +949,11 @@ function renderTableToHtml(el) {
       const cs = m ? m.cs : 1;
       const k = cellKey(r, c);
       const b = bindings[k];
+
       let label = "";
       if (b && b.label) label = b.label;
       else if (b && b.columnKey) label = `{{${b.columnKey}}}`;
+
       const csx = cellStyle[k] || {};
       const pad = csx.padding ?? t.cellPadding ?? 6;
       const bg = csx.bg ?? "#fff";
@@ -835,19 +964,23 @@ function renderTableToHtml(el) {
       const vAlign = csx.vAlign ?? "top";
       const bc = csx.borderColor ?? t.gridColor ?? "#111827";
       const bw = csx.borderWidth ?? t.gridWidth ?? 1;
-      const outer = `
+
+      const tdCss = `
         border:${bw}px solid ${bc};
-        box-sizing:border-box;
-        overflow:hidden;
         background:${bg};
-        display:flex;
-        align-items:${vAlignToAlignItems(vAlign)};
+        padding:0;
+        vertical-align:${vAlign};
+        overflow:hidden;
       `;
 
-      const inner = `
+      // Inner keeps alignment without breaking table layout (no display:flex on td)
+      const innerCss = `
         width:100%;
-        max-height:100%;
+        height:100%;
         box-sizing:border-box;
+        display:flex;
+        align-items:${vAlignToAlignItems(vAlign)};
+        justify-content:${align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start"};
         ${cssFromStyle({
           fontFamily: el.style?.fontFamily,
           fontSize: fs,
@@ -867,11 +1000,11 @@ function renderTableToHtml(el) {
         word-break:break-word;
       `;
 
-      rowCells += `<td rowspan="${rs}" colspan="${cs}" style="${outer}"><div style="${inner}">${escapeHtml(
+      rowCells += `<td rowspan="${rs}" colspan="${cs}" style="${tdCss}"><div style="${innerCss}">${escapeHtml(
         label,
       )}</div></td>`;
     }
-    tbodyHtml += `<tr style="height:${rowPct[r]}%">${rowCells}</tr>`;
+    tbodyHtml += `<tr style="height:${rowMm[r]}mm">${rowCells}</tr>`;
   }
 
   return `
@@ -889,8 +1022,8 @@ function renderTableToHtml(el) {
       box-sizing:border-box;
     ">
       <table style="
-        width:100%;
-        height:100%;
+        width:${width};
+        height:${height};
         border-collapse:collapse;
         table-layout:fixed;
         font-size:${pxToPt(Number(t.fontSize || 11))}pt;
@@ -983,7 +1116,7 @@ export default function BlCreatorPage() {
       }
     };
     fetchData();
-  }, []);
+  }, [clientId]);
 
   useEffect(() => {
     const fetchBlPrintTemplateData = async () => {
@@ -1019,6 +1152,9 @@ export default function BlCreatorPage() {
 
   const [template, setTemplate] = useState(() => {
     const paper = PAPER_SIZES.find((p) => p.id === "A4") || PAPER_SIZES[4];
+
+    const mainPageId = uid();
+
     return {
       id: uid(),
       name: "BL Template (Draft)",
@@ -1028,6 +1164,19 @@ export default function BlCreatorPage() {
         enabled: false,
         heightMm: 25,
       },
+
+      // ✅ NEW: pages (Main + Attachments)
+      pages: [
+        {
+          id: mainPageId,
+          name: "Main",
+          elements: [],
+          groups: {},
+        },
+      ],
+
+      // optional: keep these for backward compat (old JSON)
+      // (runtime aliases for active page)
       elements: [],
       groups: {},
     };
@@ -1040,8 +1189,12 @@ export default function BlCreatorPage() {
 
   // keep templateRef synced immediately when needed (pointermove)
   const setTemplateLive = (next) => {
-    templateRef.current = next;
-    setTemplate(next);
+    // keep active page aliases alive for legacy code paths
+    const withPages = ensurePages(next);
+    const persisted = syncActiveAliasesToPages(withPages, activePageId);
+    const aliased = attachActiveElementsAlias(persisted, activePageId);
+    templateRef.current = aliased;
+    setTemplate(aliased);
   };
 
   const [ui, setUi] = useState({
@@ -1051,16 +1204,27 @@ export default function BlCreatorPage() {
     snap: true,
     snapThreshold: 2.5,
   });
-
-  const [leftTab, setLeftTab] = useState("elements");
+  const [leftTab, setLeftTab] = useState("Assets");
+  const [layerSearch, setLayerSearch] = useState("");
   const [rightTab, setRightTab] = useState("inspect");
   const [activeTool, setActiveTool] = useState("select");
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [hoverId, setHoverId] = useState(null);
+
+  const [activePageId, setActivePageId] = useState(() => null);
+
+  const activePage = useMemo(
+    () => getActivePage(ensurePages(template), activePageId),
+    [template, activePageId],
+  );
+
+  const activeElements = activePage?.elements || [];
+
   const selected = useMemo(() => {
     const set = selectedIds;
-    return template.elements.filter((e) => set.has(e.id));
-  }, [template.elements, selectedIds]);
+    return activeElements.filter((e) => set.has(e.id));
+  }, [activeElements, selectedIds]);
+
   const primarySelected = selected.length
     ? selected[selected.length - 1]
     : null;
@@ -1089,9 +1253,39 @@ export default function BlCreatorPage() {
   }
 
   function commit(next) {
-    setTemplateLive(next);
-    pushHistory(next);
+    const withPages = ensurePages(next);
+    const pid = activePageId || withPages?.pages?.[0]?.id || null;
+
+    // First: persist any runtime aliases (template.elements/groups) into the active page
+    const persisted = syncActiveAliasesToPages(withPages, pid);
+
+    // Then: re-hydrate runtime aliases from the active page so old code keeps working
+    const hydrated = attachActiveElementsAlias(persisted, pid);
+
+    setTemplateLive(hydrated);
+    pushHistory(hydrated);
   }
+
+  function switchToPage(nextPageId) {
+  if (!nextPageId) return;
+
+  // 1) persist current alias (template.elements/groups) into the CURRENT active page
+  const cur = ensurePages(templateRef.current);
+  const curPid = activePageId || cur.pages?.[0]?.id || null;
+
+  const persisted = syncActiveAliasesToPages(cur, curPid);
+
+  // 2) now hydrate alias from the NEXT page into template.elements/groups
+  const hydrated = attachActiveElementsAlias(persisted, nextPageId);
+
+  // ✅ update template without pushing history (page switch should not be undo step)
+  setTemplateLive(hydrated);
+
+  // ✅ update state
+  setActivePageId(nextPageId);
+  setSelectedIds(new Set());
+}
+
 
   function undo() {
     const h = historyRef.current;
@@ -1126,9 +1320,25 @@ export default function BlCreatorPage() {
     toastTimer.current = setTimeout(() => setToastMsg(""), 1600);
   }
 
+  // (multi-page helpers are defined at module scope)
+  useEffect(() => {
+    const pages = getPages(templateRef.current);
+    if (!pages.length) return;
+
+    // ✅ ensure the ACTIVE alias (template.elements) always matches the active page
+    if (!activePageId || !pages.some((p) => p.id === activePageId)) {
+      // fallback to first page and hydrate aliases
+      switchToPage(pages[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [template.pages, activePageId]);
+
   /** ---------- Local Save/Load ---------- */
   function saveLocal() {
-    localStorage.setItem(LS_KEY, JSON.stringify(templateRef.current));
+    localStorage.setItem(
+      LS_KEY,
+      JSON.stringify(ensurePages(templateRef.current)),
+    );
     toast("Saved locally");
   }
 
@@ -1145,15 +1355,14 @@ export default function BlCreatorPage() {
   }
 
   function exportJSON() {
-    const blob = new Blob([JSON.stringify(templateRef.current, null, 2)], {
+    const data = ensurePages(templateRef.current);
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
       type: "application/json",
     });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `${(templateRef.current.name || "bl-template").replaceAll(
-      " ",
-      "_",
-    )}.json`;
+    a.download = `${(data.name || "bl-template").replaceAll(" ", "_")}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -1178,37 +1387,53 @@ export default function BlCreatorPage() {
       : String(Date.now() + Math.random());
 
   const loadTemplate = (tpl) => {
-    if (!tpl) return;
+  if (!tpl) return;
 
-    // tpl can be string/object
-    const raw = typeof tpl === "string" ? JSON.parse(tpl) : tpl;
+  const raw = typeof tpl === "string" ? JSON.parse(tpl) : tpl;
 
-    // ✅ normalize minimum structure so editor doesn't break
-    const next = {
-      ...raw,
-      elements: Array.isArray(raw?.elements) ? raw.elements : [],
-      header: raw?.header ?? { enabled: false, heightMm: 0 },
-    };
-
-    // ✅ ensure each element has an id (many templates miss it)
-    next.elements = next.elements.map((el) => ({
-      ...el,
-      id: el?.id ?? makeId(),
-    }));
-
-    // ✅ clear any current interaction state (important)
-    if (interactionRef.current) {
-      interactionRef.current.mode = null;
-      interactionRef.current.start = null;
-      interactionRef.current.marquee = null;
-    }
-
-    // ✅ clear selection (optional but recommended)
-    clearSelection?.();
-
-    // ✅ THIS is what actually refreshes canvas + history
-    commit(next);
+  // normalize full structure
+  let next = {
+    ...raw,
+    header: raw?.header ?? { enabled: false, heightMm: 0 },
+    pages: Array.isArray(raw?.pages) ? raw.pages : null,
+    elements: Array.isArray(raw?.elements) ? raw.elements : [],
+    groups: raw?.groups || {},
   };
+
+  // ✅ always ensure pages exist
+  next = ensurePages(next);
+
+  // ✅ ensure every element in every page has id (important!)
+  next.pages = (next.pages || []).map((p) => ({
+    ...p,
+    elements: Array.isArray(p?.elements)
+      ? p.elements.map((el) => ({ ...el, id: el?.id ?? makeId() }))
+      : [],
+    groups: p?.groups || {},
+  }));
+
+  // ✅ bind to first page always
+  const firstPageId = next.pages?.[0]?.id;
+
+  // clear interactions
+  if (interactionRef.current) {
+    interactionRef.current.mode = null;
+    interactionRef.current.start = null;
+    interactionRef.current.marquee = null;
+  }
+  clearSelection?.();
+
+  // ✅ IMPORTANT: hydrate alias to first page so preview matches
+  const hydrated = attachActiveElementsAlias(next, firstPageId);
+
+  // ✅ commit as new template state (history)
+  commit(hydrated);
+
+  // ✅ switch active page correctly
+  setActivePageId(firstPageId);
+  setSelectedIds(new Set());
+};
+
 
   const getEmptyTemplate = () => ({
     id: crypto.randomUUID(),
@@ -1448,41 +1673,66 @@ export default function BlCreatorPage() {
   }
 
   function onCanvasDrop(e) {
-    e.preventDefault();
+    try {
+      e.preventDefault();
+      e.stopPropagation();
 
-    const toolType = e.dataTransfer.getData("application/x-bltool");
-    if (!toolType) return;
+      const dt = e.dataTransfer;
 
-    const { x: xMm, y: yMm } = canvasPointMmFromClient(e);
+      // IMPORTANT: ToolIcon uses onDragStartTool -> "application/x-bltool"
+      const raw =
+        dt.getData("application/x-bltool") ||
+        dt.getData("application/x-blcreator") ||
+        dt.getData("text/plain") ||
+        "";
 
-    const elType =
-      toolType === "Text"
-        ? "text"
-        : toolType === "LineH"
-          ? "lineH"
-          : toolType === "LineV"
-            ? "lineV"
-            : toolType === "Box"
-              ? "box"
-              : toolType === "Image"
-                ? "image"
-                : "table";
+      if (!raw) return;
 
-    const headerOffset = templateRef.current.header?.enabled
-      ? templateRef.current.header.heightMm
-      : 0;
+      const mapType = (s) => {
+        const t = String(s || "")
+          .trim()
+          .toLowerCase();
+        if (t === "text") return "text";
+        if (t === "box") return "box";
+        if (t === "image") return "image";
+        if (t === "table") return "table";
+        if (t === "lineh" || t === "line_h" || t === "line-h" || t === "h")
+          return "lineH";
+        if (t === "linev" || t === "line_v" || t === "line-v" || t === "v")
+          return "lineV";
+        return null;
+      };
 
-    const next = deepClone(templateRef.current);
+      const elType = mapType(raw);
+      if (!elType) return;
 
-    next.elements.push(
-      makeElement(
-        elType,
-        clamp(xMm, 0, paperMM.w - 10),
-        clamp(yMm, headerOffset, paperMM.h - 10),
-      ),
-    );
+      // Use your existing helper (already in file)
+      const pt = canvasPointMmFromClient(e);
+      const headerOffset = templateRef.current?.header?.enabled
+        ? Number(templateRef.current?.header?.heightMm || 0)
+        : 0;
 
-    commit(next);
+      const next = updateActivePage(
+        templateRef.current,
+        activePageId,
+        (page) => {
+          const els = Array.isArray(page.elements) ? page.elements : [];
+          page.elements = [
+            ...els,
+            makeElement(
+              elType,
+              clamp(pt.x, 0, paperMM.w - 10),
+              clamp(pt.y, headerOffset, paperMM.h - 10),
+            ),
+          ];
+          return page;
+        },
+      );
+
+      commit(next);
+    } catch (err) {
+      console.error("Drop failed:", err);
+    }
   }
 
   /** ---------- Inline text edit ---------- */
@@ -1494,8 +1744,10 @@ export default function BlCreatorPage() {
   // update template WITHOUT pushing history (smooth typing)
   function setTemplateSilent(mutator) {
     setTemplate((prev) => {
-      const next = deepClone(prev);
+      let next = attachActiveElementsAlias(deepClone(prev), activePageId);
       mutator(next);
+      next = syncActiveAliasesToPages(next, activePageId);
+      next = attachActiveElementsAlias(next, activePageId);
       templateRef.current = next;
       return next;
     });
@@ -1564,7 +1816,7 @@ export default function BlCreatorPage() {
 
   function prepareSnapForSelection(selSet) {
     return {
-      targets: buildSnapTargets(templateRef.current.elements, selSet),
+      targets: buildSnapTargets(templateRef.current.elements || [], selSet),
       canvas: {
         x: [
           { axis: "x", v: 0, type: "edge" },
@@ -1596,7 +1848,7 @@ export default function BlCreatorPage() {
   function startDragNow(e, id, selSetOverride) {
     interactionRef.current.mode = "drag";
     interactionRef.current.start = getPointerMM(e);
-    interactionRef.current.startEls = deepClone(templateRef.current.elements);
+    interactionRef.current.startEls = deepClone((templateRef.current.elements || []));
 
     const selSet = selSetOverride || new Set(selectedIds);
     selSet.add(id);
@@ -1610,7 +1862,7 @@ export default function BlCreatorPage() {
   function startDrag(e, id) {
     if (activeTool === "hand") return startPan(e);
 
-    const el = templateRef.current.elements.find((x) => x.id === id);
+    const el = (templateRef.current.elements || []).find((x) => x.id === id);
     if (!el || el.locked) return;
 
     if (!selectedIds.has(id) && !e.ctrlKey && !e.metaKey) setOnlySelected(id);
@@ -1635,7 +1887,7 @@ export default function BlCreatorPage() {
       interactionRef.current.mode = "pending";
       interactionRef.current.pendingId = el.id;
       interactionRef.current.start = getPointerMM(e);
-      interactionRef.current.startEls = deepClone(templateRef.current.elements);
+      interactionRef.current.startEls = deepClone((templateRef.current.elements || []));
 
       const selSet = new Set(selectedIds);
       selSet.add(id);
@@ -1650,14 +1902,14 @@ export default function BlCreatorPage() {
   }
 
   function startResize(e, id, handle) {
-    const el = templateRef.current.elements.find((x) => x.id === id);
+    const el = (templateRef.current.elements || []).find((x) => x.id === id);
     if (!el || el.locked) return;
 
     if (!selectedIds.has(id)) setOnlySelected(id);
 
     interactionRef.current.mode = "resize";
     interactionRef.current.start = getPointerMM(e);
-    interactionRef.current.startEls = deepClone(templateRef.current.elements);
+    interactionRef.current.startEls = deepClone((templateRef.current.elements || []));
     interactionRef.current.handle = handle;
 
     const selSet = new Set([id]);
@@ -1668,7 +1920,7 @@ export default function BlCreatorPage() {
   }
 
   function startRotate(e, id) {
-    const el = templateRef.current.elements.find((x) => x.id === id);
+    const el = (templateRef.current.elements || []).find((x) => x.id === id);
     if (!el || el.locked) return;
     if (!selectedIds.has(id)) setOnlySelected(id);
     const start = getPointerMM(e);
@@ -1678,7 +1930,7 @@ export default function BlCreatorPage() {
 
     interactionRef.current.mode = "rotate";
     interactionRef.current.start = start;
-    interactionRef.current.startEls = deepClone(templateRef.current.elements);
+    interactionRef.current.startEls = deepClone((templateRef.current.elements || []));
     interactionRef.current.rotate = {
       id,
       cx,
@@ -1739,28 +1991,108 @@ export default function BlCreatorPage() {
     e.preventDefault();
   }
 
+  function addAttachmentPage() {
+  const next = deepClone(ensurePages(templateRef.current));
+  const n = next.pages.length;
+  const id = uid();
+
+  next.pages.push({
+    id,
+    name: `Attachment ${n}`,
+    elements: [],
+    groups: {},
+  });
+
+  commit(next);        // save structure
+  switchToPage(id);    // ✅ bind editor to new attachment page
+  toast("Attachment added");
+}
+
+function deleteActiveAttachmentPage() {
+  const next = deepClone(ensurePages(templateRef.current));
+  if (!next.pages?.length || next.pages.length === 1)
+    return toast("Can't delete Main page");
+
+  const currentId = activePageId || next.pages[0].id;
+  const idx = next.pages.findIndex((p) => p.id === currentId);
+  if (idx <= 0) return toast("Can't delete Main page");
+
+  next.pages.splice(idx, 1);
+  commit(next);
+
+  // ✅ switch to main after delete
+  switchToPage(next.pages[0].id);
+
+  toast("Attachment deleted");
+}
+
+
+  function deleteActivePage() {
+    const cur = ensurePages(templateRef.current);
+    const pages = getPages(cur);
+
+    if (pages.length <= 1) return toast("Main page can't be deleted");
+
+    const idx = getActivePageIndex(cur, activePageId);
+    const page = pages[idx];
+
+    if (page?.name === "Main") return toast("Main page can't be deleted");
+
+    const next = deepClone(cur);
+    next.pages = pages.filter((p) => p.id !== page.id);
+
+    // ✅ switch to Main after delete and hydrate aliases (so Main/Attachment don't mirror)
+    const main = next.pages.find((p) => p.name === "Main") || next.pages[0];
+    const hydrated = attachActiveElementsAlias(next, main.id);
+    commit(hydrated);
+    setActivePageId(main.id);
+    setSelectedIds(new Set());
+    toast("Attachment deleted");
+  }
+
+  function switchToPage(nextPageId) {
+    if (!nextPageId) return;
+
+    // ✅ persist CURRENT active aliases (template.elements/groups) into the current page first
+    const cur = ensurePages(templateRef.current);
+    const curPid = activePageId || cur.pages?.[0]?.id || null;
+    const persisted = syncActiveAliasesToPages(cur, curPid);
+
+    // ✅ hydrate ACTIVE aliases from the target page
+    const aliased = attachActiveElementsAlias(persisted, nextPageId);
+
+    // reset selection/editing when switching
+    setSelectedIds(new Set());
+    setEditingId(null);
+
+    // page switch should NOT be an undo step
+    setTemplateLive(aliased);
+    setActivePageId(nextPageId);
+  }
+
+
   /** ---------- Table divider drag ---------- */
   function startTableColDrag(e, tableElId, colIdx) {
-    const el = templateRef.current.elements.find((x) => x.id === tableElId);
+    const el = (templateRef.current.elements || []).find((x) => x.id === tableElId);
     if (!el || el.locked || el.type !== "table") return;
     if (!selectedIds.has(el.id)) setOnlySelected(el.id);
 
     interactionRef.current.mode = "table-col";
     interactionRef.current.start = getPointerMM(e);
-    interactionRef.current.startEls = deepClone(templateRef.current.elements);
+    interactionRef.current.startEls = deepClone((templateRef.current.elements || []));
     interactionRef.current.table = { id: tableElId, colIdx };
     e.preventDefault();
     e.stopPropagation();
   }
 
   function startTableRowDrag(e, tableElId, rowIdx) {
-    const el = templateRef.current.elements.find((x) => x.id === tableElId);
+    const el = (templateRef.current.elements || []).find((x) => x.id === tableElId);
     if (!el || el.locked || el.type !== "table") return;
     if (!selectedIds.has(el.id)) setOnlySelected(el.id);
 
     interactionRef.current.mode = "table-row";
     interactionRef.current.start = getPointerMM(e);
-    interactionRef.current.startEls = deepClone(templateRef.current.elements);
+    interactionRef.current.startEls = deepClone((templateRef.current.elements || []));
     interactionRef.current.table = { id: tableElId, rowIdx };
     e.preventDefault();
     e.stopPropagation();
@@ -1828,7 +2160,7 @@ export default function BlCreatorPage() {
         const yMax = Math.max(m.y0, m.y1);
 
         const hit = new Set(selectedIds);
-        for (const el of templateRef.current.elements) {
+        for (const el of (templateRef.current.elements || [])) {
           if (el.hidden || el.locked) continue;
           const ex0 = el.x,
             ex1 = el.x + el.w,
@@ -2069,7 +2401,7 @@ export default function BlCreatorPage() {
         resetInteraction();
 
         if (!pointerMovedRef.current && id) {
-          const el = templateRef.current.elements.find((x) => x.id === id);
+          const el = (templateRef.current.elements || []).find((x) => x.id === id);
           if (el && el.type === "text" && !el.locked) {
             setEditingId(id);
             setTextDraft(el.text || "");
@@ -2197,7 +2529,7 @@ export default function BlCreatorPage() {
   /** ---------- ✅ Print / Export PDF ---------- */
   function printTemplate() {
     try {
-      const elementsHtml = renderElementsToHtml(templateRef.current.elements);
+      const elementsHtml = renderElementsToHtml((templateRef.current.elements || []));
 
       const html = templateToPrintableHTML({
         wMm: paperMM.w,
@@ -2407,8 +2739,9 @@ export default function BlCreatorPage() {
 
   /** ---------- Sorted elements ---------- */
   const sortedElements = useMemo(() => {
-    return [...template.elements].sort((a, b) => (a.z || 0) - (b.z || 0));
-  }, [template.elements]);
+    const els = Array.isArray(activeElements) ? activeElements : [];
+    return [...els].sort((a, b) => (a?.z || 0) - (b?.z || 0));
+  }, [activeElements]);
 
   /** ---------- Marquee UI ---------- */
   const marquee = interactionRef.current?.marquee ?? null;
@@ -2438,13 +2771,13 @@ export default function BlCreatorPage() {
     };
   }, [guides, ui.scale]);
 
-  /** ---------- Layers list ---------- */
+  /** ---------- Layers list (ACTIVE PAGE) ---------- */
   const layerItems = useMemo(() => {
-    return [...template.elements]
-      .filter((e) => !e.hidden)
-      .sort((a, b) => (b.z || 0) - (a.z || 0));
-  }, [template.elements]);
-
+    const els = Array.isArray(activeElements) ? activeElements : [];
+    return [...els]
+      .filter((e) => !e?.hidden)
+      .sort((a, b) => (b?.z || 0) - (a?.z || 0));
+  }, [activeElements]);
   /** ---------- UI Components ---------- */
   function IconButton({ title, onClick, icon, danger, active }) {
     return (
@@ -2476,7 +2809,7 @@ export default function BlCreatorPage() {
     );
   }
 
-  function Tabs({ value, onChange, tabs }) {
+function Tabs({ value, onChange, tabs }) {
     return (
       <div style={styles.tabs}>
         {tabs.map((t) => (
@@ -2653,7 +2986,7 @@ export default function BlCreatorPage() {
                   if (e.key === "Escape") {
                     e.preventDefault();
                     const original =
-                      templateRef.current.elements.find((x) => x.id === el.id)
+                      (templateRef.current.elements || []).find((x) => x.id === el.id)
                         ?.text || "";
                     setTextDraft(original);
                     setEditingId(null);
@@ -2835,7 +3168,7 @@ export default function BlCreatorPage() {
             height: 14,
             borderRadius: 999,
             border: "2px solid #2563eb",
-            background: "#fff",
+            background: "rgba(2,6,23,.45)",
             cursor: "grab",
             zIndex: 10000,
             display: "flex",
@@ -2867,7 +3200,7 @@ export default function BlCreatorPage() {
               top: p.y - half,
               width: size,
               height: size,
-              background: "#fff",
+              background: "rgba(2,6,23,.45)",
               border: "2px solid #2563eb",
               borderRadius: 999,
               cursor:
@@ -2929,7 +3262,7 @@ export default function BlCreatorPage() {
           width: "100%",
           height: "100%",
           border,
-          background: "#fff",
+          background: "#ffffff",
           position: "relative",
         }}
       >
@@ -3196,8 +3529,8 @@ export default function BlCreatorPage() {
               minWidth: 100,
               "& .MuiOutlinedInput-root": {
                 borderRadius: "10px",
-                background: "var(--inputBg)",
-                color: "var(--text)",
+                background: "rgba(255,255,255,.92)",
+                color: "#0f172a",
                 minHeight: 32,
                 fontSize: 11,
               },
@@ -3320,8 +3653,8 @@ export default function BlCreatorPage() {
                 // input root
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "10px",
-                  background: "var(--inputBg)",
-                  color: "var(--text)",
+                  background: "rgba(255,255,255,.92)",
+                  color: "#0f172a",
                   minHeight: 32,
                   fontSize: 11,
                   pr: "52px", // ✅ space for X + arrow (very important)
@@ -3448,110 +3781,198 @@ export default function BlCreatorPage() {
             value={leftTab}
             onChange={setLeftTab}
             tabs={[
-              { id: "elements", label: "Elements", icon: "tabs" },
+              { id: "assets", label: "Assets", icon: "mag" },
               { id: "arrange", label: "Arrange", icon: "mag" },
             ]}
           />
 
-          {leftTab === "elements" ? (
-            <div style={styles.leftSection}>
-              <div style={styles.toolsRow}>
-                <ToolIcon name="Text" icon="text" draggableType="Text" />
-                <ToolIcon name="Box" icon="box" draggableType="Box" />
-                <ToolIcon name="H" icon="lineH" draggableType="LineH" />
-                <ToolIcon name="V" icon="lineV" draggableType="LineV" />
-                {/* <ToolIcon name="Table" icon="table" draggableType="Table" /> */}
-                <ToolIcon name="Image" icon="image" draggableType="Image" />
+          <div style={styles.leftSection}>
+            {/* ✅ PAGES / ATTACHMENTS PANEL (always visible) */}
+            <div
+              style={{
+                padding: 10,
+                borderRadius: 12,
+                border: "1px solid rgba(148,163,184,.18)",
+                background: "rgba(255,255,255,.02)",
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+              >
+                <div style={{ fontWeight: 800, fontSize: 13 }}>Pages</div>
+
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={addAttachmentPage}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(148,163,184,.28)",
+                      background: "transparent",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                    title="Add Attachment Page"
+                  >
+                    + Attachment
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={deleteActivePage}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(148,163,184,.28)",
+                      background: "transparent",
+                      cursor: "pointer",
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                    title="Delete Active Attachment Page"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
 
-              <div style={styles.divider} />
-
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  style={{
-                    ...styles.pill,
-                    ...(activeTool === "select" ? styles.pillActive : {}),
-                  }}
-                  onClick={() => setActiveTool("select")}
-                  title="Select"
-                >
-                  <Icon name="cursor" />
-                </button>
-                <button
-                  style={{
-                    ...styles.pill,
-                    ...(activeTool === "hand" ? styles.pillActive : {}),
-                  }}
-                  onClick={() => setActiveTool("hand")}
-                  title="Hand (Space)"
-                >
-                  <Icon name="hand" />
-                </button>
+              <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
+                {(template.pages || []).map((p) => {
+                  const active = p.id === activePageId;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => switchToPage(p.id)}
+                      style={{
+                        textAlign: "left",
+                        padding: "10px 10px",
+                        borderRadius: 10,
+                        border: active
+                          ? "1px solid rgba(59,130,246,.55)"
+                          : "1px solid rgba(148,163,184,.18)",
+                        background: active
+                          ? "rgba(59,130,246,.12)"
+                          : "transparent",
+                        cursor: "pointer",
+                        color: "inherit",
+                      }}
+                      title={`Switch to ${p.name}`}
+                    >
+                      <div
+                        style={{ fontSize: 13, fontWeight: active ? 900 : 700 }}
+                      >
+                        {p.name}
+                      </div>
+                      <div
+                        style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}
+                      >
+                        {(p.elements || []).length} items
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          ) : (
-            <div style={styles.leftSection}>
+
+            {/* ✅ Your existing tab-based content */}
+            {/* ✅ Left panel content */}
+            {leftTab === "assets" ? (
+              <>
+                <div style={styles.toolsRow}>
+                  <ToolIcon name="Text" icon="text" draggableType="Text" />
+                  <ToolIcon name="Box" icon="box" draggableType="Box" />
+                  <ToolIcon name="H" icon="lineH" draggableType="LineH" />
+                  <ToolIcon name="V" icon="lineV" draggableType="LineV" />
+                  <ToolIcon name="Table" icon="table" draggableType="Table" />
+                  <ToolIcon name="Image" icon="image" draggableType="Image" />
+                </div>
+
+                <div style={styles.divider} />
+
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    style={{ ...styles.pill, ...(activeTool === "select" ? styles.pillActive : {}) }}
+                    onClick={() => setActiveTool("select")}
+                    title="Select"
+                  >
+                    <Icon name="cursor" />
+                  </button>
+                  <button
+                    type="button"
+                    style={{ ...styles.pill, ...(activeTool === "hand" ? styles.pillActive : {}) }}
+                    onClick={() => setActiveTool("hand")}
+                    title="Hand (Space)"
+                  >
+                    <Icon name="hand" />
+                  </button>
+                </div>
+              </>
+            ) : (
               <div style={styles.iconGrid}>
-                <button
-                  style={styles.iconPill}
-                  title="Align Left"
-                  onClick={() => alignSelected("left")}
-                >
-                  <Icon name="alignLeft" />
-                </button>
-                <button
-                  style={styles.iconPill}
-                  title="Center X"
-                  onClick={() => alignSelected("centerX")}
-                >
-                  <Icon name="alignCenter" />
-                </button>
-                <button
-                  style={styles.iconPill}
-                  title="Align Right"
-                  onClick={() => alignSelected("right")}
-                >
-                  <Icon name="alignRight" />
-                </button>
-                <button
-                  style={styles.iconPill}
-                  title="Align Top"
-                  onClick={() => alignSelected("top")}
-                >
-                  <Icon name="alignTop" />
-                </button>
-                <button
-                  style={styles.iconPill}
-                  title="Center Y"
-                  onClick={() => alignSelected("centerY")}
-                >
-                  <Icon name="alignMiddle" />
-                </button>
-                <button
-                  style={styles.iconPill}
-                  title="Align Bottom"
-                  onClick={() => alignSelected("bottom")}
-                >
-                  <Icon name="alignBottom" />
-                </button>
+                <button type="button" style={styles.iconPill} title="Align Left" onClick={() => alignSelected("left")}><Icon name="alignLeft" /></button>
+                <button type="button" style={styles.iconPill} title="Center X" onClick={() => alignSelected("centerX")}><Icon name="alignCenter" /></button>
+                <button type="button" style={styles.iconPill} title="Align Right" onClick={() => alignSelected("right")}><Icon name="alignRight" /></button>
+                <button type="button" style={styles.iconPill} title="Align Top" onClick={() => alignSelected("top")}><Icon name="alignTop" /></button>
+                <button type="button" style={styles.iconPill} title="Center Y" onClick={() => alignSelected("centerY")}><Icon name="alignMiddle" /></button>
+                <button type="button" style={styles.iconPill} title="Align Bottom" onClick={() => alignSelected("bottom")}><Icon name="alignBottom" /></button>
+                <button type="button" style={styles.iconPill} title="Bring to Front" onClick={bringToFront}><Icon name="front" /></button>
+                <button type="button" style={styles.iconPill} title="Send to Back" onClick={sendToBack}><Icon name="back" /></button>
+              </div>
+            )}
+          <div style={styles.sidebarFooter}>
+            <div style={styles.sidebarFooterRow}>
+              <button
+                type="button"
+                style={styles.bottomBtn}
+                title="Grid"
+                onClick={() => setUi((s) => ({ ...s, showGrid: !s.showGrid }))}
+              >
+                <Icon name="grid" />
+              </button>
+              <button
+                type="button"
+                style={styles.bottomBtn}
+                title="Rulers"
+                onClick={() =>
+                  setUi((s) => ({ ...s, showRulers: !s.showRulers }))
+                }
+              >
+                <Icon name="ruler" />
+              </button>
+              <button
+                type="button"
+                style={styles.bottomBtn}
+                title="Snap"
+                onClick={() => setUi((s) => ({ ...s, snap: !s.snap }))}
+              >
+                <Icon name="mag" />
+              </button>
 
-                <button
-                  style={styles.iconPill}
-                  title="Bring to Front"
-                  onClick={bringToFront}
-                >
-                  <Icon name="front" />
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button type="button" style={styles.bottomMini} onClick={zoomOut} title="Zoom out">
+                  −
                 </button>
-                <button
-                  style={styles.iconPill}
-                  title="Send to Back"
-                  onClick={sendToBack}
-                >
-                  <Icon name="back" />
+                <div style={{ fontWeight: 900, fontSize: 12, minWidth: 48, textAlign: "center" }}>
+                  {Math.round(ui.scale * 100)}%
+                </div>
+                <button type="button" style={styles.bottomMini} onClick={zoomIn} title="Zoom in">
+                  +
                 </button>
               </div>
             </div>
-          )}
+          </div>
+
+          </div>
         </div>
 
         <div style={styles.center}>
@@ -3574,12 +3995,12 @@ export default function BlCreatorPage() {
                 ...styles.canvas,
                 width: paperPX.w,
                 height: paperPX.h,
-                background: "#fff",
+                background: "#ffffff",
                 ...(ui.showGrid ? styles.gridBg : {}),
               }}
               onPointerDown={startMarquee}
-              onDragOver={(e) => e.preventDefault()}
               onDrop={onCanvasDrop}
+              onDragOver={(e) => e.preventDefault()}
               onClick={() => {
                 if (editingId) return;
                 clearSelection();
@@ -3632,8 +4053,8 @@ export default function BlCreatorPage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    background: "#fff",
-                    borderBottom: "1px solid #e5e7eb",
+                    background: "rgba(2,6,23,.45)",
+                    borderBottom: "1px solid rgba(148,163,184,.18)",
                     zIndex: 2,
                     pointerEvents: "none", // ✅ IMPORTANT
                   }}
@@ -3666,64 +4087,6 @@ export default function BlCreatorPage() {
                   }}
                 />
               ) : null}
-            </div>
-          </div>
-
-          <div className="blc-ui blc-bottombar" style={styles.bottomBar}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <button
-                style={styles.bottomBtn}
-                title="Grid"
-                onClick={() => setUi((s) => ({ ...s, showGrid: !s.showGrid }))}
-              >
-                <Icon name="grid" />
-              </button>
-              <button
-                style={styles.bottomBtn}
-                title="Rulers"
-                onClick={() =>
-                  setUi((s) => ({ ...s, showRulers: !s.showRulers }))
-                }
-              >
-                <Icon name="ruler" />
-              </button>
-              <button
-                style={styles.bottomBtn}
-                title="Snap"
-                onClick={() => setUi((s) => ({ ...s, snap: !s.snap }))}
-              >
-                <Icon name="mag" />
-              </button>
-              <div style={styles.bottomPill}>
-                <span style={{ fontSize: 11, fontWeight: 900, opacity: 0.7 }}>
-                  Zoom
-                </span>
-                <button
-                  style={styles.bottomMini}
-                  onClick={zoomOut}
-                  title="Zoom out"
-                >
-                  –
-                </button>
-                <button
-                  style={styles.bottomMini}
-                  onClick={zoomReset}
-                  title="Reset"
-                >
-                  {Math.round(ui.scale * 100)}%
-                </button>
-                <button
-                  style={styles.bottomMini}
-                  onClick={zoomIn}
-                  title="Zoom in"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-            <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.7 }}>
-              {paperMM.w}×{paperMM.h}mm • {ui.snap ? "Snap" : "No snap"} •{" "}
-              {activeTool === "hand" ? "Hand" : "Select"}
             </div>
           </div>
         </div>
@@ -4658,7 +5021,7 @@ function Ruler({ axis, mm, scale }) {
         width: axis === "x" ? mm * MM_TO_PX * scale : 36,
         height: axis === "x" ? 28 : mm * MM_TO_PX * scale,
         background: "#f8fafc",
-        border: "1px solid #e5e7eb",
+        border: "1px solid rgba(148,163,184,.18)",
         overflow: "hidden",
       }}
     >
@@ -4732,8 +5095,8 @@ const styles = {
   page: {
     height: "100vh",
     width: "100%",
-    background: "#f6f7fb",
-    color: "#0f172a",
+    background: "#0b1220",
+    color: "#e5e7eb",
     fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial",
     display: "flex",
     flexDirection: "column",
@@ -4745,8 +5108,8 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    background: "rgba(255,255,255,.92)",
-    borderBottom: "1px solid #e5e7eb",
+    background: "rgba(17,24,39,.98)",
+    borderBottom: "1px solid rgba(148,163,184,.18)",
     backdropFilter: "blur(10px)",
     flexShrink: 0,
     fontSize: 24,
@@ -4762,8 +5125,10 @@ const styles = {
   select: {
     height: 32,
     borderRadius: 10,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "var(--inputBg, rgba(2,6,23,.35))",
+    color: "var(--text, #e5e7eb)",
+    WebkitTextFillColor: "var(--text, #e5e7eb)",
     padding: "0 10px",
     fontSize: 12,
     fontWeight: 500,
@@ -4772,8 +5137,8 @@ const styles = {
   softBtn: {
     height: 32,
     borderRadius: 10,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     padding: "0 10px",
     fontSize: 12,
     fontWeight: 900,
@@ -4787,8 +5152,8 @@ const styles = {
     width: 34,
     height: 32,
     borderRadius: 10,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -4813,8 +5178,8 @@ const styles = {
     overflow: "hidden",
   },
   left: {
-    background: "rgba(255,255,255,.92)",
-    border: "1px solid #e5e7eb",
+    background: "rgba(17,24,39,.98)",
+    border: "1px solid rgba(148,163,184,.18)",
     borderRadius: 14,
     overflow: "hidden",
     minHeight: 0,
@@ -4822,8 +5187,8 @@ const styles = {
     flexDirection: "column",
   },
   right: {
-    background: "rgba(255,255,255,.92)",
-    border: "1px solid #e5e7eb",
+    background: "rgba(17,24,39,.98)",
+    border: "1px solid rgba(148,163,184,.18)",
     borderRadius: 14,
     overflow: "hidden",
     minHeight: 0,
@@ -4834,15 +5199,15 @@ const styles = {
     display: "flex",
     gap: 8,
     padding: 10,
-    borderBottom: "1px solid #e5e7eb",
+    borderBottom: "1px solid rgba(148,163,184,.18)",
     background: "rgba(248,250,252,.75)",
   },
   tab: {
     flex: 1,
     height: 36,
     borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -4855,11 +5220,14 @@ const styles = {
     boxShadow: "0 0 0 3px rgba(37,99,235,.12)",
   },
   leftSection: { padding: 12, minHeight: 0, overflow: "auto" },
+  sidebarFooter: { padding: 12, borderTop: "1px solid rgba(148,163,184,.18)" },
+  sidebarFooterRow: { display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" },
+
   toolsRow: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 },
   toolIcon: {
-    border: "1px solid #e5e7eb",
+    border: "1px solid rgba(148,163,184,.18)",
     borderRadius: 14,
-    background: "#fff",
+    background: "rgba(2,6,23,.45)",
     padding: "12px 10px",
     display: "flex",
     alignItems: "center",
@@ -4873,8 +5241,8 @@ const styles = {
     width: 40,
     height: 36,
     borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -4888,8 +5256,8 @@ const styles = {
   iconPill: {
     height: 38,
     borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -4897,8 +5265,8 @@ const styles = {
   },
   center: { position: "relative", minHeight: 0, overflow: "hidden" },
   rulers: { position: "absolute", inset: 0, pointerEvents: "none", zIndex: 5 },
-  rulerTop: { position: "absolute", left: 36, top: 0, right: 0, height: 28 },
-  rulerLeft: { position: "absolute", left: 0, top: 28, bottom: 0, width: 36 },
+  rulerTop: { position: "absolute", left: 28, top: 0, right: 0, height: 20 },
+  rulerLeft: { position: "absolute", left: 0, top: 20, bottom: 0, width: 28 },
   canvasStage: {
     position: "absolute",
     inset: 0,
@@ -4912,7 +5280,7 @@ const styles = {
     position: "relative",
     margin: 20,
     borderRadius: 10,
-    border: "1px solid #e5e7eb",
+    border: "1px solid rgba(148,163,184,.18)",
     boxShadow: "0 10px 30px rgba(15,23,42,.08)",
     overflow: "hidden",
   },
@@ -4922,6 +5290,7 @@ const styles = {
     backgroundSize: "24px 24px",
   },
   bottomBar: {
+    display: "none",
     position: "absolute",
     left: 12,
     right: 12,
@@ -4941,8 +5310,8 @@ const styles = {
     width: 38,
     height: 34,
     borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
@@ -4951,8 +5320,8 @@ const styles = {
   bottomPill: {
     height: 34,
     borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
@@ -4963,8 +5332,8 @@ const styles = {
     height: 26,
     minWidth: 34,
     borderRadius: 10,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     fontWeight: 900,
     cursor: "pointer",
   },
@@ -4979,8 +5348,8 @@ const styles = {
     justifyContent: "space-between",
     gap: 10,
     padding: 10,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     borderRadius: 12,
     cursor: "pointer",
   },
@@ -5001,8 +5370,8 @@ const styles = {
     width: 34,
     height: 30,
     borderRadius: 10,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
@@ -5011,8 +5380,8 @@ const styles = {
 
   columns: { display: "grid", gap: 8 },
   colBtn: {
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     borderRadius: 12,
     padding: 10,
     cursor: "pointer",
@@ -5038,8 +5407,8 @@ const styles = {
 /** ---------- Inspector KV styles ---------- */
 const stylesKV = {
   block: {
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     borderRadius: 14,
     padding: 12,
   },
@@ -5054,28 +5423,45 @@ const stylesKV = {
     width: "100%",
     height: 32,
     borderRadius: 10,
-    border: "1px solid #e5e7eb",
+    border: "1px solid rgba(148,163,184,.18)",
     padding: "0 10px",
     outline: "none",
     fontWeight: 800,
     fontSize: 12,
+    background: "var(--inputBg, rgba(2,6,23,.35))",
+    color: "var(--text, #e5e7eb)",
+    WebkitTextFillColor: "var(--text, #e5e7eb)",
   },
+  num: {
+    width: "100%",
+    height: 32,
+    borderRadius: 10,
+    border: "1px solid rgba(148,163,184,.18)",
+    padding: "0 10px",
+    outline: "none",
+    fontWeight: 800,
+    fontSize: 12,
+    background: "var(--inputBg, rgba(2,6,23,.35))",
+    color: "var(--text, #e5e7eb)",
+    WebkitTextFillColor: "var(--text, #e5e7eb)",
+  },
+
   select: {
     width: "100%",
     height: 32,
     borderRadius: 10,
-    border: "1px solid #e5e7eb",
+    border: "1px solid rgba(148,163,184,.18)",
     padding: "0 10px",
     outline: "none",
     fontWeight: 900,
     fontSize: 12,
-    background: "#fff",
+    background: "rgba(2,6,23,.45)",
   },
   chip: {
     height: 34,
     borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     padding: "0 12px",
     cursor: "pointer",
     fontWeight: 900,
@@ -5088,7 +5474,7 @@ const stylesKV = {
   actionBtn: {
     height: 34,
     borderRadius: 12,
-    border: "1px solid #e5e7eb",
+    border: "1px solid rgba(148,163,184,.18)",
     background: "linear-gradient(180deg,#ffffff,#f8fafc)",
     cursor: "pointer",
     fontWeight: 900,
@@ -5099,8 +5485,8 @@ const stylesKV = {
     width: "100%",
     padding: "10px 10px",
     borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    background: "#fff",
+    border: "1px solid rgba(148,163,184,.18)",
+    background: "rgba(2,6,23,.45)",
     textAlign: "left",
     cursor: "pointer",
     fontSize: 12,

@@ -14,7 +14,6 @@ import Modal from "@mui/material/Modal";
 import Fade from "@mui/material/Fade";
 import Tooltip from "@mui/material/Tooltip";
 import { Avatar } from "@mui/material";
-import ApartmentRoundedIcon from "@mui/icons-material/ApartmentRounded";
 
 import { logoutBtn, homeLogo, homeHoverLogo } from "@/assets/index.jsx";
 import {
@@ -49,7 +48,6 @@ import { userLogout } from "@/services/auth/Auth.services";
 
 const backendUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-// -------------------- react-select base styles (same as your code) --------------------
 const customStyles = {
   menu: (base) => ({
     ...base,
@@ -84,7 +82,7 @@ const customStyles = {
     cursor: "text !important",
     width: "fit-content",
     height: "27px ",
-    zindex: 999,
+    zIndex: 999,
     fontSize: "10px",
     position: "relative",
   }),
@@ -146,7 +144,6 @@ export default function NavbarPage() {
   const [branchData, setBranchData] = useState([]);
   const [financialYearData, setFinancialYearData] = useState([]);
   const [userDetails, setUserDetails] = useState({});
-  const [Controller, setController] = useState(null);
 
   const [selectedCompany, setSelectedCompany] = useState("");
   const [selectedFinancialYear, setSelectedFinancialYear] = useState("");
@@ -158,21 +155,22 @@ export default function NavbarPage() {
   const [companyImageUrl, setCompanyImageUrl] = useState("");
   const [profileImage, setProfileImage] = useState("");
 
-  const [openAlertModal, setOpenAlertModal] = useState(false); // your existing confirm modal
-  const [openSwitchModal, setOpenSwitchModal] = useState(false); // ✅ NEW: Company Details modal
+  const [openAlertModal, setOpenAlertModal] = useState(false);
+  const [openSwitchModal, setOpenSwitchModal] = useState(false);
 
   const yearDropdownRef = useRef(null);
-  const cityDropdownRef = useRef(null);
+  const companyDropdownRef = useRef(null);
+  const branchDropdownRef = useRef(null);
+
   const prevPageNo = useRef();
-  let callInputChangeFunc = true;
+  const callInputChangeFuncRef = useRef(true);
 
   const isRedirected = useSelector((state) => state?.counter?.isRedirection);
   const [redirected, setRedirected] = useState(true);
 
-  // ✅ responsive breakpoint for compact navbar
   const [isCompact, setIsCompact] = useState(false);
   useEffect(() => {
-    const calc = () => setIsCompact(window.innerWidth < 1280); // < xl
+    const calc = () => setIsCompact(window.innerWidth < 1280);
     calc();
     window.addEventListener("resize", calc);
     return () => window.removeEventListener("resize", calc);
@@ -182,20 +180,45 @@ export default function NavbarPage() {
     setRedirected(isRedirected);
   }, [isRedirected]);
 
+  const companyCtrlRef = useRef(null);
+  const branchCtrlRef = useRef(null);
+  const yearCtrlRef = useRef(null);
+
+  const getUserDataSafe = () => {
+    try {
+      const storedUserData = localStorage.getItem("userData");
+      if (!storedUserData) return null;
+      return JSON.parse(decrypt(storedUserData));
+    } catch (e) {
+      console.error("Failed to read userData:", e);
+      return null;
+    }
+  };
+
+  const setUserDataSafe = (patch) => {
+    const ud = getUserDataSafe();
+    if (!ud?.[0]) return;
+    const next = { ...ud[0], ...patch };
+    localStorage.setItem("userData", encrypt(JSON.stringify([next])));
+  };
+
   useEffect(() => {
-    const storedUserData = localStorage.getItem("userData");
-    if (storedUserData) {
-      const ud = JSON.parse(decrypt(storedUserData));
+    const ud = getUserDataSafe();
+    if (ud) {
       setUserDetails(ud);
-      setSelectedCompany(ud[0].defaultCompanyId);
-      setSelectedBranch(ud[0].defaultBranchId);
-      setSelectedFinancialYear(ud[0].defaultFinYearId);
-      setProfileImage(backendUrl + ud[0].profilePhoto);
-      setCompanyImageUrl(backendUrl + ud[0].companyLogo);
+      setSelectedCompany(ud?.[0]?.defaultCompanyId ?? "");
+      setSelectedBranch(ud?.[0]?.defaultBranchId ?? "");
+      setSelectedFinancialYear(ud?.[0]?.defaultFinYearId ?? "");
+      setProfileImage(
+        ud?.[0]?.profilePhoto ? backendUrl + ud[0].profilePhoto : "",
+      );
+      setCompanyImageUrl(
+        ud?.[0]?.companyLogo ? backendUrl + ud[0].companyLogo : "",
+      );
     }
 
     function getAllSessionStorage() {
-      let items = [];
+      const items = [];
       for (let i = 0; i < sessionStorage.length; i++) {
         const key = sessionStorage.key(i);
         const value = sessionStorage.getItem(key);
@@ -206,20 +229,26 @@ export default function NavbarPage() {
 
     const sessionStorageItems = getAllSessionStorage();
     let filterObject = null;
+
     if (sessionStorageItems.length > 0) {
       filterObject = sessionStorageItems.reduce((obj, item) => {
         obj[item.key] = item.value;
         return obj;
       }, {});
-      setSelectedCompany(filterObject?.companyId);
-      setSelectedBranch(filterObject?.branchId);
-      setSelectedFinancialYear(filterObject?.financialYear);
+      if (filterObject?.companyId) setSelectedCompany(filterObject.companyId);
+      if (filterObject?.branchId) setSelectedBranch(filterObject.branchId);
+      if (filterObject?.financialYear)
+        setSelectedFinancialYear(filterObject.financialYear);
     }
 
+    const initialCompanyId =
+      filterObject?.companyId ?? ud?.[0]?.defaultCompanyId ?? "";
+
     Promise.all([
-      fetchCompanyData(pageNo, "", filterObject?.companyId),
-      fetchBranchData(pageNo, "", filterObject?.branchId),
-      fetchFinancialYearData(pageNo, "", filterObject?.financialYear),
+      fetchCompanyData(1, "", filterObject?.companyId),
+      fetchBranchData(1, "", filterObject?.branchId, initialCompanyId),
+      // ✅ company-aware FY
+      fetchFinancialYearData(1, "", filterObject?.financialYear, initialCompanyId),
     ])
       .then(([cd, bd, fd]) => {
         setCompanyData(cd || []);
@@ -231,18 +260,20 @@ export default function NavbarPage() {
       });
 
     return () => {
-      Controller?.abort();
+      companyCtrlRef.current?.abort();
+      branchCtrlRef.current?.abort();
+      yearCtrlRef.current?.abort();
     };
   }, []);
 
   async function fetchCompanyData(pageNo, inputValueForDataFetch, valueSearch) {
-    if (Controller) Controller.abort();
-    const abortController = new AbortController();
-    setController(abortController);
+    companyCtrlRef.current?.abort();
+    companyCtrlRef.current = new AbortController();
 
-    const storedUserData = localStorage.getItem("userData");
-    const userData = JSON.parse(decrypt(storedUserData));
-    const clientId = userData[0].clientId;
+    const ud = getUserDataSafe();
+    if (!ud) return null;
+
+    const clientId = ud?.[0]?.clientId;
 
     const requestData = {
       onfilterkey: "status",
@@ -258,8 +289,9 @@ export default function NavbarPage() {
     try {
       const apiResponse = await dynamicDropDownFieldsData(
         requestData,
-        abortController,
+        companyCtrlRef.current,
       );
+
       if (pageNo == 1 || inputValueForDataFetch.length > 0) {
         setCompanyData(apiResponse.data);
       } else {
@@ -275,33 +307,47 @@ export default function NavbarPage() {
     }
   }
 
-  async function fetchBranchData(pageNo, inputValueForDataFetch, valueSearch) {
-    if (Controller) Controller.abort();
-    const abortController = new AbortController();
-    setController(abortController);
+  async function fetchBranchData(
+    pageNo,
+    inputValueForDataFetch,
+    valueSearch,
+    companyIdForBranches,
+  ) {
+    branchCtrlRef.current?.abort();
+    branchCtrlRef.current = new AbortController();
 
-    const storedUserData = localStorage.getItem("userData");
-    const userData = JSON.parse(decrypt(storedUserData));
-    const clientId = userData[0].clientId;
-    const companyId = userData[0].defaultCompanyId;
+    const ud = getUserDataSafe();
+    if (!ud) return null;
+
+    const clientId = ud?.[0]?.clientId;
+
+    const companyId =
+      companyIdForBranches ??
+      parseInt(sessionStorage.getItem("companyId")) ??
+      ud?.[0]?.defaultCompanyId;
+
+    if (!companyId) {
+      setBranchData([]);
+      return [];
+    }
 
     const requestData = {
       onfilterkey: "status",
       onfiltervalue: 1,
       referenceTable: "tblCompanyBranch",
       referenceColumn: "name",
-      dropdownFilter:
-        " and clientId = " + clientId + " and companyId =" + companyId,
+      dropdownFilter: ` and clientId = ${clientId} and companyId = ${companyId}`,
       search: inputValueForDataFetch,
       pageNo: inputValueForDataFetch.length > 0 ? 1 : pageNo,
-      value: null,
+      value: valueSearch ?? null,
     };
 
     try {
       const apiResponse = await dynamicDropDownFieldsData(
         requestData,
-        abortController,
+        branchCtrlRef.current,
       );
+
       if (pageNo == 1 || inputValueForDataFetch.length > 0) {
         setBranchData(apiResponse.data);
       } else {
@@ -317,35 +363,46 @@ export default function NavbarPage() {
     }
   }
 
+  // ✅ company-aware Financial Year
   async function fetchFinancialYearData(
     pageNo,
     inputValueForDataFetch,
     valueSearch,
+    companyIdForYear,
   ) {
-    if (Controller) Controller.abort();
-    const abortController = new AbortController();
-    setController(abortController);
+    yearCtrlRef.current?.abort();
+    yearCtrlRef.current = new AbortController();
 
-    const storedUserData = localStorage.getItem("userData");
-    const userData = JSON.parse(decrypt(storedUserData));
-    const clientId = userData[0].clientId;
+    const ud = getUserDataSafe();
+    if (!ud) return null;
+
+    const clientId = ud?.[0]?.clientId;
+
+    const companyId =
+      companyIdForYear ??
+      parseInt(sessionStorage.getItem("companyId")) ??
+      ud?.[0]?.defaultCompanyId;
+
+    // ✅ If FY is company-based, keep this. If not, remove the company filter.
+    const companyFilter = companyId ? ` and companyId = ${companyId}` : "";
 
     const requestData = {
       onfilterkey: "status",
       onfiltervalue: 1,
       referenceTable: "tblFinancialYear",
       referenceColumn: "financialYear",
-      dropdownFilter: " and clientId = " + clientId,
+      dropdownFilter: ` and clientId = ${clientId}${companyFilter}`,
       search: inputValueForDataFetch,
       pageNo: inputValueForDataFetch.length > 0 ? 1 : pageNo,
-      value: null,
+      value: valueSearch ?? null,
     };
 
     try {
       const apiResponse = await dynamicDropDownFieldsData(
         requestData,
-        abortController,
+        yearCtrlRef.current,
       );
+
       if (pageNo == 1 || inputValueForDataFetch.length > 0) {
         setFinancialYearData(apiResponse.data);
       } else {
@@ -361,43 +418,81 @@ export default function NavbarPage() {
     }
   }
 
-  // Generic handler for select values
-  const handleSelect = async (
-    selectedValue,
-    setState,
-    selectedBy,
-    updateColumn,
-  ) => {
-    const storedUserData = localStorage.getItem("userData");
-    const userData = JSON.parse(decrypt(storedUserData));
-
-    if (updateColumn === "defaultBranchId") {
+  const updateBranchHeaderFooter = async (branchId) => {
+    try {
       const requestData = {
         columns: "cbd.header,cbd.footer",
         tableName: `tblCompanyBranchParameterDetails cbd 
-      join tblCompanyBranchParameter cb on cb.id = cbd.companyBranchParameterId and cb.companyBranchId = ${selectedValue?.value}`,
+          join tblCompanyBranchParameter cb 
+            on cb.id = cbd.companyBranchParameterId 
+           and cb.companyBranchId = ${branchId}`,
         whereCondition: `1=1`,
         clientIdCondition: `cbd.status=1 FOR JSON PATH , INCLUDE_NULL_VALUES `,
       };
       const { data } = await fetchReportData(requestData);
-      const setUserData = {
-        ...userData[0],
+      setUserDataSafe({
+        defaultBranchId: branchId,
         footerLogoPath: data?.[0]?.footer,
         headerLogoPath: data?.[0]?.header,
-        [updateColumn]: selectedValue?.value,
-      };
-      localStorage.setItem("userData", encrypt(JSON.stringify([setUserData])));
-    } else {
-      const setUserData = {
-        ...userData[0],
-        [updateColumn]: selectedValue?.value,
-      };
-      localStorage.setItem("userData", encrypt(JSON.stringify([setUserData])));
+      });
+    } catch (e) {
+      console.error("header/footer fetch failed:", e);
+      // still set branch id, don't block UI
+      setUserDataSafe({ defaultBranchId: branchId });
+    }
+  };
+
+  const handleSelect = async (selectedValue, setState, selectedBy, updateColumn) => {
+    const ud = getUserDataSafe();
+    if (!ud) return;
+
+    // persist default id changes to userData
+    if (updateColumn === "defaultBranchId") {
+      // handled below (includes header/footer)
+      if (selectedValue?.value != null) {
+        await updateBranchHeaderFooter(selectedValue.value);
+      }
+    } else if (selectedValue?.value != null) {
+      setUserDataSafe({ [updateColumn]: selectedValue.value });
     }
 
     if (selectedValue && selectedValue.value !== undefined) {
       setState(selectedValue.value);
       sessionStorage.setItem(selectedBy, selectedValue.value);
+
+      // ✅ COMPANY CHANGE -> reset + refetch + auto set Branch + Financial Year
+      if (selectedBy === "companyId") {
+        const newCompanyId = selectedValue.value;
+
+        // clear branch + FY
+        setSelectedBranch(null);
+        sessionStorage.removeItem("branchId");
+        setSelectedFinancialYear(null);
+        sessionStorage.removeItem("financialYear");
+
+        // reset paging/scroll shared list states
+        setPageNo(1);
+        setScrollPosition(0);
+
+        // load branches for company + auto pick first
+        const bd = await fetchBranchData(1, "", null, newCompanyId);
+        const firstBranch = Array.isArray(bd) && bd.length > 0 ? bd[0] : null;
+        if (firstBranch?.value != null) {
+          setSelectedBranch(firstBranch.value);
+          sessionStorage.setItem("branchId", firstBranch.value);
+          await updateBranchHeaderFooter(firstBranch.value);
+        }
+
+        // load FY for company + auto pick first
+        const fd = await fetchFinancialYearData(1, "", null, newCompanyId);
+        const firstFY = Array.isArray(fd) && fd.length > 0 ? fd[0] : null;
+        if (firstFY?.value != null) {
+          setSelectedFinancialYear(firstFY.value);
+          sessionStorage.setItem("financialYear", firstFY.value);
+          setUserDataSafe({ defaultFinYearId: firstFY.value });
+        }
+      }
+      window.location.reload();
     } else if (selectedValue?.length === 0) {
       setState(null);
     }
@@ -407,28 +502,13 @@ export default function NavbarPage() {
     const dropValue = value ? value[0] : [];
     switch (selectedBy) {
       case "companyId":
-        handleSelect(
-          dropValue,
-          setSelectedCompany,
-          selectedBy,
-          "defaultCompanyId",
-        );
+        handleSelect(dropValue, setSelectedCompany, selectedBy, "defaultCompanyId");
         break;
       case "financialYear":
-        handleSelect(
-          dropValue,
-          setSelectedFinancialYear,
-          selectedBy,
-          "defaultFinYearId",
-        );
+        handleSelect(dropValue, setSelectedFinancialYear, selectedBy, "defaultFinYearId");
         break;
       case "branchId":
-        handleSelect(
-          dropValue,
-          setSelectedBranch,
-          selectedBy,
-          "defaultBranchId",
-        );
+        handleSelect(dropValue, setSelectedBranch, selectedBy, "defaultBranchId");
         break;
       default:
         break;
@@ -437,7 +517,7 @@ export default function NavbarPage() {
 
   async function handleLogout() {
     const storedUserData = localStorage.getItem("loginCredentials");
-    let tokenVal = Cookies.get("token");
+    const tokenVal = Cookies.get("token");
     const response = await userLogout(tokenVal);
     if (response.success === true) {
       localStorage.clear();
@@ -457,11 +537,24 @@ export default function NavbarPage() {
     push("/dashboard");
   }
 
-  // Debounced fetch call
-  const debouncedFetch = useCallback(
+  const debouncedCompanyFetch = useCallback(
     debounce((searchValue) => {
-      fetchCompanyData(pageNo, searchValue);
-    }, 50),
+      fetchCompanyData(1, searchValue);
+    }, 150),
+    [],
+  );
+
+  const debouncedBranchFetch = useCallback(
+    debounce((searchValue, companyId) => {
+      fetchBranchData(1, searchValue, null, companyId);
+    }, 150),
+    [],
+  );
+
+  const debouncedYearFetch = useCallback(
+    debounce((searchValue, companyId) => {
+      fetchFinancialYearData(1, searchValue, null, companyId);
+    }, 150),
     [],
   );
 
@@ -469,16 +562,12 @@ export default function NavbarPage() {
     if (pageNo > 1) {
       if (prevPageNo.current !== pageNo) {
         fetchCompanyData(pageNo, "");
-        fetchBranchData(pageNo, "");
-        fetchFinancialYearData(pageNo, "");
+        fetchBranchData(pageNo, "", null, selectedCompany || null);
+        fetchFinancialYearData(pageNo, "", null, selectedCompany || null);
       }
       prevPageNo.current = pageNo;
     }
   }, [pageNo]);
-
-  const handleInputChange = (newInputValue) => {
-    debouncedFetch(newInputValue);
-  };
 
   function setRedirectedFn() {
     setOpenAlertModal((pre) => !pre);
@@ -547,7 +636,6 @@ export default function NavbarPage() {
     scrollPosition: PropTypes.any,
   };
 
-  // ✅ modal styles for stacked dropdowns (full width)
   const modalSelectStyles = {
     ...customStyles,
     control: (base, st) => ({
@@ -562,11 +650,8 @@ export default function NavbarPage() {
   };
 
   return (
-    <Navbar
-      className={`${navbarStyles} shadow-none rounded-sm bg-[var(--navbarBg)]`}
-    >
+    <Navbar className={`${navbarStyles} shadow-none rounded-sm bg-[var(--navbarBg)]`}>
       <div className={CompanyLogostyles1} style={{ width: "100%" }}>
-        {/* ✅ Left Logo (always visible) */}
         <div className="flex items-center justify-start">
           <Image
             src={loginIcon}
@@ -576,7 +661,6 @@ export default function NavbarPage() {
           />
         </div>
 
-        {/* Middle Data */}
         <div className={middleDataStyles} style={{ width: "100%" }}>
           <ul className="flex flex-row flex-nowrap items-center justify-between mb-0 w-full">
             {/* user */}
@@ -616,15 +700,11 @@ export default function NavbarPage() {
               </Typography>
             </div>
 
-            {/* ✅ Desktop dropdowns only */}
             {!isCompact ? (
               <>
                 {/* Company */}
                 <div className="flex items-center">
-                  <div
-                    ref={cityDropdownRef}
-                    className="relative inline-block text-left"
-                  >
+                  <div ref={companyDropdownRef} className="relative inline-block text-left">
                     <div className="inline-flex items-center relative">
                       <HoverIcon
                         defaultIcon={officeIcon}
@@ -643,12 +723,9 @@ export default function NavbarPage() {
                         isClearable={false}
                         backspaceRemovesValue={false}
                         onChange={(newValue) => {
-                          callInputChangeFunc = false;
-                          handleChangeValue(
-                            newValue ? [newValue] : null,
-                            "companyId",
-                          );
-                          callInputChangeFunc = true;
+                          callInputChangeFuncRef.current = false;
+                          handleChangeValue(newValue ? [newValue] : null, "companyId");
+                          callInputChangeFuncRef.current = true;
                         }}
                         options={companyData}
                         components={{
@@ -670,10 +747,10 @@ export default function NavbarPage() {
                         onMenuOpen={() => setPageNo(1)}
                         onInputChange={(value, e) => {
                           if (
-                            callInputChangeFunc &&
+                            callInputChangeFuncRef.current &&
                             e.action === "input-change"
                           ) {
-                            handleInputChange(value);
+                            debouncedCompanyFetch(value);
                           }
                         }}
                       />
@@ -683,10 +760,7 @@ export default function NavbarPage() {
 
                 {/* Branch */}
                 <div className="flex items-center">
-                  <div
-                    ref={cityDropdownRef}
-                    className="relative inline-block text-left"
-                  >
+                  <div ref={branchDropdownRef} className="relative inline-block text-left">
                     <div className="inline-flex items-center relative">
                       <HoverIcon
                         defaultIcon={officeIcon}
@@ -705,12 +779,9 @@ export default function NavbarPage() {
                         isClearable={false}
                         backspaceRemovesValue={false}
                         onChange={(newValue) => {
-                          callInputChangeFunc = false;
-                          handleChangeValue(
-                            newValue ? [newValue] : null,
-                            "branchId",
-                          );
-                          callInputChangeFunc = true;
+                          callInputChangeFuncRef.current = false;
+                          handleChangeValue(newValue ? [newValue] : null, "branchId");
+                          callInputChangeFuncRef.current = true;
                         }}
                         options={branchData}
                         components={{
@@ -729,13 +800,16 @@ export default function NavbarPage() {
                             ? "No records found"
                             : "Loading..."
                         }
-                        onMenuOpen={() => setPageNo(1)}
+                        onMenuOpen={() => {
+                          setPageNo(1);
+                          fetchBranchData(1, "", null, selectedCompany || null);
+                        }}
                         onInputChange={(value, e) => {
                           if (
-                            callInputChangeFunc &&
+                            callInputChangeFuncRef.current &&
                             e.action === "input-change"
                           ) {
-                            handleInputChange(value);
+                            debouncedBranchFetch(value, selectedCompany || null);
                           }
                         }}
                       />
@@ -760,8 +834,7 @@ export default function NavbarPage() {
                         backspaceRemovesValue={false}
                         value={
                           financialYearData?.find(
-                            (item) =>
-                              item.value === parseInt(selectedFinancialYear),
+                            (item) => item.value === parseInt(selectedFinancialYear),
                           ) || null
                         }
                         onChange={(newValue) => {
@@ -787,13 +860,16 @@ export default function NavbarPage() {
                             ? "No records found"
                             : "Loading..."
                         }
-                        onMenuOpen={() => setPageNo(1)}
+                        onMenuOpen={() => {
+                          setPageNo(1);
+                          fetchFinancialYearData(1, "", null, selectedCompany || null);
+                        }}
                         onInputChange={(value, e) => {
                           if (
-                            callInputChangeFunc &&
+                            callInputChangeFuncRef.current &&
                             e.action === "input-change"
                           ) {
-                            handleInputChange(value);
+                            debouncedYearFetch(value, selectedCompany || null);
                           }
                         }}
                       />
@@ -802,13 +878,11 @@ export default function NavbarPage() {
                 </div>
               </>
             ) : (
-              // ✅ compact: keep middle clean (no dropdowns)
               <div className="flex-1" />
             )}
 
             {/* Right actions (Apartment icon on compact) */}
             <div className="flex items-center ml-2 gap-2">
-              {/* ✅ Company Details icon (same style as Home button) */}
               {isCompact && (
                 <Tooltip
                   title="Company Details"
@@ -846,19 +920,16 @@ export default function NavbarPage() {
                   >
                     <div
                       className="flex items-center justify-center"
-                      style={{
-                        width: 30,
-                        height: 35,
-                      }}
+                      style={{ width: 30, height: 35 }}
                     >
                       <HoverIcon
-                        defaultIcon={officeIcon} // ✅ normal (black)
-                        hoverIcon={officeIconHover} // ✅ hover (blue)
+                        defaultIcon={officeIcon}
+                        hoverIcon={officeIconHover}
                         altText={"Company Details"}
                         className=""
                         style={{
-                          width: 20, // ✅ increase if needed
-                          height: 20, // ✅ increase if needed
+                          width: 20,
+                          height: 20,
                           display: "block",
                         }}
                       />
@@ -897,7 +968,7 @@ export default function NavbarPage() {
           </ul>
         </div>
 
-        {/* ✅ Right company logo (always visible but constrained) */}
+        {/* ✅ Right company logo */}
         <div className="flex items-center justify-end relative">
           <img
             src={companyImageUrl}
@@ -908,7 +979,7 @@ export default function NavbarPage() {
         </div>
       </div>
 
-      {/* -------------------- your existing alert modal (UNCHANGED) -------------------- */}
+      {/* -------------------- Alert Modal -------------------- */}
       <Modal
         aria-labelledby="transition-modal-title"
         aria-describedby="transition-modal-description"
@@ -927,9 +998,7 @@ export default function NavbarPage() {
                 <h3 className={`${styles.modalTextColor} text-[12px]`}>
                   www.sysconinfotech.com says
                 </h3>
-                <p
-                  className={`${styles.modalTextColor} text-black text-[12px] mt-4`}
-                >
+                <p className={`${styles.modalTextColor} text-black text-[12px] mt-4`}>
                   Do you want to close this form, all changes will be lost?
                 </p>
               </div>
@@ -952,7 +1021,7 @@ export default function NavbarPage() {
         </Fade>
       </Modal>
 
-      {/* -------------------- ✅ Company Details modal (COMPACT ONLY) -------------------- */}
+      {/* -------------------- Compact Switch Modal -------------------- */}
       <Modal
         open={openSwitchModal}
         onClose={() => setOpenSwitchModal(false)}
@@ -983,7 +1052,6 @@ export default function NavbarPage() {
                 </button>
               </div>
 
-              {/* stacked fields */}
               <div className="flex flex-col gap-10" style={{ gap: 10 }}>
                 {/* Company */}
                 <div>
@@ -1011,10 +1079,7 @@ export default function NavbarPage() {
                         isClearable={false}
                         backspaceRemovesValue={false}
                         onChange={(newValue) => {
-                          handleChangeValue(
-                            newValue ? [newValue] : null,
-                            "companyId",
-                          );
+                          handleChangeValue(newValue ? [newValue] : null, "companyId");
                         }}
                         options={companyData}
                         menuPortalTarget={
@@ -1051,15 +1116,20 @@ export default function NavbarPage() {
                         isClearable={false}
                         backspaceRemovesValue={false}
                         onChange={(newValue) => {
-                          handleChangeValue(
-                            newValue ? [newValue] : null,
-                            "branchId",
-                          );
+                          handleChangeValue(newValue ? [newValue] : null, "branchId");
                         }}
                         options={branchData}
                         menuPortalTarget={
                           typeof document !== "undefined" ? document.body : null
                         }
+                        onMenuOpen={() => {
+                          fetchBranchData(1, "", null, selectedCompany || null);
+                        }}
+                        onInputChange={(value, e) => {
+                          if (e.action === "input-change") {
+                            debouncedBranchFetch(value, selectedCompany || null);
+                          }
+                        }}
                       />
                     </div>
                   </div>
@@ -1085,8 +1155,7 @@ export default function NavbarPage() {
                         styles={modalSelectStyles}
                         value={
                           financialYearData?.find(
-                            (item) =>
-                              item.value === parseInt(selectedFinancialYear),
+                            (item) => item.value === parseInt(selectedFinancialYear),
                           ) || null
                         }
                         isClearable={false}
@@ -1101,6 +1170,19 @@ export default function NavbarPage() {
                         menuPortalTarget={
                           typeof document !== "undefined" ? document.body : null
                         }
+                        onMenuOpen={() => {
+                          fetchFinancialYearData(
+                            1,
+                            "",
+                            null,
+                            selectedCompany || null,
+                          );
+                        }}
+                        onInputChange={(value, e) => {
+                          if (e.action === "input-change") {
+                            debouncedYearFetch(value, selectedCompany || null);
+                          }
+                        }}
                       />
                     </div>
                   </div>

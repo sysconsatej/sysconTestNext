@@ -24,7 +24,8 @@ function rptTransportation() {
   const [CompanyHeader, setCompanyHeader] = useState("");
   const [ImageUrl, setImageUrl] = useState("");
   const [companyname, setCompanyname] = useState(null);
-  const enquiryModuleRef = useRef();
+  //const enquiryModuleRef = useRef();
+  //const enquiryModuleRefs = useRef([]);
   const [html2pdf, setHtml2pdf] = useState(null);
   const enquiryModuleRefs = useRef([]);
 
@@ -108,12 +109,12 @@ function rptTransportation() {
                 "x-access-token": JSON.parse(token),
               },
               body: JSON.stringify(requestBody),
-            }
+            },
           );
           if (!response.ok) throw new Error("Failed to fetch job data");
           const data = await response.json();
-          setData(data.data);
-          setCompanyHeader(data.data[0].brachId);
+          setData(data?.data);
+          setCompanyHeader(data?.data[0]?.brachId);
         } catch (error) {
           console.error("Error fetching job data:", error);
         }
@@ -226,7 +227,6 @@ function rptTransportation() {
     }
   `;
 
-  console.log("data =>>>>", data);
   const CompanyImgModule = () => {
     return (
       <img
@@ -318,11 +318,14 @@ function rptTransportation() {
       >
         {/* Signature Table */}
         <div>
-          <table className="text-xs w-full text-right table-fixed">
+          <table
+            style={{ fontSize: "9px" }}
+            className="text-xs w-full text-right table-fixed"
+          >
             <thead>
               <tr>
-                <th className="pr-5 pt-2 pb-2">
-                  For, {data && data.length > 0 ? data[0].ownCompanyName : ""}
+                <th className="pr-2 pt-2 pb-2">
+                  For, {data && data.length > 0 ? data[0].companyName : ""}
                 </th>
               </tr>
             </thead>
@@ -336,15 +339,18 @@ function rptTransportation() {
           }}
           className="mt-5"
         >
-          <table className="mt-1 text-xs w-full text-right table-fixed">
+          <table
+            style={{ fontSize: "9px" }}
+            className="mt-1 text-xs w-full text-right table-fixed"
+          >
             <thead>
               <tr>
-                <th className="pr-5 pt-2 pb-2">Authorized Signatory </th>
+                <th className="pr-2 pt-2 pb-2">Authorized Signatory </th>
               </tr>
             </thead>
           </table>
         </div>
-        <div className="p-2 text-xs">
+        <div style={{ fontSize: "9px" }} className="p-2 text-xs">
           <p>
             {" "}
             All payments should be payable to CARGO MOVERS LOGISTICS LIMITED
@@ -363,10 +369,10 @@ function rptTransportation() {
 
   const handlePrintDeliveryNote = async (data) => {
     const uniqueVehicleOrderNos = new Set(
-      data.map((item) => item.vehicleOrderNo).filter((orderNo) => orderNo) // Filter to exclude undefined or null values
+      data.map((item) => item.vehicleOrderNo).filter((orderNo) => orderNo), // Filter to exclude undefined or null values
     );
     const pageDisplayed = uniqueVehicleOrderNos.size;
-    const element = enquiryModuleRef.current;
+    const element = enquiryModuleRefs.current;
 
     // Wrap the content into pages
     const pageContent = element.innerHTML;
@@ -439,19 +445,20 @@ function rptTransportation() {
     if (!dateString) return "";
     const date = new Date(dateString);
     return `${String(date.getDate()).padStart(2, "0")}-${String(
-      date.getMonth() + 1
+      date.getMonth() + 1,
     ).padStart(2, "0")}-${date.getFullYear()}`;
   };
 
   const routeDetailsRpt = () => {
-    console.log("data", data);
-    const vehicleRouteDetails = data?.[0]?.tblVehicleRouteDetails || [];
+    console.log("data akan", data);
+    const vehicleRouteDetails = data[0]?.vehicleRouteDetails || [];
+    console.log("vehicleRouteDetails=>", vehicleRouteDetails);
     return (
       <div
         style={{ BorderBottom: "1px solid black" }}
         className="m-4 text-black border border-black"
       >
-        <div className="mt-9 ml-1">
+        <div className="ml-1">
           <CompanyImgModule />
         </div>
         <div
@@ -461,7 +468,7 @@ function rptTransportation() {
           }}
         >
           {/* Heading */}
-          <h1 className="text-center font-bold text-2xl pt-2 pb-2">
+          <h1 className="text-center font-semibold  pt-2 pb-2">
             Loading Sheet
           </h1>
         </div>
@@ -494,7 +501,7 @@ function rptTransportation() {
                     {data &&
                       data.length > 0 &&
                       formatDate(
-                        data[0].tblVehicleRouteDetails[0].actualDepartureDate
+                        data?.vehicleRouteDetails?.actualDepartureDate,
                       )}
                   </td>
                 </tr>
@@ -521,9 +528,7 @@ function rptTransportation() {
                   <td className="p-1">
                     {data &&
                       data.length > 0 &&
-                      formatDate(
-                        data[0].tblVehicleRouteDetails[0].actualArrivalDate
-                      )}
+                      formatDate(data?.vehicleRouteDetails?.actualArrivalDate)}
                   </td>
                 </tr>
               </tbody>
@@ -531,7 +536,7 @@ function rptTransportation() {
           </div>
         </div>
         {/* Grid Table */}
-        <div className="w-full mt-5" style={{ height: "450px" }}>
+        <div className="w-full mt-5" style={{ height: "550px" }}>
           <table
             className="mt-1 custom-font text-left text-center table-auto"
             style={{ width: "100%", overflow: "auto", tableLayout: "fixed" }}
@@ -592,7 +597,7 @@ function rptTransportation() {
                     }}
                     className="pt-2 pb-2 border border-black custom-font"
                   >
-                    {route.vehicleOrderNo || ""}
+                    {route?.vehicleOrderNo || route?.JobNo || ""}
                   </td>
                   <td
                     style={{
@@ -646,9 +651,10 @@ function rptTransportation() {
                     }}
                     className="pt-2 pb-2 border border-black custom-font"
                   >
-                    {route.tblVehicleOrderDetails?.[0]?.noOfPackages || ""}{" "}
+                    {/* {route.tblVehicleOrderDetails?.[0]?.noOfPackages || ""}{" "}
                     {route.tblVehicleOrderDetails?.[0]?.typesOfPackagesName ||
-                      ""}
+                      ""} */}
+                    {route?.noOfPackages || ""}
                   </td>
                   <td
                     style={{
@@ -974,7 +980,8 @@ function rptTransportation() {
               return (
                 <div
                   key={index}
-                  ref={enquiryModuleRef}
+                  //ref={enquiryModuleRef}
+                  ref={(el) => (enquiryModuleRefs.current[index] = el)}
                   className={
                     index < reportIds.length - 1 ? "report-spacing" : ""
                   }

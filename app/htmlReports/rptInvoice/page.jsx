@@ -25,6 +25,7 @@ function rptInvoice() {
   const [data, setData] = useState([]);
   const [charge, setCharge] = useState([]);
   const [chargeAtt, setChargeAtt] = useState([]);
+  const [chargeAttOfSubLeas, setChargeAttOfSubLeas] = useState([]);
   const [hsnSac, setHsnSac] = useState([]);
   const [CompanyHeader, setCompanyHeader] = useState("");
   const hsnGridRef = useRef(null);
@@ -283,13 +284,32 @@ function rptInvoice() {
             const allInvoiceDetails = data?.data[0]?.tblInvoiceCharge?.flatMap(
               (charge) => charge.tblInvoiceChargeDetails || [],
             );
+
+            const invoiceCharges = data?.data?.[0]?.tblInvoiceCharge || [];
+
+            const filteredCharges = invoiceCharges.filter(
+              (c) => c?.thirdLevelPrint === 1 || c?.thirdLevelPrint === "1",
+            );
+
+            const allInvoiceDetailsSubLeasInvoice = filteredCharges.flatMap(
+              (c) => c?.tblInvoiceChargeDetails || [],
+            );
+
             const resultAtt = splitIntoChunksWithExtraArray(
               allInvoiceDetails,
               itemsPerPageAtt,
             );
-            console.log("Data received Abhi:", resultAtt);
 
-            setChargeAtt(resultAtt);
+            const resultAttSubLeasInvoice = splitIntoChunksWithExtraArray(
+              allInvoiceDetailsSubLeasInvoice,
+              itemsPerPageAtt,
+            );
+            if (resultAtt.length > 0) {
+              setChargeAtt(resultAtt);
+            }
+            if (resultAttSubLeasInvoice.length > 0) {
+              setChargeAttOfSubLeas(resultAttSubLeasInvoice);
+            }
             const allTaxes = [];
             const uniqueSacList = [];
             const uniqueHsnList = [];
@@ -1709,9 +1729,8 @@ function rptInvoice() {
             {charge[index]?.map((chargeData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${
-                  idx === array.length - 1 ? "border-b" : ""
-                }`}
+                className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
+                  }`}
                 style={{ fontSize: "9px", width: "100%" }}
               >
                 <p
@@ -1784,8 +1803,8 @@ function rptInvoice() {
                 <p className="pb-1 text-center" style={{ width: "7%" }}>
                   {(
                     Number(chargeData?.qty || 0) *
-                      Number(chargeData?.rate || 0) *
-                      Number(chargeData?.exchangeRate || 1) +
+                    Number(chargeData?.rate || 0) *
+                    Number(chargeData?.exchangeRate || 1) +
                     Number(chargeData?.IGST || 0) +
                     Number(chargeData?.CGST || 0) +
                     Number(chargeData?.SGST || 0)
@@ -1933,15 +1952,14 @@ function rptInvoice() {
           <div
             className="border-black border-r border-l"
             style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-            // style={{ height: chargeGridHeight, overflow: "hidden" }}
+          // style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {!chargeAtt?.length &&
               charge[index]?.map((chargeData, idx, array) => (
                 <div
                   key={idx}
-                  className={`flex w-full ${
-                    idx === array.length - 1 ? "border-b border-black" : ""
-                  }`}
+                  className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
+                    }`}
                   style={{ fontSize: "9px", width: "100%" }}
                 >
                   <p
@@ -1988,9 +2006,8 @@ function rptInvoice() {
               charge[index]?.map((chargeData, idx, array) => (
                 <div
                   key={idx}
-                  className={`flex w-full ${
-                    idx === array.length - 1 ? "border-b border-black" : ""
-                  }`}
+                  className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
+                    }`}
                   style={{ fontSize: "9px", width: "100%" }}
                 >
                   <p
@@ -2129,9 +2146,8 @@ function rptInvoice() {
                   {chargeAtt[index]?.map((chargeAttData, idx, array) => (
                     <div
                       key={idx}
-                      className={`flex w-full ${
-                        idx === array.length - 1 ? "border-b" : ""
-                      }`}
+                      className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
+                        }`}
                       style={{ fontSize: "9px", width: "100%" }}
                     >
                       <p
@@ -2304,14 +2320,13 @@ function rptInvoice() {
           <div
             className="border-black border-r border-l"
             style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-            // style={{ height: chargeGridHeight, overflow: "hidden" }}
+          // style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {charge[index]?.map((chargeData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${
-                  idx === array.length - 1 ? "border-b border-black" : ""
-                }`}
+                className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
+                  }`}
                 style={{ fontSize: "9px", width: "100%" }}
               >
                 <p
@@ -2500,14 +2515,13 @@ function rptInvoice() {
           <div
             className="border-black border-r border-l"
             style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-            // style={{ height: chargeGridHeight, overflow: "hidden" }}
+          // style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {charge[index]?.map((chargeData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${
-                  idx === array.length - 1 ? "border-b border-black" : ""
-                }`}
+                className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
+                  }`}
                 style={{ fontSize: "9px", width: "100%" }}
               >
                 <p
@@ -3670,10 +3684,10 @@ function rptInvoice() {
     // compute once (before render or above your return)
     const lastAvailableIndex = Array.isArray(chargeAtt)
       ? chargeAtt.reduce(
-          (last, inner, idx) =>
-            Array.isArray(inner) && inner.length > 0 ? idx : last,
-          -1, // → -1 if none are non-empty
-        )
+        (last, inner, idx) =>
+          Array.isArray(inner) && inner.length > 0 ? idx : last,
+        -1, // → -1 if none are non-empty
+      )
       : -1;
 
     console.log("lastAvailableIndex", lastAvailableIndex);
@@ -3859,9 +3873,8 @@ function rptInvoice() {
             {currentChargeAtt.map((chargeAttData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${
-                  idx === array.length - 1 ? "border-b" : ""
-                }`}
+                className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
+                  }`}
                 style={{ fontSize: "9px", width: "100%", color: "black" }}
               >
                 <p
@@ -6101,7 +6114,7 @@ function rptInvoice() {
     );
   };
 
-  const HeadingGrid = ({}) => {
+  const HeadingGrid = ({ }) => {
     const containerDetails = data[0]?.tblInvoiceCharge;
 
     // One function: build "count X size+type" label(s) using `type` (not typeCode)
@@ -6523,7 +6536,7 @@ function rptInvoice() {
     );
   };
 
-  const HeadingGridYms = ({}) => {
+  const HeadingGridYms = ({ }) => {
     const containerDetails = data[0]?.tblInvoiceCharge;
 
     // One function: build "count X size+type" label(s) using `type` (not typeCode)
@@ -6945,7 +6958,7 @@ function rptInvoice() {
     );
   };
 
-  const BankDetailsGrid = ({}) => {
+  const BankDetailsGrid = ({ }) => {
     const banks = data[0]?.tblInvoiceBank ?? []; // or just use your array directly
 
     const hasValue = (v) =>
@@ -7012,9 +7025,8 @@ function rptInvoice() {
               <div
                 key={idx}
                 style={{ width: `${100 / banks?.length}%`, minWidth: 0 }}
-                className={`print:break-inside-avoid border-black ${
-                  isLast ? "" : "border-r"
-                }`}
+                className={`print:break-inside-avoid border-black ${isLast ? "" : "border-r"
+                  }`}
               >
                 <table
                   className="w-full text-[10px] text-black border-collapse"
@@ -7034,9 +7046,8 @@ function rptInvoice() {
                         )}
                         <td
                           // className=${p-1 break-words text-center}`
-                          className={`p-1 break-words ${
-                            isLast ? "text-center" : ""
-                          }`}
+                          className={`p-1 break-words ${isLast ? "text-center" : ""
+                            }`}
                           style={{ fontSize: "9px" }}
                           colSpan={isLast ? 2 : 1}
                         >
@@ -8569,8 +8580,8 @@ function rptInvoice() {
                 >
                   {item?.discountAmount
                     ? `${data[0]?.currency} ${parseFloat(
-                        item.discountAmount,
-                      ).toFixed(2)}`
+                      item.discountAmount,
+                    ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
                 <div
@@ -8585,8 +8596,8 @@ function rptInvoice() {
                 >
                   {item?.tblInvoiceChargeTax?.[0]?.taxAmountHc
                     ? `${data[0]?.currency} ${parseFloat(
-                        item.tblInvoiceChargeTax[0].taxAmountHc,
-                      ).toFixed(2)}`
+                      item.tblInvoiceChargeTax[0].taxAmountHc,
+                    ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
                 <div
@@ -8600,8 +8611,8 @@ function rptInvoice() {
                 >
                   {item?.totalAmount
                     ? `${data[0]?.currency} ${parseFloat(
-                        item.totalAmount,
-                      ).toFixed(2)}`
+                      item.totalAmount,
+                    ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
               </div>
@@ -8723,8 +8734,8 @@ function rptInvoice() {
             >
               {discountAmount
                 ? `${data[0]?.currency} ${parseFloat(discountAmount).toFixed(
-                    2,
-                  )}`
+                  2,
+                )}`
                 : `${data[0]?.currency}  0.00`}
             </td>
           </tr>
@@ -8753,8 +8764,8 @@ function rptInvoice() {
             >
               {grossTotalAmount
                 ? `${data[0]?.currency} ${parseFloat(grossTotalAmount).toFixed(
-                    2,
-                  )}`
+                  2,
+                )}`
                 : `${data[0]?.currency}  0.00`}
             </td>
           </tr>
@@ -9129,9 +9140,9 @@ function rptInvoice() {
           const amount =
             typeof amountRaw === "number"
               ? amountRaw.toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })
               : safe(amountRaw);
 
           return (
@@ -9730,7 +9741,8 @@ function rptInvoice() {
                                   className="bgTheme removeFontSize"
                                 >
                                   <BlAttachmentPrint
-                                    chargeAtt={chargeAtt} // pass full list if child uses index
+                                    chargeAtt={chargeAttOfSubLeas}
+                                    // chargeAtt={chargeAtt} // pass full list if child uses index
                                     // If the child only needs the specific inner array, use:
                                     // chargeAtt={chargeAtt[idx]}
                                     index={idx}

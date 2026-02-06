@@ -1042,11 +1042,10 @@ export default function ShipmentSheet({ value, onChange }) {
   });
   const [tableName, setTableName] = useState(false);
   const [formControlData, setFormControlData] = useState([]);
-  const newState = value;          // ✅ source of truth
-  const setNewState = onChange;    // ✅ direct update
+  const newState = value;
+  const setNewState = onChange;
 
   const getLabelValue = (labelValue) => {
-    //    console.log(labelValue, "labelValue");
     setLabelName(labelValue);
   };
   const [hideFieldName, setHideFieldName] = useState([]);
@@ -1076,14 +1075,11 @@ export default function ShipmentSheet({ value, onChange }) {
     formControlData
   ) => {
     try {
-      console.log("field", field);
       const requestData = {
         id: updatedValues.copyMappingName,
         filterValue: field[field.length - 1],
         menuID: uriDecodedMenu.id,
       };
-      console.log("formControlData", requestData);
-
       const getCopyDetails = await getCopyData(requestData);
       if (!getCopyDetails.success) {
         toast.error(getCopyDetails.Message);
@@ -1108,17 +1104,13 @@ export default function ShipmentSheet({ value, onChange }) {
       getCopyDetails.keyToValidate.fieldsMaping
         .filter((data) => data.isChild)
         .forEach((data) => {
-          // dataToCopy[data.tableName] = getCopyDetails.data[0][data?.toTableName];
           dataToCopy[data?.toTableName] = formControlData?.controlname.toLowerCase() == "multiselect" ? [...newState[data?.toTableName], ...getCopyDetails.data[0][data?.toTableName]] : getCopyDetails.data[0][data?.toTableName]
             ;
         });
-
-      //      console.log("dataToCopy", dataToCopy);
       let childData = getCopyDetails.keyToValidate.fieldsMaping.filter(
         (data) => data.isChild == "true"
       );
       setChildsFields((prev) => {
-        // Create a copy of the previous state
         let updatedFields = [...prev];
 
         childData.forEach((data) => {
@@ -1127,7 +1119,6 @@ export default function ShipmentSheet({ value, onChange }) {
           );
 
           if (index !== -1) {
-            // Update the specific object at the found index
             updatedFields[index] = {
               ...updatedFields[index],
               isAddFunctionality: data.isAddFunctionality,
@@ -1136,14 +1127,8 @@ export default function ShipmentSheet({ value, onChange }) {
             };
           }
         });
-        //        console.log("updatedFields", updatedFields);
-
-        // Return the new state
         return updatedFields;
       });
-
-      console.log("getCopyDetails", dataToCopy);
-
       const dataObj = dataToCopy;
 
       Object.keys(dataObj).forEach((key) => {
@@ -1159,29 +1144,6 @@ export default function ShipmentSheet({ value, onChange }) {
         ...getCopyDetails,
         data: [dataObj, ...(getCopyDetails?.data?.slice(1) || [])],
       };
-
-      // setNewState((prevState) => {
-      //   finalIndexdata.keyToValidate.fieldsMaping.forEach((data) => {
-      //     if (data.isChild == "true") {
-      //       if (typeof prevState[data.ToColmunName] === "undefined") {
-      //         prevState[data.ToColmunName] = [];
-      //       }
-      //       for (const iterator of finalIndexdata.data[0][data.ToColmunName]) {
-      //         prevState[data.ToColmunName].push(iterator);
-      //       }
-
-      //       //            console.log("prevState", prevState);
-      //     }
-      //   });
-      //   // return {
-      //   //   ...prevState,
-      //   //   ...dataToCopy,
-      //   // };
-      //   return {
-      //     ...prevState,
-      //     ...finalIndexdata.data[0],
-      //   };
-      // });
 
       setNewState((prevState) => {
         const next = { ...(prevState || {}) };
@@ -1324,16 +1286,11 @@ function ParentAccordianComponent({
   useEffect(() => {
     setIsParentAccordionOpen(expandAll);
   }, [expandAll]);
-  console.log("section Name", section);
-  console.log("parentsFields Name", parentsFields);
   useEffect(() => {
     setFieldId(hideColumnsId);
   }, [hideColumnsId]);
 
-  //  console.log("hideColumnsId of ak", hideColumnsId);
-
   function handleChangeFunction(result) {
-    //    console.log(result, "resilt");
     if (result?.isCheck === false) {
       if (result.alertShow) {
         setParaText(result.message);
@@ -1347,7 +1304,6 @@ function ParentAccordianComponent({
       }
       return;
     }
-    // let data = { ...result.values };
     let data = { ...result?.newState };
     setNewState((pre) => {
       return {
@@ -1372,7 +1328,6 @@ function ParentAccordianComponent({
       }
       return;
     }
-    // let data = { ...result.values };
     let data = { ...result?.newState };
     setNewState((pre) => {
       return {
@@ -1387,7 +1342,6 @@ function ParentAccordianComponent({
       };
     });
   }
-  //  console.log("parentsFields[section] =>>", parentsFields[section]);
   return (
     <React.Fragment key={indexValue}>
       <Accordion
@@ -1419,34 +1373,66 @@ function ParentAccordianComponent({
                 columns={exBondColumns}
                 editorFields={parentsFields?.[section] || []}
                 rowIdField="id"
-                fetchPayload={{ jobId: newState?.jobId }}
-                fetchRows={async (payload) => {
-                  return { data: [], totalCount: 0 };
-                }}
-                onSave={async (row) => row}
-                onDelete={async (row) => { }}
                 height={220}
-              />
+                fetchRows={async ({ pageNo, pageSize, keyName, keyValue } = {}) => {
+                  const all = Array.isArray(newState?.tblExBondDetails)
+                    ? newState.tblExBondDetails
+                    : [];
 
-              <div className="mt-2">
-                <CustomeInputFields
-                  inputFieldData={parentsFields?.[section] || []}
-                  values={newState}
-                  onValuesChange={handleFieldValuesChange}
-                  handleFieldValuesChange2={handleFieldValuesChange2}
-                  inEditMode={{ isEditMode: false, isCopy: true }}
-                  onChangeHandler={(result) => handleChangeFunction(result)}
-                  onBlurHandler={(result) => handleBlurFunction(result)}
-                  clearFlag={clearFlag}
-                  newState={newState}
-                  tableName={parentTableName}
-                  formControlData={formControlData}
-                  setFormControlData={setFormControlData}
-                  setStateVariable={setNewState}
-                  getLabelValue={getLabelValue}
-                  hideColumnsId={fieldId}
-                />
-              </div>
+                  let filtered = all;
+                  if (keyName && keyValue) {
+                    const kv = String(keyValue).toLowerCase();
+                    filtered = all.filter((r) =>
+                      String(r?.[keyName] ?? "").toLowerCase().includes(kv)
+                    );
+                  }
+
+                  const p = Number(pageNo || 1);
+                  const ps = Number(pageSize || 15);
+                  const start = (p - 1) * ps;
+                  const pageRows = filtered.slice(start, start + ps);
+
+                  return { data: pageRows, totalCount: filtered.length };
+                }}
+                onSave={async (row) => {
+                  const id = row?.id ?? Date.now();
+                  const savedRow = { ...row, id };
+                  setNewState((prev) => {
+                    const base = prev || {};
+                    const existing = Array.isArray(base.tblExBondDetails)
+                      ? base.tblExBondDetails
+                      : [];
+
+                    const idx = existing.findIndex((r) => r?.id === id);
+                    const next =
+                      idx >= 0
+                        ? existing.map((r, i) => (i === idx ? savedRow : r))
+                        : [...existing, savedRow];
+
+                    return { ...base, tblExBondDetails: next };
+                  });
+
+                  return savedRow;
+                }}
+                onDelete={async (row) => {
+                  const id = row?.id;
+                  if (!id) return;
+
+                  setNewState((prev) => {
+                    const base = prev || {};
+                    const existing = Array.isArray(base.tblExBondDetails)
+                      ? base.tblExBondDetails
+                      : [];
+
+                    return {
+                      ...base,
+                      tblExBondDetails: existing.filter((r) => r?.id !== id),
+                    };
+                  });
+
+                  return true;
+                }}
+              />
             </div>
           ) : (
             <div>

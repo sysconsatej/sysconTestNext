@@ -52,6 +52,7 @@ import { DatePicker } from "@mui/x-date-pickers";
 import { MuiColorInput } from "mui-color-input";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "next/navigation";
+import { get } from "lodash";
 
 // ✅ widths: mobile 100% | tablet 2 columns | desktop original
 const fieldWrapClass = "w-full sm:w-[calc(50%-0.5rem)] lg:w-auto mr-2 mb-2";
@@ -190,7 +191,7 @@ function CustomeInputFieldsDynamicReports({
   hideColumnsId,
   formDataChange,
 }) {
-  const { companyId, financialYear, branchId } = useThemeProvider();
+  //const { companyId, financialYear, branchId } = useThemeProvider();
   const [fileName, setFileName] = useState("");
   const { userDetails } = useThemeProvider();
   const { dateFormat } = getUserDetails();
@@ -698,6 +699,7 @@ function InputFieldRenderer(props) {
   const acceptButtonRef = useRef(null);
   const firstRender = useRef(true);
   const { dateFormat } = getUserDetails();
+  const { companyId, financialYear, branchId } = getUserDetails();
   const portalTarget = typeof window !== "undefined" ? document.body : null;
 
   useEffect(() => {

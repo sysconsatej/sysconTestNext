@@ -7749,7 +7749,7 @@ const rptJobs = () => {
             className="uppercase text-center font-bold underline"
             style={{ fontSize: "14px" }}
           >
-            Container Release Order
+            Container Release Order 
           </h1>
         </div>
 
@@ -8156,7 +8156,8 @@ const rptJobs = () => {
           <tr>
             <th style={thStyle}>HAZ Details</th>
             <td style={tdStyle}>
-              {jobData && jobData.length > 0 ? jobData[0].imo : ""}
+              {jobData && jobData.length > 0 ? jobData[0].imo : ""}{" "}
+              {jobData && jobData.length > 0 ? jobData[0]?.imoClass : ""}
             </td>
           </tr>
           <tr>
@@ -8176,7 +8177,7 @@ const rptJobs = () => {
     );
   };
 
-  const ContainerReleaseOrderContainerGrid = ({ rows = [] }) => {
+  const  ContainerReleaseOrderContainerGrid = ({ rows = [] }) => {
     console.log("rows 3", rows);
 
     const tableStyle = {
@@ -8213,8 +8214,9 @@ const rptJobs = () => {
               <th style={thStyle}>Size/Type</th>
               <th style={thStyle}>Status</th>
               <th style={thStyle}>Gross Wt.</th>
-              <th style={thStyle}>No. of Packages</th>
-              <th style={thStyle}>Seal No</th>
+              <th style={thStyle}>Ref Temp</th>
+              <th style={thStyle}>Humidity</th>
+              <th style={thStyle}>Ventilation</th>
             </tr>
           </thead>
           <tbody>
@@ -8232,8 +8234,9 @@ const rptJobs = () => {
                   <td style={tdStyle}>
                     {row.grossWt} {row.weightUnit}
                   </td>
-                  <td style={tdStyle}>{row.qty}</td>
-                  <td style={tdStyle}>{row.agentSealNo}</td>
+                  <td style={tdStyle}>{row.refTemp}</td>
+                  <td style={tdStyle}>{row.humidity}</td>
+                  <td style={tdStyle}>{row.ventilation}</td>
                 </tr>
               ))}
           </tbody>

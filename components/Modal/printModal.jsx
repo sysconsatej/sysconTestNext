@@ -439,8 +439,9 @@ export default function PrintModal({
             }))
           : [];
 
-        const combined = [...fetchedMenuNames, ...blPrintTemplate];
-        setReportNames(combined.length > 0 ? combined : []);
+        //const combined = [...fetchedMenuNames, ...blPrintTemplate];
+        //const combined = [...fetchedMenuNames];
+        setReportNames(fetchedMenuNames.length > 0 ? fetchedMenuNames : []);
       } catch (error) {
         console.error("Error fetching initial data:", error);
         setReportNames([]);

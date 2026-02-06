@@ -46,18 +46,23 @@ const MenuAccess = () => {
   };
 
   async function handleSubmit() {
+    const { companyId, branchId } = getUserDetails();
     const userObj = {
       createdBy: userId,
       roleId: roleId,
       clientId: clientId,
       updatedBy: userId,
       userId: selectedUserName,
+      companyId: companyId,
+      companyBranchId: branchId,
     };
     let result = getMenuSubmitValues(menuTree, userObj);
     const menuObj = {
       userId: selectedUserName,
       menu_json: JSON.stringify(result),
       updatedBy: userId,
+      companyId: companyId,
+      companyBranchId: branchId,
     };
     if (selectedUserName) {
       const response = await menuAccessSubmit(menuObj);
@@ -73,6 +78,9 @@ const MenuAccess = () => {
 
   const handleChange = async (updatedValue) => {
     const { user, copyUser } = updatedValue;
+
+    const { companyId } = getUserDetails();
+
     let selectedUserId = null;
 
     if (copyUser && !user) {
@@ -89,7 +97,7 @@ const MenuAccess = () => {
     const requestBodyMenuAccess = {
       columns: "menuId,isEdit,isView,isAdd,isDelete,isExport,isAccess",
       tableName: "tblMenuAccess",
-      whereCondition: `userId = ${selectedUserId}`,
+      whereCondition: `userId = ${selectedUserId} and companyId = ${companyId}`,
       clientIdCondition: `status = 1 FOR JSON PATH, include_null_values`,
     };
     const { data } = await fetchReportData(requestBodyMenuAccess);

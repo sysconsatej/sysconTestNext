@@ -67,6 +67,7 @@ import Image from "next/image";
 import { fetchReportData } from "@/services/auth/FormControl.services.js";
 import { useDispatch, useSelector } from "react-redux";
 import CustomeModal from "@/components/Modal/customModal.jsx";
+const { clientId, userId, companyId, branchId, financialYear, emailId } = getUserDetails();
 
 export default function VoucherBankReceiptAdd() {
   const selectedMenuId = useSelector((state) => state?.counter?.selectedMenuId);
@@ -3443,7 +3444,7 @@ const isTdsApplicable = [
         isEditable: true,
         isSwitchToText: false,
         isBreak: false,
-        dropdownFilter: null,
+        dropdownFilter: `and companyId=${companyId}`,
         controlDefaultValue: null,
         functionOnChange:
           "setVoucher(glId);getVoucherParty(glId);setGeneralLedgerName()",
@@ -4262,7 +4263,7 @@ const isTdsNotApplicable = [
         isEditable: true,
         isSwitchToText: false,
         isBreak: false,
-        dropdownFilter: null,
+        dropdownFilter: `and companyId=${companyId}`,
         controlDefaultValue: null,
         functionOnChange:
           "setVoucher(glId);getVoucherParty(glId);setGeneralLedgerName()",
@@ -4656,7 +4657,7 @@ const parentFieldIsTdsApplied = {
       isSwitchToText: false,
       isBreak: false,
       dropdownFilter:
-        "and glTypeId not in (select id from tblmasterdata where masterlistname = 'tblgltype' and name IN ('BANK','CASH'))",
+        `and glTypeId not in (select id from tblmasterdata where masterlistname = 'tblgltype' and name IN ('BANK','CASH')) and companyId=${companyId}`,
       controlDefaultValue: null,
       functionOnChange: "getVoucherInvoiceDetails(paymentByParty)",
       functionOnBlur: null,
@@ -4705,7 +4706,7 @@ const parentFieldIsTdsApplied = {
       isSwitchToText: false,
       isBreak: true,
       dropdownFilter:
-        "and glTypeId in (select id from tblmasterdata where masterlistname = 'tblgltype' and name = 'BANK')",
+        `and glTypeId in (select id from tblmasterdata where masterlistname = 'tblgltype' and name = 'BANK') and companyId=${companyId}`,
       controlDefaultValue: null,
       functionOnChange: null,
       functionOnBlur: null,
@@ -5505,7 +5506,7 @@ const parentFieldIsTdsNotApplied = {
       isSwitchToText: false,
       isBreak: false,
       dropdownFilter:
-        "and glTypeId not in (select id from tblmasterdata where masterlistname = 'tblgltype' and name IN ('BANK','CASH'))",
+        `and glTypeId not in (select id from tblmasterdata where masterlistname = 'tblgltype' and name IN ('BANK','CASH')) and companyId=${companyId}`,
       controlDefaultValue: null,
       functionOnChange: "getVoucherInvoiceDetails(paymentByParty)",
       functionOnBlur: null,
@@ -5554,7 +5555,7 @@ const parentFieldIsTdsNotApplied = {
       isSwitchToText: false,
       isBreak: true,
       dropdownFilter:
-        "and  glTypeId in (select id from tblmasterdata where masterlistname = 'tblgltype' and name = 'BANK')",
+        `and  glTypeId in (select id from tblmasterdata where masterlistname = 'tblgltype' and name = 'BANK') and companyId=${companyId}`,
       controlDefaultValue: null,
       functionOnChange: null,
       functionOnBlur: null,
@@ -6392,7 +6393,7 @@ const sameCurrencyHideField = {
       isSwitchToText: false,
       isBreak: false,
       dropdownFilter:
-        "and glTypeId not in (select id from tblmasterdata where masterlistname = 'tblgltype' and name IN ('BANK','CASH'))",
+        `and glTypeId not in (select id from tblmasterdata where masterlistname = 'tblgltype' and name IN ('BANK','CASH')) and companyId=${companyId}`,
       controlDefaultValue: null,
       functionOnChange: "getVoucherInvoiceDetails(paymentByParty)",
       functionOnBlur: null,
@@ -6441,7 +6442,7 @@ const sameCurrencyHideField = {
       isSwitchToText: false,
       isBreak: true,
       dropdownFilter:
-        "and glTypeId in (select id from tblmasterdata where masterlistname = 'tblgltype' and name = 'BANK')",
+        `and glTypeId in (select id from tblmasterdata where masterlistname = 'tblgltype' and name = 'BANK') and companyId=${companyId}`,
       controlDefaultValue: null,
       functionOnChange: null,
       functionOnBlur: null,

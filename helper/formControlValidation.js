@@ -28,6 +28,7 @@ import {
   fetchContainerNoData,
   getVoucher,
   getVoucherThirdLevelData,
+  getTariffChargeDetails
 } from "@/services/auth/FormControl.services";
 import { getUserDetails } from "@/helper/userDetails";
 import moment from "moment";
@@ -5666,10 +5667,11 @@ const setGLSacDetails = async (obj) => {
     formControlData,
     setStateVariable,
   } = obj;
-
+  const { companyId, branchId } = getUserDetails();
   const requestBody = {
     chargeId: values?.chargeId,
     voucherTypeId: newState?.voucherTypeId,
+    companyId: companyId
   };
 
   const response = await getGLChargeDetails(requestBody);
@@ -6384,8 +6386,8 @@ const setSameSizeValues = (obj) => {
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
       const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
-          ? `id in (${sizeIds.join(",")})`
-          : `id = ${sizeIds}`
+        ? `id in (${sizeIds.join(",")})`
+        : `id = ${sizeIds}`
         } `;
 
       console.log("editedString", editedString);
@@ -6434,8 +6436,8 @@ const setSameSizeValues = (obj) => {
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
       const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
-          ? `id in (${sizeIds.join(",")})`
-          : `id = ${sizeIds}`
+        ? `id in (${sizeIds.join(",")})`
+        : `id = ${sizeIds}`
         } `;
 
       if (editedString.trim()) {
@@ -11911,11 +11913,11 @@ const setBlData = async (obj) => {
 
     const response = await fetchReportData(requestObj);
     const jobData = response?.data?.[0];
-    const { hblNo,blId } = jobData || {};
-    console.log("jobData",jobData);
+    const { hblNo, blId } = jobData || {};
+    console.log("jobData", jobData);
     setStateVariable((prev) => ({
       ...prev,
-      blNo:hblNo,
+      blNo: hblNo,
       blId: blId,
     }));
 
@@ -11923,8 +11925,8 @@ const setBlData = async (obj) => {
       type: "success",
       result: true,
       message: "Billing party set successfully.",
-      values: { ...values, blNo:hblNo,blId: blId },
-      newState: { ...newState,blNo:hblNo, blId: blId},
+      values: { ...values, blNo: hblNo, blId: blId },
+      newState: { ...newState, blNo: hblNo, blId: blId },
     };
   } catch (error) {
     console.error("Error in setBillingPartyForJob:", error);
@@ -11959,7 +11961,7 @@ const calculateVoucherAmtDy = async (obj) => {
       //amtRecFC
       const amtRecFc = amtRec;
       const onAccountHc = amtRec;
-      const OnAccountHFc =amtRec
+      const OnAccountHFc = amtRec
       // Store in newState
       setStateVariable((prev) => ({
         ...prev,
@@ -12004,7 +12006,7 @@ const calculateVoucherAmtDy = async (obj) => {
 };
 
 const sameDebitAmount = async (obj) => {
-  const { args,values, newState, setStateVariable } = obj;
+  const { args, values, newState, setStateVariable } = obj;
   try {
     const argNames = args.split(",").map((arg) => arg.trim());
     const debitAmount = values?.[argNames[0]];
@@ -12097,7 +12099,107 @@ const setTdsAmt = async (obj) => {
   }
 };
 
+const setSameValue = async (obj) => {
+  const { args, newState, setStateVariable } = obj;
 
+  try {
+    const [fromKey, toKey] = args.split(",").map((s) => s.trim());
+
+    const ar1 = newState?.[fromKey]; // value to copy
+
+    // ✅ set ar1 value into ar2 (toKey) in state
+    setStateVariable((prev) => ({
+      ...prev,
+      [toKey]: ar1,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: `Copied ${fromKey} -> ${toKey}`,
+    };
+  } catch (error) {
+    console.error("Error in set same value:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Failed to set same value",
+    };
+  }
+};
+const setDateOnFinalInvoice = async (obj) => {
+  const { args, values, newState, setStateVariable } = obj;
+  const argNames = args.split(",").map((arg) => arg.trim());
+  const final = values?.[argNames[0]];
+  const invoiceDate = [argNames[1]];
+  if (final == "Y") {
+    setStateVariable((prev) => ({
+      ...prev,
+      invoiceDate: Date.now()
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "Date set successfully",
+    };
+  }
+}
+const getBlChargesForTariff = async (obj) => {
+  const { args, values, newState, setStateVariable } = obj;
+
+  try {
+    const argNames = Array.isArray(args)
+      ? args.map((a) => String(a).trim())
+      : String(args ?? "")
+          .split(",")
+          .map((a) => a.trim())
+          .filter(Boolean);
+
+    const rateKey = argNames[0];
+    const currencyIdKey = argNames[1];
+    const exchangeRateKey = argNames[2];
+    const totalAmountHcKey = argNames[3];
+    const totalAmountFcKey = argNames[4];
+
+    const ud = getUserDetails();
+
+    const requestData = {
+      clientId: ud.clientId,
+      chargeId: values?.chargeId,
+      voucherType: newState?.voucherTypeId,
+      companyId: ud.companyId,
+      companyBranchId: ud.branchId,
+      blIds: newState?.blId || values?.blId || 0,
+    };
+    const res = await getTariffChargeDetails(requestData);
+    const chargers = Array.isArray(res) ? res : res?.Chargers;
+    const row = Array.isArray(chargers) ? chargers[0] : null;
+
+    if (!row) {
+      return { type: "error", result: false, message: "No tariff data found" };
+    }
+    const patch = {};
+    if (rateKey) patch[rateKey] = row.rate ?? "";
+    if (currencyIdKey) patch[currencyIdKey] = row.currencyId ?? "";
+    if (exchangeRateKey) patch[exchangeRateKey] = row.exchangeRate ?? 1;
+    if (totalAmountHcKey) patch[totalAmountHcKey] = row.totalAmount ?? "";
+    if (totalAmountFcKey) patch[totalAmountFcKey] = row.totalAmountFc ?? "";
+    setStateVariable((prev) => ({
+      ...prev,
+      ...patch,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "Tariff values applied successfully",
+    };
+  } catch (error) {
+    console.error("Error in getBlChargesForTariff:", error);
+    return { type: "error", result: false, message: error?.message || "Error" };
+  }
+};
 
 export {
   setSameCurrencyFc,
@@ -12231,7 +12333,10 @@ export {
   setBlData,
   calculateVoucherAmtDy,
   sameDebitAmount,
-  setTdsAmt
+  setTdsAmt,
+  setSameValue,
   //setBankVoucher
+  setDateOnFinalInvoice,
+  getBlChargesForTariff
 
 };

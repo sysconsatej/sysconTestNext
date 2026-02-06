@@ -212,8 +212,6 @@ export default function AddEditFormControll({ reportData }) {
   const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
   const header = BackEndUrl + headerLogoPath;
 
-  console.log("akash=>", newState);
-
   useEffect(() => {
     // Set first non-empty array as default active table
     const firstKey = Object.entries(analysisData || {}).find(
@@ -3579,7 +3577,6 @@ export default function AddEditFormControll({ reportData }) {
       try {
         if (menuType !== "M") return;
 
-        // ✅ 1) Get SP name from mapping
         const requestBodyForMenuReportDetails = {
           columns:
             "spName,reportCriteriaId,isDefaultDataShow,outputFileType,isSp",
@@ -3598,301 +3595,1120 @@ export default function AddEditFormControll({ reportData }) {
           return;
         }
 
-        // ✅ 2) Build filter JSON for SP
-        const json = {
-          ...newState,
-          companyId,
-          branchId,
-          financialYear,
-          userId,
-          clientId,
-        };
+        const outputFileType = reportData?.data?.[0]?.outputFileType || "Excel";
 
-        const filterCondition = removeSingleQuotes(json);
-        const filterConditionWithoutDropdowns =
-          removeDropdownFields(filterCondition);
-
-        // ✅ 3) Call SP
-        const response = await fetchDynamicReportSpData(
-          spName,
-          filterConditionWithoutDropdowns,
-        );
-
-        // ✅ Use your main (excelDataArray)
-        const main = response?.data?.[0];
-
-        if (!main || typeof main !== "object") {
-          toast.error("No data found to export.");
-          return;
-        }
-
-        // ✅ 4) Workbook
-        const workbook = new ExcelJS.Workbook();
-        workbook.creator = "Syscon Infotech";
-        workbook.created = new Date();
-
-        // -----------------------------
-        // Helpers + Styles (ExcelJS)
-        // -----------------------------
-        const BORDER_THIN = {
-          top: { style: "thin" },
-          left: { style: "thin" },
-          bottom: { style: "thin" },
-          right: { style: "thin" },
-        };
-
-        const safeSheetName = (name) =>
-          String(name)
-            .replace(/[:\\/?*\[\]]/g, " ")
-            .slice(0, 31)
-            .trim() || "Sheet";
-
-        const styleBlueCell = (cell) => {
-          cell.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: "0766AD" },
+        if (String(outputFileType).toLowerCase() === "csv") {
+          // ✅ Build filter JSON for SP (same as Excel)
+          const json = {
+            ...newState,
+            companyId,
+            branchId,
+            financialYear,
+            userId,
+            clientId,
           };
-          cell.font = { bold: true, color: { argb: "FFFFFF" } };
-          cell.alignment = {
-            horizontal: "center",
-            vertical: "middle",
-            wrapText: false,
-          };
-          cell.border = BORDER_THIN;
-        };
 
-        const styleBlueRow = (row) => {
-          row.eachCell({ includeEmpty: true }, (cell) => styleBlueCell(cell));
-        };
+          const filterCondition = removeSingleQuotes(json);
+          const filterConditionWithoutDropdowns =
+            removeDropdownFields(filterCondition);
 
-        const stylePeachHeader = (row) => {
-          row.eachCell({ includeEmpty: true }, (cell) => {
-            cell.fill = {
-              type: "pattern",
-              pattern: "solid",
-              fgColor: { argb: "F8CBAD" },
-            };
-            cell.font = { bold: true, color: { argb: "000000" } };
-            cell.alignment = {
-              horizontal: "center",
-              vertical: "middle",
-              wrapText: true,
-            };
-            cell.border = BORDER_THIN;
-          });
-        };
+          // ✅ Call SP (same as Excel)
+          const response = await fetchDynamicReportSpData(
+            spName,
+            filterConditionWithoutDropdowns,
+          );
 
-        const styleNormalRow = (row) => {
-          row.eachCell({ includeEmpty: true }, (cell) => {
-            cell.alignment = {
-              horizontal: "center",
-              vertical: "middle",
-              wrapText: true,
-            };
-            cell.border = BORDER_THIN;
-          });
-        };
-
-        const collectHeaders = (rows) => {
-          const set = new Set();
-          (rows || []).forEach((r) => {
-            if (r && typeof r === "object" && !Array.isArray(r)) {
-              Object.keys(r).forEach((k) => set.add(k));
-            }
-          });
-          return Array.from(set);
-        };
-
-        const isDateLike = (v) => {
-          if (v === null || v === undefined) return false;
-          if (v instanceof Date) return !Number.isNaN(v.getTime());
-          if (typeof v !== "string") return false;
-
-          const s = v.trim();
-          if (!s) return false;
-
-          if (/^\d{4}-\d{2}-\d{2}/.test(s))
-            return !Number.isNaN(new Date(s).getTime());
-          if (/^\d{1,2}-[A-Za-z]{3}-\d{4}$/.test(s))
-            return !Number.isNaN(new Date(s).getTime());
-          if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(s))
-            return !Number.isNaN(new Date(s).getTime());
-          return false;
-        };
-
-        const fmtDate = (v) => {
-          try {
-            if (typeof moment !== "undefined" && moment) {
-              const m = moment(
-                v,
-                [moment.ISO_8601, "DD-MMM-YYYY", "DD-MM-YYYY", "DD/MM/YYYY"],
-                true,
-              );
-              if (m.isValid()) return m.format("DD-MM-YYYY");
-            }
-          } catch (e) {}
-
-          const d = new Date(v);
-          if (Number.isNaN(d.getTime())) return v;
-
-          const dd = String(d.getDate()).padStart(2, "0");
-          const mm = String(d.getMonth() + 1).padStart(2, "0");
-          const yyyy = d.getFullYear();
-          return `${dd}-${mm}-${yyyy}`;
-        };
-
-        const autoWidth = (ws) => {
-          ws.columns.forEach((col) => {
-            let max = 10;
-            col.eachCell({ includeEmpty: true }, (cell) => {
-              const v = cell.value;
-              const len = v === null || v === undefined ? 0 : String(v).length;
-              if (len > max) max = len;
-            });
-            col.width = Math.min(max + 2, 60);
-          });
-        };
-
-        const buildGstrSectionSheet = (sheetKey, sectionObj) => {
-          const ws = workbook.addWorksheet(safeSheetName(sheetKey));
-
-          const heading = sectionObj?.heading || sheetKey;
-          const headingRowArr = Array.isArray(sectionObj?.headingRow)
-            ? sectionObj.headingRow
-            : [];
-          const dataRows = Array.isArray(sectionObj?.data)
-            ? sectionObj.data
-            : [];
-
-          const headers = collectHeaders(dataRows);
-
-          const colCount = Math.max(headers.length || 1, 12);
-          ws.columns = new Array(colCount)
-            .fill(null)
-            .map(() => ({ width: 12 }));
-
-          // -------------------------
-          // Row 1: Heading (BLUE block on left only)
-          // -------------------------
-          const r1 = ws.addRow(new Array(colCount).fill(""));
-          r1.height = 20;
-
-          const headingMergeEnd = Math.min(4, colCount);
-          ws.mergeCells(r1.number, 1, r1.number, headingMergeEnd);
-
-          const hCell = ws.getCell(r1.number, 1);
-          hCell.value = heading;
-          hCell.alignment = {
-            horizontal: "left",
-            vertical: "middle",
-            wrapText: false,
-          };
-          styleBlueCell(hCell);
-
-          for (let c = headingMergeEnd + 1; c <= colCount; c++) {
-            r1.getCell(c).border = BORDER_THIN;
-          }
-
-          // ---------------------------------------------
-          // ✅ Row 2-3: headingRow EXACTLY like you want
-          // - Every index creates a column (even {})
-          // - Row 2 is FULL BLUE STRIP
-          // - Row 3 is WHITE (values) with borders
-          // - NO MERGE anywhere
-          // ---------------------------------------------
-          const labelRow = ws.addRow(new Array(colCount).fill(""));
-          const valueRow = ws.addRow(new Array(colCount).fill(""));
-          labelRow.height = 18;
-          valueRow.height = 18;
-
-          // FULL blue strip on Row 2 (including empty cells)
-          styleBlueRow(labelRow);
-
-          // Borders + alignment on Row 3 (white)
-          for (let c = 1; c <= colCount; c++) {
-            const vc = valueRow.getCell(c);
-            vc.border = BORDER_THIN;
-            vc.alignment = {
-              horizontal: "center",
-              vertical: "middle",
-              wrapText: false,
-            };
-          }
-
-          // Fill by index
-          for (let i = 0; i < Math.min(headingRowArr.length, colCount); i++) {
-            const obj = headingRowArr[i];
-            const keys = obj && typeof obj === "object" ? Object.keys(obj) : [];
-
-            if (keys.length) {
-              const k = keys[0];
-              const v = obj[k];
-
-              // Row2 label
-              labelRow.getCell(i + 1).value = k;
-
-              // Row3 value
-              valueRow.getCell(i + 1).value = v ?? "";
-            } else {
-              // {} => keep empty cells (already blue in row2, already bordered in row3)
-              labelRow.getCell(i + 1).value = "";
-              valueRow.getCell(i + 1).value = "";
-            }
-          }
-
-          // -------------------------
-          // Row 4: Table header (peach)
-          // -------------------------
-          if (!headers.length) {
-            const noDataHeader = ws.addRow(
-              ["No Data"].concat(new Array(colCount - 1).fill("")),
-            );
-            stylePeachHeader(noDataHeader);
-            autoWidth(ws);
+          const main = response?.data?.[0];
+          if (!main || typeof main !== "object") {
+            toast.error("No data found to export.");
             return;
           }
 
-          const headerRow = ws.addRow(
-            headers.concat(new Array(colCount - headers.length).fill("")),
-          );
-          stylePeachHeader(headerRow);
+          // -----------------------------
+          // ✅ CSV helpers
+          // -----------------------------
+          const collectHeaders = (rows) => {
+            const set = new Set();
+            (rows || []).forEach((r) => {
+              if (r && typeof r === "object" && !Array.isArray(r)) {
+                Object.keys(r).forEach((k) => set.add(k));
+              }
+            });
+            return Array.from(set);
+          };
 
-          // -------------------------
-          // Data rows
-          // -------------------------
-          dataRows.forEach((obj) => {
-            const rowVals = headers.map((h) => {
-              let v = obj?.[h];
-              if (isDateLike(v)) v = fmtDate(v);
-              return v === undefined || v === null ? "" : v;
+          const isDateLike = (v) => {
+            if (v === null || v === undefined) return false;
+            if (v instanceof Date) return !Number.isNaN(v.getTime());
+            if (typeof v !== "string") return false;
+
+            const s = v.trim();
+            if (!s) return false;
+
+            if (/^\d{4}-\d{2}-\d{2}/.test(s))
+              return !Number.isNaN(new Date(s).getTime());
+            if (/^\d{1,2}-[A-Za-z]{3}-\d{4}$/.test(s))
+              return !Number.isNaN(new Date(s).getTime());
+            if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(s))
+              return !Number.isNaN(new Date(s).getTime());
+            return false;
+          };
+
+          const fmtDate = (v) => {
+            try {
+              if (typeof moment !== "undefined" && moment) {
+                const m = moment(
+                  v,
+                  [moment.ISO_8601, "DD-MMM-YYYY", "DD-MM-YYYY", "DD/MM/YYYY"],
+                  true,
+                );
+                if (m.isValid()) return m.format("DD-MM-YYYY");
+              }
+            } catch (e) {}
+
+            const d = new Date(v);
+            if (Number.isNaN(d.getTime())) return v;
+
+            const dd = String(d.getDate()).padStart(2, "0");
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const yyyy = d.getFullYear();
+            return `${dd}-${mm}-${yyyy}`;
+          };
+
+          // Escape CSV cell
+          const csvCell = (val) => {
+            if (val === null || val === undefined) return "";
+            let s = String(val);
+
+            // prevent breaking rows
+            s = s.replace(/\r?\n/g, " ");
+
+            // escape quotes
+            if (s.includes('"')) s = s.replace(/"/g, '""');
+
+            // wrap if contains comma/quote/newline
+            if (/[,"\n]/.test(s)) s = `"${s}"`;
+
+            return s;
+          };
+
+          // ✅ HeadingRow extract (1..N) same as Excel
+          const getHeadingRowBlocks = (sectionObj) => {
+            const blocks = [];
+
+            Object.keys(sectionObj || {}).forEach((k) => {
+              const m = /^headingRow(\d+)$/i.exec(k);
+              if (!m) return;
+              const idx = Number(m[1]);
+              const arr = sectionObj?.[k];
+              if (Array.isArray(arr) && arr.length) blocks.push({ idx, arr });
             });
 
-            const padded = rowVals.concat(
-              new Array(colCount - rowVals.length).fill(""),
+            blocks.sort((a, b) => a.idx - b.idx);
+
+            // fallback: old headingRow
+            if (
+              !blocks.length &&
+              Array.isArray(sectionObj?.headingRow) &&
+              sectionObj.headingRow.length
+            ) {
+              blocks.push({ idx: 1, arr: sectionObj.headingRow });
+            }
+
+            return blocks.map((b) => b.arr);
+          };
+
+          // We'll build ONE combined CSV (no "=== Sheet ===" lines)
+          const lines = [];
+          const keys = Object.keys(main || {});
+
+          keys.forEach((sheetKey, sheetIndex) => {
+            const sectionObj = main[sheetKey] || {};
+
+            const dataRows = Array.isArray(sectionObj?.data)
+              ? sectionObj.data
+              : [];
+            const headers = collectHeaders(dataRows);
+            const colCount = Math.max(headers.length || 1, 12);
+
+            const orientation = String(
+              sectionObj?.orientation || "H",
+            ).toUpperCase();
+
+            // ✅ Heading row ONLY if heading has value (if null -> nothing)
+            const rawHeading = sectionObj?.heading;
+            const headingStr =
+              rawHeading === null || rawHeading === undefined
+                ? ""
+                : String(rawHeading).trim();
+
+            const hasHeading =
+              headingStr !== "" && headingStr.toLowerCase() !== "null";
+
+            // Add a blank line between sections (only if not first)
+            if (sheetIndex > 0) lines.push("");
+
+            if (hasHeading) {
+              // heading row: first col heading, rest empty
+              const row = [headingStr, ...new Array(colCount - 1).fill("")];
+              lines.push(row.map(csvCell).join(","));
+            }
+
+            // ✅ headingRow blocks
+            const headingBlocks = getHeadingRowBlocks(sectionObj);
+
+            const writeHeadingBlock_H = (arr) => {
+              // labels row
+              const labels = new Array(colCount).fill("");
+              // values row
+              const values = new Array(colCount).fill("");
+
+              const usedCols = Math.min(arr.length, colCount);
+
+              for (let i = 0; i < usedCols; i++) {
+                const obj = arr[i];
+                const keys =
+                  obj && typeof obj === "object" ? Object.keys(obj) : [];
+                if (!keys.length) continue;
+
+                const k = keys[0];
+                const v = obj[k];
+
+                labels[i] = k;
+                values[i] = v ?? "";
+              }
+
+              lines.push(labels.map(csvCell).join(","));
+              lines.push(values.map(csvCell).join(","));
+            };
+
+            const writeHeadingBlock_V = (arr) => {
+              // one row with pairs [Label, Value, Label, Value...]
+              const row = new Array(colCount).fill("");
+              let colPtr = 0;
+
+              for (let i = 0; i < arr.length && colPtr < colCount; i++) {
+                const obj = arr[i];
+                const keys =
+                  obj && typeof obj === "object" ? Object.keys(obj) : [];
+                const label = keys.length ? keys[0] : "";
+                const value = keys.length ? obj[label] : "";
+
+                if (colPtr < colCount) row[colPtr++] = label;
+                if (colPtr < colCount) row[colPtr++] = value ?? "";
+              }
+
+              lines.push(row.map(csvCell).join(","));
+            };
+
+            headingBlocks.forEach((blockArr) => {
+              if (orientation === "V") writeHeadingBlock_V(blockArr);
+              else writeHeadingBlock_H(blockArr);
+            });
+
+            // ✅ Table header + data
+            if (!headers.length) {
+              const row = ["No Data", ...new Array(colCount - 1).fill("")];
+              lines.push(row.map(csvCell).join(","));
+              return;
+            }
+
+            // header row
+            lines.push(
+              headers
+                .concat(new Array(colCount - headers.length).fill(""))
+                .map(csvCell)
+                .join(","),
             );
-            const r = ws.addRow(padded);
-            styleNormalRow(r);
+
+            // data rows
+            dataRows.forEach((obj) => {
+              const rowVals = headers.map((h) => {
+                let v = obj?.[h];
+                if (isDateLike(v)) v = fmtDate(v);
+                return v === undefined || v === null ? "" : v;
+              });
+
+              const padded = rowVals.concat(
+                new Array(colCount - rowVals.length).fill(""),
+              );
+              lines.push(padded.map(csvCell).join(","));
+            });
           });
 
-          autoWidth(ws);
-        };
+          // ✅ BOM helps Excel open UTF-8 properly
+          const csvText = "\ufeff" + lines.join("\n");
+          const fileName = `${spName || "Report"}.csv`;
 
-        // ✅ 5) Create multiple sheets
-        Object.keys(main || {}).forEach((sheetKey) => {
-          buildGstrSectionSheet(sheetKey, main[sheetKey]);
-        });
+          const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+          saveAs(blob, fileName);
 
-        // ✅ 6) Download
-        const fileName = `${spName || "GSTR1"}.xlsx`;
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], {
-          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        });
-        saveAs(blob, fileName);
+          return;
+        }
+
+        if (String(outputFileType).toLowerCase() === "excel") {
+          // ✅ Build filter JSON for SP
+          const json = {
+            ...newState,
+            companyId,
+            branchId,
+            financialYear,
+            userId,
+            clientId,
+          };
+
+          const filterCondition = removeSingleQuotes(json);
+          const filterConditionWithoutDropdowns =
+            removeDropdownFields(filterCondition);
+
+          // ✅ Call SP
+          const response = await fetchDynamicReportSpData(
+            spName,
+            filterConditionWithoutDropdowns,
+          );
+
+          const main = response?.data?.[0];
+          if (!main || typeof main !== "object") {
+            toast.error("No data found to export.");
+            return;
+          }
+
+          // ✅ Workbook
+          const workbook = new ExcelJS.Workbook();
+          workbook.creator = "Syscon Infotech";
+          workbook.created = new Date();
+
+          // =========================================================
+          // ✅ IMAGE SIZE CONTROLS (CHANGE HERE)
+          // =========================================================
+          const HEADER_IMAGE_WIDTH_PX = 700; // ✅ change width here
+          const HEADER_IMAGE_HEIGHT_PX = 120; // ✅ change height here
+
+          // -----------------------------
+          // Helpers + Styles (NO COLORS)
+          // -----------------------------
+          const BORDER_THIN = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+
+          const safeSheetName = (name) =>
+            String(name)
+              .replace(/[:\\/?*\[\]]/g, " ")
+              .slice(0, 31)
+              .trim() || "Sheet";
+
+          const styleCellPlain = (cell, { bold = false } = {}) => {
+            cell.font = { bold };
+            cell.alignment = {
+              horizontal: "center",
+              vertical: "middle",
+              wrapText: true,
+            };
+            cell.border = BORDER_THIN;
+          };
+
+          const styleRowPlain = (row, { bold = false } = {}) => {
+            row.eachCell({ includeEmpty: true }, (cell) =>
+              styleCellPlain(cell, { bold }),
+            );
+          };
+
+          const collectHeaders = (rows) => {
+            const set = new Set();
+            (rows || []).forEach((r) => {
+              if (r && typeof r === "object" && !Array.isArray(r)) {
+                Object.keys(r).forEach((k) => set.add(k));
+              }
+            });
+            return Array.from(set);
+          };
+
+          const isDateLike = (v) => {
+            if (v === null || v === undefined) return false;
+            if (v instanceof Date) return !Number.isNaN(v.getTime());
+            if (typeof v !== "string") return false;
+
+            const s = v.trim();
+            if (!s) return false;
+
+            if (/^\d{4}-\d{2}-\d{2}/.test(s))
+              return !Number.isNaN(new Date(s).getTime());
+            if (/^\d{1,2}-[A-Za-z]{3}-\d{4}$/.test(s))
+              return !Number.isNaN(new Date(s).getTime());
+            if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(s))
+              return !Number.isNaN(new Date(s).getTime());
+            return false;
+          };
+
+          const fmtDate = (v) => {
+            try {
+              if (typeof moment !== "undefined" && moment) {
+                const m = moment(
+                  v,
+                  [moment.ISO_8601, "DD-MMM-YYYY", "DD-MM-YYYY", "DD/MM/YYYY"],
+                  true,
+                );
+                if (m.isValid()) return m.format("DD-MM-YYYY");
+              }
+            } catch (e) {}
+
+            const d = new Date(v);
+            if (Number.isNaN(d.getTime())) return v;
+
+            const dd = String(d.getDate()).padStart(2, "0");
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const yyyy = d.getFullYear();
+            return `${dd}-${mm}-${yyyy}`;
+          };
+
+          const autoWidth = (ws) => {
+            ws.columns.forEach((col) => {
+              let max = 10;
+              col.eachCell({ includeEmpty: true }, (cell) => {
+                const v = cell.value;
+                const len =
+                  v === null || v === undefined ? 0 : String(v).length;
+                if (len > max) max = len;
+              });
+              col.width = Math.min(max + 2, 60);
+            });
+          };
+
+          // -----------------------------
+          // Header Image Helpers
+          // -----------------------------
+          const fetchAsArrayBuffer = async (url) => {
+            const res = await fetch(url);
+            if (!res.ok)
+              throw new Error(`Failed to fetch image: ${res.status}`);
+            return await res.arrayBuffer();
+          };
+
+          const guessExt = (src) => {
+            const s = String(src || "").toLowerCase();
+            if (s.startsWith("data:image/png")) return "png";
+            if (
+              s.startsWith("data:image/jpeg") ||
+              s.startsWith("data:image/jpg")
+            )
+              return "jpeg";
+            if (s.endsWith(".png")) return "png";
+            if (s.endsWith(".jpg") || s.endsWith(".jpeg")) return "jpeg";
+            return "png";
+          };
+
+          // ✅ Logo row - uses direct pixel width/height from variables above
+          const addHeaderImageRow = async (ws, imgSrc, colCount) => {
+            const rImg = ws.addRow(new Array(colCount).fill(""));
+
+            // IMPORTANT: row height is in "points" not pixels.
+            // Keep it reasonably close so image isn't clipped.
+            rImg.height = Math.max(
+              40,
+              Math.round(HEADER_IMAGE_HEIGHT_PX * 0.75),
+            );
+
+            const ext = guessExt(imgSrc);
+            let imgId;
+
+            if (String(imgSrc).startsWith("data:image/")) {
+              const base64 = String(imgSrc).split(",")[1] || "";
+              imgId = workbook.addImage({ base64, extension: ext });
+            } else {
+              const buffer = await fetchAsArrayBuffer(imgSrc);
+              imgId = workbook.addImage({ buffer, extension: ext });
+            }
+
+            // ✅ place image with exact pixel sizing
+            ws.addImage(imgId, {
+              tl: { col: 0, row: rImg.number - 1 },
+              ext: {
+                width: HEADER_IMAGE_WIDTH_PX,
+                height: HEADER_IMAGE_HEIGHT_PX,
+              },
+              editAs: "oneCell",
+            });
+
+            // borders for the row
+            for (let c = 1; c <= colCount; c++) {
+              rImg.getCell(c).border = BORDER_THIN;
+            }
+          };
+
+          // -----------------------------
+          // ✅ HeadingRow extract (1..N)
+          // -----------------------------
+          const getHeadingRowBlocks = (sectionObj) => {
+            const blocks = [];
+
+            Object.keys(sectionObj || {}).forEach((k) => {
+              const m = /^headingRow(\d+)$/i.exec(k);
+              if (!m) return;
+              const idx = Number(m[1]);
+              const arr = sectionObj?.[k];
+              if (Array.isArray(arr) && arr.length) blocks.push({ idx, arr });
+            });
+
+            blocks.sort((a, b) => a.idx - b.idx);
+
+            if (
+              !blocks.length &&
+              Array.isArray(sectionObj?.headingRow) &&
+              sectionObj.headingRow.length
+            ) {
+              blocks.push({ idx: 1, arr: sectionObj.headingRow });
+            }
+
+            return blocks.map((b) => b.arr);
+          };
+
+          // -----------------------------
+          // ✅ Build sheet (async)
+          // -----------------------------
+          const buildGstrSectionSheet = async (sheetKey, sectionObj) => {
+            const ws = workbook.addWorksheet(safeSheetName(sheetKey));
+
+            const dataRows = Array.isArray(sectionObj?.data)
+              ? sectionObj.data
+              : [];
+            const headers = collectHeaders(dataRows);
+            const colCount = Math.max(headers.length || 1, 12);
+
+            ws.columns = new Array(colCount)
+              .fill(null)
+              .map(() => ({ width: 12 }));
+
+            // ✅ orientation
+            const orientation = String(
+              sectionObj?.orientation || "H",
+            ).toUpperCase();
+
+            // ✅ Image only when header === "Y"
+            const wantHeaderImage =
+              String(sectionObj?.header ?? "").toUpperCase() === "Y" &&
+              !!header;
+
+            if (wantHeaderImage) {
+              try {
+                await addHeaderImageRow(ws, header, colCount);
+              } catch (e) {
+                console.warn("Header image failed:", e?.message || e);
+              }
+            }
+
+            // ✅ Heading row only if heading has value
+            const rawHeading = sectionObj?.heading;
+            const headingStr =
+              rawHeading === null || rawHeading === undefined
+                ? ""
+                : String(rawHeading).trim();
+
+            const hasHeading =
+              headingStr !== "" && headingStr.toLowerCase() !== "null";
+
+            if (hasHeading) {
+              const headRow = ws.addRow(new Array(colCount).fill(""));
+              headRow.height = 20;
+
+              ws.mergeCells(headRow.number, 1, headRow.number, colCount);
+              const c1 = ws.getCell(headRow.number, 1);
+              c1.value = headingStr;
+
+              // no color, just border + bold
+              styleRowPlain(headRow, { bold: true });
+            }
+
+            // ✅ headingRow blocks (headingRow1..N)
+            const headingBlocks = getHeadingRowBlocks(sectionObj);
+
+            // ✅ H block: two rows (labels + values)
+            const addHeadingBlock_H = (arr) => {
+              const usedCols = Math.min(arr.length, colCount);
+
+              const labelRow = ws.addRow(new Array(colCount).fill(""));
+              const valueRow = ws.addRow(new Array(colCount).fill(""));
+              labelRow.height = 18;
+              valueRow.height = 18;
+
+              // just borders/bold for label row
+              styleRowPlain(labelRow, { bold: true });
+              styleRowPlain(valueRow, { bold: false });
+
+              for (let i = 0; i < usedCols; i++) {
+                const obj = arr[i];
+                const keys =
+                  obj && typeof obj === "object" ? Object.keys(obj) : [];
+                if (keys.length) {
+                  const k = keys[0];
+                  const v = obj[k];
+                  labelRow.getCell(i + 1).value = k;
+                  valueRow.getCell(i + 1).value = v ?? "";
+                }
+              }
+            };
+
+            // ✅ V block: one row with pairs label/value across columns
+            const addHeadingBlock_V = (arr) => {
+              const row = ws.addRow(new Array(colCount).fill(""));
+              row.height = 18;
+
+              let colPtr = 1;
+
+              for (let i = 0; i < arr.length && colPtr <= colCount; i++) {
+                const obj = arr[i];
+                const keys =
+                  obj && typeof obj === "object" ? Object.keys(obj) : [];
+                const label = keys.length ? keys[0] : "";
+                const value = keys.length ? obj[label] : "";
+
+                if (colPtr <= colCount) {
+                  const cLabel = row.getCell(colPtr);
+                  cLabel.value = label;
+                  styleCellPlain(cLabel, { bold: true });
+                  colPtr++;
+                }
+
+                if (colPtr <= colCount) {
+                  const cVal = row.getCell(colPtr);
+                  cVal.value = value ?? "";
+                  styleCellPlain(cVal, { bold: false });
+                  colPtr++;
+                }
+              }
+
+              // rest borders
+              for (let c = colPtr; c <= colCount; c++) {
+                styleCellPlain(row.getCell(c), { bold: false });
+              }
+            };
+
+            headingBlocks.forEach((blockArr) => {
+              if (orientation === "V") addHeadingBlock_V(blockArr);
+              else addHeadingBlock_H(blockArr);
+            });
+
+            // -------------------------
+            // Table header (no color; just bold)
+            // -------------------------
+            if (!headers.length) {
+              const noDataHeader = ws.addRow(
+                ["No Data"].concat(new Array(colCount - 1).fill("")),
+              );
+              styleRowPlain(noDataHeader, { bold: true });
+              autoWidth(ws);
+              return;
+            }
+
+            const headerRow = ws.addRow(
+              headers.concat(new Array(colCount - headers.length).fill("")),
+            );
+            styleRowPlain(headerRow, { bold: true });
+
+            // -------------------------
+            // Data rows
+            // -------------------------
+            dataRows.forEach((obj) => {
+              const rowVals = headers.map((h) => {
+                let v = obj?.[h];
+                if (isDateLike(v)) v = fmtDate(v);
+                return v === undefined || v === null ? "" : v;
+              });
+
+              const padded = rowVals.concat(
+                new Array(colCount - rowVals.length).fill(""),
+              );
+              const r = ws.addRow(padded);
+              styleRowPlain(r, { bold: false });
+            });
+
+            autoWidth(ws);
+          };
+
+          // ✅ Create multiple sheets
+          for (const sheetKey of Object.keys(main || {})) {
+            await buildGstrSectionSheet(sheetKey, main[sheetKey]);
+          }
+
+          // ✅ Download
+          const fileName = `${spName || "GSTR1"}.xlsx`;
+          const buffer = await workbook.xlsx.writeBuffer();
+          const blob = new Blob([buffer], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          });
+          saveAs(blob, fileName);
+        }
       } catch (err) {
         console.error("handleMultipleExcel error:", err);
         toast.error(err?.message || "Excel export failed.");
+      }
+    },
+
+    handleSubmitMultiple: async () => {
+      setCurrentPage(1);
+      setIsLoading(true);
+      setOutputFileType(true);
+      for (const [section, fields] of Object.entries(parentsFields)) {
+        const missingField = Object.entries(fields).find(
+          ([, { isRequired, fieldname, yourlabel }]) =>
+            isRequired && !newState[fieldname],
+        );
+
+        if (missingField) {
+          const [, { yourlabel }] = missingField;
+          toast.error(`Value for ${yourlabel} is missing.`);
+          setIsLoading(false); // Stop loading if there's a validation error
+          return;
+        }
+      }
+      if (isDefaultDataShow === false && outputFileFormat === "Excel") {
+        let jsonData = { ...filterCondition, clientId: clientId };
+        const fetchData = await fetchDynamicReportSpData(spName, jsonData);
+
+        const workbook = new ExcelJS.Workbook();
+
+        // Iterate over each dataset in fetchData
+        if (fetchData && fetchData.data?.length > 0) {
+          // 3) One-and-only Workbook
+          const workbook = new ExcelJS.Workbook();
+
+          // 4) Helper to avoid duplicate sheet names
+          const usedNames = new Set();
+          function makeSheetName(base, idx) {
+            let name = `${base}_${idx + 1}`;
+            let attempt = 1;
+            while (usedNames.has(name)) {
+              name = `${base}_${idx + 1}_${attempt++}`;
+            }
+            usedNames.add(name);
+            return name;
+          }
+
+          // 5) Walk the top‐level arrays
+          fetchData.data.forEach((outerArray, outerIdx) => {
+            // CASE A: outerArray is directly an array of row‐objects
+            if (
+              outerArray.length > 0 &&
+              typeof outerArray[0] === "object" &&
+              !Array.isArray(outerArray[0])
+            ) {
+              const sheetName = makeSheetName("Data", outerIdx);
+              const ws = workbook.addWorksheet(sheetName);
+
+              // headers from the first object
+              const headers = Object.keys(outerArray[0]);
+              ws.addRow(headers);
+
+              // each row
+              outerArray.forEach((item) => {
+                const row = headers.map((h) => item[h] ?? "");
+                ws.addRow(row);
+              });
+            }
+            // CASE B: outerArray is an array of `{ key: [...] }` datasets
+            else {
+              outerArray.forEach((dataset) => {
+                const key = Object.keys(dataset)[0];
+                const data = dataset[key];
+
+                // normalize to an array of objects
+                const rows = Array.isArray(data) ? data : [data];
+                if (rows.length === 0 || typeof rows[0] !== "object") return;
+
+                const sheetName = makeSheetName(key, outerIdx);
+                const ws = workbook.addWorksheet(sheetName);
+
+                const headers = Object.keys(rows[0]);
+                ws.addRow(headers);
+
+                rows.forEach((item) => {
+                  const row = headers.map((h) => item[h] ?? "");
+                  ws.addRow(row);
+                });
+              });
+            }
+          });
+
+          // 6) Write & download
+          const buffer = await workbook.xlsx.writeBuffer();
+          const blob = new Blob([buffer], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${spName}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        } else {
+          console.log("No data available to export.");
+        }
+        setIsLoading(false);
+      } else if (isDefaultDataShow === false && outputFileFormat === "Json") {
+        const fetchData = await fetchDynamicReportSpData(
+          spName,
+          filterCondition,
+        );
+        console.log("fetchData =>>", fetchData);
+
+        if (fetchData && fetchData.data?.length > 0) {
+          // Serialize the data to a JSON string with indentation for formatting
+          const jsonString = JSON.stringify(fetchData.data, null, 2);
+
+          // Convert the JSON string to a Blob object
+          const blob = new Blob([jsonString], { type: "application/json" });
+
+          // Create a link and trigger the download
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = `${spName}.json`;
+          link.click();
+        } else {
+          console.log("No data available to export.");
+        }
+        setIsLoading(false);
+      } else if (isDefaultDataShow === false && outputFileFormat === "CSV") {
+        try {
+          setIsLoading(true);
+
+          const fetchData = await fetchDynamicReportSpData(spName, {
+            ...filterCondition,
+            clientId,
+            companyId,
+            companyBranchId: branchId,
+            financialYearId: financialYear,
+            userId,
+          });
+          console.log("fetchData =>>", fetchData);
+
+          const rows = Array.isArray(fetchData?.data) ? fetchData.data : [];
+
+          if (rows.length === 0) {
+            console.log("No data available to export.");
+            return;
+          }
+
+          // ✅ headers (union of keys) — handles spaces like "Sr No"
+          const headerSet = new Set();
+          rows.forEach((r) => {
+            if (r && typeof r === "object") {
+              Object.keys(r).forEach((k) => headerSet.add(k));
+            }
+          });
+          const headers = Array.from(headerSet);
+
+          const escapeCsv = (value) => {
+            if (value === null || value === undefined) return "";
+            if (typeof value === "object") {
+              try {
+                return JSON.stringify(value);
+              } catch {
+                return String(value);
+              }
+            }
+            return String(value);
+          };
+
+          const csvLines = [];
+          // header row
+          csvLines.push(
+            headers.map((h) => `"${h.replace(/"/g, '""')}"`).join(","),
+          );
+
+          // data rows
+          rows.forEach((row) => {
+            const line = headers
+              .map((h) => {
+                const v = escapeCsv(row?.[h]);
+                return `"${v.replace(/"/g, '""')}"`;
+              })
+              .join(",");
+            csvLines.push(line);
+          });
+
+          const csvString = csvLines.join("\r\n");
+
+          // ✅ Blob download (most reliable)
+          const blob = new Blob([csvString], {
+            type: "text/csv;charset=utf-8;",
+          });
+          const url = window.URL.createObjectURL(blob);
+
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `${spName || "report"}.csv`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          // cleanup
+          window.URL.revokeObjectURL(url);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        try {
+          // Clear previous data
+          setPaginatedData([]);
+          setFinalPaginatedData([]);
+          setTableData([]);
+          setReportCalled(true);
+          setFilteredSortData([]);
+          // Validate the required fields
+          for (const [section, fields] of Object.entries(parentsFields)) {
+            const missingField = Object.entries(fields).find(
+              ([, { isRequired, fieldname, yourlabel }]) =>
+                isRequired && !newState[fieldname],
+            );
+
+            if (missingField) {
+              const [, { yourlabel }] = missingField;
+              toast.error(`Value for ${yourlabel} is missing.`);
+              setIsLoading(false); // Stop loading if there's a validation error
+              return;
+            }
+          }
+
+          const removeDropdownFields = (obj) => {
+            const newObj = { ...obj };
+            Object.keys(newObj).forEach((key) => {
+              if (key.endsWith("dropdown")) {
+                delete newObj[key];
+              }
+            });
+            return newObj;
+          };
+
+          const updateFieldNames = async (filterCondition) => {
+            const updatedFilterCondition = {
+              ...filterCondition,
+              companyId,
+              branchId,
+              financialYear,
+              userId,
+              clientId,
+            };
+
+            for (const key in filterCondition) {
+              // Skip fields with an empty string or null value
+              if (
+                filterCondition[key] === "" ||
+                filterCondition[key] === null
+              ) {
+                delete updatedFilterCondition[key];
+                continue;
+              }
+
+              const requestBodyGrid = {
+                columns: "af.id,af.fieldname,af.label",
+                tableName:
+                  "tblApiDefinition ad Left join tblApiFields af on af.apiDefinitionId = ad.id",
+                whereCondition: `af.id = ${key} and af.status = 1`,
+                clientIdCondition: `ad.status = 1 FOR JSON PATH`,
+              };
+
+              try {
+                const data = await fetchReportData(requestBodyGrid);
+                if (
+                  data &&
+                  data.data &&
+                  data.data[0] &&
+                  data.data[0].fieldname
+                ) {
+                  const apiField = data.data[0].fieldname;
+                  const newFieldName = apiField;
+
+                  // Add the new fieldname with the old value
+                  updatedFilterCondition[newFieldName] =
+                    updatedFilterCondition[key];
+                  // Remove the old fieldname
+                  delete updatedFilterCondition[key];
+                } else {
+                  console.error("No data returned for key:", key);
+                }
+              } catch (error) {
+                console.error(
+                  "Error fetching report types for key:",
+                  key,
+                  error,
+                );
+              }
+            }
+
+            // Filter out null or empty string values before returning the result
+            for (const key in updatedFilterCondition) {
+              if (
+                updatedFilterCondition[key] === "" ||
+                updatedFilterCondition[key] === null
+              ) {
+                delete updatedFilterCondition[key];
+              }
+            }
+
+            return updatedFilterCondition;
+          };
+
+          // Process the filter conditions and fetch new data
+          const filterConditionWithoutDropdowns =
+            removeDropdownFields(filterCondition);
+          const updatedConditionWithFieldNames = await updateFieldNames(
+            filterConditionWithoutDropdowns,
+          );
+
+          const requestBodyForMenuReportDetails = {
+            columns:
+              "spName,reportCriteriaId,isDefaultDataShow,outputFileType,isSp",
+            tableName: "tblMenuReportMapping",
+            whereCondition: `menuId = ${search}`,
+            clientIdCondition: `status = 1 FOR JSON PATH,INCLUDE_NULL_VALUES`,
+          };
+          reportData = await fetchReportData(requestBodyForMenuReportDetails);
+          const getSpName = reportData.data[0].spName;
+
+          let responseData = await dynamicReportFilter(
+            updatedConditionWithFieldNames,
+            clientId,
+            getSpName,
+          );
+
+          if (menuType === "L") {
+            fetchLedgerReportData(getSpName);
+            return;
+          }
+          if (responseData && responseData?.success) {
+            if (enablePivot) {
+              responseData.data = buildPivotData(
+                responseData.data,
+                NewpivotRowFields, // row field
+                NewpivotColFields, // column field
+                NewpivotAggregateField,
+                NewpivotAggregateFunction,
+              );
+            }
+
+            // if (responseData.data.length > 0) {
+            const keys = Object.keys(
+              responseData?.data?.[0]?.loadList?.data ?? [],
+            );
+
+            const fieldNamesFormattedArray = keys
+              .filter(
+                (key) => key !== "groupSpans" && key !== "startIndexForGroup",
+              )
+              .map((key) => ({
+                fieldname: key,
+                label: key,
+                minWidth: 100,
+                width: 150,
+              }));
+
+            // setGrid(fieldNamesFormattedArray);
+            // setGridHeader(fieldNamesFormattedArray);
+            // }
+            const processedData = preprocessDataForGrouping(
+              responseData?.data?.[0]?.loadList?.data ?? [],
+              grid.length > 0 ? grid : fieldNamesFormattedArray,
+              groupingDepth,
+            );
+
+            if (isDataFromStoredProcedure) {
+              if (processedData.length > 0) {
+                const keys = Object.keys(processedData[0]);
+
+                const fieldNamesFormattedArray = keys
+                  .filter(
+                    (key) =>
+                      key !== "groupSpans" && key !== "startIndexForGroup",
+                  )
+                  .map((key) => ({
+                    fieldname: key,
+                    label: key,
+                    minWidth: 100,
+                    width: 150,
+                  }));
+
+                setGrid(fieldNamesFormattedArray);
+                setGridHeader(fieldNamesFormattedArray);
+              } else {
+                console.log("Filtered data is empty");
+              }
+            } else {
+              for (var key = 0; key < apiGRidDataNew.length; key++) {
+                var apiFieldsId = fetchGridNew[key].fieldname;
+                if (
+                  apiFieldsId === undefined ||
+                  apiFieldsId === null ||
+                  apiFieldsId === ""
+                ) {
+                  grid.push({
+                    fieldName: fetchGridNew[key].label,
+                    label: fetchGridNew[key].label,
+                    _id: null,
+                  });
+                } else {
+                  const requestBodyGrid = {
+                    columns: "af.id,af.fieldname,af.label",
+                    tableName:
+                      "tblApiDefinition ad Left join tblApiFields af on af.apiDefinitionId = ad.id",
+                    whereCondition: `af.id = ${apiFieldsId} and af.status = 1 and ad.status = 1`,
+                    clientIdCondition: `ad.status = 1 FOR JSON PATH`,
+                  };
+                  try {
+                    const data = await fetchReportData(requestBodyGrid);
+                    if (data) {
+                      grid.push(data.data[0]);
+                    } else {
+                      console.error("No data returned for key:", key);
+                    }
+                  } catch (error) {
+                    console.error(
+                      "Error fetching report types for key:",
+                      key,
+                      error,
+                    );
+                  }
+                }
+              }
+              setGrid(grid);
+              const header = fetchGridNew.map((gridItem) => ({
+                fieldname: gridItem.fieldname,
+                label: gridItem.label,
+                minWidth: gridItem.minWidth || 100,
+                width: gridItem.width || 150,
+              }));
+              setGridHeader(header);
+            }
+
+            // Filter out rows with all null or empty fields
+            const filteredTableData = processedData.filter((data) => {
+              return Object.values(data).some(
+                (value) => value !== null && value !== "",
+              );
+            });
+
+            // Set new data
+            setPaginatedData(filteredTableData);
+            setTableData(filteredTableData);
+            setFinalPaginatedData(filteredTableData);
+            setFilteredSortData(filteredTableData);
+            setIsDataInitialized(true);
+            setIsDefaultDataShow(true);
+          } else {
+            // Handle the case where data fetching fails
+            console.error("Data fetching failed");
+          }
+        } catch (error) {
+          console.error("Error during data fetching:", error);
+        } finally {
+          // Stop loading~
+          setIsLoading(false);
+        }
       }
     },
     handleCoarriCodecoUpload: async () => {
@@ -3903,7 +4719,7 @@ export default function AddEditFormControll({ reportData }) {
           companyBranchId: branchId,
           financialYearId: financialYear,
           userId,
-          fileName:fileNameUploaded,
+          fileName: fileNameUploaded,
           data: newState?.null || newState || [],
         };
         const res = await fetchDynamicReportSpData(spName, payload);
@@ -4932,13 +5748,14 @@ export default function AddEditFormControll({ reportData }) {
       // Date time fixes for grouped cells
       if (!DateFormat && typeof content === "string" && isValidDate(content)) {
         content = moment(content).format("DD-MM-YYYY");
-      } else if (
-        DateFormat &&
-        typeof content === "string" &&
-        isValidDate(content)
-      ) {
-        content = moment(content).format(`${DateFormat}`);
-      }
+      } 
+      // else if (
+      //   DateFormat &&
+      //   typeof content === "string" &&
+      //   isValidDate(content)
+      // ) {
+      //   content = moment(content).format(`${DateFormat}`);
+      // }
 
       // Render the cell with proper row span and background color
       return (
@@ -5354,7 +6171,7 @@ export default function AddEditFormControll({ reportData }) {
                   {/* Conditionally render the table based on menuType */}
                   {isDefaultDataShow &&
                     outputFileType &&
-                    menuType === "D" &&
+                    (menuType === "D" || menuType === "M") &&
                     (isLoading ? (
                       <div
                         style={{

@@ -1,14 +1,9 @@
 "use client";
 /* eslint-disable */
-
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import PropTypes from "prop-types";
 import styles from "@/app/app.module.css";
-
-// ✅ Custom Fields
 import CustomeInputFields from "@/components/Inputs/customeInputFields";
-
-// MUI
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -20,11 +15,9 @@ import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import InputBase from "@mui/material/InputBase";
 import Divider from "@mui/material/Divider";
-import Button from "@mui/material/Button";
+import { fontFamilyStyles } from "@/app/globalCss";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
-
-// Icons
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
@@ -34,8 +27,6 @@ import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
-
-// ✅ Your theme-friendly styles (already in your project)
 import {
     displayTablePaperStyles,
     displayTableContainerStyles,
@@ -45,10 +36,6 @@ import {
     searchInputStyling,
 } from "@/app/globalCss";
 
-/**
- * ✅ Bottom editor fields rendered using CustomeInputFields.
- * NOTE: for dropdowns, this assumes your CustomeInputFields supports `staticData`.
- */
 const bottomFormdata = {
     "Container Details": [
         {
@@ -80,12 +67,9 @@ const bottomFormdata = {
             isRequired: false,
             sectionHeader: "General",
             sectionOrder: 1,
-            staticData: [
-                { id: "20 High Cube", name: "20 High Cube" },
-                { id: "40 High Cube", name: "40 High Cube" },
-                { id: "20 GP", name: "20 GP" },
-                { id: "40 GP", name: "40 GP" },
-            ],
+            referenceTable: "tblMasterData",
+            referenceColumn: "name",
+            dropdownFilter: "and masterListId in (select id from tblMasterList where name='tblType')",
         },
         {
             id: 3,
@@ -136,8 +120,8 @@ const bottomFormdata = {
             id: 6,
             fieldname: "sealDate",
             yourlabel: "Seal Date",
-            controlname: "text", // change to "date" if supported
-            type: 6902,
+            controlname: "date",
+            type: 6783,
             typeValue: "string",
             ordering: 6,
             isControlShow: true,
@@ -161,11 +145,10 @@ const bottomFormdata = {
             isRequired: false,
             sectionHeader: "General",
             sectionOrder: 2,
-            staticData: [
-                { id: "BTSL - Bottle", name: "BTSL - Bottle" },
-                { id: "Cable", name: "Cable" },
-                { id: "Metal", name: "Metal" },
-            ],
+            referenceTable: "tblMasterData",
+            referenceColumn: "name",
+            dropdownFilter: "and masterListId in (select id from tblMasterList where name='tblSealTypeIndicator')",
+
         },
         {
             id: 8,
@@ -186,46 +169,29 @@ const bottomFormdata = {
 };
 
 export default function ContainerSheet({ value, onChange }) {
-    // ✅ Replace with your real endpoints
     const API_LIST = "/api/blcontainer/list";
     const API_UPSERT = "/api/blcontainer/update";
     const API_DELETE = "/api/blcontainer/delete";
 
     const theme = useTheme();
-    useMediaQuery(theme.breakpoints.down("md")); // isMobile not used; keep if you want responsive tweaks later
+    useMediaQuery(theme.breakpoints.down("md"));
 
     const [loading, setLoading] = useState(false);
     const [rows, setRows] = useState([]);
-
-    // ✅ Parent state: single source of truth
     const newState = value || {};
     const setNewState = onChange;
-
-    // ✅ paging
     const [page, setPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(15);
     const [totalCount, setTotalCount] = useState(0);
-
-    // ✅ (optional) global search
     const [query, setQuery] = useState("");
-
-    // ✅ column right-click filter
     const [isColumnSearchOpen, setIsColumnSearchOpen] = useState(false);
     const [activeColumn, setActiveColumn] = useState(null);
     const [columnKeyName, setColumnKeyName] = useState("");
     const [columnKeyValue, setColumnKeyValue] = useState("");
-
-    // ✅ selection + bottom editor
     const [selectedId, setSelectedId] = useState(null);
-    const [mode, setMode] = useState("view"); // view | edit | new
-
-    // ✅ local form drives editor UI (BUT always sync to parent like InvoiceSheet)
+    const [mode, setMode] = useState("view");
     const [form, setForm] = useState(getEmptyForm());
-
-    // ✅ hover actions
     const [hoverRowId, setHoverRowId] = useState(null);
-
-    // ✅ local clearFlag
     const [clearFlagLocal, setClearFlagLocal] = useState({
         isClear: false,
         fieldName: "",
@@ -233,8 +199,6 @@ export default function ContainerSheet({ value, onChange }) {
 
     const safeStr = (v) => (v === null || v === undefined ? "" : String(v));
     const isEditable = mode === "edit" || mode === "new";
-
-    // ✅ columns (top grid)
     const columns = useMemo(
         () => [
             { id: "containerNo", label: "Container No", minWidth: 200 },
@@ -260,26 +224,18 @@ export default function ContainerSheet({ value, onChange }) {
         location: r?.location ?? "",
         __raw: r,
     });
-
-    // ✅ helper: keep parent state synced EXACTLY like InvoiceSheet
     const patchParent = useCallback(
         (patch = {}) => {
-            // supports both setter styles:
-            // 1) setState(prev => ({...prev,...patch}))
-            // 2) setState(nextObj)
             if (typeof setNewState === "function") {
                 try {
                     setNewState((prev) => ({ ...(prev || {}), ...(patch || {}) }));
                 } catch (e) {
-                    // fallback if parent provided non-functional setter
                     setNewState({ ...(newState || {}), ...(patch || {}) });
                 }
             }
         },
         [setNewState, newState]
     );
-
-    // ✅ fetch list
     const fetchRows = useCallback(async () => {
         setLoading(true);
         try {
@@ -315,7 +271,7 @@ export default function ContainerSheet({ value, onChange }) {
                 setSelectedId(null);
                 setMode("view");
                 setForm(getEmptyForm());
-                patchParent(getEmptyFormForParent()); // ✅ keep parent clean too
+                patchParent(getEmptyFormForParent());
             }
         } catch (e) {
             console.error("tblBlContainer fetch error:", e);
@@ -329,8 +285,6 @@ export default function ContainerSheet({ value, onChange }) {
     useEffect(() => {
         fetchRows();
     }, [fetchRows]);
-
-    // ✅ local filter (client-side)
     const filteredRowsLocal = useMemo(() => {
         if (!columnKeyName || !columnKeyValue) return rows;
         const ck = (columnKeyName || "").trim();
@@ -344,18 +298,7 @@ export default function ContainerSheet({ value, onChange }) {
         setIsColumnSearchOpen(true);
     };
 
-    const clearAllFilters = () => {
-        setQuery("");
-        setColumnKeyName("");
-        setColumnKeyValue("");
-        setActiveColumn(null);
-        setIsColumnSearchOpen(false);
-        setPage(1);
-    };
-
     const totalPages = Math.max(1, Math.ceil((totalCount || 0) / rowsPerPage));
-
-    // ✅ when selecting row, ALSO push to parent so finalState picks it up
     const selectRow = (row) => {
         const next = {
             id: row?.id ?? null,
@@ -375,8 +318,6 @@ export default function ContainerSheet({ value, onChange }) {
         setSelectedId(next.id);
         setMode("view");
         setForm(next);
-
-        // ✅ parent sync (like InvoiceSheet)
         patchParent({
             containerNo: next.containerNo ?? null,
             type: next.type ?? null,
@@ -389,15 +330,11 @@ export default function ContainerSheet({ value, onChange }) {
             blContainerId: next.id ?? null,
         });
     };
-
-    // ✅ top toolbar actions
     const onNew = () => {
         setSelectedId(null);
         setMode("new");
         const empty = getEmptyForm();
         setForm(empty);
-
-        // ✅ parent sync
         patchParent(getEmptyFormForParent());
     };
 
@@ -417,8 +354,6 @@ export default function ContainerSheet({ value, onChange }) {
         setMode("new");
         setForm((prev) => ({ ...(prev || {}), id: null }));
         setSelectedId(null);
-
-        // ✅ parent sync (new record)
         patchParent({ blContainerId: null });
     };
 
@@ -426,12 +361,8 @@ export default function ContainerSheet({ value, onChange }) {
         setMode("view");
         setSelectedId(null);
         setForm(getEmptyForm());
-
-        // ✅ parent sync (clear selection)
         patchParent(getEmptyFormForParent());
     };
-
-    // ✅ upsert
     const upsert = async () => {
         if (mode === "edit" && !form?.id) return;
 
@@ -471,7 +402,6 @@ export default function ContainerSheet({ value, onChange }) {
             setMode("view");
             if (savedId) {
                 setSelectedId(savedId);
-                // ✅ parent sync: store id too (if you want)
                 patchParent({ blContainerId: savedId });
             }
         } catch (e) {
@@ -480,8 +410,6 @@ export default function ContainerSheet({ value, onChange }) {
             setLoading(false);
         }
     };
-
-    // ✅ delete
     const onDelete = async (rowOrId) => {
         const id = typeof rowOrId === "object" ? rowOrId?.id : rowOrId;
         const deleteId = id ?? form?.id;
@@ -509,16 +437,9 @@ export default function ContainerSheet({ value, onChange }) {
         }
     };
 
-    /**
-     * ✅ KEY FIX:
-     * - Always patch BOTH local form + parent state (InvoiceSheet pattern)
-     * - Also supports functional setter style.
-     */
     const handleBottomFieldValuesChange = (updatedValues = {}) => {
         setForm((prev) => {
             const next = { ...(prev || {}), ...(updatedValues || {}) };
-
-            // ✅ parent sync (PATCH, not replace)
             patchParent({
                 containerNo: next.containerNo ?? null,
                 type: next.type ?? null,
@@ -535,9 +456,7 @@ export default function ContainerSheet({ value, onChange }) {
         });
     };
 
-    // ✅ Apply CustomeInputFields "result" object (like InvoiceSheet applyResultToState)
     const applyResultToState = (result) => {
-        // handle validation fail pattern (if your CustomeInputFields uses it)
         if (result?.isCheck === false) {
             if (result?.alertShow && result?.fieldName) {
                 setClearFlagLocal({ isClear: true, fieldName: result.fieldName });
@@ -547,11 +466,7 @@ export default function ContainerSheet({ value, onChange }) {
 
         const patch = { ...(result?.newState || {}) };
         if (!Object.keys(patch).length) return;
-
-        // update local
         setForm((p) => ({ ...(p || {}), ...patch }));
-
-        // update parent
         patchParent(patch);
     };
 
@@ -563,51 +478,41 @@ export default function ContainerSheet({ value, onChange }) {
 
     return (
         <div style={{ width: "100%" }}>
-            {/* ✅ Top hover toolbar */}
             <div className="flex mb-2 justify-end">
-                <div
-                    className="flex justify-between h-[27px] border border-gray-100 rounded-[7px] shadow-md"
-                    style={{ background: "var(--page-bg-color)" }}
-                >
-                    <div className="flex items-center px-1">
-                        <Tooltip title="New">
-                            <span>
-                                <IconButton size="small" onClick={onNew} disabled={loading} sx={iconBtnSx()}>
-                                    <AddCircleOutlineIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
 
-                        <Tooltip title={isEditable ? "Save" : "Select row to edit"}>
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={upsert}
-                                    disabled={loading || !isEditable}
-                                    sx={iconBtnSx()}
-                                >
-                                    <SaveOutlinedIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
+                <div className="flex items-center gap-2 px-1">
+                    <Tooltip title="New">
+                        <span>
+                            <button
+                                className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
+                                type="button"
+                                onClick={onNew} disabled={loading} >
+                                <AddCircleOutlineIcon fontSize="small" />
+                            </button>
+                        </span>
+                    </Tooltip>
 
-                        <Tooltip title="Close">
-                            <span>
-                                <IconButton size="small" onClick={onClose} disabled={loading} sx={iconBtnSx()}>
-                                    <CloseOutlinedIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
+                    <Tooltip title={isEditable ? "Save" : "Select row to edit"}>
+                        <span>
+                            <button
+                                className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
+                                type="button"
+                                onClick={upsert} disabled={loading || !isEditable} sx={iconBtnSx()}>
+                                <SaveOutlinedIcon fontSize="small" />
+                            </button>
+                        </span>
+                    </Tooltip>
 
-                        {/* optional: clear filters */}
-                        <Tooltip title="Clear Filters">
-                            <span>
-                                <IconButton size="small" onClick={clearAllFilters} disabled={loading} sx={iconBtnSx()}>
-                                    <ClearIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                    </div>
+                    <Tooltip title="Close">
+                        <span>
+                            <button
+                                className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
+                                type="button"
+                                onClick={onClose} disabled={loading} sx={iconBtnSx()}>
+                                <CloseOutlinedIcon fontSize="small" />
+                            </button>
+                        </span>
+                    </Tooltip>
                 </div>
             </div>
 
@@ -746,8 +651,6 @@ export default function ContainerSheet({ value, onChange }) {
                                                         </span>
                                                     </Tooltip>
                                                 </div>
-
-                                                {/* keep layout stable even when icons hidden */}
                                                 <div style={{ height: 32, display: hoverRowId === r.id ? "none" : "block" }} />
                                             </TableCell>
                                         </TableRow>
@@ -756,38 +659,24 @@ export default function ContainerSheet({ value, onChange }) {
                             )}
                         </TableBody>
                     </Table>
-
-                    {/* pagination */}
                     <div className="flex items-center justify-end pt-2 px-4 text-black gap-3">
-                        <Button
-                            size="small"
-                            variant="outlined"
+                        <button
+                            className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
+                            type="button"
                             disabled={page <= 1 || loading}
                             onClick={() => setPage((p) => Math.max(1, p - 1))}
-                            sx={{
-                                height: 28,
-                                fontSize: 11,
-                                borderColor: "var(--inputBorderColor)",
-                                color: "var(--table-text-color)",
-                            }}
                         >
                             Prev
-                        </Button>
+                        </button>
 
-                        <Button
-                            size="small"
-                            variant="outlined"
+                        <button
+                            className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
+                            type="button"
                             disabled={page >= totalPages || loading}
                             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                            sx={{
-                                height: 28,
-                                fontSize: 11,
-                                borderColor: "var(--inputBorderColor)",
-                                color: "var(--table-text-color)",
-                            }}
                         >
                             Next
-                        </Button>
+                        </button>
 
                         <input
                             type="number"
@@ -802,13 +691,19 @@ export default function ContainerSheet({ value, onChange }) {
                             className={`border ${styles.txtColorDark} ${styles.pageBackground} border-gray-300 rounded-md p-2 h-[28px] w-16 text-[11px] outline-gray-300 outline-0`}
                         />
 
-                        <p className={`text-[11px] ${styles.txtColorDark}`}>
+                        <span className="text-black text-[12px]">
                             Page {page} of {totalPages} (Total: {totalCount})
-                        </p>
+                        </span>
                     </div>
-
-                    {/* ✅ Bottom Editor (no buttons) */}
-                    <div style={editorWrapSx}>
+                    <div
+                        style={{
+                            ...editorWrapSx,
+                            backgroundColor: "var(--page-bg-color)",
+                            "--inputBg": "var(--page-bg-color)",
+                            "--tableRowBg": "var(--page-bg-color)",
+                            "--commonBg": "var(--page-bg-color)",
+                        }}
+                    >
                         <CustomeInputFields
                             inputFieldData={bottomFormdata["Container Details"]}
                             values={form}
@@ -820,14 +715,8 @@ export default function ContainerSheet({ value, onChange }) {
                             onChangeHandler={(result) => applyResultToState(result)}
                             onBlurHandler={(result) => applyResultToState(result)}
                         />
-
-                        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
-                            <div style={{ marginLeft: "auto", fontSize: 11, color: "var(--tableRowTextColor)" }}>
-                                {mode === "new" ? "Mode: New" : mode === "edit" ? "Mode: Edit" : "Mode: View"}
-                                {selectedId ? ` | Selected: ${selectedId}` : ""}
-                            </div>
-                        </div>
                     </div>
+
                 </TableContainer>
             </Paper>
         </div>
@@ -894,9 +783,6 @@ ColumnSearchBox.propTypes = {
     onClear: PropTypes.func,
     defaultValue: PropTypes.string,
 };
-
-/* ============================== Helpers ============================== */
-
 function getEmptyForm() {
     return {
         id: null,
@@ -913,8 +799,6 @@ function getEmptyForm() {
         grWtTRWt: "",
     };
 }
-
-// ✅ parent patch values (only what you need in finalState)
 function getEmptyFormForParent() {
     return {
         blContainerId: null,

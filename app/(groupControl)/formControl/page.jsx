@@ -312,7 +312,7 @@ export default function StickyHeadTable() {
 
     try {
       e.currentTarget.setPointerCapture?.(e.pointerId);
-    } catch {}
+    } catch { }
   };
 
   const onSwipeMove = (e) => {
@@ -527,7 +527,7 @@ export default function StickyHeadTable() {
           columns: "*",
           tableName: "tblMenuAccess",
           whereCondition: `menuId = ${search}`,
-          clientIdCondition: `userId = ${userId} and clientId in (${clientId}) FOR JSON PATH, INCLUDE_NULL_VALUES`,
+          clientIdCondition: `userId = ${userId} and companyId = ${companyId} and clientId in (${clientId}) FOR JSON PATH, INCLUDE_NULL_VALUES`,
         };
         const fetchedUserData = await fetchReportData(menuAccessRequest);
         const menuAccessData = fetchedUserData.data[0];
@@ -1374,17 +1374,17 @@ export default function StickyHeadTable() {
         prev.map((item, i) =>
           i === index
             ? {
-                ...item,
-                fromDate: formattedDate,
-                advanceSearch: {
-                  ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
-                  [name]: {
-                    // Update or add the new key within advanceSearch
-                    ...item.advanceSearch?.[name], // Spread existing values under this key, if any
-                    $gte: formattedDate, // Update or add the $lte key under the specified name
-                  },
+              ...item,
+              fromDate: formattedDate,
+              advanceSearch: {
+                ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
+                [name]: {
+                  // Update or add the new key within advanceSearch
+                  ...item.advanceSearch?.[name], // Spread existing values under this key, if any
+                  $gte: formattedDate, // Update or add the $lte key under the specified name
                 },
-              }
+              },
+            }
             : item,
         ),
       );
@@ -1399,17 +1399,17 @@ export default function StickyHeadTable() {
         prev.map((item, i) =>
           i === index
             ? {
-                ...item,
-                toDate: formattedDate,
-                advanceSearch: {
-                  ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
-                  [name]: {
-                    // Update or add the new key within advanceSearch
-                    ...item.advanceSearch?.[name], // Spread existing values under this key, if any
-                    $lte: formattedDate, // Update or add the $lte key under the specified name
-                  },
+              ...item,
+              toDate: formattedDate,
+              advanceSearch: {
+                ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
+                [name]: {
+                  // Update or add the new key within advanceSearch
+                  ...item.advanceSearch?.[name], // Spread existing values under this key, if any
+                  $lte: formattedDate, // Update or add the $lte key under the specified name
                 },
-              }
+              },
+            }
             : item,
         ),
       );
@@ -2337,13 +2337,13 @@ export default function StickyHeadTable() {
                         if (field?.isDummy) {
                           return field?.dummyField === "comma"
                             ? getCommaSeparatedValuesCountFromNestedKeys(
-                                row?.[field?.id],
-                                field?.refkey,
-                              )?.values
+                              row?.[field?.id],
+                              field?.refkey,
+                            )?.values
                             : getCommaSeparatedValuesCountFromNestedKeys(
-                                row?.[field?.id],
-                                field?.refkey,
-                              )?.count;
+                              row?.[field?.id],
+                              field?.refkey,
+                            )?.count;
                         }
                         if (
                           typeof row?.[field?.id] === "object" &&
@@ -3039,11 +3039,11 @@ export default function StickyHeadTable() {
                           `}
                                     >
                                       {typeof row[fieldName.id] === "object" &&
-                                      row[fieldName.id] !== null
+                                        row[fieldName.id] !== null
                                         ? getNestedValue(
-                                            row[fieldName.id],
-                                            fieldName.refkey,
-                                          )
+                                          row[fieldName.id],
+                                          fieldName.refkey,
+                                        )
                                         : isDateFormat(row[fieldName.id])}
                                     </TableCell>
                                   )}
@@ -3058,13 +3058,13 @@ export default function StickyHeadTable() {
                                     >
                                       {fieldName.dummyField == "comma"
                                         ? getCommaSeparatedValuesCountFromNestedKeys(
-                                            row[fieldName.id],
-                                            fieldName.refkey,
-                                          ).values
+                                          row[fieldName.id],
+                                          fieldName.refkey,
+                                        ).values
                                         : getCommaSeparatedValuesCountFromNestedKeys(
-                                            row[fieldName.id],
-                                            fieldName.refkey,
-                                          ).count}
+                                          row[fieldName.id],
+                                          fieldName.refkey,
+                                        ).count}
                                     </TableCell>
                                   )}
                                 {typeof row[fieldName.id] !==

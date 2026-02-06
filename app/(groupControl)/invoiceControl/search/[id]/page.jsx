@@ -1079,6 +1079,398 @@ export default function AddEditFormControll() {
     getThirdLevelDetails: getThirdLevelDetails,
   };
 
+  // async function getThirdLevelDetails(obj) {
+  //   const values = newState;
+  //   const { companyId, clientId, branchId } = getUserDetails();
+
+  //   const {
+  //     businessSegmentId,
+  //     voucherTypeId,
+  //     blId,
+  //     plrId,
+  //     podId,
+  //     fpdId,
+  //     polId,
+  //     depotId,
+  //     billingPartyId,
+  //     containerStatusId,
+  //     fromDate,
+  //     toDate,
+  //     exchangeRate,
+  //     includeMNR,
+  //   } = newState;
+
+  //   const {
+  //     jobId,
+  //     chargeId,
+  //     cargoTypeId,
+  //     sizeId,
+  //     typeId,
+  //     containerRepairId,
+  //     containerTransactionId,
+  //   } = values;
+
+  //   const requestData = {
+  //     billingPartyId,
+  //     clientId,
+  //     jobId,
+  //     chargeId,
+  //     companyId,
+  //     companyBranchId: branchId,
+  //     fromDate,
+  //     toDate,
+  //     businessSegmentId,
+  //     voucherTypeId,
+  //     blId,
+  //     plrId,
+  //     podId,
+  //     fpdId,
+  //     polId,
+  //     depotId,
+  //     containerStatusId,
+  //     cargoTypeId,
+  //     sizeId,
+  //     typeId,
+  //     containerRepairId,
+  //     containerTransactionId,
+  //     invoiceExchageRate: exchangeRate,
+  //     includeMNR,
+  //   };
+
+  //   const fetchChargeDetails = await fetchSecondThirdLevelDetails(requestData);
+  //   if (!fetchChargeDetails) return;
+
+  //   const apiCharges = Array.isArray(fetchChargeDetails)
+  //     ? fetchChargeDetails
+  //     : Array.isArray(fetchChargeDetails?.Chargers)
+  //       ? fetchChargeDetails.Chargers
+  //       : [];
+
+  //   const toNum = (v) =>
+  //     v === null || v === undefined || v === "" ? null : Number(v);
+
+  //   const mkDD = (value, label) => {
+  //     const n = toNum(value);
+  //     if (n === null) return [];
+  //     return [{ value: n, label: label ?? String(n) }];
+  //   };
+
+  //   const pickValidDD = (arr) => {
+  //     const a = Array.isArray(arr) ? arr : [];
+  //     return a.filter((x) => x && x.value != null && x.label != null);
+  //   };
+
+  //   // ✅ thirdlevel rows + dropdowns (including chargeId & currencyId)
+  //   const buildChargeDetailsRows = (thirdlevelArr) => {
+  //     const src = Array.isArray(thirdlevelArr) ? thirdlevelArr : [];
+
+  //     return src.map((item, i) => {
+  //       const _containerId = toNum(item.containerId);
+  //       const _sizeId = toNum(item.sizeId);
+  //       const _typeId = toNum(item.typeId);
+  //       const _jobId = toNum(item.jobId);
+  //       const _containerTransactionId = toNum(item.containerTransactionId);
+  //       const _containerRepairId = toNum(item.containerRepairId);
+  //       const _blId = toNum(item.blId);
+
+  //       const _chargeId = toNum(item.chargeId);
+  //       const _currencyId = toNum(item.currencyId);
+
+  //       return {
+  //         ...item,
+
+  //         // ✅ EXACT requirement: array index only
+  //         indexValue: i,
+
+  //         // ✅ FIX: chargeId label + currencyId label for detail rows
+  //         chargeIddropdown: pickValidDD(item.chargeIddropdown).length
+  //           ? pickValidDD(item.chargeIddropdown)
+  //           : mkDD(_chargeId, item.chargeName ?? item.description),
+  //         currencyIddropdown: pickValidDD(item.currencyIddropdown).length
+  //           ? pickValidDD(item.currencyIddropdown)
+  //           : mkDD(_currencyId, item.currencyName),
+
+  //         containerIddropdown:
+  //           _containerId !== null
+  //             ? [
+  //                 {
+  //                   value: _containerId,
+  //                   label: item.containerNo ?? String(_containerId),
+  //                 },
+  //               ]
+  //             : [],
+  //         sizeIddropdown:
+  //           _sizeId !== null
+  //             ? [{ value: _sizeId, label: item.sizeName ?? String(_sizeId) }]
+  //             : [],
+  //         typeIddropdown:
+  //           _typeId !== null
+  //             ? [{ value: _typeId, label: item.typeName ?? String(_typeId) }]
+  //             : [],
+  //         jobIddropdown:
+  //           _jobId !== null
+  //             ? [{ value: _jobId, label: item.jobNo ?? String(_jobId) }]
+  //             : [],
+  //         containerTransactionIddropdown:
+  //           _containerTransactionId !== null
+  //             ? [
+  //                 {
+  //                   value: _containerTransactionId,
+  //                   label:
+  //                     item.containerTransactionName ??
+  //                     String(_containerTransactionId),
+  //                 },
+  //               ]
+  //             : [],
+  //         containerRepairIddropdown:
+  //           _containerRepairId !== null
+  //             ? [
+  //                 {
+  //                   value: _containerRepairId,
+  //                   label:
+  //                     item.containerRepairName ?? String(_containerRepairId),
+  //                 },
+  //               ]
+  //             : [],
+  //         blIddropdown:
+  //           _blId !== null
+  //             ? [{ value: _blId, label: item.blNo ?? String(_blId) }]
+  //             : [],
+
+  //         calculatedAmount:
+  //           (Number(item.noOfDays) || 0) * (Number(item.rate) || 0),
+  //       };
+  //     });
+  //   };
+
+  //   // ✅ totals for charge header (kept your logic; noOfDays in header forced to 1 later)
+  //   const computeTotalsFromDetails = (detailsRows, stateExchangeRate) => {
+  //     const qty = detailsRows.reduce((acc, r) => acc + (Number(r.qty) || 0), 0);
+
+  //     const totalWeighted = detailsRows.reduce(
+  //       (acc, r) => acc + (Number(r.noOfDays) || 0) * (Number(r.rate) || 0),
+  //       0,
+  //     );
+
+  //     const avgRate = qty > 0 ? totalWeighted / qty : 0;
+
+  //     const totalAmountHc = totalWeighted;
+  //     const exRate = Number(stateExchangeRate || 1);
+  //     const totalAmountFc = totalWeighted * exRate;
+
+  //     return { qty, avgRate, totalAmountHc, totalAmountFc };
+  //   };
+
+  //   const buildThirdLevelForSave = (detailsRows, fallbackChargeId) => {
+  //     return detailsRows.map((r, i) => ({
+  //       chargeId: toNum(r.chargeId ?? fallbackChargeId),
+  //       vesselId: toNum(r.vesselId),
+  //       indexValue: i,
+  //       voyageId: toNum(r.voyageId ?? r.voyageid),
+  //       jobId: toNum(r.jobId),
+  //       blId: toNum(r.blId),
+  //       containerId: toNum(r.containerId),
+  //       sizeId: toNum(r.sizeId),
+  //       typeId: toNum(r.typeId),
+  //       freeDays: toNum(r.freeDays),
+  //       noOfDays: toNum(r.noOfDays),
+  //       fromDate: r.fromDate ?? null,
+  //       toDate: r.toDate ?? null,
+  //       qty: toNum(r.qty),
+  //       currencyId: toNum(r.currencyId),
+  //       exchangeRate: toNum(r.exchangeRate),
+  //       rate: toNum(r.rate),
+  //       amountHc: toNum(r.amountHc),
+  //       amountFc: toNum(r.amountFc),
+  //       containerRepairId: toNum(r.containerRepairId),
+  //       containerTransactionId: toNum(r.containerTransactionId),
+  //     }));
+  //   };
+
+  //   setNewState((prev) => {
+  //     const prevCharges = Array.isArray(prev.tblInvoiceCharge)
+  //       ? prev.tblInvoiceCharge
+  //       : [];
+
+  //     // ✅ add indexValue to each CHARGE from API (0,1,2...) before mapping by id
+  //     const apiChargesWithIndex = apiCharges.map((c, i) => ({
+  //       ...(c || {}),
+  //       indexValue: i,
+  //     }));
+
+  //     const apiMap = new Map(
+  //       apiChargesWithIndex
+  //         .filter((x) => x && x.chargeId != null)
+  //         .map((x) => [Number(x.chargeId), x]),
+  //     );
+
+  //     const updatedExisting = prevCharges.map((ch) => {
+  //       const id = Number(ch.chargeId);
+  //       const apiRow = apiMap.get(id);
+  //       if (!apiRow) {
+  //         // ✅ ensure charge always has noOfDays = 1 even if API didn't return this charge
+  //         return { ...ch, noOfDays: 1 };
+  //       }
+
+  //       const detailsRows = buildChargeDetailsRows(apiRow.thirdlevel);
+  //       const totals = computeTotalsFromDetails(detailsRows, prev.exchangeRate);
+  //       const thirdlevel = buildThirdLevelForSave(detailsRows, id);
+
+  //       // ✅ FIX: currency dropdown (prefer apiRow.currencyIddropdown else derive from first detail row)
+  //       const derivedCurrencyDD = pickValidDD(apiRow.currencyIddropdown).length
+  //         ? pickValidDD(apiRow.currencyIddropdown)
+  //         : pickValidDD(ch.currencyIddropdown).length
+  //           ? pickValidDD(ch.currencyIddropdown)
+  //           : mkDD(
+  //               ch.currencyId ?? apiRow.currencyId ?? prev.currencyId,
+  //               detailsRows?.[0]?.currencyName ??
+  //                 detailsRows?.[0]?.currencyIddropdown?.[0]?.label,
+  //             );
+
+  //       // ✅ FIX: charge dropdown (prefer apiRow.chargeIddropdown else derive)
+  //       const derivedChargeDD = pickValidDD(apiRow.chargeIddropdown).length
+  //         ? pickValidDD(apiRow.chargeIddropdown)
+  //         : pickValidDD(ch.chargeIddropdown).length
+  //           ? pickValidDD(ch.chargeIddropdown)
+  //           : mkDD(id, apiRow.description ?? ch.description);
+
+  //       return {
+  //         ...ch,
+
+  //         description: apiRow.description ?? ch.description,
+  //         cargoTypeId: apiRow.cargoTypeId ?? ch.cargoTypeId,
+  //         expImp: apiRow.expImp ?? ch.expImp,
+  //         icd: apiRow.icd ?? ch.icd,
+  //         jobId: apiRow.jobId ?? ch.jobId,
+  //         blId: apiRow.blId ?? ch.blId,
+  //         typeId: apiRow.typeId ?? ch.typeId,
+  //         sizeId: apiRow.sizeId ?? ch.sizeId,
+  //         rateBasisId: apiRow.rateBasisId ?? ch.rateBasisId,
+
+  //         // ✅ add indexValue on charge object too
+  //         indexValue: apiRow.indexValue,
+
+  //         // ✅ FIX: ensure labels are present
+  //         chargeIddropdown: derivedChargeDD,
+  //         currencyIddropdown: derivedCurrencyDD,
+
+  //         thirdlevel,
+  //         tblInvoiceChargeDetails: detailsRows,
+
+  //         // ✅ YOUR REQUIREMENT: always 1 at charge/header level
+  //         noOfDays: 1,
+
+  //         qty: totals.qty || 0,
+  //         rate: Number(totals.avgRate || 0).toFixed(2),
+  //         totalAmountHc: Number(totals.totalAmountHc || 0).toFixed(2),
+  //         totalAmountFc: Number(totals.totalAmountFc || 0).toFixed(2),
+
+  //         currencyId: ch.currencyId ?? apiRow.currencyId ?? prev.currencyId,
+  //         exchangeRate: prev.exchangeRate ?? 1,
+
+  //         containerTransactionId:
+  //           apiRow.containerTransactionId ?? ch.containerTransactionId ?? null,
+  //         containerRepairId:
+  //           apiRow.containerRepairId ?? ch.containerRepairId ?? null,
+  //       };
+  //     });
+
+  //     const existingIds = new Set(
+  //       updatedExisting.map((x) => Number(x.chargeId)),
+  //     );
+
+  //     const newOnes = apiChargesWithIndex
+  //       .filter(
+  //         (x) =>
+  //           x && x.chargeId != null && !existingIds.has(Number(x.chargeId)),
+  //       )
+  //       .map((apiRow) => {
+  //         const id = Number(apiRow.chargeId);
+
+  //         const detailsRows = buildChargeDetailsRows(apiRow.thirdlevel);
+  //         const totals = computeTotalsFromDetails(
+  //           detailsRows,
+  //           prev.exchangeRate,
+  //         );
+  //         const thirdlevel = buildThirdLevelForSave(detailsRows, id);
+
+  //         const derivedCurrencyDD = pickValidDD(apiRow.currencyIddropdown)
+  //           .length
+  //           ? pickValidDD(apiRow.currencyIddropdown)
+  //           : mkDD(
+  //               apiRow.currencyId ?? prev.currencyId,
+  //               detailsRows?.[0]?.currencyName ??
+  //                 detailsRows?.[0]?.currencyIddropdown?.[0]?.label,
+  //             );
+
+  //         const derivedChargeDD = pickValidDD(apiRow.chargeIddropdown).length
+  //           ? pickValidDD(apiRow.chargeIddropdown)
+  //           : mkDD(id, apiRow.description ?? "");
+
+  //         return {
+  //           chargeId: id,
+  //           description: apiRow.description ?? "",
+  //           cargoTypeId: apiRow.cargoTypeId ?? null,
+  //           expImp: apiRow.expImp ?? null,
+  //           icd: apiRow.icd ?? null,
+  //           jobId: apiRow.jobId ?? null,
+  //           blId: apiRow.blId ?? null,
+  //           typeId: apiRow.typeId ?? null,
+  //           sizeId: apiRow.sizeId ?? null,
+  //           rateBasisId: apiRow.rateBasisId ?? null,
+
+  //           indexValue: apiRow.indexValue,
+
+  //           // ✅ FIX: ensure labels are present for new rows too
+  //           chargeIddropdown: derivedChargeDD,
+  //           currencyIddropdown: derivedCurrencyDD,
+
+  //           thirdlevel,
+  //           tblInvoiceChargeDetails: detailsRows,
+
+  //           // ✅ YOUR REQUIREMENT: always 1 at charge/header level
+  //           noOfDays: 1,
+
+  //           qty: totals.qty || 0,
+  //           rate: Number(totals.avgRate || 0).toFixed(2),
+  //           totalAmountHc: Number(totals.totalAmountHc || 0).toFixed(2),
+  //           totalAmountFc: Number(totals.totalAmountFc || 0).toFixed(2),
+
+  //           currencyId: apiRow.currencyId ?? prev.currencyId ?? null,
+  //           exchangeRate: prev.exchangeRate ?? 1,
+
+  //           containerTransactionId: apiRow.containerTransactionId ?? null,
+  //           containerRepairId: apiRow.containerRepairId ?? null,
+  //         };
+  //       });
+
+  //     const updatedCharges = [...updatedExisting, ...newOnes];
+
+  //     const invAmount = updatedCharges.reduce(
+  //       (sum, ch) => sum + (Number(ch.totalAmountHc) || 0),
+  //       0,
+  //     );
+  //     const invAmountFc = updatedCharges.reduce(
+  //       (sum, ch) => sum + (Number(ch.totalAmountFc) || 0),
+  //       0,
+  //     );
+
+  //     const taxHc = Number(prev.taxAmount || 0);
+  //     const taxFc = Number(prev.taxAmountFc || 0);
+
+  //     return {
+  //       ...prev,
+  //       tblInvoiceCharge: updatedCharges,
+
+  //       invoiceAmount: Number(invAmount.toFixed(2)),
+  //       invoiceAmountFc: Number(invAmountFc.toFixed(2)),
+
+  //       totalInvoiceAmount: Number((invAmount + taxHc).toFixed(2)),
+  //       totalInvoiceAmountFc: Number((invAmountFc + taxFc).toFixed(2)),
+  //     };
+  //   });
+  // }
+
   async function getThirdLevelDetails(obj) {
     const values = newState;
     const { companyId, clientId, branchId } = getUserDetails();
@@ -1146,11 +1538,19 @@ export default function AddEditFormControll() {
         ? fetchChargeDetails.Chargers
         : [];
 
-    const toNum = (v) =>
+    // -----------------------
+    // helpers
+    // -----------------------
+    const toNumOrNull = (v) =>
       v === null || v === undefined || v === "" ? null : Number(v);
 
+    const toNum = (v) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+
     const mkDD = (value, label) => {
-      const n = toNum(value);
+      const n = toNumOrNull(value);
       if (n === null) return [];
       return [{ value: n, label: label ?? String(n) }];
     };
@@ -1160,21 +1560,40 @@ export default function AddEditFormControll() {
       return a.filter((x) => x && x.value != null && x.label != null);
     };
 
+    // 🔑 composite key to avoid overwriting when same chargeId repeats (like 4375)
+    // include expImp/icd/currencyId/typeId/sizeId (add more if needed)
+    const keyOf = (row) => {
+      const ch = row || {};
+      return [
+        toNumOrNull(ch.chargeId),
+        ch.expImp ?? "",
+        ch.icd ?? "",
+        toNumOrNull(ch.currencyId),
+        toNumOrNull(ch.typeId),
+        toNumOrNull(ch.sizeId),
+        toNumOrNull(ch.rateBasisId),
+        toNumOrNull(ch.containerRepairId),
+        toNumOrNull(ch.containerTransactionId),
+        toNumOrNull(ch.jobId),
+        toNumOrNull(ch.blId),
+      ].join("|");
+    };
+
     // ✅ thirdlevel rows + dropdowns (including chargeId & currencyId)
     const buildChargeDetailsRows = (thirdlevelArr) => {
       const src = Array.isArray(thirdlevelArr) ? thirdlevelArr : [];
 
       return src.map((item, i) => {
-        const _containerId = toNum(item.containerId);
-        const _sizeId = toNum(item.sizeId);
-        const _typeId = toNum(item.typeId);
-        const _jobId = toNum(item.jobId);
-        const _containerTransactionId = toNum(item.containerTransactionId);
-        const _containerRepairId = toNum(item.containerRepairId);
-        const _blId = toNum(item.blId);
+        const _containerId = toNumOrNull(item.containerId);
+        const _sizeId = toNumOrNull(item.sizeId);
+        const _typeId = toNumOrNull(item.typeId);
+        const _jobId = toNumOrNull(item.jobId);
+        const _containerTransactionId = toNumOrNull(item.containerTransactionId);
+        const _containerRepairId = toNumOrNull(item.containerRepairId);
+        const _blId = toNumOrNull(item.blId);
 
-        const _chargeId = toNum(item.chargeId);
-        const _currencyId = toNum(item.currencyId);
+        const _chargeId = toNumOrNull(item.chargeId);
+        const _currencyId = toNumOrNull(item.currencyId);
 
         return {
           ...item,
@@ -1182,109 +1601,133 @@ export default function AddEditFormControll() {
           // ✅ EXACT requirement: array index only
           indexValue: i,
 
-          // ✅ FIX: chargeId label + currencyId label for detail rows
+          // ✅ ensure dropdown labels exist
           chargeIddropdown: pickValidDD(item.chargeIddropdown).length
             ? pickValidDD(item.chargeIddropdown)
             : mkDD(_chargeId, item.chargeName ?? item.description),
+
           currencyIddropdown: pickValidDD(item.currencyIddropdown).length
             ? pickValidDD(item.currencyIddropdown)
-            : mkDD(_currencyId, item.currencyName),
+            : mkDD(_currencyId, item.currencyName ?? item.currencyCode),
 
           containerIddropdown:
             _containerId !== null
               ? [
-                  {
-                    value: _containerId,
-                    label: item.containerNo ?? String(_containerId),
-                  },
-                ]
+                {
+                  value: _containerId,
+                  label: item.containerNo ?? String(_containerId),
+                },
+              ]
               : [],
+
           sizeIddropdown:
             _sizeId !== null
               ? [{ value: _sizeId, label: item.sizeName ?? String(_sizeId) }]
               : [],
+
           typeIddropdown:
             _typeId !== null
               ? [{ value: _typeId, label: item.typeName ?? String(_typeId) }]
               : [],
+
           jobIddropdown:
             _jobId !== null
               ? [{ value: _jobId, label: item.jobNo ?? String(_jobId) }]
               : [],
+
           containerTransactionIddropdown:
             _containerTransactionId !== null
               ? [
-                  {
-                    value: _containerTransactionId,
-                    label:
-                      item.containerTransactionName ??
-                      String(_containerTransactionId),
-                  },
-                ]
+                {
+                  value: _containerTransactionId,
+                  label:
+                    item.containerTransactionName ??
+                    String(_containerTransactionId),
+                },
+              ]
               : [],
+
           containerRepairIddropdown:
             _containerRepairId !== null
               ? [
-                  {
-                    value: _containerRepairId,
-                    label:
-                      item.containerRepairName ?? String(_containerRepairId),
-                  },
-                ]
-              : [],
-          blIddropdown:
-            _blId !== null
-              ? [{ value: _blId, label: item.blNo ?? String(_blId) }]
+                {
+                  value: _containerRepairId,
+                  label: item.containerRepairName ?? String(_containerRepairId),
+                },
+              ]
               : [],
 
-          calculatedAmount:
-            (Number(item.noOfDays) || 0) * (Number(item.rate) || 0),
+          blIddropdown:
+            _blId !== null ? [{ value: _blId, label: item.blNo ?? String(_blId) }] : [],
+
+          calculatedAmount: (toNum(item.noOfDays) || 0) * (toNum(item.rate) || 0),
         };
       });
     };
 
-    // ✅ totals for charge header (kept your logic; noOfDays in header forced to 1 later)
-    const computeTotalsFromDetails = (detailsRows, stateExchangeRate) => {
-      const qty = detailsRows.reduce((acc, r) => acc + (Number(r.qty) || 0), 0);
-
-      const totalWeighted = detailsRows.reduce(
-        (acc, r) => acc + (Number(r.noOfDays) || 0) * (Number(r.rate) || 0),
-        0,
-      );
-
-      const avgRate = qty > 0 ? totalWeighted / qty : 0;
-
-      const totalAmountHc = totalWeighted;
-      const exRate = Number(stateExchangeRate || 1);
-      const totalAmountFc = totalWeighted * exRate;
-
-      return { qty, avgRate, totalAmountHc, totalAmountFc };
-    };
-
+    // ✅ save payload (indexValue = array index)
     const buildThirdLevelForSave = (detailsRows, fallbackChargeId) => {
-      return detailsRows.map((r, i) => ({
-        chargeId: toNum(r.chargeId ?? fallbackChargeId),
-        vesselId: toNum(r.vesselId),
+      return (Array.isArray(detailsRows) ? detailsRows : []).map((r, i) => ({
+        chargeId: toNumOrNull(r.chargeId ?? fallbackChargeId),
+        vesselId: toNumOrNull(r.vesselId),
         indexValue: i,
-        voyageId: toNum(r.voyageId ?? r.voyageid),
-        jobId: toNum(r.jobId),
-        blId: toNum(r.blId),
-        containerId: toNum(r.containerId),
-        sizeId: toNum(r.sizeId),
-        typeId: toNum(r.typeId),
-        freeDays: toNum(r.freeDays),
-        noOfDays: toNum(r.noOfDays),
+        voyageId: toNumOrNull(r.voyageId ?? r.voyageid),
+        jobId: toNumOrNull(r.jobId),
+        blId: toNumOrNull(r.blId),
+        containerId: toNumOrNull(r.containerId),
+        sizeId: toNumOrNull(r.sizeId),
+        typeId: toNumOrNull(r.typeId),
+        freeDays: toNumOrNull(r.freeDays),
+        noOfDays: toNumOrNull(r.noOfDays),
         fromDate: r.fromDate ?? null,
         toDate: r.toDate ?? null,
-        qty: toNum(r.qty),
-        currencyId: toNum(r.currencyId),
-        exchangeRate: toNum(r.exchangeRate),
-        rate: toNum(r.rate),
-        amountHc: toNum(r.amountHc),
-        amountFc: toNum(r.amountFc),
-        containerRepairId: toNum(r.containerRepairId),
-        containerTransactionId: toNum(r.containerTransactionId),
+        qty: toNumOrNull(r.qty),
+        currencyId: toNumOrNull(r.currencyId),
+        exchangeRate: toNumOrNull(r.exchangeRate),
+        rate: toNumOrNull(r.rate),
+        amountHc: toNumOrNull(r.amountHc),
+        amountFc: toNumOrNull(r.amountFc),
+        containerRepairId: toNumOrNull(r.containerRepairId),
+        containerTransactionId: toNumOrNull(r.containerTransactionId),
       }));
+    };
+
+    // ✅ totals for header from details (sums amountHc/amountFc + avg rate)
+    const computeHeaderFromDetails = (detailsRows, headerCurrencyId) => {
+      const rows = Array.isArray(detailsRows) ? detailsRows : [];
+
+      // ✅ avoid mixing currencies: only take detail rows that match header currencyId (when set)
+      const filtered =
+        headerCurrencyId != null
+          ? rows.filter((r) => Number(r.currencyId) === Number(headerCurrencyId))
+          : rows;
+
+      const qty = filtered.reduce((acc, r) => acc + (toNum(r.qty) || 0), 0);
+
+      // totals from amounts (best, because your API already gives amountHc/amountFc)
+      const totalAmountHc = filtered.reduce((acc, r) => acc + toNum(r.amountHc), 0);
+      const totalAmountFc = filtered.reduce((acc, r) => acc + toNum(r.amountFc), 0);
+
+      // avg rate (weighted by qty * days)
+      let weightedSum = 0;
+      let weightTotal = 0;
+      for (const r of filtered) {
+        const rate = toNum(r.rate);
+        const q = toNum(r.qty) || 1;
+        const d = toNum(r.noOfDays) || 1;
+        const w = q * d;
+        weightedSum += rate * w;
+        weightTotal += w;
+      }
+      const avgRate = weightTotal > 0 ? weightedSum / weightTotal : 0;
+
+      return {
+        qty,
+        avgRate,
+        totalAmountHc,
+        totalAmountFc,
+        filtered,
+      };
     };
 
     setNewState((prev) => {
@@ -1292,47 +1735,56 @@ export default function AddEditFormControll() {
         ? prev.tblInvoiceCharge
         : [];
 
-      // ✅ add indexValue to each CHARGE from API (0,1,2...) before mapping by id
+      // add indexValue to API header rows (array index only)
       const apiChargesWithIndex = apiCharges.map((c, i) => ({
         ...(c || {}),
         indexValue: i,
       }));
 
+      // map API by composite key
       const apiMap = new Map(
         apiChargesWithIndex
           .filter((x) => x && x.chargeId != null)
-          .map((x) => [Number(x.chargeId), x]),
+          .map((x) => [keyOf(x), x]),
       );
 
       const updatedExisting = prevCharges.map((ch) => {
-        const id = Number(ch.chargeId);
-        const apiRow = apiMap.get(id);
+        const apiRow = apiMap.get(keyOf(ch));
+
         if (!apiRow) {
-          // ✅ ensure charge always has noOfDays = 1 even if API didn't return this charge
+          // not returned by API: keep but enforce header noOfDays=1
           return { ...ch, noOfDays: 1 };
         }
 
-        const detailsRows = buildChargeDetailsRows(apiRow.thirdlevel);
-        const totals = computeTotalsFromDetails(detailsRows, prev.exchangeRate);
-        const thirdlevel = buildThirdLevelForSave(detailsRows, id);
+        const detailsRowsAll = buildChargeDetailsRows(apiRow.thirdlevel);
 
-        // ✅ FIX: currency dropdown (prefer apiRow.currencyIddropdown else derive from first detail row)
+        // currency for header:
+        // prefer existing header currencyId, else api header currencyId, else first detail row
+        const headerCurrencyId =
+          ch.currencyId ?? apiRow.currencyId ?? detailsRowsAll?.[0]?.currencyId ?? prev.currencyId;
+
+        const { qty, avgRate, totalAmountHc, totalAmountFc, filtered } =
+          computeHeaderFromDetails(detailsRowsAll, headerCurrencyId);
+
+        // build save rows ONLY from filtered (so thirdlevel matches the header)
+        const thirdlevel = buildThirdLevelForSave(filtered, ch.chargeId);
+
+        // dropdown derivations
         const derivedCurrencyDD = pickValidDD(apiRow.currencyIddropdown).length
           ? pickValidDD(apiRow.currencyIddropdown)
           : pickValidDD(ch.currencyIddropdown).length
             ? pickValidDD(ch.currencyIddropdown)
             : mkDD(
-                ch.currencyId ?? apiRow.currencyId ?? prev.currencyId,
-                detailsRows?.[0]?.currencyName ??
-                  detailsRows?.[0]?.currencyIddropdown?.[0]?.label,
-              );
+              headerCurrencyId,
+              filtered?.[0]?.currencyName ??
+              filtered?.[0]?.currencyIddropdown?.[0]?.label,
+            );
 
-        // ✅ FIX: charge dropdown (prefer apiRow.chargeIddropdown else derive)
         const derivedChargeDD = pickValidDD(apiRow.chargeIddropdown).length
           ? pickValidDD(apiRow.chargeIddropdown)
           : pickValidDD(ch.chargeIddropdown).length
             ? pickValidDD(ch.chargeIddropdown)
-            : mkDD(id, apiRow.description ?? ch.description);
+            : mkDD(Number(ch.chargeId), apiRow.description ?? ch.description);
 
         return {
           ...ch,
@@ -1347,25 +1799,25 @@ export default function AddEditFormControll() {
           sizeId: apiRow.sizeId ?? ch.sizeId,
           rateBasisId: apiRow.rateBasisId ?? ch.rateBasisId,
 
-          // ✅ add indexValue on charge object too
+          // ✅ header indexValue array index
           indexValue: apiRow.indexValue,
 
-          // ✅ FIX: ensure labels are present
           chargeIddropdown: derivedChargeDD,
           currencyIddropdown: derivedCurrencyDD,
 
+          // ✅ keep only currency-matching detail rows in UI too
+          tblInvoiceChargeDetails: filtered,
           thirdlevel,
-          tblInvoiceChargeDetails: detailsRows,
 
-          // ✅ YOUR REQUIREMENT: always 1 at charge/header level
+          // ✅ requirement: header noOfDays always 1
           noOfDays: 1,
 
-          qty: totals.qty || 0,
-          rate: Number(totals.avgRate || 0).toFixed(2),
-          totalAmountHc: Number(totals.totalAmountHc || 0).toFixed(2),
-          totalAmountFc: Number(totals.totalAmountFc || 0).toFixed(2),
+          qty: qty || 0,
+          rate: +Number(avgRate || 0).toFixed(4),
+          totalAmountHc: +Number(totalAmountHc || 0).toFixed(2),
+          totalAmountFc: +Number(totalAmountFc || 0).toFixed(2),
 
-          currencyId: ch.currencyId ?? apiRow.currencyId ?? prev.currencyId,
+          currencyId: headerCurrencyId,
           exchangeRate: prev.exchangeRate ?? 1,
 
           containerTransactionId:
@@ -1375,40 +1827,36 @@ export default function AddEditFormControll() {
         };
       });
 
-      const existingIds = new Set(
-        updatedExisting.map((x) => Number(x.chargeId)),
-      );
+      // existing keys so we don't add duplicates
+      const existingKeys = new Set(updatedExisting.map((x) => keyOf(x)));
 
       const newOnes = apiChargesWithIndex
-        .filter(
-          (x) =>
-            x && x.chargeId != null && !existingIds.has(Number(x.chargeId)),
-        )
+        .filter((x) => x && x.chargeId != null && !existingKeys.has(keyOf(x)))
         .map((apiRow) => {
-          const id = Number(apiRow.chargeId);
+          const detailsRowsAll = buildChargeDetailsRows(apiRow.thirdlevel);
 
-          const detailsRows = buildChargeDetailsRows(apiRow.thirdlevel);
-          const totals = computeTotalsFromDetails(
-            detailsRows,
-            prev.exchangeRate,
-          );
-          const thirdlevel = buildThirdLevelForSave(detailsRows, id);
+          const headerCurrencyId =
+            apiRow.currencyId ?? detailsRowsAll?.[0]?.currencyId ?? prev.currencyId;
 
-          const derivedCurrencyDD = pickValidDD(apiRow.currencyIddropdown)
-            .length
+          const { qty, avgRate, totalAmountHc, totalAmountFc, filtered } =
+            computeHeaderFromDetails(detailsRowsAll, headerCurrencyId);
+
+          const thirdlevel = buildThirdLevelForSave(filtered, apiRow.chargeId);
+
+          const derivedCurrencyDD = pickValidDD(apiRow.currencyIddropdown).length
             ? pickValidDD(apiRow.currencyIddropdown)
             : mkDD(
-                apiRow.currencyId ?? prev.currencyId,
-                detailsRows?.[0]?.currencyName ??
-                  detailsRows?.[0]?.currencyIddropdown?.[0]?.label,
-              );
+              headerCurrencyId,
+              filtered?.[0]?.currencyName ??
+              filtered?.[0]?.currencyIddropdown?.[0]?.label,
+            );
 
           const derivedChargeDD = pickValidDD(apiRow.chargeIddropdown).length
             ? pickValidDD(apiRow.chargeIddropdown)
-            : mkDD(id, apiRow.description ?? "");
+            : mkDD(Number(apiRow.chargeId), apiRow.description ?? "");
 
           return {
-            chargeId: id,
+            chargeId: Number(apiRow.chargeId),
             description: apiRow.description ?? "",
             cargoTypeId: apiRow.cargoTypeId ?? null,
             expImp: apiRow.expImp ?? null,
@@ -1419,24 +1867,25 @@ export default function AddEditFormControll() {
             sizeId: apiRow.sizeId ?? null,
             rateBasisId: apiRow.rateBasisId ?? null,
 
+            // ✅ header indexValue array index
             indexValue: apiRow.indexValue,
 
-            // ✅ FIX: ensure labels are present for new rows too
             chargeIddropdown: derivedChargeDD,
             currencyIddropdown: derivedCurrencyDD,
 
+            // only matching currency detail rows
+            tblInvoiceChargeDetails: filtered,
             thirdlevel,
-            tblInvoiceChargeDetails: detailsRows,
 
-            // ✅ YOUR REQUIREMENT: always 1 at charge/header level
+            // ✅ requirement
             noOfDays: 1,
 
-            qty: totals.qty || 0,
-            rate: Number(totals.avgRate || 0).toFixed(2),
-            totalAmountHc: Number(totals.totalAmountHc || 0).toFixed(2),
-            totalAmountFc: Number(totals.totalAmountFc || 0).toFixed(2),
+            qty: qty || 0,
+            rate: +Number(avgRate || 0).toFixed(4),
+            totalAmountHc: +Number(totalAmountHc || 0).toFixed(2),
+            totalAmountFc: +Number(totalAmountFc || 0).toFixed(2),
 
-            currencyId: apiRow.currencyId ?? prev.currencyId ?? null,
+            currencyId: headerCurrencyId,
             exchangeRate: prev.exchangeRate ?? 1,
 
             containerTransactionId: apiRow.containerTransactionId ?? null,
@@ -1446,6 +1895,7 @@ export default function AddEditFormControll() {
 
       const updatedCharges = [...updatedExisting, ...newOnes];
 
+      // invoice totals
       const invAmount = updatedCharges.reduce(
         (sum, ch) => sum + (Number(ch.totalAmountHc) || 0),
         0,
@@ -1462,14 +1912,15 @@ export default function AddEditFormControll() {
         ...prev,
         tblInvoiceCharge: updatedCharges,
 
-        invoiceAmount: Number(invAmount.toFixed(2)),
-        invoiceAmountFc: Number(invAmountFc.toFixed(2)),
+        invoiceAmount: +Number(invAmount).toFixed(2),
+        invoiceAmountFc: +Number(invAmountFc).toFixed(2),
 
-        totalInvoiceAmount: Number((invAmount + taxHc).toFixed(2)),
-        totalInvoiceAmountFc: Number((invAmountFc + taxFc).toFixed(2)),
+        totalInvoiceAmount: +Number(invAmount + taxHc).toFixed(2),
+        totalInvoiceAmountFc: +Number(invAmountFc + taxFc).toFixed(2),
       };
     });
   }
+
 
   const onConfirm = async (conformData) => {
     if (
@@ -2049,15 +2500,15 @@ export default function AddEditFormControll() {
     const ledgers = hasLedgers
       ? newState.tblVoucherLedger
       : [
-          {
-            __virtual: true,
-            tblVoucherLedgerDetails: Array.isArray(
-              newState?.tblVoucherLedgerDetails,
-            )
-              ? newState.tblVoucherLedgerDetails
-              : [],
-          },
-        ];
+        {
+          __virtual: true,
+          tblVoucherLedgerDetails: Array.isArray(
+            newState?.tblVoucherLedgerDetails,
+          )
+            ? newState.tblVoucherLedgerDetails
+            : [],
+        },
+      ];
 
     const allDetails = ledgers.flatMap((l) =>
       Array.isArray(l?.tblVoucherLedgerDetails)
@@ -2255,17 +2706,17 @@ export default function AddEditFormControll() {
     const computeSig = (stateObj) => {
       const sLedgers =
         Array.isArray(stateObj?.tblVoucherLedger) &&
-        stateObj.tblVoucherLedger.length
+          stateObj.tblVoucherLedger.length
           ? stateObj.tblVoucherLedger
           : [
-              {
-                tblVoucherLedgerDetails: Array.isArray(
-                  stateObj?.tblVoucherLedgerDetails,
-                )
-                  ? stateObj.tblVoucherLedgerDetails
-                  : [],
-              },
-            ];
+            {
+              tblVoucherLedgerDetails: Array.isArray(
+                stateObj?.tblVoucherLedgerDetails,
+              )
+                ? stateObj.tblVoucherLedgerDetails
+                : [],
+            },
+          ];
 
       const sAll = sLedgers.flatMap((l) =>
         Array.isArray(l?.tblVoucherLedgerDetails)
@@ -2291,18 +2742,18 @@ export default function AddEditFormControll() {
     setNewState((prevState) => {
       const out = Array.isArray(prevState?.tblVoucherLedger)
         ? {
-            ...prevState,
-            tblVoucherLedger: filledLedgers.filter((l) => !l?.__virtual),
-            balanceAmtHc: asStr2(remHC),
-            balanceAmtFc: asStr2(remFC),
-          }
+          ...prevState,
+          tblVoucherLedger: filledLedgers.filter((l) => !l?.__virtual),
+          balanceAmtHc: asStr2(remHC),
+          balanceAmtFc: asStr2(remFC),
+        }
         : {
-            ...prevState,
-            tblVoucherLedgerDetails:
-              filledLedgers[0]?.tblVoucherLedgerDetails || [],
-            balanceAmtHc: asStr2(remHC),
-            balanceAmtFc: asStr2(remFC),
-          };
+          ...prevState,
+          tblVoucherLedgerDetails:
+            filledLedgers[0]?.tblVoucherLedgerDetails || [],
+          balanceAmtHc: asStr2(remHC),
+          balanceAmtFc: asStr2(remFC),
+        };
 
       if (computeSig(prevState) === computeSig(out)) {
         if (DBG) console.log(`${tag} setNewState skipped (no diff)`);
@@ -3077,13 +3528,13 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-                // const parsedValue = parseFloat(row[item.fieldname] || 0);
-                const parsedValue =
-                  typeof row[item.fieldname] === "number"
-                    ? row[item.fieldname]
-                    : parseFloat(row[item.fieldname] || 0);
-                return isNaN(parsedValue) ? sum : sum + parsedValue;
-              }, 0) // Calculate sum for 's' type
+              // const parsedValue = parseFloat(row[item.fieldname] || 0);
+              const parsedValue =
+                typeof row[item.fieldname] === "number"
+                  ? row[item.fieldname]
+                  : parseFloat(row[item.fieldname] || 0);
+              return isNaN(parsedValue) ? sum : sum + parsedValue;
+            }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -3910,7 +4361,7 @@ function ChildAccordianComponent({
                                             {(field.type === "number" ||
                                               field.type === "decimal" ||
                                               field.type === "string") &&
-                                            field.gridTotal
+                                              field.gridTotal
                                               ? columnTotals[field.fieldname]
                                               : ""}
                                           </div>
