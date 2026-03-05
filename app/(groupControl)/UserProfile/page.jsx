@@ -23,7 +23,7 @@ import {
   profileSubmit,
   themeChange,
   dynamicDropDownFieldsData,
-  profileDropdowns, // ✅ bring back
+  profileDropdowns,
 } from "@/services/auth/FormControl.services";
 import { toast, ToastContainer } from "react-toastify";
 import { useThemeProvider } from "@/context/themeProviderDataContext";
@@ -90,24 +90,19 @@ const UserProfile = () => {
       if (!companyId) return;
 
       const res = await profileDropdowns(companyId);
-      const data = res?.data || res?.data?.data || res?.data?.[0] || res?.data; // safe
+      const payload = res?.data?.data ?? res?.data ?? {};
+
       const toVL = (arr) =>
         Array.isArray(arr)
           ? arr.map((x) => ({
-            value: x.value ?? x.id,
-            label: x.label ?? x.name,
-          }))
+              value: x.value ?? x.id,
+              label: x.label ?? x.name,
+            }))
           : [];
-      const t = toVL(res?.data?.theme || res?.data?.themes || []);
-      const l = toVL(res?.data?.language || res?.data?.languages || []);
-      const m = toVL(res?.data?.menu || res?.data?.menus || []);
-      const t2 = t.length ? t : toVL(res?.data?.data?.theme || []);
-      const l2 = l.length ? l : toVL(res?.data?.data?.language || []);
-      const m2 = m.length ? m : toVL(res?.data?.data?.menu || []);
 
-      setThemeData(t2);
-      setLanguageData(l2);
-      setMenuData(m2);
+      setThemeData(toVL(payload.theme ?? payload.themes ?? []));
+      setLanguageData(toVL(payload.language ?? payload.languages ?? []));
+      setMenuData(toVL(payload.menu ?? payload.menus ?? []));
     } catch (e) {
       console.error("profileDropdowns failed:", e);
       setThemeData([]);
@@ -138,7 +133,7 @@ const UserProfile = () => {
     try {
       const apiResponse = await dynamicDropDownFieldsData(
         requestData,
-        companyCtrlRef.current,
+        companyCtrlRef.current
       );
       const list = apiResponse?.data || [];
       setCompanyData(list);
@@ -154,7 +149,7 @@ const UserProfile = () => {
     companyId,
     pageNo = 1,
     search = "",
-    valueSearch = null,
+    valueSearch = null
   ) {
     branchCtrlRef.current?.abort();
     branchCtrlRef.current = new AbortController();
@@ -182,7 +177,7 @@ const UserProfile = () => {
     try {
       const apiResponse = await dynamicDropDownFieldsData(
         requestData,
-        branchCtrlRef.current,
+        branchCtrlRef.current
       );
       const list = apiResponse?.data || [];
       setBranchData(list);
@@ -198,7 +193,7 @@ const UserProfile = () => {
     companyId,
     pageNo = 1,
     search = "",
-    valueSearch = null,
+    valueSearch = null
   ) {
     yearCtrlRef.current?.abort();
     yearCtrlRef.current = new AbortController();
@@ -223,7 +218,7 @@ const UserProfile = () => {
     try {
       const apiResponse = await dynamicDropDownFieldsData(
         requestData,
-        yearCtrlRef.current,
+        yearCtrlRef.current
       );
       const list = apiResponse?.data || [];
       setFinancialYearData(list);
@@ -248,7 +243,7 @@ const UserProfile = () => {
         setLoginId(userData.id);
 
         setProfilePicture(
-          userData.profilePhoto ? backendUrl + userData.profilePhoto : null,
+          userData.profilePhoto ? backendUrl + userData.profilePhoto : null
         );
         setOldProfile(userData.profilePhoto || "");
 
@@ -266,28 +261,31 @@ const UserProfile = () => {
 
         const companyId = userData.defaultCompanyId ?? null;
 
-        //await fetchCompanyData(1, "", companyId);
-        await fetchCompanyData(1, "", null);
+        // ✅ load company list and make sure selected company exists
+        await fetchCompanyData(1, "", companyId);
+
         const bd = await fetchBranchData(
           companyId,
           1,
           "",
-          userData.defaultBranchId ?? null,
+          userData.defaultBranchId ?? null
         );
         const fd = await fetchFinancialYearData(
           companyId,
           1,
           "",
-          userData.defaultFinYearId ?? null,
+          userData.defaultFinYearId ?? null
         );
 
         setProfileState((prev) => {
           const branchOk =
-            prev.branch && Array.isArray(bd) && bd.some((x) => x.value === prev.branch);
+            prev.branch &&
+            Array.isArray(bd) &&
+            bd.some((x) => Number(x.value) === Number(prev.branch));
           const fyOk =
             prev.financialYear &&
             Array.isArray(fd) &&
-            fd.some((x) => x.value === prev.financialYear);
+            fd.some((x) => Number(x.value) === Number(prev.financialYear));
 
           return {
             ...prev,
@@ -330,7 +328,7 @@ const UserProfile = () => {
         "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
           borderColor: "var(--inputBorderHoverColor)",
         },
-        "&.Mui-disabled .MuiInputBase-input": {
+        "& .Mui-disabled .MuiInputBase-input": {
           WebkitTextFillColor: "unset",
         },
       },
@@ -368,45 +366,8 @@ const UserProfile = () => {
     if (!Array.isArray(options) || options.length === 0) return null;
     return options.some((x) => Number(x.value) === v) ? v : null;
   };
+
   const handleButtonClick = {
-    // handleSubmit: async () => {
-    //   try {
-    //     const formData = new FormData();
-    //     if (uploadImage) formData.append("avatar", uploadImage);
-    //     formData.append("oldAvatar", oldProfile || "");
-    //     formData.append("id", loginId);
-
-    //     formData.append("themeId", profileState.theme ?? "");
-    //     formData.append("languageId", profileState.language ?? "");
-    //     formData.append("dateTimeFormat", dateFormat ?? "");
-    //     formData.append("numberFormat", numberFormat ?? "");
-    //     formData.append("defaultCompanyId", profileState.company ?? "");
-    //     formData.append("defaultBranchId", profileState.branch ?? "");
-    //     formData.append("defaultFinYearId", profileState.financialYear ?? "");
-    //     formData.append("defaultMenuId", profileState.menu ?? "");
-
-    //     const { data } = await profileSubmit(formData);
-
-    //     setUserDataSafe({
-    //       themeId: profileState.theme,
-    //       languageId: profileState.language,
-    //       dateTimeFormat: dateFormat,
-    //       numberFormat,
-    //       defaultCompanyId: profileState.company,
-    //       defaultBranchId: profileState.branch,
-    //       defaultFinYearId: profileState.financialYear,
-    //       defaultMenuId: profileState.menu,
-    //       profilePhoto: data?.profilePhoto ?? oldProfile,
-    //     });
-
-    //     updateUserDetails(data);
-    //     toast.success("Update profile successfully!");
-    //   } catch (error) {
-    //     console.log(error);
-    //     toast.error("Profile not updated!");
-    //   }
-    // },
-
     handleSubmit: async () => {
       try {
         if (!loginId) {
@@ -414,7 +375,11 @@ const UserProfile = () => {
           return;
         }
 
-        const safeMenuId = ensureValidId(profileState.menu, menuData);
+        const safeMenuId =
+          menuData?.length > 0
+            ? ensureValidId(profileState.menu, menuData)
+            : profileState.menu;
+
         const formData = new FormData();
         if (uploadImage) formData.append("avatar", uploadImage);
         formData.append("oldAvatar", oldProfile?.trim() ? oldProfile : "null");
@@ -427,8 +392,10 @@ const UserProfile = () => {
         formData.append("defaultBranchId", asNullStr(profileState.branch));
         formData.append("defaultFinYearId", asNullStr(profileState.financialYear));
         formData.append("defaultMenuId", asNullStr(safeMenuId));
+
         const resp = await profileSubmit(formData);
         const data = resp?.data?.data ?? resp?.data;
+
         setUserDataSafe({
           themeId: profileState.theme,
           languageId: profileState.language,
@@ -440,17 +407,19 @@ const UserProfile = () => {
           defaultMenuId: safeMenuId,
           profilePhoto: data?.profilePhoto ?? oldProfile,
         });
+
         updateUserDetails(data);
         toast.success("Update profile successfully!");
       } catch (error) {
         console.log(" profile submit error:", error?.response?.data || error);
         toast.error(
           error?.response?.data?.message ||
-          error?.message ||
-          "Profile not updated!",
+            error?.message ||
+            "Profile not updated!"
         );
       }
     },
+
     handleCancel: () => {
       toast.warning("Update action has been cancelled by the user.");
       router.push("/dashboard");
@@ -484,6 +453,7 @@ const UserProfile = () => {
         </MenuItem>
       );
     }
+
     return list.map((opt) => (
       <MenuItem
         key={opt.value}
@@ -499,7 +469,15 @@ const UserProfile = () => {
     ));
   };
 
-  const ProfileSelect = ({ label, value, options, onChange, disabled = false }) => {
+  // ✅ generic select + optional Select placeholder
+  const ProfileSelect = ({
+    label,
+    value,
+    options,
+    onChange,
+    disabled = false,
+    showSelect = false,
+  }) => {
     return (
       <Grid item xs={12} sm={6}>
         <TextField
@@ -531,6 +509,13 @@ const UserProfile = () => {
             },
           }}
         >
+          {/* ✅ Select option */}
+          {showSelect && (
+            <MenuItem value="" style={{ fontSize: "0.75rem" }}>
+              Select
+            </MenuItem>
+          )}
+
           {renderSelectOptions(options)}
         </TextField>
       </Grid>
@@ -541,10 +526,12 @@ const UserProfile = () => {
     try {
       const { data } = await themeChange({ themeId });
 
+      const payload = data?.data ?? data;
+
       const serverThemeData = {
-        lightTheme: data,
+        lightTheme: payload,
         darkTheme: {
-          ...data,
+          ...payload,
           pageBackground: "#000000",
           commonBg: "#1f1f1f",
           commonTextColor: "#ffffff",
@@ -605,15 +592,28 @@ const UserProfile = () => {
             item
             xs={12}
             sm={4}
-            style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
           >
-            <Typography variant="body1" style={{ color: "var(--inputTextColor)", fontSize: "1rem" }}>
+            <Typography
+              variant="body1"
+              style={{ color: "var(--inputTextColor)", fontSize: "1rem" }}
+            >
               {userName || "User Name"}
             </Typography>
 
             <Avatar
               src={profilePicture || ""}
-              sx={{ width: 100, height: 100, mt: 2, mb: 2, borderRadius: "15%" }}
+              sx={{
+                width: 100,
+                height: 100,
+                mt: 2,
+                mb: 2,
+                borderRadius: "15%",
+              }}
             />
 
             <input
@@ -633,17 +633,31 @@ const UserProfile = () => {
           <Grid item xs={12} sm={8}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
-                <TextField label="Login ID" value={loginEmailId} disabled {...commonTextFieldProps} />
+                <TextField
+                  label="Login ID"
+                  value={loginEmailId}
+                  disabled
+                  {...commonTextFieldProps}
+                />
               </Grid>
 
-              <Grid item xs={12} sm={6} style={{ display: "flex", alignItems: "center" }}>
+              <Grid
+                item
+                xs={12}
+                sm={6}
+                style={{ display: "flex", alignItems: "center" }}
+              >
                 <Link
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
                     handleButtonClick.handleEditPassword();
                   }}
-                  style={{ fontSize: "0.855rem", color: "var(--blue-color)", textDecoration: "none" }}
+                  style={{
+                    fontSize: "0.855rem",
+                    color: "var(--blue-color)",
+                    textDecoration: "none",
+                  }}
                 >
                   Change Password?
                 </Link>
@@ -665,7 +679,10 @@ const UserProfile = () => {
                 value={profileState.language}
                 options={languageData}
                 onChange={(e) => {
-                  setProfileState((prev) => ({ ...prev, language: e.target.value }));
+                  setProfileState((prev) => ({
+                    ...prev,
+                    language: e.target.value,
+                  }));
                 }}
               />
 
@@ -687,12 +704,26 @@ const UserProfile = () => {
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    "& .MuiFormLabel-root": { color: "var(--inputTextColor)" },
-                    "& .MuiFormControlLabel-root": { marginRight: 2, color: "var(--inputTextColor)" },
-                    "& .MuiFormControlLabel-label": { fontSize: "0.75rem", color: "var(--inputTextColor)" },
-                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "var(--inputBorderColor)" },
-                    "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "var(--inputBorderColor)" },
-                    "& .MuiInputBase-root": { backgroundColor: "var(--inputBg)" },
+                    "& .MuiFormLabel-root": {
+                      color: "var(--inputTextColor)",
+                    },
+                    "& .MuiFormControlLabel-root": {
+                      marginRight: 2,
+                      color: "var(--inputTextColor)",
+                    },
+                    "& .MuiFormControlLabel-label": {
+                      fontSize: "0.75rem",
+                      color: "var(--inputTextColor)",
+                    },
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "var(--inputBorderColor)",
+                    },
+                    "&:hover .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "var(--inputBorderColor)",
+                    },
+                    "& .MuiInputBase-root": {
+                      backgroundColor: "var(--inputBg)",
+                    },
                   }}
                   fullWidth
                   InputProps={{
@@ -706,8 +737,16 @@ const UserProfile = () => {
                           onChange={(e) => setNumberFormat(e.target.value)}
                         >
                           <div className="flex gap-4">
-                            <FormControlLabel value="d" control={<Radio />} label="dot" />
-                            <FormControlLabel value="c" control={<Radio />} label="comma" />
+                            <FormControlLabel
+                              value="d"
+                              control={<Radio />}
+                              label="dot"
+                            />
+                            <FormControlLabel
+                              value="c"
+                              control={<Radio />}
+                              label="comma"
+                            />
                           </div>
                         </RadioGroup>
                       </div>
@@ -730,7 +769,6 @@ const UserProfile = () => {
                     financialYear: null,
                   }));
 
-                  // ✅ reload branch + FY for new company
                   const bd = await fetchBranchData(newCompanyId, 1, "", null);
                   const fd = await fetchFinancialYearData(newCompanyId, 1, "", null);
 
@@ -743,10 +781,8 @@ const UserProfile = () => {
                     financialYear: firstFY,
                   }));
 
-                  // ✅ reload Theme/Language/Menu based on company
                   await loadProfileDropdowns(newCompanyId);
 
-                  // optional: persist immediately
                   setUserDataSafe({
                     defaultCompanyId: newCompanyId,
                     defaultBranchId: firstBranch,
@@ -759,21 +795,35 @@ const UserProfile = () => {
                 label="Default Branch"
                 value={profileState.branch}
                 options={branchData}
-                onChange={(e) => setProfileState((prev) => ({ ...prev, branch: e.target.value }))}
+                onChange={(e) =>
+                  setProfileState((prev) => ({ ...prev, branch: e.target.value }))
+                }
               />
 
               <ProfileSelect
                 label="Default Financial Year"
                 value={profileState.financialYear}
                 options={financialYearData}
-                onChange={(e) => setProfileState((prev) => ({ ...prev, financialYear: e.target.value }))}
+                onChange={(e) =>
+                  setProfileState((prev) => ({
+                    ...prev,
+                    financialYear: e.target.value,
+                  }))
+                }
               />
 
+              {/* ✅ Default Menu with only "Select" placeholder */}
               <ProfileSelect
                 label="Default Menu"
                 value={profileState.menu}
                 options={menuData}
-                onChange={(e) => setProfileState((prev) => ({ ...prev, menu: e.target.value }))}
+                showSelect={true}
+                onChange={(e) =>
+                  setProfileState((prev) => ({
+                    ...prev,
+                    menu: e.target.value === "" ? null : e.target.value,
+                  }))
+                }
               />
             </Grid>
           </Grid>

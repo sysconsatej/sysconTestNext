@@ -260,6 +260,22 @@ function CustomeInputFieldsDynamicReports({
       }));
     }
 
+    if (field.controlname.toLowerCase() === "multiselectfile") {
+      const filesArr = Array.isArray(value) ? value : value ? [value] : [];
+
+      Object.assign(updatedValues, {
+        [field.fieldname]: Array.isArray(value) ? value : value,
+      });
+
+      setFileName((prevFileNames) => ({
+        ...prevFileNames,
+        [field.fieldname]: filesArr
+          .map((f) => f?.name)
+          .filter(Boolean)
+          .join(", "),
+      }));
+    }
+
     if (value && typeof value.format === "function") {
       formattedValue = dayjs(value).format("YYYY-MM-DD HH:mm:ss");
       updatedValues[`${field.fieldname}`] = formattedValue;
@@ -1244,6 +1260,22 @@ function InputFieldRenderer(props) {
       setFileName((prevFileNames) => ({
         ...prevFileNames,
         [field.fieldname]: file.name,
+      }));
+    }
+
+    if (field.controlname.toLowerCase() === "multiselectfile") {
+      const filesArr = Array.isArray(value) ? value : value ? [value] : [];
+
+      Object.assign(updatedValues, {
+        [field.fieldname]: Array.isArray(value) ? value : value,
+      });
+
+      setFileName((prevFileNames) => ({
+        ...prevFileNames,
+        [field.fieldname]: filesArr
+          .map((f) => f?.name)
+          .filter(Boolean)
+          .join(", "),
       }));
     }
 
@@ -3425,6 +3457,94 @@ function InputFieldRenderer(props) {
           </div>
         </LightTooltip>
       );
+    case "multiselectfile": {
+      return (
+        <LightTooltip title={inputLabel}>
+          <div className="flex flex-col ">
+            <Button
+              component="label"
+              className={`${fileWidthClass} h-[27px] text-sm ${styles.inputTextColor} leading-normal p-3 rounded-xl rounded-br-none focus:shadow-lg border-gray-300 border hover:border-gray-500 dark:hover:border-gray-500 focus:border-gray-500 dark:focus:border-gray-500 dark:border-slate-600 dark:bg-slate-900 text-slate-900 dark:text-slate-300 focus-visible:outline-0 box-border ${styles.inputField}`}
+              role={undefined}
+              onChange={(e) => {
+                const filesList = e?.target?.files;
+                if (!filesList || filesList.length === 0) return;
+
+                const filesArr = Array.from(filesList); // ✅ File[]
+
+                // ✅ pass array to handleChange
+                handleChange(filesArr, field);
+
+                // ✅ keep values updated
+                values[field.fieldname] = filesArr;
+
+                // ✅ show names
+                setFileName((prev) => ({
+                  ...prev,
+                  [field.fieldname]: filesArr.map((f) => f.name).join(", "),
+                }));
+
+                // ✅ same functionOnChange trigger
+                const funcCallString = field.functionOnChange;
+                if (funcCallString) {
+                  let multiCallFunctions = funcCallString.split(";");
+                  multiCallFunctions.forEach((funcCall) => {
+                    handleFuncChangeCall(
+                      funcCall,
+                      values,
+                      field.fieldname,
+                      tableName,
+                    );
+                  });
+                }
+
+                // ✅ allow reselecting same files
+                e.target.value = "";
+              }}
+              sx={{
+                ...fileInputStyle,
+              }}
+              variant="outlined"
+              tabIndex={-1}
+              startIcon={<CloudUploadIcon />}
+              disabled={
+                isView ||
+                (inEditMode?.isEditMode
+                  ? inEditMode?.isCopy === true
+                    ? !field?.isCopyEditable
+                    : ["e", "b"].includes(
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable
+                  : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
+                    !field.isEditable)
+              }
+            >
+              <span className="text-[10px]">
+                {field.isRequired ? (
+                  <span className={`${styles.inputTextColor}`}>
+                    {inputLabel} <span style={{ color: "red" }}> *</span>
+                  </span>
+                ) : (
+                  <span className={`${styles.inputTextColor}`}>
+                    {inputLabel}
+                  </span>
+                )}
+              </span>
+
+              {/* ✅ Multiple enabled */}
+              <VisuallyHiddenInput type="file" multiple />
+            </Button>
+
+            {/* ✅ show selected file names */}
+            {fileName[field.fieldname] && (
+              <span className=" mt-[1px] text-[10px] ml-[2px] ">
+                {fileName[field.fieldname]}
+              </span>
+            )}
+          </div>
+        </LightTooltip>
+      );
+    }
+
     case "label":
       return (
         <LightTooltip title={inputLabel}>

@@ -17,6 +17,7 @@ export const AddRow = ({
   isCopy,
   onSave,
   indexValue,
+  showSrNo,
 }) => {
   return (
     <Fragment key={indexValue}>
@@ -26,56 +27,73 @@ export const AddRow = ({
         <>
           <TableRow>
             {childFieldsData?.map((info, _idx) => (
-              <TableCell
-                key={_idx}
-                align="left"
-                sx={{
-                  padding: "0 ",
-                  lineHeight: "0",
-                  fontSize: "12px",
-                  position: "relative",
-                }}
-              >
-                <Box className="flex gap-1">
-                  {_idx === 0 ? (
-                    <>
-                      <div className="flex">
-                        <HoverIcon
-                          defaultIcon={refreshIcon}
-                          hoverIcon={revertHover}
-                          altText={"Revert"}
-                          title={"Revert"}
-                          onClick={revert}
-                        />
+              <Fragment key={_idx}>
+                <TableCell
+                  align="left"
+                  sx={{
+                    padding: "0 ",
+                    lineHeight: "0",
+                    fontSize: "12px",
+                    position: "relative",
+                  }}
+                >
+                  <Box className="flex gap-1">
+                    {_idx === 0 ? (
+                      <>
+                        <div className="flex">
+                          <HoverIcon
+                            defaultIcon={refreshIcon}
+                            hoverIcon={revertHover}
+                            altText={"Revert"}
+                            title={"Revert"}
+                            onClick={revert}
+                          />
 
-                        <HoverIcon
-                          defaultIcon={saveIcon}
-                          hoverIcon={saveIconHover}
-                          altText={"Save"}
-                          title={"Save"}
-                          onClick={onSave}
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <></>
-                  )}
+                          <HoverIcon
+                            defaultIcon={saveIcon}
+                            hoverIcon={saveIconHover}
+                            altText={"Save"}
+                            title={"Save"}
+                            onClick={onSave}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <></>
+                    )}
 
-                  <GridInputFields
-                    fieldData={info}
-                    indexValue={_idx}
-                    onValuesChange={handleFieldChildrenValuesChange}
-                    values={childObject}
-                    inEditMode={{ isEditMode: true, isCopy: isCopy }}
-                    onChangeHandler={(result) => {
-                      handleChangeFunction(result);
+                    <GridInputFields
+                      fieldData={info}
+                      indexValue={_idx}
+                      onValuesChange={handleFieldChildrenValuesChange}
+                      values={childObject}
+                      inEditMode={{ isEditMode: true, isCopy: isCopy }}
+                      onChangeHandler={(result) => {
+                        handleChangeFunction(result);
+                      }}
+                      onBlurHandler={(result) => {
+                        handleBlurFunction(result);
+                      }}
+                    />
+                  </Box>
+                </TableCell>
+                {showSrNo && _idx === 0 && (
+                  <TableCell
+                    align="left"
+                    sx={{
+                      padding: "0 8px",
+                      lineHeight: "0",
+                      fontSize: "12px",
+                      width: "64px",
+                      minWidth: "64px",
                     }}
-                    onBlurHandler={(result) => {
-                      handleBlurFunction(result);
-                    }}
-                  />
-                </Box>
-              </TableCell>
+                  >
+                    <Box className="flex items-center h-full pl-1 text-xs font-semibold">
+                      #
+                    </Box>
+                  </TableCell>
+                )}
+              </Fragment>
             ))}
           </TableRow>
         </>
@@ -101,4 +119,5 @@ AddRow.propTypes = {
   onSave: func,
   isCopy: bool,
   indexValue: any,
+  showSrNo: bool,
 };

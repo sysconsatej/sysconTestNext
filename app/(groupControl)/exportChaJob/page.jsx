@@ -1,13 +1,10 @@
 "use client";
 /* eslint-disable */
-
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-
-// MUI
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Button from "@mui/material/Button";
@@ -21,20 +18,14 @@ import IconButton from "@mui/material/IconButton";
 import Divider from "@mui/material/Divider";
 import InputBase from "@mui/material/InputBase";
 import TextField from "@mui/material/TextField";
-
-// Icons
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
-
-// Date
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import dayjs from "dayjs";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-
-// Styles
 import styles from "@/app/app.module.css";
 import {
   searchInputStyling,
@@ -47,14 +38,12 @@ import {
   pageTableCellInlineStyle,
 } from "@/app/globalCss";
 
-// Components
 import LightTooltip from "@/components/Tooltip/customToolTip";
 import CustomeBreadCrumb from "@/components/VoucherBreadCrumbs/breadCrumb.jsx";
 import CustomeModal from "@/components/Modal/customModal.jsx";
 import PaginationButtons from "@/components/Pagination/index.jsx";
 import GridHoverIcon from "@/components/HoveredIcons/GridHoverIcon";
 
-// Services / Helpers
 import {
   fetchSearchPageData,
   fetchReportData,
@@ -62,47 +51,48 @@ import {
 import { getUserDetails } from "@/helper/userDetails";
 import { isDateFormat } from "@/helper/dateFormat";
 
-// Assets (same pattern as your Voucher search page)
 import {
   searchImage,
   magnifyIcon,
   magnifyIconHover,
   closeIcon,
   crossIconHover,
-  refreshIcon,
-  revertHover,
   addDocIcon,
   addDocIconHover,
+  edit,
+  EditHover,
+  viewIcon,
+  viewIconHover,
+  copyDoc,
+  CopyHover,
+  DeleteIcon2,
+  DeleteHover,
+  printer,
+  PrintHover,
 } from "@/assets/index.jsx";
 
-// ✅ change if needed
 const TABLE_NAME = "tblJob";
-
-// ✅ grid columns
 const JOB_GRID_CONFIG = [
+  { fieldname: "id", controlname: "text", yourlabel: "Job ID" },
   { fieldname: "jobNo", controlname: "text", yourlabel: "Job No" },
   { fieldname: "jobDate", controlname: "date", yourlabel: "Job Date" },
-  {
-    fieldname: "rateRequestId",
-    controlname: "text",
-    yourlabel: "Quotation No",
-  },
+  { fieldname: "rateRequestId", controlname: "text", yourlabel: "Quotation No" },
   { fieldname: "customerId", controlname: "text", yourlabel: "Customer" },
   { fieldname: "polId", controlname: "text", yourlabel: "POL" },
   { fieldname: "podId", controlname: "text", yourlabel: "POD" },
   { fieldname: "commodityText", controlname: "text", yourlabel: "Commodity" },
   { fieldname: "createdBy", controlname: "text", yourlabel: "Created By" },
-  {
-    fieldname: "createdDate",
-    controlname: "date",
-    yourlabel: "Created Date/Time",
-  },
+  { fieldname: "createdDate", controlname: "date", yourlabel: "Created Date/Time" },
 ];
 
-export default function JobSearchLikeVoucherPage() {
+const escapeSqlLike = (v) =>
+  String(v ?? "")
+    .trim()
+    .replace(/'/g, "''");
+
+export default function TblJobSearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const tableRef = useRef(null);
 
   const {
@@ -115,25 +105,18 @@ export default function JobSearchLikeVoucherPage() {
     defaultFinYearId,
   } = getUserDetails();
 
-  // -------- UI / Paging ----------
   const [page, setPage] = useState(1);
   const [selectedPageNumber, setSelectedPageNumber] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(17);
-  const [totalPages, setTotalPages] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [pageCount, setPageCount] = useState(0);
-
   const [gridData, setGridData] = useState([]);
   const [loader, setLoader] = useState(true);
-
-  // Top icons hover
   const [hoveredIcon, setHoveredIcon] = useState(null);
-
-  // Advanced search (same UX as voucher page)
   const [searchOpen, setSearchOpen] = useState(false);
   const [isAdvanceSearchOpen, setIsAdvanceSearchOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
 
-  // Simple “advanced” filters (kept stable + production friendly)
   const [filters, setFilters] = useState({
     jobNo: "",
     createdBy: "",
@@ -142,26 +125,17 @@ export default function JobSearchLikeVoucherPage() {
     jobDateTo: null,
   });
 
-  // Right click column search
   const [isInputVisible, setInputVisible] = useState(false);
   const [activeColumn, setActiveColumn] = useState(null);
   const [prevSearchInput, setPrevSearchInput] = useState("");
   const [columnSearchKeyName, setColumnSearchKeyName] = useState("");
   const [columnSearchKeyValue, setColumnSearchKeyValue] = useState("");
-
-  // Sorting (client-side on current page data)
   const [sortedColumn, setSortedColumn] = useState(null);
   const [isAscending, setIsAscending] = useState(true);
-
-  // Modal
   const [openModal, setOpenModal] = useState(false);
   const [paraText, setParaText] = useState("");
   const [isError, setIsError] = useState(false);
-
-  // Scroll sync for right-side icon bar
   const [scrollLeft, setScrollLeft] = useState(0);
-
-  // ✅ Table headings same structure as voucher page
   const tableheading = useMemo(() => {
     return JOB_GRID_CONFIG.map((h) => ({
       id: h.fieldname,
@@ -173,17 +147,9 @@ export default function JobSearchLikeVoucherPage() {
       minWidth: 200,
     }));
   }, []);
-
-  // -------- helpers ----------
-  const escapeSqlLike = (v) =>
-    String(v ?? "")
-      .trim()
-      .replace(/'/g, "''");
-
   const buildFilterCondition = () => {
     const parts = [];
 
-    // ✅ your standard company/client/branch/year conditions
     if (clientId) parts.push(`clientId=${clientId}`);
     if (companyId || defaultCompanyId)
       parts.push(`companyId=${companyId || defaultCompanyId}`);
@@ -191,25 +157,19 @@ export default function JobSearchLikeVoucherPage() {
       parts.push(`companyBranchId=${branchId || defaultBranchId}`);
     if (financialYearId || defaultFinYearId)
       parts.push(`financialYearId=${financialYearId || defaultFinYearId}`);
-
-    // ✅ if your table uses status=1 for active rows (common in your project)
     parts.push(`status = 1`);
-
-    // Global search (top Search... input)
     if (searchInput?.trim()) {
       const q = escapeSqlLike(searchInput);
       parts.push(`(
-                            jobNo like '%${q}%'
-                            OR rateRequestId like '%${q}%'
-                            OR customerId like '%${q}%'
-                            OR polId like '%${q}%'
-                            OR podId like '%${q}%'
-                            OR commodityText like '%${q}%'
-                            OR createdBy like '%${q}%'
-                        )`);
+        jobNo like '%${q}%'
+        OR rateRequestId like '%${q}%'
+        OR customerId like '%${q}%'
+        OR polId like '%${q}%'
+        OR podId like '%${q}%'
+        OR commodityText like '%${q}%'
+        OR createdBy like '%${q}%'
+      )`);
     }
-
-    // Advanced filters (simple, stable)
     if (filters.jobNo?.trim())
       parts.push(`jobNo like '%${escapeSqlLike(filters.jobNo)}%'`);
     if (filters.createdBy?.trim())
@@ -218,17 +178,13 @@ export default function JobSearchLikeVoucherPage() {
       parts.push(`status like '%${escapeSqlLike(filters.status)}%'`);
 
     if (filters.jobDateFrom) {
-      parts.push(
-        `jobDate >= '${dayjs(filters.jobDateFrom).format("YYYY-MM-DD")}'`,
-      );
+      parts.push(`jobDate >= '${dayjs(filters.jobDateFrom).format("YYYY-MM-DD")}'`);
     }
     if (filters.jobDateTo) {
       parts.push(
-        `jobDate <= '${dayjs(filters.jobDateTo).format("YYYY-MM-DD")}'`,
+        `jobDate < '${dayjs(filters.jobDateTo).add(1, "day").format("YYYY-MM-DD")}'`
       );
     }
-
-    // Column right-click search (like voucher page)
     if (
       columnSearchKeyName &&
       String(columnSearchKeyValue ?? "").trim() !== ""
@@ -239,78 +195,51 @@ export default function JobSearchLikeVoucherPage() {
 
     return parts.join(" and ");
   };
-
-  function pageSelected(p) {
-    setPage(p);
-    setSelectedPageNumber(p);
-  }
-
-  const handleCustomRowsPerPageChange = (event) => {
-    const value = parseInt(event.target.value || "0", 10);
-    if (!isNaN(value) && value > 0) {
-      sessionStorage?.setItem("rowsPerPage", value);
-      setRowsPerPage(value);
-      setPage(1);
-      setSelectedPageNumber(1);
-    }
-  };
-
-  useEffect(() => {
-    const storedRowsPerPage = sessionStorage.getItem("rowsPerPage");
-    setRowsPerPage(storedRowsPerPage ? parseInt(storedRowsPerPage, 10) : 17);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Right click input
-  const handleRightClick = (event, columnId) => {
-    event.preventDefault();
-    setInputVisible(true);
-    setActiveColumn(columnId);
-  };
-
-  // Sorting (client-side)
   const handleSortBy = (col) => {
-    setSortedColumn(col.id);
-    setIsAscending((p) => !p);
+    setSortedColumn((prev) => {
+      if (prev !== col.id) {
+        setIsAscending(true);
+        return col.id;
+      }
+      setIsAscending((p) => !p);
+      return prev;
+    });
   };
 
   const renderSortIcon = (columnId) => {
     const active = sortedColumn === columnId;
     const visibleOpacity = active ? 1 : 0;
-    return (
-      <>
-        {!isAscending ? (
-          <LightTooltip title={active ? "Ascending" : ""}>
-            <ArrowUpwardIcon
-              fontSize="small"
-              className={styles.ArrowDropUpIcon}
-              sx={{ opacity: visibleOpacity, color: "white" }}
-            />
-          </LightTooltip>
-        ) : (
-          <LightTooltip title={active ? "Descending" : ""}>
-            <ArrowDownwardIcon
-              fontSize="small"
-              className={styles.ArrowDropUpIcon}
-              sx={{ opacity: visibleOpacity, color: "white" }}
-            />
-          </LightTooltip>
-        )}
-      </>
+
+    return isAscending ? (
+      <LightTooltip title={active ? "Ascending" : ""}>
+        <ArrowUpwardIcon
+          fontSize="small"
+          className={styles.ArrowDropUpIcon}
+          sx={{ opacity: visibleOpacity, color: "white" }}
+        />
+      </LightTooltip>
+    ) : (
+      <LightTooltip title={active ? "Descending" : ""}>
+        <ArrowDownwardIcon
+          fontSize="small"
+          className={styles.ArrowDropUpIcon}
+          sx={{ opacity: visibleOpacity, color: "white" }}
+        />
+      </LightTooltip>
     );
   };
-
   const applyClientSort = (data) => {
     if (!sortedColumn) return data;
     const dir = isAscending ? 1 : -1;
     const copy = [...(data || [])];
+
     copy.sort((a, b) => {
       const av = a?.[sortedColumn];
       const bv = b?.[sortedColumn];
 
-      // date-safe compare
       const ad = dayjs(av);
       const bd = dayjs(bv);
+
       if (
         ad.isValid() &&
         bd.isValid() &&
@@ -325,10 +254,55 @@ export default function JobSearchLikeVoucherPage() {
       if (as > bs) return 1 * dir;
       return 0;
     });
+
     return copy;
   };
+  function pageSelected(p) {
+    setPage(p);
+    setSelectedPageNumber(p);
+  }
+  const handleCustomRowsPerPageChange = (event) => {
+    const value = parseInt(event.target.value || "0", 10);
+    if (!isNaN(value) && value > 0) {
+      sessionStorage?.setItem("rowsPerPage", value);
+      setRowsPerPage(value);
+      setPage(1);
+      setSelectedPageNumber(1);
+    }
+  };
 
-  // Fetch
+  useEffect(() => {
+    const storedRowsPerPage = sessionStorage.getItem("rowsPerPage");
+    setRowsPerPage(storedRowsPerPage ? parseInt(storedRowsPerPage, 10) : 17);
+  }, []);
+
+  const handleRightClick = (event, columnId) => {
+    event.preventDefault();
+    setInputVisible(true);
+    setActiveColumn(columnId);
+  };
+
+  useEffect(() => {
+    const el = document.getElementById("paper");
+    if (!el) return;
+
+    let timerId = null;
+    const onScroll = () => {
+      if (!timerId) {
+        timerId = setTimeout(() => {
+          setScrollLeft(el.scrollLeft || 0);
+          timerId = null;
+        }, 100);
+      }
+    };
+
+    el.addEventListener("scroll", onScroll);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      if (timerId) clearTimeout(timerId);
+    };
+  }, [gridData?.length]);
+
   async function fetchData() {
     try {
       setLoader(true);
@@ -342,8 +316,6 @@ export default function JobSearchLikeVoucherPage() {
         filterCondition,
         pageNo: page,
         pageSize: rowsPerPage,
-        // keyName/keyValue are already merged into filterCondition above,
-        // but keeping these is harmless if your API expects it:
         keyName: columnSearchKeyName,
         keyValue: columnSearchKeyValue,
       };
@@ -353,12 +325,11 @@ export default function JobSearchLikeVoucherPage() {
       if (apiResponse?.success === true && Array.isArray(apiResponse?.data)) {
         const sorted = applyClientSort(apiResponse.data);
         setGridData(sorted);
-
         const countReq = {
           columns: "id",
           tableName: TABLE_NAME,
-          // whereCondition: filterCondition || "1=1",
-          // clientIdCondition: `FOR JSON PATH, INCLUDE_NULL_VALUES`,
+          whereCondition: filterCondition || "1=1",
+          clientIdCondition: `FOR JSON PATH, INCLUDE_NULL_VALUES`,
         };
 
         const countResp = await fetchReportData(countReq);
@@ -368,8 +339,8 @@ export default function JobSearchLikeVoucherPage() {
           : Array.isArray(countResp)
             ? countResp
             : [];
-        const Count = countArr?.length || 0;
 
+        const Count = countArr?.length || 0;
         setPageCount(Count);
         setTotalPages(Math.ceil(Count / rowsPerPage) || 1);
 
@@ -400,29 +371,6 @@ export default function JobSearchLikeVoucherPage() {
     columnSearchKeyName,
     columnSearchKeyValue,
   ]);
-
-  useEffect(() => {
-    const el = document.getElementById("paper");
-    if (!el) return;
-
-    let timerId = null;
-    const onScroll = () => {
-      if (!timerId) {
-        timerId = setTimeout(() => {
-          setScrollLeft(el.scrollLeft || 0);
-          timerId = null;
-        }, 100);
-      }
-    };
-
-    el.addEventListener("scroll", onScroll);
-    return () => {
-      el.removeEventListener("scroll", onScroll);
-      if (timerId) clearTimeout(timerId);
-    };
-  }, [gridData?.length]);
-
-  // Toolbar actions
   const handleInitailSearch = () => {
     setPage(1);
     setSelectedPageNumber(1);
@@ -446,19 +394,15 @@ export default function JobSearchLikeVoucherPage() {
     setActiveColumn(null);
     setSortedColumn(null);
     setIsAscending(true);
-
     setRowsPerPage(17);
     setPage(1);
     setSelectedPageNumber(1);
   };
-
-  const handleClose = () => {
-    router.back();
-  };
-
-  const handleAdd = () => {
-    router.push("/exportChaJob/search");
-  };
+  const handleClose = () => router.back();
+  const handleAdd = () => router.push("/exportChaJob/search"); // your add page
+  const handleEditRow = (row) => router.push(`/exportChaJob/search?id=${row?.id}`);
+  const handleViewRow = (row) => router.push(`/exportChaJob/search?id=${row?.id}&isView=true`);
+  const handleCopyRow = (row) => router.push(`/exportChaJob/search?id=${row?.id}&isCopy=true`);
 
   return (
     <div className="relative">
@@ -489,11 +433,7 @@ export default function JobSearchLikeVoucherPage() {
                 onMouseLeave={() => setHoveredIcon(null)}
               >
                 <Image
-                  src={
-                    hoveredIcon === "advanceSearch"
-                      ? magnifyIconHover
-                      : searchImage
-                  }
+                  src={hoveredIcon === "advanceSearch" ? magnifyIconHover : searchImage}
                   alt="Search Icon"
                   priority={false}
                   className="cursor-pointer gridIcons2"
@@ -507,22 +447,18 @@ export default function JobSearchLikeVoucherPage() {
                 onMouseLeave={() => setHoveredIcon(null)}
                 onClick={handleClose}
               >
-                <CloseIcon
-                  sx={{ fontSize: 18, color: "var(--table-text-color)" }}
-                />
+                <CloseIcon sx={{ fontSize: 18, color: "var(--table-text-color)" }} />
               </Button>
             </LightTooltip>
           </Stack>
         </div>
       </div>
-
       {searchOpen && (
         <Paper
           className={`absolute top-[8%] right-0 z-50 ${styles.searchDispalyBg} border border-[#B2BAC2] rounded-[7px] shadow-md`}
           sx={{ width: "90%", height: "auto" }}
         >
           <div className="mx-[20px]">
-            {/* Global search row */}
             <div className="flex items-center relative mt-[6px]">
               <Paper sx={{ ...advanceSearchPaperStyles }}>
                 <InputBase
@@ -567,9 +503,7 @@ export default function JobSearchLikeVoucherPage() {
                   size="small"
                   label="Job No"
                   value={filters.jobNo}
-                  onChange={(e) =>
-                    setFilters((p) => ({ ...p, jobNo: e.target.value }))
-                  }
+                  onChange={(e) => setFilters((p) => ({ ...p, jobNo: e.target.value }))}
                 />
                 <TextField
                   size="small"
@@ -583,21 +517,14 @@ export default function JobSearchLikeVoucherPage() {
                   size="small"
                   label="Status"
                   value={filters.status}
-                  onChange={(e) =>
-                    setFilters((p) => ({ ...p, status: e.target.value }))
-                  }
+                  onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value }))}
                 />
 
                 <DateTimePicker
                   label="Job Date From"
-                  value={
-                    filters.jobDateFrom ? dayjs(filters.jobDateFrom) : null
-                  }
+                  value={filters.jobDateFrom ? dayjs(filters.jobDateFrom) : null}
                   onChange={(v) =>
-                    setFilters((p) => ({
-                      ...p,
-                      jobDateFrom: v ? v.toDate() : null,
-                    }))
+                    setFilters((p) => ({ ...p, jobDateFrom: v ? v.toDate() : null }))
                   }
                   slots={{ openPickerIcon: ExpandMoreIcon }}
                   slotProps={{
@@ -610,10 +537,7 @@ export default function JobSearchLikeVoucherPage() {
                   label="Job Date To"
                   value={filters.jobDateTo ? dayjs(filters.jobDateTo) : null}
                   onChange={(v) =>
-                    setFilters((p) => ({
-                      ...p,
-                      jobDateTo: v ? v.toDate() : null,
-                    }))
+                    setFilters((p) => ({ ...p, jobDateTo: v ? v.toDate() : null }))
                   }
                   slots={{ openPickerIcon: ExpandMoreIcon }}
                   slotProps={{
@@ -625,21 +549,10 @@ export default function JobSearchLikeVoucherPage() {
             )}
 
             <div className="flex gap-3 mt-1 pb-2">
-              <button
-                className={`my-[6px] ${styles.commonBtn}`}
-                onClick={() => {
-                  setPage(1);
-                  setSelectedPageNumber(1);
-                  fetchData();
-                  setSearchOpen(false);
-                }}
-              >
+              <button className={`my-[6px] ${styles.commonBtn}`} onClick={handleInitailSearch}>
                 Search
               </button>
-              <button
-                className={`my-[6px] ${styles.commonBtn}`}
-                onClick={handleRemoveFilter}
-              >
+              <button className={`my-[6px] ${styles.commonBtn}`} onClick={handleRemoveFilter}>
                 Remove filter
               </button>
             </div>
@@ -647,21 +560,15 @@ export default function JobSearchLikeVoucherPage() {
         </Paper>
       )}
 
+      {/* grid */}
       <Paper sx={{ ...displayTablePaperStyles }}>
         <TableContainer
           id="paper"
           className={`${styles.thinScrollBar}`}
-          sx={{
-            ...displayTableContainerStyles,
-            position: "relative !important",
-          }}
+          sx={{ ...displayTableContainerStyles, position: "relative !important" }}
           ref={tableRef}
         >
-          <Table
-            stickyHeader
-            aria-label="sticky table"
-            className={`overflow-auto ${styles.thinScrollBar}`}
-          >
+          <Table stickyHeader aria-label="sticky table" className={`overflow-auto ${styles.thinScrollBar}`}>
             <TableHead sx={{ ...displaytableHeadStyles }}>
               <TableRow style={{ cursor: "context-menu" }}>
                 {tableheading.map((col, index) => (
@@ -673,10 +580,7 @@ export default function JobSearchLikeVoucherPage() {
                     className={`${styles.cellHeading} cursor-pointer`}
                     onContextMenu={(event) => handleRightClick(event, col.id)}
                   >
-                    <span
-                      className={`${styles.labelText}`}
-                      onClick={() => handleSortBy(col)}
-                    >
+                    <span className={`${styles.labelText}`} onClick={() => handleSortBy(col)}>
                       {col.label}
                     </span>
 
@@ -690,7 +594,6 @@ export default function JobSearchLikeVoucherPage() {
                           setColumnSearchKeyName={setColumnSearchKeyName}
                           setColumnSearchKeyValue={setColumnSearchKeyValue}
                           isInputVisible={isInputVisible}
-                          setSearchInput={setSearchInput}
                           setRowsPerPage={setRowsPerPage}
                           setPage={setPage}
                         />
@@ -704,33 +607,19 @@ export default function JobSearchLikeVoucherPage() {
               </TableRow>
             </TableHead>
 
-            <TableBody
-              style={{
-                overflow: "auto",
-                marginTop: "30px",
-              }}
-              key={"body"}
-            >
+            <TableBody style={{ overflow: "auto", marginTop: "30px" }} key={"body"}>
               {gridData?.length > 0 &&
-                gridData?.map((row, rowIndex) => (
+                gridData.map((row, rowIndex) => (
                   <TableRow
                     hover
                     role="checkbox"
                     key={rowIndex}
                     className={`${styles.tableCellHoverEffect} ${styles.hh} rounded-lg p-0 opacity-1 z-0`}
-                    sx={{
-                      ...displaytableRowStyles_two(),
-                    }}
-                    onDoubleClick={() => {
-                      // ✅ update your route
-                      router.push(`/job/addEdit?id=${row?.id}`);
-                    }}
+                    sx={{ ...displaytableRowStyles_two() }}
+                    onDoubleClick={() => handleEditRow(row)}
                   >
-                    {tableheading.map((fieldName, idx) => (
-                      <TableCell
-                        key={`${rowIndex}-${fieldName.id}`}
-                        align="left"
-                      >
+                    {tableheading.map((fieldName) => (
+                      <TableCell key={`${rowIndex}-${fieldName.id}`} align="left">
                         {isDateFormat(row?.[fieldName.id])}
                       </TableCell>
                     ))}
@@ -739,14 +628,47 @@ export default function JobSearchLikeVoucherPage() {
                       <div className="w-full">
                         <div
                           id={"iconsRow"}
-                          className={`${styles.iconContainer2} flex items-center w-full -mt-[11px]`}
-                          style={{
-                            height: "20px",
-                            right: `-${scrollLeft}px`,
-                            display: "flex",
-                            opacity: 0.85,
-                          }}
-                        ></div>
+                          className={`${styles.iconContainer2} flex items-center w-fit -mt-[11px]`}
+                          style={pageTableCellInlineStyle(scrollLeft)}
+                        >
+                          <GridHoverIcon
+                            defaultIcon={edit}
+                            hoverIcon={EditHover}
+                            altText="Edit"
+                            title={"Edit"}
+                            onClick={() => handleEditRow(row)}
+                          />
+                          <GridHoverIcon
+                            defaultIcon={viewIcon}
+                            hoverIcon={viewIconHover}
+                            altText={"view"}
+                            title={"view"}
+                            onClick={() => handleViewRow(row)}
+                          />
+                          <GridHoverIcon
+                            defaultIcon={copyDoc}
+                            hoverIcon={CopyHover}
+                            altText="Copy"
+                            title={"Copy Record"}
+                            onClick={() => handleCopyRow(row)}
+                          />
+                          <GridHoverIcon
+                            defaultIcon={printer}
+                            hoverIcon={PrintHover}
+                            altText="Print"
+                            title={"Print"}
+                            onClick={() => {
+                            }}
+                          />
+                          <GridHoverIcon
+                            defaultIcon={DeleteIcon2}
+                            hoverIcon={DeleteHover}
+                            altText="Delete"
+                            title={"Delete Record"}
+                            onClick={() => {
+                            }}
+                          />
+                        </div>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -755,20 +677,12 @@ export default function JobSearchLikeVoucherPage() {
               {gridData?.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={tableheading.length + 1}>
-                    <div
-                      className={`${styles.pageBackground} flex items-center justify-center h-[calc(100vh-168px)]`}
-                    >
-                      <div
-                        className={`${styles.pageBackground} container mx-auto text-center`}
-                      >
+                    <div className={`${styles.pageBackground} flex items-center justify-center h-[calc(100vh-168px)]`}>
+                      <div className={`${styles.pageBackground} container mx-auto text-center`}>
                         {loader ? (
-                          <p className="text-gray-500 text-lg mt-4">
-                            {"Loading..."}
-                          </p>
+                          <p className="text-gray-500 text-lg mt-4">{"Loading..."}</p>
                         ) : (
-                          <p className="text-gray-500 text-lg mt-4">
-                            {"No Records Found."}
-                          </p>
+                          <p className="text-gray-500 text-lg mt-4">{"No Records Found."}</p>
                         )}
                       </div>
                     </div>
@@ -780,6 +694,7 @@ export default function JobSearchLikeVoucherPage() {
         </TableContainer>
       </Paper>
 
+      {/* pagination */}
       <div className="flex items-center justify-end pt-2 px-4 text-black">
         <PaginationButtons
           totalPages={totalPages || 1}
@@ -812,7 +727,6 @@ export default function JobSearchLikeVoucherPage() {
     </div>
   );
 }
-
 function CustomizedInputBase({
   columnData,
   setPrevSearchInput,
@@ -821,19 +735,17 @@ function CustomizedInputBase({
   setColumnSearchKeyName,
   setColumnSearchKeyValue,
   isInputVisible,
-  setSearchInput,
   setRowsPerPage,
   setPage,
 }) {
   const inputRef = useRef(null);
   const [searchInputGridData, setSearchInputGridData] = useState(
-    prevSearchInput || "",
+    prevSearchInput || ""
   );
 
   const filterFunction = (searchValue, columnKey) => {
     setColumnSearchKeyName(columnKey);
     setColumnSearchKeyValue(searchValue);
-    setSearchInput(searchValue);
     setPrevSearchInput(searchValue);
     setInputVisible(false);
     setRowsPerPage(17);
@@ -843,7 +755,6 @@ function CustomizedInputBase({
   const handleClear = () => {
     setSearchInputGridData("");
     setPrevSearchInput("");
-    setSearchInput("");
     setColumnSearchKeyName("");
     setColumnSearchKeyValue("");
     setPage(1);
@@ -854,20 +765,15 @@ function CustomizedInputBase({
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (inputRef.current && !inputRef.current.contains(event.target)) {
-        setInputVisible(!isInputVisible);
+        setInputVisible(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isInputVisible, setInputVisible]);
+  }, [setInputVisible]);
 
   return (
-    <Paper
-      ref={inputRef}
-      sx={{
-        ...createAddEditPaperStyles,
-      }}
-    >
+    <Paper ref={inputRef} sx={{ ...createAddEditPaperStyles }}>
       <InputBase
         autoFocus
         sx={{ ...searchInputStyling }}
@@ -876,8 +782,7 @@ function CustomizedInputBase({
         value={searchInputGridData}
         onChange={(e) => setSearchInputGridData(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter")
-            filterFunction(searchInputGridData, columnData.id);
+          if (e.key === "Enter") filterFunction(searchInputGridData, columnData.id);
         }}
       />
 
@@ -888,11 +793,7 @@ function CustomizedInputBase({
       </LightTooltip>
 
       <Divider
-        sx={{
-          height: 25,
-          borderColor: "var(--table-text-color)",
-          opacity: 0.3,
-        }}
+        sx={{ height: 25, borderColor: "var(--table-text-color)", opacity: 0.3 }}
         orientation="vertical"
       />
 

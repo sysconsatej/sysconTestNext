@@ -105,6 +105,8 @@ RowComponent.propTypes = {
   removeChildRecordFromInsert: PropTypes.any,
   formControlData: PropTypes.any,
   setFormControlData: PropTypes.any,
+  showSrNo: PropTypes.bool,
+  tableBodyWidth: PropTypes.string,
 };
 export default function RowComponent({
   row,
@@ -138,6 +140,8 @@ export default function RowComponent({
   removeChildRecordFromInsert,
   formControlData,
   setFormControlData,
+  showSrNo = false,
+  tableBodyWidth,
 }) {
   const [childValuseObj, setChildValuseObj] = useState({ ...row });
   const [openChildEdit, setOpenChildEdit] = useState(false); // State to manage open/close of this particular row
@@ -145,7 +149,7 @@ export default function RowComponent({
   const [hoveredIcon, setHoveredIcon] = useState(null);
   // const [isChecked, setIsChecked] = useState(true);
   const [subChildComponent, setSubChildComponent] = useState(
-    expandAll ? true : false
+    expandAll ? true : false,
   );
 
   let groupedData = subChild.reduce((result, obj) => {
@@ -221,7 +225,7 @@ export default function RowComponent({
     setCalculateData(
       Object.values(tmpData).reduce((acc, item) => {
         return acc + Number(item) ? Number(item) : 0;
-      }, 0) + calculateData
+      }, 0) + calculateData,
     );
 
     setDummyFieldArray(
@@ -230,7 +234,7 @@ export default function RowComponent({
           Object.values(tmpData).reduce((acc, item) => {
             return acc + Number(item);
           }, 0) + calculateData,
-      }))
+      })),
     );
   };
 
@@ -299,7 +303,7 @@ export default function RowComponent({
         const newStateCopy = { ...newState, ...prevState };
         // Assume each entry in the array has an 'id' property
         let updatedData = newStateCopy[sectionData.tableName].filter(
-          (_, idx) => idx === index
+          (_, idx) => idx === index,
         );
         updatedData = { ...updatedData[0], isChecked: true };
         newStateCopy[sectionData.tableName][index] = updatedData;
@@ -309,7 +313,7 @@ export default function RowComponent({
         const newStateCopy = { ...newState, ...prevState };
         // Assume each entry in the array has an 'id' property
         let updatedData = newStateCopy[sectionData.tableName].filter(
-          (_, idx) => idx === index
+          (_, idx) => idx === index,
         );
         updatedData = { ...updatedData[0], isChecked: true };
         newStateCopy[sectionData.tableName][index] = updatedData;
@@ -326,6 +330,11 @@ export default function RowComponent({
     }
   };
 
+  const stylesIconsHover =
+    tableBodyWidth === "0"
+      ? { right: tableBodyWidth + "px", width: "auto" }
+      : { left: tableBodyWidth + "px", width: "auto" };
+
   return (
     <React.Fragment>
       {!isGridEdit ? (
@@ -333,7 +342,9 @@ export default function RowComponent({
           <TableRow
             onDoubleClick={toggleRow}
             className={
-              isView ? "" : `${styles.tableCellHoverEffect} ${styles.hh}`
+              isView
+                ? ""
+                : `${styles.tableCellHoverEffect} ${styles.hh} group relative`
             }
             sx={{
               "& > *": { borderBottom: "unset" },
@@ -343,58 +354,104 @@ export default function RowComponent({
             {fields
               .filter((elem) => elem.isGridView)
               .map((field, index) => (
-                <TableCell
-                  align="left"
-                  key={index}
-                  sx={{
-                    ...gridSectionStyles,
-                    paddingLeft: index === 0 ? "29px" : "0px",
-                  }}
-                >
-                  <div className="relative">
-                    <div
-                      className={`${childTableRowStyles} overflow-hidden whitespace-nowrap`}
-                      style={{ maxWidth: "200px" }}
+                <React.Fragment key={index}>
+                  {showSrNo && index === 0 && (
+                    <TableCell
+                      align="left"
+                      sx={{
+                        ...gridSectionStyles,
+                        paddingLeft: "29px",
+                        width: "64px",
+                        minWidth: "64px",
+                      }}
                     >
-                      {field.controlname === "dropdown" ||
-                      field.controlname === "multiselect"
-                        ? (
-                            row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                            row[`${field.fieldname}Dropdown`]
-                          )?.length > 15
+                      <div className="relative">
+                        {index == 0 && (
+                          <div className={` ${styles.iconContainer}`}>
+                            <div className="absolute left-[-7px] top-[-2px] cursor-pointer">
+                              <Checkbox
+                                edge="start"
+                                sx={{
+                                  ...checkBoxStyle,
+                                }}
+                                checked={row.isChecked}
+                                tabIndex={-1}
+                                disableRipple
+                                inputProps={{
+                                  "aria-labelledby": field.fieldname,
+                                }}
+                                onChange={(event) =>
+                                  handleChange(event, row, childIndex)
+                                }
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className={`${childTableRowStyles} font-medium`}>
+                        {childIndex + 1}
+                      </div>
+                    </TableCell>
+                  )}
+                  <TableCell
+                    align="left"
+                    sx={{
+                      ...gridSectionStyles,
+                      paddingLeft:
+                        index === 0 ? "29px" : showSrNo ? "29px" : "0px",
+                    }}
+                  >
+                    <div className="relative">
+                      <div
+                        className={`${childTableRowStyles} overflow-hidden whitespace-nowrap`}
+                        style={{ maxWidth: "200px" }}
+                      >
+                        {field.controlname === "dropdown" ||
+                        field.controlname === "multiselect"
                           ? (
                               row[`${field.fieldname}dropdown`]?.[0]?.label ||
                               row[`${field.fieldname}Dropdown`]
-                            )?.slice(0, 15) + "..."
-                          : row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                            row[`${field.fieldname}Dropdown`] ||
-                            ""
-                        : isDateFormat(row[`${field.fieldname}`]) || ""}
-                    </div>
-
-                    {index == 0 && (
-                      <div className={` ${styles.iconContainer}`}>
-                        <div className="absolute left-[-7px] top-[-2px] cursor-pointer">
-                          <Checkbox
-                            edge="start"
-                            sx={{
-                              ...checkBoxStyle,
-                            }}
-                            checked={row.isChecked}
-                            tabIndex={-1}
-                            disableRipple
-                            inputProps={{ "aria-labelledby": field.fieldname }}
-                            onChange={(event) =>
-                              handleChange(event, row, childIndex)
-                            }
-                          />
-                        </div>
+                            )?.length > 15
+                            ? (
+                                row[`${field.fieldname}dropdown`]?.[0]?.label ||
+                                row[`${field.fieldname}Dropdown`]
+                              )?.slice(0, 15) + "..."
+                            : row[`${field.fieldname}dropdown`]?.[0]?.label ||
+                              row[`${field.fieldname}Dropdown`] ||
+                              ""
+                          : isDateFormat(row[`${field.fieldname}`]) || ""}
                       </div>
-                    )}
-                  </div>
-                </TableCell>
+
+                      {!showSrNo && index == 0 && (
+                        <div className={` ${styles.iconContainer}`}>
+                          <div className="absolute left-[-7px] top-[-2px] cursor-pointer">
+                            <Checkbox
+                              edge="start"
+                              sx={{
+                                ...checkBoxStyle,
+                              }}
+                              checked={row.isChecked}
+                              tabIndex={-1}
+                              disableRipple
+                              inputProps={{
+                                "aria-labelledby": field.fieldname,
+                              }}
+                              onChange={(event) =>
+                                handleChange(event, row, childIndex)
+                              }
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                </React.Fragment>
               ))}
-            <div className="group absolute right-0 w-fit">
+            <div
+              // className="group absolute right-0 w-fit"
+              className={`group-hover:visible flex flex-nowrap justify-end invisible absolute`}
+              style={stylesIconsHover}
+            >
               <LightTooltip title="Delete Record">
                 <IconButton
                   disabled={
@@ -473,70 +530,87 @@ export default function RowComponent({
             {fields
               .filter((elem) => elem.isGridView)
               .map((field, index) => (
-                <TableCell
-                  key={index}
-                  align="left"
-                  sx={{
-                    padding: "0 ",
-                    lineHeight: "0",
-                    fontSize: "12px",
-                  }}
-                >
-                  <Box className="flex gap-4">
-                    {index === 0 ? (
-                      <Fragment key={index}>
-                        <ActionButton
-                          copyImagepath={copyDoc}
-                          deleteImagePath={DeleteIcon2}
-                          onCopy={() => copyDocument(childValuseObj)}
-                          onDelete={() => deleteChildRecord(childIndex)}
-                        />
-                      </Fragment>
-                    ) : (
-                      <></>
-                    )}
-                    <GridInputFields
-                      fieldData={field}
-                      indexValue={index}
-                      onValuesChange={(e) => {
-                        setChildValuseObj((prev) => {
-                          return { ...prev, ...e };
-                        });
-                        setCopyChildValueObj((prev) => {
-                          // Clone the previous state to avoid direct mutation
-                          const newCopy = { ...prev };
-                          let tableName = Object.keys(newCopy)[0];
-                          // Loop through the outer array of 'tblJobQty'
-                          newCopy[tableName] = newCopy[tableName]?.map(
-                            (nestedArray) => {
-                              // Loop through the objects in the nested array
-                              return nestedArray.map((item) => {
-                                // Find the object with the matching '_id'
-                                if (item._id === childValuseObj._id) {
-                                  // Update the 'qty' of the matched object
-                                  return { ...item, ...e };
-                                }
-                                // Return the item unchanged if it's not the one to update
-                                return item;
-                              });
-                            }
-                          );
+                <React.Fragment key={index}>
+                  <TableCell
+                    align="left"
+                    sx={{
+                      padding: "0 ",
+                      lineHeight: "0",
+                      fontSize: "12px",
+                    }}
+                  >
+                    <Box className="flex gap-4">
+                      {index === 0 ? (
+                        <Fragment key={index}>
+                          <ActionButton
+                            copyImagepath={copyDoc}
+                            deleteImagePath={DeleteIcon2}
+                            onCopy={() => copyDocument(childValuseObj)}
+                            onDelete={() => deleteChildRecord(childIndex)}
+                          />
+                        </Fragment>
+                      ) : (
+                        <></>
+                      )}
+                      <GridInputFields
+                        fieldData={field}
+                        indexValue={index}
+                        onValuesChange={(e) => {
+                          setChildValuseObj((prev) => {
+                            return { ...prev, ...e };
+                          });
+                          setCopyChildValueObj((prev) => {
+                            // Clone the previous state to avoid direct mutation
+                            const newCopy = { ...prev };
+                            let tableName = Object.keys(newCopy)[0];
+                            // Loop through the outer array of 'tblJobQty'
+                            newCopy[tableName] = newCopy[tableName]?.map(
+                              (nestedArray) => {
+                                // Loop through the objects in the nested array
+                                return nestedArray.map((item) => {
+                                  // Find the object with the matching '_id'
+                                  if (item._id === childValuseObj._id) {
+                                    // Update the 'qty' of the matched object
+                                    return { ...item, ...e };
+                                  }
+                                  // Return the item unchanged if it's not the one to update
+                                  return item;
+                                });
+                              },
+                            );
 
-                          // Return the updated state
-                          return newCopy;
-                        });
+                            // Return the updated state
+                            return newCopy;
+                          });
+                        }}
+                        values={childValuseObj}
+                        inEditMode={inEditMode}
+                        onChangeHandler={(e) => {
+                          console.log("onchangeHandler", e);
+                        }}
+                        onBlurHandler={(e) => {
+                          console.log("onBlurHandler", e);
+                        }}
+                      />
+                    </Box>
+                  </TableCell>
+                  {showSrNo && index === 0 && (
+                    <TableCell
+                      align="left"
+                      sx={{
+                        padding: "0 8px",
+                        lineHeight: "0",
+                        fontSize: "12px",
+                        width: "64px",
+                        minWidth: "64px",
                       }}
-                      values={childValuseObj}
-                      inEditMode={inEditMode}
-                      onChangeHandler={(e) => {
-                        console.log("onchangeHandler", e);
-                      }}
-                      onBlurHandler={(e) => {
-                        console.log("onBlurHandler", e);
-                      }}
-                    />
-                  </Box>
-                </TableCell>
+                    >
+                      <Box className="flex items-center h-full pl-1 text-xs font-semibold">
+                        {childIndex + 1}
+                      </Box>
+                    </TableCell>
+                  )}
+                </React.Fragment>
               ))}
           </TableRow>
         </>
@@ -605,14 +679,14 @@ export default function RowComponent({
                               feild.isRequired &&
                               (!Object.prototype.hasOwnProperty.call(
                                 childValuseObj,
-                                feild.fieldname
+                                feild.fieldname,
                               ) ||
                                 childValuseObj[feild.fieldname]
                                   .toString()
                                   .trim() === "")
                             ) {
                               toast.error(
-                                `Value for ${feild.yourlabel} is missing or empty.`
+                                `Value for ${feild.yourlabel} is missing or empty.`,
                               );
                               return;
                             }

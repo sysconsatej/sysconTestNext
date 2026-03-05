@@ -524,7 +524,7 @@ function rptTransportation() {
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-1">Expected Arrival Date :</td>
+                  <td className="p-1">Arrival Date :</td>
                   <td className="p-1">
                     {data &&
                       data.length > 0 &&
@@ -788,23 +788,25 @@ function rptTransportation() {
                 <tr>
                   <td className="p-1">Expected Departure Date :</td>
                   <td className="p-1">
-                    {data &&
-                      data.length > 0 &&
-                      formatDate(data[0].expectedDeliveryDate)}
+                    {data && data.length > 0 && data[0].expectedDeliveryDate}
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-1">Expected Arrival Date :</td>
+                  <td className="p-1">Arrival Date :</td>
                   <td className="p-1">
-                    {data &&
-                      data.length > 0 &&
-                      formatDate(data[0].expectedPickupDate)}
+                    {data && data.length > 0 && data[0].expectedPickupDate}
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-1">Expected PickUp Date :</td>
+                  <td className="p-1">PickUp Date :</td>
                   <td className="p-1">
-                    {data && data.length > 0 && formatDate(data[0].etd)}
+                    {data && data.length > 0 && data[0].expectedPickupDate}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-1">UCN / Container No :</td>
+                  <td className="p-1">
+                    {data && data.length > 0 ? data[0].referenceNo : ""}
                   </td>
                 </tr>
               </tbody>
@@ -834,9 +836,21 @@ function rptTransportation() {
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-1">Vehicle Type :</td>
+                  <td className="p-1">Vehicle :</td>
                   <td className="p-1">
                     {data && data.length > 0 ? data[0].vehicleCode : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-1">Vehicle Type :</td>
+                  <td className="p-1">
+                    {data && data.length > 0 ? data[0].vehicleTypeName : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-1">chasis No :</td>
+                  <td className="p-1">
+                    {data && data.length > 0 ? data[0].chasisNo : ""}
                   </td>
                 </tr>
                 <tr>
@@ -846,15 +860,15 @@ function rptTransportation() {
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-1">Reference No :</td>
+                  <td className="p-1">Deliver Person :</td>
                   <td className="p-1">
-                    {data && data.length > 0 ? data[0].referenceNo : ""}
+                    {data && data.length > 0 ? data[0].consigneePerson : ""}
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-1">Expected Delivery Date :</td>
+                  <td className="p-1">Delivery Date :</td>
                   <td className="p-1">
-                    {data && data.length > 0 && formatDate(data[0].etaAtPod)}
+                    {data && data.length > 0 && data[0].expectedDeliveryDate}
                   </td>
                 </tr>
               </tbody>
@@ -877,46 +891,42 @@ function rptTransportation() {
                   No. of Packages
                 </th>
                 <th className="pr-2 pt-2 pb-2 border border-black">
+                  Pallets Exchange
+                </th>
+                <th className="pr-2 pt-2 pb-2 border border-black">
                   Gross Weight
                 </th>
                 <th className="pr-2 pt-2 pb-2 border border-black">volume</th>
-                <th className="pr-2 pt-2 pb-2 border border-black">
-                  Loaded Weight
+                <th className="pr-2 pt-2 pb-2 border-l border-t border-b border-black">
+                  Remarks / Special Instructions Required
                 </th>
-                <th className="pr-2 pt-2 pb-2 border border-black">
-                  Unloaded Weight
-                </th>
-                <th className="pr-2 pt-2 pb-2 border border-black">Remarks</th>
               </tr>
             </thead>
             <tbody>
               {vehicleRouteDetails.map((route, index) => (
                 <tr key={index}>
-                  <td className="pr-5 pt-2 pb-2 border-t border-b border-r border-black">
+                  <td className="pr-5 pb-2 border-t border-b border-r border-black">
                     {index + 1}
                   </td>
-                  <td className="pr-5 pt-2 pb-2 border border-black">
+                  <td className="pr-5 pb-2 border border-black">
                     {data && data.length > 0 ? data[0]?.CommodityText : ""}
                   </td>
-                  <td className="pr-5 pt-2 pb-2 border border-black">
+                  <td className="pr-5 pb-2 border border-black">
                     {route?.noOfPackages || ""}{" "}
                     {route?.typesOfPackagesName || ""}
                   </td>
-                  <td className="pr-5 pt-2 pb-2 border border-black">
+                  <td className="pr-5 pb-2 border border-black">
+                    {route?.noOfPalletsExchange || ""}
+                  </td>
+                  <td className="pr-5 pb-2 border border-black">
                     {data && data.length > 0 ? data[0]?.grossWt : ""}{" "}
                     {data && data.length > 0 ? data[0]?.wtUnit : ""}
                   </td>
-                  <td className="pr-5 pt-2 pb-2 border border-black">
+                  <td className="pr-5 pb-2 border border-black">
                     {data && data.length > 0 ? data[0]?.volume : ""}{" "}
                     {data && data.length > 0 ? data[0]?.volumeUnit : ""}
                   </td>
-                  <td className="pr-5 pt-2 pb-2 border border-black">
-                    {route.loadedWeight || ""}
-                  </td>
-                  <td className="pr-5 pt-2 pb-2 border border-black">
-                    {route.unloadedWeight || ""}
-                  </td>
-                  <td className="pr-5 pt-2 pb-2 border border-black">
+                  <td className="pr-2 pb-2 border-l border-t border-b border-black">
                     {route?.remarks || ""}
                   </td>
                 </tr>

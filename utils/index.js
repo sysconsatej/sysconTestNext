@@ -5,3 +5,4 @@ export {
 } from "./useTableNavigation";
 
 export { operatorFunc } from "./tableUtils";
+export { useDebounceHook } from "./useDebounceHook";

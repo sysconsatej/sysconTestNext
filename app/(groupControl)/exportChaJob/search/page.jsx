@@ -1,793 +1,853 @@
 "use client";
 /* eslint-disable */
-
-import React, { useMemo, useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
-
 import styles from "@/app/app.module.css";
 import { fontFamilyStyles } from "@/app/globalCss";
-
+import { useSearchParams, useRouter } from "next/navigation";
 import CustomeInputFields from "@/components/Inputs/customeInputFields";
-import { getContainerData } from "@/services/auth/FormControl.services";
+import {
+  fetchSearchPageData,
+  // insertExportChaJob,
+  commanPostService,
+} from "@/services/auth/FormControl.services";
 import { getUserDetails } from "@/helper/userDetails";
-// import EntitySheet from "@/components/sheets/EntitySheet";
 import "./exportChaJob.css";
-import JobSheet from "@/components/sheets/GeneralSheet";
-import ShipmentSheet from "@/components/sheets/ShipmentSheet";
+import JobSheet, { parentsFieldsData } from "@/components/sheets/GeneralSheet";
 import InvoiceSheet from "@/components/sheets/InvoiceSheet";
 import ItemSheet from "@/components/sheets/ProductSheet";
-import ContainerSheet from "@/components/sheets/ContainerSheet";
 
-const TABS = ["Job",
-    //  "Entity",
-    "Shipment", "Invoice", "Item", "Container"];
+const TABS = ["Job", "Invoice", "Item"];
 
 const PARENT_FIELDS = [
-    {
-        "Job Details": [
-            {
-                id: 123531,
-                fieldname: "businessSegmentId",
-                yourlabel: "Department",
-                controlname: "dropdown",
-                isControlShow: true,
-                isGridView: false,
-                isDataFlow: true,
-                isAuditLog: true,
-                referenceTable: "tblBusinessSegment",
-                referenceColumn: "name",
-                type: 6653,
-                typeValue: "number",
-                size: "100",
-                ordering: 1,
-                isRequired: true,
-                isEditable: false,
-                isEditableMode: "e",
-                position: "top",
-                sectionHeader: "Job Details",
-                sectionOrder: 1,
-                isCopy: false,
-                isCopyEditable: false,
-                isHideGrid: false,
-                isHideGridHeader: false,
-                isGridExpandOnLoad: false,
-                clientId: 1,
-                columnsToBeVisible: true,
-            },
-            {
-                id: 123526,
-                fieldname: "jobNo",
-                yourlabel: "Job No",
-                controlname: "text",
-                isControlShow: true,
-                isGridView: true,
-                isDataFlow: true,
-                isAuditLog: true,
-                type: 6902,
-                typeValue: "string",
-                size: "100",
-                ordering: 2,
-                isRequired: false,
-                isEditable: false,
-                isEditableMode: "e",
-                position: "top",
-                sectionHeader: "Job Details",
-                sectionOrder: 1,
-                isCopy: false,
-                isCopyEditable: false,
-                isHideGrid: false,
-                isHideGridHeader: false,
-                isGridExpandOnLoad: false,
-                clientId: 1,
-                columnsToBeVisible: true,
-            },
-            {
-                id: 123527,
-                fieldname: "jobDate",
-                yourlabel: "Job Date",
-                controlname: "date",
-                isControlShow: true,
-                isGridView: true,
-                isDataFlow: true,
-                isAuditLog: true,
-                type: 6783,
-                typeValue: "date",
-                size: "100",
-                ordering: 3,
-                isRequired: true,
-                isEditable: false,
-                isEditableMode: "e",
-                position: "top",
-                controlDefaultValue: "currentdate",
-                sectionHeader: "Job Details",
-                sectionOrder: 1,
-                isCopy: false,
-                isCopyEditable: false,
-                isHideGrid: false,
-                isHideGridHeader: false,
-                isGridExpandOnLoad: false,
-                clientId: 1,
-                columnsToBeVisible: true,
-            },
-            {
-                id: 123532,
-                fieldname: "createdBy",
-                yourlabel: "Created By",
-                controlname: "dropdown",
-                isControlShow: true,
-                isGridView: false,
-                isDataFlow: true,
-                isAuditLog: true,
-                referenceTable: "tblUser",
-                referenceColumn: "name",
-                type: 6653,
-                typeValue: "number",
-                size: "100",
-                ordering: 1,
-                isRequired: true,
-                isEditable: false,
-                isEditableMode: "e",
-                position: "top",
-                sectionHeader: "Job Details",
-                sectionOrder: 1,
-                isCopy: false,
-                isCopyEditable: false,
-                isHideGrid: false,
-                isHideGridHeader: false,
-                isGridExpandOnLoad: false,
-                clientId: 1,
-                columnsToBeVisible: true,
-            },
-        ],
-    },
+  {
+    "Job Details": [
+      {
+        id: 123531,
+        fieldname: "businessSegmentId",
+        yourlabel: "Department",
+        controlname: "dropdown",
+        isControlShow: true,
+        isGridView: false,
+        isDataFlow: true,
+        isAuditLog: true,
+        referenceTable: "tblBusinessSegment",
+        referenceColumn: "name",
+        type: 6653,
+        typeValue: "number",
+        size: "100",
+        ordering: 1,
+        isRequired: true,
+        isEditable: false,
+        isEditableMode: "e",
+        position: "top",
+        sectionHeader: "Job Details",
+        sectionOrder: 1,
+        isCopy: false,
+        isCopyEditable: false,
+        isHideGrid: false,
+        isHideGridHeader: false,
+        isGridExpandOnLoad: false,
+        clientId: 1,
+        columnsToBeVisible: true,
+        dropdownFilter: "and jobTypeId= 840",
+      },
+      {
+        id: 123526,
+        fieldname: "jobNo",
+        yourlabel: "Job No",
+        controlname: "text",
+        isControlShow: true,
+        isGridView: true,
+        isDataFlow: true,
+        isAuditLog: true,
+        type: 6902,
+        typeValue: "string",
+        size: "100",
+        ordering: 2,
+        isRequired: false,
+        isEditable: false,
+        isEditableMode: "e",
+        position: "top",
+        sectionHeader: "Job Details",
+        sectionOrder: 1,
+        isCopy: false,
+        isCopyEditable: false,
+        isHideGrid: false,
+        isHideGridHeader: false,
+        isGridExpandOnLoad: false,
+        clientId: 1,
+        columnsToBeVisible: true,
+      },
+      {
+        id: 123527,
+        fieldname: "jobDate",
+        yourlabel: "Job Date",
+        controlname: "date",
+        isControlShow: true,
+        isGridView: true,
+        isDataFlow: true,
+        isAuditLog: true,
+        type: 6783,
+        typeValue: "date",
+        size: "100",
+        ordering: 3,
+        isRequired: true,
+        isEditable: false,
+        isEditableMode: "e",
+        position: "top",
+        controlDefaultValue: null,
+        sectionHeader: "Job Details",
+        sectionOrder: 1,
+        isCopy: false,
+        isCopyEditable: false,
+        isHideGrid: false,
+        isHideGridHeader: false,
+        isGridExpandOnLoad: false,
+        clientId: 1,
+        columnsToBeVisible: true,
+      },
+      {
+        id: 123532,
+        fieldname: "createdBy",
+        yourlabel: "Created By",
+        controlname: "dropdown",
+        isControlShow: true,
+        isGridView: true,
+        isDataFlow: true,
+        isAuditLog: true,
+        referenceTable: "tblUser",
+        referenceColumn: "name",
+        type: 6653,
+        typeValue: "number",
+        size: "100",
+        ordering: 1,
+        isRequired: true,
+        isEditable: false,
+        isEditableMode: "e",
+        position: "top",
+        sectionHeader: "Job Details",
+        sectionOrder: 1,
+        isCopy: false,
+        isCopyEditable: false,
+        isHideGrid: false,
+        isHideGridHeader: false,
+        isGridExpandOnLoad: false,
+        clientId: 1,
+        columnsToBeVisible: true,
+      },
+    ],
+  },
 ];
 
-const DEFAULT_STATE = {
-    routeName: "mastervalue",
-    businessSegmentId: null,
-    jobNo: "",
-    jobDate: "currentdate",
-    createdBy: null,
-    tblContainerMovement: [],
-};
+/* =========================================================
+   ✅ DEFAULT STATE (NEW RECORD)
+   - jobDate: defaults to today (new Date())
+   - createdBy: defaults to logged-in userId
+========================================================= */
 
-const initialJobState = {
-    exporterName: null,
-    exporterAddress: null,
-    branchSNo: null,
-    exporterStateId: null,
-    ieCodeNo: null,
-    registrationNo: null,
-    dbkBankName: null,
-    dbkAccountNo: null,
-    dbkEdiAccountNo: null,
+const makeDefaultState = (userId) => ({
+  routeName: "mastervalue",
+  businessSegmentId: null,
+  jobNo: "",
+  jobDate: new Date(),
+  createdBy: userId ?? null,
+  tblContainerMovement: [],
+});
 
-    consigneeName: null,
-    consigneeAddress: null,
-    consigneeCountryName: null,
+export const invoice = {
+  buyerId: null,
+  buyerBranchId: null,
+  buyerAddress: null,
+  buyerStateId: null,
+  buyerCityId: null,
+  buyerpin: null,
+  buyerOrderNo: null,
 
-    isBuyerDifferent: false,
-    isHandCarry: false,
-
-    exporterRefNo: null,
-    exporterRefDate: null,
-    exporterTypeId: null,
-
-    sbNumber: null,
-    sbDate: null,
-
-    rbiApprovalNo: null,
-    rbiApprovalDate: null,
-
-    isGrWaived: false,
-    grNo: null,
-    grDate: null,
-
-    rbiWaiverNo: null,
-    rbiWaiverDate: null,
-
-    bankDealerName: null,
-    bankAccountNo: null,
-    adCode: null,
-    epzCode: null,
-
-    notifyName: null,
-    notifyAddress: null,
-
-    docUserId: null,
-    quotationNo: null,
-};
-
-
-// const initialEntityDetailsState = {
-//     exporterStateId: null,
-//     exporterTypeId: null,
-//     consigneeCountryName: null,
-//     branchSNo: null,
-//     ieCodeNo: null,
-//     exporterAddress: null,
-//     dbkBankName: null,
-//     dbkAccountNo: null,
-//     dbkEdiAccountNo: null,
-//     consigneeName: null,
-//     consigneeAddress: null,
-// };
-
-const shipment = {
-    // ===== Main =====
-    dischargePortId: null,
-    dischargeCountryId: null,
-    destinationPortId: null,
-    destinationCountryId: null,
-    airlineId: null,
-    flightNoDate: null,
-    egmNoDate: null,
-    mawbNoDate: null,
-    hawbNoDate: null,
-    preCarriageBy: null,
-    placeOfReceipt: null,
-    transhipperCode: null,
-    gatewayPortId: null,
-    stateOfOriginId: null,
-    isAnnexureCFiledWithAnnexureA: false,
-    natureOfCargoId: null,
-    totalNoOfPkgs: null,
-    loosePkgs: null,
-    pktsInMawb: null,
-    grossWeight: null,
-    netWeight: null,
-    volume: null,
-    chargeableWeight: null,
-    marksAndNos: null,
-
-    // ===== Stuffing Details =====
-    goodsStuffedAtId: null,
-    isSampleAccompanied: false,
-    cfsId: null,
-    factoryAddress: null,
-    warehouseCode: null,
-    sealTypeId: null,
-    sealNo: null,
-    agencyName: null,
-
-    // ===== Invoice Printing =====
-    buyersOrderNo: null,
-    otherReferences: null,
-    termsOfDeliveryAndPayment: null,
-    originCountryId: null,
-    invoiceHeader: null,
-
-    // ===== Shipping Bill Printing =====
-    qCertNoDate: null,
-    exportTradeControl: null,
-    typeOfShipmentId: null,
-    shipmentTypeOther: null,
-    permissionNoDate: null,
-    exportUnderId: null,
-    sbHeading: null,
-    sbBottomText: null,
-
-    // ===== Ex-Bond Details =====
-    // voyage: null,
-    // igmNo: null,
-    // igmDate: null,
-    // noOfPkg: null,
-    // bondNo: null,
-    // bondDate: null,
-    // warehouse: null,
-
-    // ===== Annex C1 Details =====
-    ieCodeOfEou: null,
-    branchSlNo: null,
-    examinationDate: null,
-    examiningOfficer: null,
-    examiningOfficerDesignation: null,
-    supervisingOfficer: null,
-    supervisingOfficerDesignation: null,
-    commissionerate: null,
-    division: null,
-    range: null,
-    verifiedByExaminingOfficer: false,
-    sampleForwarded: false,
-    sealNumber: null,
-
-    tblExBondDetails: [],
-};
-
-const invoice = {
-    // ===== Buyer / Third Party Information =====
-    exporterNameOne: null,
-    exporterAddressOne: null,
-    consigneeCountryNameOne: null,
-    ieCodeNo: null,
-    consigneeCountryName: null,
-    exporterStateIdOne: null,
-
-    exporterName: null,
-    exporterAddress: null,
-    exporterStateId: null,
-
-    // ===== Other Info =====
-    exportContractNoDate: null,
-    natureOfPaymentId: null,
-    paymentPeriodDays: null,
-    aeoCode: null,
-    aeoCountryId: null,
-    aeoRole: null,
-};
-
-const container = {
-    containerNo: null,
-    type: null,
-    pkgsStuffed: null,
-    grossWeight: null,
-    sealNo: null,
-    sealDate: null,
-    sealType: null,
-    location: null,
+  exporterContractNo: null,
+  exporterContractDate: null,
+  natureOfTransaction: null,
+  periodOfPayment: null,
+  aeoCode: null,
+  aeoCountry: null,
+  aeoRole: null,
+  invoiceNo: null,
+  invoiceDate: null,
+  invoiceCurrency: null,
+  invoiceAmount: null,
+  currencyId: null,
+  exchangeRate: null,
+  invoiceValue: null,
+  fobValue: null,
+  remarks: null,
+  tblJobInvoice: [],
 };
 
 const item = {
-    // ========= Main (Item) =========
-    itemDescription: null,
-    ritcHsnCode: null,
-    quantity: null,
-    sqcQuantity: null,
-    unitPrice: null,
-    pricePer: null,
-    amount: null,
-    eximCodeId: null,
-    endUse: null,
-    ptaFtaInfoId: null,
-    medicinalPlantId: null,
-    labGrownDiamondId: null,
-    nfeiCategoryId: null,
-    originDistrictId: null,
-    alternateQty: null,
-    alternateQtyUnit: null,
-    formulation: null,
-    rewardItem: null,
-    isStrCode: false,
-    originStateId: null,
-    materialCode: null,
-    surfaceMaterialInContact: null,
+  itemDescription: null,
+  ritcHsnCode: null,
+  quantity: null,
+  sqcQuantity: null,
+  unitPrice: null,
+  pricePer: null,
+  amount: null,
+  eximCodeId: null,
+  endUse: null,
+  ptaFtaInfoId: null,
+  medicinalPlantId: null,
+  labGrownDiamondId: null,
+  nfeiCategoryId: null,
+  originDistrictId: null,
+  alternateQty: null,
+  alternateQtyUnit: null,
+  formulation: null,
+  rewardItem: null,
+  isStrCode: false,
+  originStateId: null,
+  materialCode: null,
+  surfaceMaterialInContact: null,
 
-    // ========= PMV =========
-    pmvCurrencyId: null,
-    pmvCalcMethod: "Manual",
-    pmvPerUnit: null,
-    pmvCurrency: null, // your formdata duplicated fieldname pmvPerUnit for "Pmv Currency" -> keep separate key here
-    totalPmv: null,
-    totalPmvCurrency: "INR",
+  pmvCurrencyId: null,
+  pmvCalcMethod: "Manual",
+  pmvPerUnit: null,
+  pmvCurrency: null,
+  totalPmv: null,
+  totalPmvCurrency: "INR",
 
-    // ========= GST =========
-    gstPaymentStatus: null,
-    gstTaxableValue: null,
-    gstRate: null,
-    igstAmount: null,
-    compCessRate: null,
-    compCessAmount: null,
+  gstPaymentStatus: null,
+  gstTaxableValue: null,
+  gstRate: null,
+  igstAmount: null,
+  compCessRate: null,
+  compCessAmount: null,
 
-    // ========= RODTEP =========
-    rodtepClaim: null,
-    rodtepQuantity: null,
-    rodtepRate: null,
-    rodtepCapValue: null,
-    rodtepCapValuePerUnit: null,
-    rodtepAmount: null,
+  rodtepClaim: null,
+  rodtepQuantity: null,
+  rodtepRate: null,
+  rodtepCapValue: null,
+  rodtepCapValuePerUnit: null,
+  rodtepAmount: null,
 
-    // ========= TABLE SECTIONS (SearchEditGrid) =========
-    tblDucInfo: [],
-    tblDocInfo: [],
-    tblAreDetails: [],
+  tblDucInfo: [],
+  tblDocInfo: [],
+  tblAreDetails: [],
 
-    // ========= Re-export =========
-    beNumber: null,
-    beDate: null,
-    invoiceSNo: null,
-    itemSNo: null,
-    importPortCodeId: null,
-    isManualBe: false,
-    beItemDesc: null,
-    qtyImported: null,
-    assessableValue: null,
-    totalDutyPaid: null,
-    totalDutyPaidDate: null,
+  beNumber: null,
+  beDate: null,
+  invoiceSNo: null,
+  itemSNo: null,
+  importPortCodeId: null,
+  isManualBe: false,
+  beItemDesc: null,
+  qtyImported: null,
+  assessableValue: null,
+  totalDutyPaid: null,
+  totalDutyPaidDate: null,
 
-    qtyExported: null,
-    technicalDetails: null,
-    isInputCreditAvailed: false,
-    isPersonalUseItem: false,
-    otherIdentifyingParameters: null,
+  qtyExported: null,
+  technicalDetails: null,
+  isInputCreditAvailed: false,
+  isPersonalUseItem: false,
+  otherIdentifyingParameters: null,
 
-    isAgainstExportObligation: false,
-    obligationNo: null,
-    drawbackAmtClaimed: null,
-    isItemUnUsed: false,
-    isCommissionerPermission: false,
-    boardNumber: null,
-    boardDate: null,
-    isModvatAvailed: false,
-    isModvatReversed: false,
+  isAgainstExportObligation: false,
+  obligationNo: null,
+  drawbackAmtClaimed: null,
+  isItemUnUsed: false,
+  isCommissionerPermission: false,
+  boardNumber: null,
+  boardDate: null,
+  isModvatAvailed: false,
+  isModvatReversed: false,
 
-    // ========= Other Details =========
-    accessoriesId: null,
-    accessoriesRemarks: null,
+  accessoriesId: null,
+  accessoriesRemarks: null,
 
-    isThirdPartyExport: false,
-    thirdPartyName: null,
-    thirdPartyIeCode: null,
-    thirdPartyBranchSNo: null,
-    thirdPartyRegnNo: null,
-    thirdPartyAddress: null,
+  isThirdPartyExport: false,
+  thirdPartyName: null,
+  thirdPartyIeCode: null,
+  thirdPartyBranchSNo: null,
+  thirdPartyRegnNo: null,
+  thirdPartyAddress: null,
 
-    mpgName: null,
-    mpgCode: null,
-    mpgAddress: null,
-    mpgCountryId: null,
-    mpgStateProvince: null,
-    mpgPostalCode: null,
-    mpgSourceStateId: null,
-    mpgTransitCountryId: null,
+  mpgName: null,
+  mpgCode: null,
+  mpgAddress: null,
+  mpgCountryId: null,
+  mpgStateProvince: null,
+  mpgPostalCode: null,
+  mpgSourceStateId: null,
+  mpgTransitCountryId: null,
 
-    // ========= CESS / CENVAT accordion =========
-    cessLeviable: false,
+  cessLeviable: false,
 
-    exportDuty: "",
-    exportDutyRate1: "0.00",
-    exportDutyRateType: "%",
-    exportDutyRate2: "0.00",
-    exportDutyTV: "0.00",
-    exportDutyQty: "0.000",
-    exportDutyUnit: "",
-    exportDutyDesc: "",
+  exportDuty: "",
+  exportDutyRate1: "0.00",
+  exportDutyRateType: "%",
+  exportDutyRate2: "0.00",
+  exportDutyTV: "0.00",
+  exportDutyQty: "0.000",
+  exportDutyUnit: "",
+  exportDutyDesc: "",
 
-    cess: "",
-    cessRate1: "0.00",
-    cessRateType: "%",
-    cessRate2: "0.00",
-    cessTV: "0.00",
-    cessQty: "0.000",
-    cessUnit: "",
-    cessDesc: "",
+  cess: "",
+  cessRate1: "0.00",
+  cessRateType: "%",
+  cessRate2: "0.00",
+  cessTV: "0.00",
+  cessQty: "0.000",
+  cessUnit: "",
+  cessDesc: "",
 
-    othDuty: "",
-    othDutyRate1: "0.00",
-    othDutyRateType: "%",
-    othDutyRate2: "0.00",
-    othDutyTV: "0.00",
-    othDutyQty: "0.000",
-    othDutyUnit: "",
-    othDutyDesc: "",
+  othDuty: "",
+  othDutyRate1: "0.00",
+  othDutyRateType: "%",
+  othDutyRate2: "0.00",
+  othDutyTV: "0.00",
+  othDutyQty: "0.000",
+  othDutyUnit: "",
+  othDutyDesc: "",
 
-    thirdCess: "",
-    thirdCessRate1: "0.00",
-    thirdCessRateType: "%",
-    thirdCessRate2: "0.00",
-    thirdCessTV: "0.00",
-    thirdCessQty: "0.000",
-    thirdCessUnit: "",
-    thirdCessDesc: "",
+  thirdCess: "",
+  thirdCessRate1: "0.00",
+  thirdCessRateType: "%",
+  thirdCessRate2: "0.00",
+  thirdCessTV: "0.00",
+  thirdCessQty: "0.000",
+  thirdCessUnit: "",
+  thirdCessDesc: "",
 
-    cenvatCertNo: "",
-    cenvatDate: "",
-    cenvatValidUpto: "",
-    cenvatCexOfficeCode: "",
-    cenvatAssesseeCode: "",
+  cenvatCertNo: "",
+  cenvatDate: "",
+  cenvatValidUpto: "",
+  cenvatCexOfficeCode: "",
+  cenvatAssesseeCode: "",
 };
 
+const jobFields = {
+  shipperId: null,
+  shipperBranchId: null,
+  shipperAddress: null,
+  branchSrNo: null,
+  exporterStateId: null,
+  shipperType: null,
+  shipperReferenceNo: null,
+  shipperReferenceDate: null,
+  rateRequestId: null,
+  sbNo: null,
+  sbDate: null,
+  rbiApprovalNo: null,
+  rbiApprovalDate: null,
+  isGrWaived: null,
+  grNo: null,
+  grDate: null,
+  iecCode: null,
+  registrationNo: null,
+  rbiWaiverNo: null,
+  rbiWaiverDate: null,
+  dbkBank: null,
+  dbkAccountNo: null,
+  dbkEdiAccountNo: null,
+  bankDealerName: null,
+  accountNo: null,
+  adCode: null,
+  consigneeId: null,
+  consigneeBranchId: null,
+  consigneeAddress: null,
+  consigneeCountry: null,
+  plrId: null,
+  polId: null,
+  podId: null,
+  fpdId: null,
+  epzCode: null,
+  notifyPartyId: null,
+  notifyAddress: null,
+  docUserId: null,
+  isBuyerDifferent: null,
+  businessSegmentId: null,
+  jobNo: null,
+  jobDate: null,
+  createdBy: null,
+
+  dischargeCountryId: null,
+  dischargePortId: null,
+  destinationCountryId: null,
+  destinationPortId: null,
+  natureOfCargoId: null,
+  totalNoOfPkgs: null,
+  airlineId: null,
+  flightNoDate: null,
+  egmNoDate: null,
+  mawbNoDate: null,
+  hawbNoDate: null,
+  preCarriageBy: null,
+  placeOfReceipt: null,
+  transhipperCode: null,
+  gatewayPortId: null,
+  stateOfOriginId: null,
+  isAnnexureCFiledWithAnnexureA: null,
+  loosePkgs: null,
+  pktsInMawb: null,
+  grossWeight: null,
+  netWeight: null,
+  volume: null,
+  chargeableWeight: null,
+  marksAndNos: null,
+
+  goodsStuffedAtId: null,
+  isSampleAccompanied: null,
+  cfsId: null,
+  factoryAddress: null,
+  warehouseCode: null,
+  sealTypeId: null,
+  sealNo: null,
+  agencyName: null,
+
+  buyersOrderNo: null,
+  otherReferences: null,
+  termsOfDeliveryAndPayment: null,
+  originCountryId: null,
+  invoiceHeader: null,
+
+  qCertNoDate: null,
+  exportTradeControl: null,
+  typeOfShipmentId: null,
+  shipmentTypeOther: null,
+  permissionNoDate: null,
+  exportUnderId: null,
+  sbHeading: null,
+  sbBottomText: null,
+
+  ieCodeOfEou: null,
+  branchSlNo: null,
+  examinationDate: null,
+  examiningOfficer: null,
+  examiningOfficerDesignation: null,
+  supervisingOfficer: null,
+  supervisingOfficerDesignation: null,
+  commissionerate: null,
+  division: null,
+  range: null,
+  verifiedByExaminingOfficer: null,
+  sampleForwarded: null,
+  sealNumber: null,
+
+  containerNo: null,
+  type: null,
+  pkgsStuffed: null,
+  sealDate: null,
+  sealType: null,
+  location: null,
+  tblJobContainer: [],
+};
 
 export default function JobDetailsSectionPage() {
-    const { clientId, userId } = getUserDetails();
-    const [activeTab, setActiveTab] = useState("Job");
-    const [newState, setNewState] = useState(DEFAULT_STATE);
-    const [clearFlag, setClearFlag] = useState({ isClear: false, fieldName: "" });
-    const [jobState, setJobState] = useState(initialJobState)
-    // const [entityState, setEntityState] = useState(initialEntityDetailsState)
-    const [shipmentState, setShipmentState] = useState(shipment);
-    const [invoiceState, setInvoiceState] = useState(invoice);
-    const [containerState, setContainerState] = useState(container);
-    const [itemState, setItemState] = useState(item);
-    const [finalState, setFinalState] = useState(null);
+  const {
+    clientId,
+    userId,
+    defaultCompanyId,
+    defaultBranchId,
+    defaultFinYearId,
+  } = getUserDetails();
 
-    useEffect(() => {
-        const header = {
-            businessSegmentId: newState?.businessSegmentId ?? null,
-            jobNo: newState?.jobNo ?? "",
-            jobDate: newState?.jobDate ?? null,
-            createdBy: newState?.createdBy ?? null,
+  const [activeTab, setActiveTab] = useState("Job");
+
+  // ✅ NEW RECORD defaults
+  const [newState, setNewState] = useState(() => makeDefaultState(userId));
+
+  const [clearFlag, setClearFlag] = useState({ isClear: false, fieldName: "" });
+  const [jobState, setJobState] = useState(jobFields);
+  const [invoiceState, setInvoiceState] = useState(invoice);
+  const [itemState, setItemState] = useState(item);
+  const [finalState, setFinalState] = useState(null);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
+
+  const isView =
+    searchParams.get("view") === "1" ||
+    searchParams.get("isView") === "true" ||
+    searchParams.get("isView") === "1";
+
+  // ✅ Any time id exists (EDIT or VIEW), you want these fields NULL
+  const hasId = !!id;
+
+  const fetchBranchCityPin = useCallback(
+    async (branchId) => {
+      if (!branchId) return null;
+
+      try {
+        const requestData = {
+          tableName: "tblCompanyBranch",
+          fieldName: [
+            { fieldname: "id", yourlabel: "id" },
+            { fieldname: "cityId", yourlabel: "cityId" },
+            { fieldname: "pinCode", yourlabel: "pinCode" },
+            { fieldname: "address", yourlabel: "address" },
+            { fieldname: "stateId", yourlabel: "stateId" },
+          ],
+          clientId,
+          filterCondition: `id=${Number(branchId)} and status=1`,
+          pageNo: 1,
+          pageSize: 1,
+          keyName: "",
+          keyValue: "",
         };
 
-        // force arrays (so later multiple rows will still work)
-        const invoiceArr = Array.isArray(invoiceState) ? invoiceState : [invoiceState];
-        const itemArr = Array.isArray(itemState) ? itemState : [itemState];
+        const resp = await fetchSearchPageData(requestData);
+        if (resp?.success) return resp?.data?.[0] || null;
+        return null;
+      } catch (e) {
+        console.error("fetchBranchCityPin error:", e);
+        return null;
+      }
+    },
+    [clientId]
+  );
 
-        const shipmentArr = Array.isArray(shipmentState) ? shipmentState : [shipmentState];
-        const containerArr = Array.isArray(containerState) ? containerState : [containerState];
+  const mapExporterToBuyer = useCallback(async () => {
+    const exporterId = jobState?.shipperId ?? null;
+    const exporterBranchId = jobState?.shipperBranchId ?? null;
+    const exporterAddress = jobState?.shipperAddress ?? null;
+    const exporterStateId = jobState?.exporterStateId ?? null;
 
-        setFinalState({
-            tblJob:
-            {
-                ...jobState,
-                ...header,
+    if (!exporterId) return;
 
-                tblJobInvoice: invoiceArr.map((inv) => ({
-                    ...inv,
+    setInvoiceState((prev) => ({
+      ...(prev || {}),
+      buyerId: exporterId,
+      buyerBranchId: exporterBranchId,
+      buyerAddress: exporterAddress,
+      buyerStateId: exporterStateId,
+    }));
+    const branchRow = await fetchBranchCityPin(exporterBranchId);
 
-                    tblJobItem: Array.isArray(inv?.tblJobItem) ? inv.tblJobItem : itemArr,
-                })),
+    if (branchRow) {
+      const cityResp = await fetchSearchPageData({
+        tableName: "tblCity",
+        fieldName: [
+          { fieldname: "id", yourlabel: "id" },
+          { fieldname: "name", yourlabel: "name" },
+        ],
+        clientId,
+        filterCondition: `id=${Number(branchRow?.cityId)} and status=1`,
+        pageNo: 1,
+        pageSize: 1,
+        keyName: "",
+        keyValue: "",
+      });
 
-                tblJobShipment: shipmentArr.map((shp) => ({
-                    ...shp,
+      const cityRow = cityResp?.success ? cityResp?.data?.[0] : null;
+      const cityOpt = cityRow ? { value: cityRow.id, label: cityRow.name } : null;
 
-                    tblJobContainer: Array.isArray(shp?.tblJobContainer)
-                        ? shp.tblJobContainer
-                        : containerArr,
-                })),
-            },
+      setInvoiceState((prev) => ({
+        ...(prev || {}),
+        buyerCityId: branchRow?.cityId ?? null,
+        ...(cityOpt
+          ? { buyerCityIddropdown: [cityOpt], buyerCityIdText: [cityOpt] }
+          : {}),
+        buyerpin: branchRow?.pinCode ?? null,
+      }));
+    }
+  }, [jobState, fetchBranchCityPin]);
 
-        });
-    }, [newState, jobState, shipmentState, invoiceState, containerState, itemState]);
+  useEffect(() => {
+    if (id) fetchData();
+  }, [id]);
 
+  useEffect(() => {
+    if (hasId) return;
 
+    setJobState((prev) => ({
+      ...prev,
+      createdBy: prev?.createdBy ?? userId ?? null,
+      jobDate: prev?.jobDate ?? new Date(),
+    }));
 
-    console.log('finalState=>', finalState)
+    setNewState((prev) => ({
+      ...prev,
+      createdBy: prev?.createdBy ?? userId ?? null,
+      jobDate: prev?.jobDate ?? new Date(),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasId, userId]);
 
-    const handleFieldValuesChange = useCallback(
-        (updatedValues) => {
-            setNewState((prev) => ({ ...prev, ...updatedValues }));
-            if (clearFlag.isClear) setClearFlag({ isClear: false, fieldName: "" });
-        },
-        [clearFlag.isClear],
-    );
-    const handleFieldValuesChange2 = async (
-        updatedValues,
-        field,
-        formControlData
-    ) => {
-        try {
-            console.log("field", field);
-            const requestData = {
-                id: updatedValues.copyMappingName,
-                filterValue: field[field.length - 1],
-                menuID: uriDecodedMenu.id,
-            };
-            const getCopyDetails = await getCopyData(requestData);
-            if (!getCopyDetails.success) {
-                toast.error(getCopyDetails.Message);
-                return;
-            }
-            let dataToCopy = {};
-            getCopyDetails.keyToValidate.fieldsMaping
-                .filter((data) => !data.isChild)
-                .forEach((data) => {
-                    if (
-                        Array.isArray(getCopyDetails.data[0][data.toColmunName]) &&
-                        formControlData?.controlname.toLowerCase() == "multiselect"
-                    ) {
-                        dataToCopy[data.toColmunName] = newState[data.toColmunName].concat(
-                            getCopyDetails.data[0][data.toColmunName]
-                        );
-                    } else {
-                        dataToCopy[data.toColmunName] =
-                            getCopyDetails.data[0][data.toColmunName];
-                    }
-                });
-            getCopyDetails.keyToValidate.fieldsMaping
-                .filter((data) => data.isChild)
-                .forEach((data) => {
-                    // dataToCopy[data.tableName] = getCopyDetails.data[0][data?.toTableName];
-                    dataToCopy[data?.toTableName] = formControlData?.controlname.toLowerCase() == "multiselect" ? [...newState[data?.toTableName], ...getCopyDetails.data[0][data?.toTableName]] : getCopyDetails.data[0][data?.toTableName]
-                        ;
-                });
+  useEffect(() => {
+    if (!hasId) return;
 
-            //      console.log("dataToCopy", dataToCopy);
-            let childData = getCopyDetails.keyToValidate.fieldsMaping.filter(
-                (data) => data.isChild == "true"
-            );
-            setChildsFields((prev) => {
-                let updatedFields = [...prev];
+    setJobState((prev) => ({
+      ...prev,
+      createdBy: null,
+      jobDate: null,
+    }));
 
-                childData.forEach((data) => {
-                    let index = updatedFields.findIndex(
-                        (i) => i.tableName === data.toColmunName
-                    );
+    setNewState((prev) => ({
+      ...prev,
+      createdBy: null,
+      jobDate: null,
+    }));
+  }, [hasId]);
 
-                    if (index !== -1) {
-                        // Update the specific object at the found index
-                        updatedFields[index] = {
-                            ...updatedFields[index],
-                            isAddFunctionality: data.isAddFunctionality,
-                            isDeleteFunctionality: data.isDeleteFunctionality,
-                            isCopyFunctionality: data.isCopyFunctionality,
-                        };
-                    }
-                });
-                return updatedFields;
-            });
+  const buildFilterCondition = () => {
+    const parts = [];
+    if (clientId) parts.push(`clientId=${clientId}`);
+    if (defaultCompanyId) parts.push(`companyId=${defaultCompanyId}`);
+    if (defaultBranchId) parts.push(`companyBranchId=${defaultBranchId}`);
+    if (defaultFinYearId) parts.push(`financialYearId=${defaultFinYearId}`);
+    if (id) parts.push(`id=${id}`);
+    parts.push(`status = 1`);
+    return parts.join(" and ");
+  };
 
-            console.log("getCopyDetails", dataToCopy);
+  async function fetchData() {
+    try {
+      const filterCondition = buildFilterCondition();
+      const requestData = {
+        tableName: "tblJob",
+        fieldName: Object.values(parentsFieldsData)
+          .flat()
+          .map((e) => ({
+            fieldname: e.fieldname,
+            yourlabel: e.yourlabel,
+          })),
+        clientId: clientId,
+        filterCondition,
+        pageNo: 1,
+        pageSize: 10,
+        keyName: "",
+        keyValue: "",
+      };
 
-            const dataObj = dataToCopy;
+      const apiResponse = await fetchSearchPageData(requestData);
+      if (apiResponse.success) {
+        const row = apiResponse.data?.[0] || {};
 
-            Object.keys(dataObj).forEach((key) => {
-                if (Array.isArray(dataObj[key])) {
-                    dataObj[key] = dataObj[key].map((item, index) => ({
-                        ...item,
-                        indexValue: index + 1,
-                    }));
-                }
-            });
+        // ✅ Load DB row; since you want NULL in EDIT+VIEW, override when hasId
+        setJobState(() => ({
+          id,
+          ...row,
+          ...(hasId ? { createdBy: null, jobDate: null } : {}),
+        }));
 
-            const finalIndexdata = {
-                ...getCopyDetails,
-                data: [dataObj, ...(getCopyDetails?.data?.slice(1) || [])],
-            };
+        setNewState((prev) => ({
+          ...prev,
+          ...row,
+          ...(hasId ? { createdBy: null, jobDate: null } : {}),
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  }
 
-            setNewState((prevState) => {
-                finalIndexdata.keyToValidate.fieldsMaping.forEach((data) => {
-                    if (data.isChild == "true") {
-                        if (typeof prevState[data.ToColmunName] === "undefined") {
-                            prevState[data.ToColmunName] = [];
-                        }
-                        for (const iterator of finalIndexdata.data[0][data.ToColmunName]) {
-                            prevState[data.ToColmunName].push(iterator);
-                        }
-                    }
-                });
-                return {
-                    ...prevState,
-                    ...finalIndexdata.data[0],
-                };
-            });
-            setSubmitNewState((prevState) => ({
-                ...prevState,
-                ...finalIndexdata.data[0],
-            }));
-
-            setKeysTovalidate(finalIndexdata.keyToValidate.fieldsMaping);
-        } catch (error) {
-            console.error("Fetch Error :", error);
-        }
-    };
-    const handleClose = useCallback(() => {
-        setNewState(DEFAULT_STATE);
-        setClearFlag({ isClear: true, fieldName: "" });
-    }, []);
-
-    const handleSubmit = async () => {
-        try {
-            if (!finalState?.tblJob) {
-                toast.error("Final payload not ready.");
-                return;
-            }
-            const payload = {
-                ...finalState,
-                clientId,
-                userId,
-            };
-
-            console.log("SUBMIT PAYLOAD =>", payload);
-
-            const res = await insertExportChaJob(payload);
-
-            if (res?.success) {
-                toast.success(res?.message || "Saved successfully.");
-                setClearFlag({ isClear: true, fieldName: "" });
-                setNewState(DEFAULT_STATE);
-                return;
-            }
-
-            if (res?.rowsAffected?.success === false && Array.isArray(res?.rowsAffected?.errors)) {
-                toast.error(res?.rowsAffected?.message || "Error Found !");
-                console.log("Row Errors =>", res.rowsAffected.errors);
-                return;
-            }
-
-            toast.error(res?.message || "Something went wrong.");
-        } catch (err) {
-            console.error(err);
-            toast.error(err?.message || "Failed to save.");
-        }
+  useEffect(() => {
+    const header = {
+      businessSegmentId: newState?.businessSegmentId ?? null,
+      jobNo: newState?.jobNo ?? "",
+      jobDate: newState?.jobDate ?? null, // ✅ null in edit/view
+      createdBy: newState?.createdBy ?? null, // ✅ null in edit/view
     };
 
+    const invoiceArr = Array.isArray(invoiceState) ? invoiceState : [invoiceState];
+    const itemArr = Array.isArray(itemState) ? itemState : [itemState];
 
-    // const handleSubmit = useCallback(async () => {
-    //     try {
-    //         const payload = { ...newState, clientId, userId };
-    //         const result = await getContainerData(payload);
+    setFinalState({
+      tblJob: {
+        ...jobState,
+        ...header,
+        tblJobInvoice: invoiceArr.map((inv) => ({
+          ...inv,
+          tblJobItem: Array.isArray(inv?.tblJobItem) ? inv.tblJobItem : itemArr,
+        })),
+      },
+    });
+  }, [newState, jobState, invoiceState, itemState]);
 
-    //         if (result?.success) toast.success("Saved successfully.");
-    //         else toast.error(result?.message || "Save failed.");
-    //     } catch (err) {
-    //         console.error(err);
-    //         toast.error("Error submitting form.");
-    //     }
-    // }, [newState, clientId, userId]);
-    return (
-        <>
-            <div className="flex space-x-4 p-2 mb-5">
-                <button
-                    className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
-                    type="button"
-                    onClick={handleSubmit}
-                >
-                    Submit
-                </button>
+  const handleFieldValuesChange = useCallback(
+    (updatedValues) => {
+      if (isView) return;
+      setJobState((prev) => ({ ...prev, ...updatedValues }));
+      setNewState((prev) => ({ ...prev, ...updatedValues }));
+      if (clearFlag.isClear) setClearFlag({ isClear: false, fieldName: "" });
+    },
+    [clearFlag.isClear, isView]
+  );
 
-                <button
-                    className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
-                    type="button"
-                    onClick={handleClose}
-                >
-                    Close
-                </button>
-            </div>
-            <div
-                className={`p-0 ${styles.thinScrollBar}`}
-                style={{ "--inputFontSize": "12px", "--labelFontSize": "12px" }}
-            >
-                <CustomeInputFields
-                    inputFieldData={PARENT_FIELDS[0]["Job Details"]}
-                    values={newState}
-                    onValuesChange={handleFieldValuesChange}
-                    inEditMode={{ isEditMode: false, isCopy: false }}
-                    clearFlag={clearFlag}
-                    newState={newState}
-                    setStateVariable={setNewState}
-                    handleFieldValuesChange2={handleFieldValuesChange2}
-                />
-            </div>
+  const handleFieldValuesChange2 = async () => {
+    if (isView) return;
+  };
 
-            <div className="tabsBar">
-                {TABS.map((t) => (
-                    <button
-                        key={t}
-                        type="button"
-                        onClick={() => setActiveTab(t)}
-                        className={`tabBtn ${activeTab === t ? "tabBtnActive" : ""}`}
-                    >
-                        {t}
-                    </button>
-                ))}
-            </div>
+  const handleClose = useCallback(() => {
+    setNewState(makeDefaultState(userId));
+    setClearFlag({ isClear: true, fieldName: "" });
+    router.push("/exportChaJob");
+  }, [router, userId]);
 
-            {activeTab === "Job" ? (
-                <JobSheet
-                    value={jobState}
-                    onChange={setJobState}
-                />
-            ) : null}
-            {/* {activeTab === "Entity" ? (
-                <EntitySheet
-                    value={entityState}
-                    onChange={setEntityState}
-                />
-            ) : null} */}
-            {activeTab === "Shipment" ? (
-                <ShipmentSheet
-                    value={shipmentState}
-                    onChange={setShipmentState}
-                />
-            ) : null}
-            {activeTab === "Invoice" ? (
-                <InvoiceSheet
-                    value={invoiceState}
-                    onChange={setInvoiceState}
-                />
-            ) : null}
-            {activeTab === "Item" ? (
-                <ItemSheet
-                    value={itemState}
-                    onChange={setItemState}
-                />
-            ) : null}
-            {activeTab === "Container" ? (
-                <ContainerSheet
-                    value={containerState}
-                    onChange={setContainerState}
-                />
-            ) : null}
-        </>
-    );
+  // const handleSubmit = async () => {
+  //   if (isView) return;
+  //   try {
+  //     if (!finalState?.tblJob) {
+  //       toast.error("Final payload not ready.");
+  //       return;
+  //     }
+  //     const payload = {
+  //       ...finalState,
+  //       clientId,
+  //       userId,
+  //     };
+
+  //     const res = await insertExportChaJob(payload);
+
+  //     if (res?.success) {
+  //       toast.success(res?.message || "Saved successfully.");
+  //       setClearFlag({ isClear: true, fieldName: "" });
+  //       setNewState(makeDefaultState(userId));
+  //       return;
+  //     }
+
+  //     if (
+  //       res?.rowsAffected?.success === false &&
+  //       Array.isArray(res?.rowsAffected?.errors)
+  //     ) {
+  //       toast.error(res?.rowsAffected?.message || "Error Found !");
+  //       console.log("Row Errors =>", res.rowsAffected.errors);
+  //       return;
+  //     }
+
+  //     toast.error(res?.message || "Something went wrong.");
+  //   } catch (err) {
+  //     console.error(err);
+  //     toast.error(err?.message || "Failed to save.");
+  //   }
+  // };
+
+  const handleSubmit = async () => {
+    if (isView) return;
+
+    try {
+      if (!finalState?.tblJob) {
+        toast.error("Final payload not ready.");
+        return;
+      }
+
+      const requestBody = {
+        jsonData: finalState.tblJob,
+        tableName: "tblJob",
+        formId: newState?.id || null,
+        parentColumnName: "jobId",
+      };
+
+      const res = await commanPostService({
+        url: "/api/master/saveJsonToDB",
+        data: requestBody,
+      });
+
+      if (res?.success) {
+        toast.success(res?.message || "Saved successfully.");
+        return;
+      }
+
+      toast.error(res?.message || "Failed to save.");
+    } catch (e) {
+      console.error(e);
+      toast.error(e?.message || "Submit error");
+    }
+  };
+
+  const viewWrapperStyle = isView ? { opacity: 0.95 } : undefined;
+
+  return (
+    <>
+      <div className="flex space-x-4 p-2 mb-5">
+        {!isView && (
+          <button
+            className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
+            type="button"
+            onClick={handleSubmit}
+          >
+            Submit
+          </button>
+        )}
+
+        <button
+          className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
+          type="button"
+          onClick={handleClose}
+        >
+          Close
+        </button>
+
+        {/* {isView && (
+          <span className="text-[12px] px-2 py-1 rounded bg-gray-100 border border-gray-300">
+            View Mode
+          </span>
+        )} */}
+      </div>
+
+      <div
+        className={`p-0 ${styles.thinScrollBar}`}
+        style={{ "--inputFontSize": "12px", "--labelFontSize": "12px" }}
+      >
+        <CustomeInputFields
+          inputFieldData={PARENT_FIELDS[0]["Job Details"]}
+          values={newState}
+          onValuesChange={handleFieldValuesChange}
+          inEditMode={{ isEditMode: !!id && !isView, isCopy: false }}
+          clearFlag={clearFlag}
+          newState={newState}
+          setStateVariable={isView ? () => { } : setNewState}
+          handleFieldValuesChange2={handleFieldValuesChange2}
+          isView={isView}
+        />
+      </div>
+
+      <div className="tabsBar">
+        {TABS.map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={async () => {
+              if (t === "Invoice") {
+                await mapExporterToBuyer();
+              }
+              setActiveTab(t);
+            }}
+            className={`tabBtn ${activeTab === t ? "tabBtnActive" : ""}`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      <div style={viewWrapperStyle}>
+        {activeTab === "Job" ? (
+          <JobSheet
+            value={jobState}
+            onChange={isView ? () => { } : setJobState}
+            jobId={id}
+            isView={isView}
+          />
+        ) : null}
+
+        {activeTab === "Invoice" ? (
+          <InvoiceSheet
+            value={invoiceState}
+            onChange={isView ? () => { } : setInvoiceState}
+            isView={isView}
+            jobId={id || 0}
+            setStateVariable={isView ? () => { } : setInvoiceState}
+          />
+        ) : null}
+
+        {activeTab === "Item" ? (
+          <ItemSheet
+            value={itemState}
+            onChange={isView ? () => { } : setItemState}
+            isView={isView}
+          />
+        ) : null}
+      </div>
+    </>
+  );
 }

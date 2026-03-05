@@ -38,21 +38,6 @@ const exBondColumns = [
 const formdata = {
   "Main": [
     {
-      "fieldname": "dischargePortId",
-      "yourlabel": "Discharge Port",
-      "controlname": "dropdown",
-      "referenceTable": "tblPort",
-      "referenceColumn": "name + ' (' + code + ')'",
-      "dropdownFilter": "",
-      "isControlShow": true,
-      "isGridView": false,
-      "isDataFlow": true,
-      "isRequired": false,
-      "isEditable": true,
-      "isBreak": false,
-      "ordering": 1
-    },
-    {
       "fieldname": "dischargeCountryId",
       "yourlabel": "Discharge Country",
       "controlname": "dropdown",
@@ -65,22 +50,22 @@ const formdata = {
       "isRequired": false,
       "isEditable": true,
       "isBreak": false,
-      "ordering": 2
+      "ordering": 1
     },
     {
-      "fieldname": "destinationPortId",
-      "yourlabel": "Destination Port",
+      "fieldname": "dischargePortId",
+      "yourlabel": "Discharge Port",
       "controlname": "dropdown",
       "referenceTable": "tblPort",
-      "referenceColumn": "name + ' (' + code + ')'",
-      "dropdownFilter": "",
+      "referenceColumn": "name",
+      "dropdownFilter": " and countryId = ${newState.dischargeCountryId}",
       "isControlShow": true,
       "isGridView": false,
       "isDataFlow": true,
       "isRequired": false,
       "isEditable": true,
       "isBreak": false,
-      "ordering": 3
+      "ordering": 1
     },
     {
       "fieldname": "destinationCountryId",
@@ -96,6 +81,52 @@ const formdata = {
       "isEditable": true,
       "isBreak": false,
       "ordering": 4
+    },
+    {
+      "fieldname": "destinationPortId",
+      "yourlabel": "Destination Port",
+      "controlname": "dropdown",
+      "referenceTable": "tblPort",
+      "referenceColumn": "name",
+      "dropdownFilter": " and countryId = ${newState.destinationCountryId}",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 3
+    },
+    {
+      "fieldname": "natureOfCargoId",
+      "yourlabel": "Nature of Cargo",
+      "controlname": "dropdown",
+      "referenceTable": "tblMasterData",
+      "referenceColumn": "name",
+      "dropdownFilter": "and masterListId in (select id from tblMasterList where name='tblNatureOfCargo')",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 16
+    },
+
+    {
+      "fieldname": "totalNoOfPkgs",
+      "yourlabel": "Total No. of Pkgs",
+      "controlname": "number",
+      "referenceTable": "",
+      "referenceColumn": "",
+      "dropdownFilter": "",
+      "isControlShow": true,
+      "isGridView": false,
+      "isDataFlow": true,
+      "isRequired": false,
+      "isEditable": true,
+      "isBreak": false,
+      "ordering": 17
     },
     {
       "fieldname": "airlineId",
@@ -262,36 +293,7 @@ const formdata = {
       "isBreak": false,
       "ordering": 15
     },
-    {
-      "fieldname": "natureOfCargoId",
-      "yourlabel": "Nature of Cargo",
-      "controlname": "dropdown",
-      "referenceTable": "tblMasterData",
-      "referenceColumn": "name",
-      "dropdownFilter": "and masterListId in (select id from tblMasterList where name='tblNatureOfCargo')",
-      "isControlShow": true,
-      "isGridView": false,
-      "isDataFlow": true,
-      "isRequired": false,
-      "isEditable": true,
-      "isBreak": false,
-      "ordering": 16
-    },
-    {
-      "fieldname": "totalNoOfPkgs",
-      "yourlabel": "Total No. of Pkgs",
-      "controlname": "number",
-      "referenceTable": "",
-      "referenceColumn": "",
-      "dropdownFilter": "",
-      "isControlShow": true,
-      "isGridView": false,
-      "isDataFlow": true,
-      "isRequired": false,
-      "isEditable": true,
-      "isBreak": false,
-      "ordering": 17
-    },
+
     {
       "fieldname": "loosePkgs",
       "yourlabel": "Loose Pkgs",

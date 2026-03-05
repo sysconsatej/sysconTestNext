@@ -38,13 +38,20 @@ export default function PrintModal({
   const [redirectedPageType, setRedirectedPageType] = useState(null);
   const id = searchParams.id;
 
+  console.log("PrintModal instance =>", {
+  submittedMenuId,
+  submittedRecordId,
+  tableName,
+  pageType,
+});
+
   useEffect(() => {
     setRedirectedPageType(pageType);
   }, [pageType]);
 
   const handleClose = () => {
     try {
-      setOpenPrintModal((prev) => !prev);
+      setOpenPrintModal(false);
     } catch (err) {
       console.error("Error in handleClose:", err);
     }
@@ -398,7 +405,7 @@ export default function PrintModal({
         };
 
         const blEditerRequestBody = {
-          columns: "tbp.id,tbp.name,tbp.blPrintTemplateJson",
+          columns: "tbp.id,tbp.name",
           tableName: "tblBlPrintTemplate tbp",
           whereCondition: `tbp.clientId=${clientId} and tbp.blOfId=${companyId}`,
           clientIdCondition: `tbp.status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
@@ -433,15 +440,16 @@ export default function PrintModal({
               ReportMenuLink: "/blReport",
               menuType: "B",
               reportMenuId: null,
-              reportTemplateId: item?.id, // optional
+              reportTemplateId: item?.id, 
               redirectionPath: null,
               displayName: item?.name,
             }))
           : [];
 
-        //const combined = [...fetchedMenuNames, ...blPrintTemplate];
-        //const combined = [...fetchedMenuNames];
-        setReportNames(fetchedMenuNames.length > 0 ? fetchedMenuNames : []);
+          console.log('blPrintTemplate =>',blPrintTemplate)
+          console.log('fetchedMenuNames =>',fetchedMenuNames)
+          const combinedReportNames = [...fetchedMenuNames, ...blPrintTemplate];
+        setReportNames(combinedReportNames);
       } catch (error) {
         console.error("Error fetching initial data:", error);
         setReportNames([]);
@@ -459,7 +467,6 @@ export default function PrintModal({
           columns: "tableName",
           tableName: "tblForm",
           whereCondition: `id in (select formId from tblMenuFormMapping where menuId=${submittedMenuId} and level=1 and status=1 and srNO=1 and clientId in (${clientId},(select id from tblClient where clientCode = 'SYSCON')))`,
-
           clientIdCondition: `status = 1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
         };
         const tableName = await fetchReportData(requestBody);

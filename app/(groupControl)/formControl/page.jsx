@@ -107,6 +107,8 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { useTheme } from "@mui/material/styles";
 import Pagination from "@mui/material/Pagination";
+import { useSelector } from "react-redux";
+import { User } from "lucide-react";
 
 /* ✅ put these styles ABOVE return OR near your component (same file) */
 const chipBtnStyle = {
@@ -183,6 +185,9 @@ export default function StickyHeadTable() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = JSON.parse(searchParams.get("menuName")).id;
+  const selectedMenuId = useSelector((state) => state?.counter?.selectedMenuId);
+  const [dataFetched, setDataFetched] = useState(false);
+  console.log("selectedMenuId", selectedMenuId);
   const prevMenuIdRef = React.useRef(null); // stores previous menuId
   const previousMenuId = prevMenuIdRef.current; // read previous value
   const inputRef = useRef(null);
@@ -205,7 +210,6 @@ export default function StickyHeadTable() {
   const [sortedColumn, setSortedColumn] = useState(null);
   const [hoveredIcon, setHoveredIcon] = useState(null);
   const [loader, setLoader] = useState(true);
-  const [dataFetched, setDataFetched] = useState(false);
   const [isInputVisible, setInputVisible] = useState(false);
   const [activeColumn, setActiveColumn] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -235,6 +239,7 @@ export default function StickyHeadTable() {
   const [openPrintModal, setOpenPrintModal] = useState(false);
   const [submittedMenuId, setSubmittedMenuId] = useState(null);
   const [submittedRecordId, setSubmittedRecordId] = useState(null);
+  const [printTableName, setPrintTableName] = useState(null);
   const [isReportPresent, setisReportPresent] = useState(false);
   //const [defaultCompanyBranch, setDefaultCompanyBranch] = useState([]);
   const [operatorsBg, setOperatorsBg] = useState("blue");
@@ -243,8 +248,15 @@ export default function StickyHeadTable() {
   const [expandedRows, setExpandedRows] = useState({}); // { [rowId]: true/false }
   const theme = useTheme();
 
-  // Tailwind lg starts at 1024px
-  //const isLgUp = useMediaQuery("(min-width:1024px)", { noSsr: true });
+  const previousMenuIdRef = useRef();
+
+  useEffect(() => {
+    if (previousMenuIdRef.current !== selectedMenuId) {
+      setDataFetched(false);
+    }
+    previousMenuIdRef.current = selectedMenuId;
+  }, [selectedMenuId]);
+
   const isLgUp = useMediaQuery("(min-width:1024px)");
 
   console.log("Previous Menu ID:", previousMenuId);
@@ -312,7 +324,7 @@ export default function StickyHeadTable() {
 
     try {
       e.currentTarget.setPointerCapture?.(e.pointerId);
-    } catch { }
+    } catch {}
   };
 
   const onSwipeMove = (e) => {
@@ -452,7 +464,7 @@ export default function StickyHeadTable() {
   const [isEditVisible, setIsEditVisible] = useState(false);
   const [isAddVisible, setIsAddVisible] = useState(false);
   const [isViewVisible, setIsViewVisible] = useState(false);
-  const [isPrintVisible, setIsPrintVisible] = useState(false);
+  const [isPrintVisible, setIsPrintVisible] = useState(true);
   const [isCopyVisible, setIsCopyVisible] = useState(false);
   const [isAttachmentVisible, setisAttachmentVisible] = useState(false);
   let [TemplateIdAfterSelect, setTemplateId] = useState([0]);
@@ -589,6 +601,7 @@ export default function StickyHeadTable() {
       setOpenPrintModal((prev) => !prev);
       setSubmittedMenuId(search);
       setSubmittedRecordId(row.id);
+      setPrintTableName(tableName);
     }
   };
 
@@ -811,7 +824,6 @@ export default function StickyHeadTable() {
         status: 1,
       },
     };
-    console.log("Akash", fetchParentMenuId);
     try {
       const data = await fetchDataAPI(requestBodyMenu);
       if (data && data.data && data.data.length > 0) {
@@ -985,12 +997,15 @@ export default function StickyHeadTable() {
       return toast.error(error.message);
     }
     console.log("deleteController", data);
-    const { clientId } = getUserDetails();
+    const { clientId, userId } = getUserDetails();
     setDeleteData({
       id: data.id,
       tableName,
       menuID: search,
       clientId: parseInt(clientId),
+      updateBy: parseInt(userId),
+      deletedNo: data.id,
+      //updateDate:Date.now()
     });
     setParaText("Do you want to delete this record?");
     setIsError(false);
@@ -1374,17 +1389,17 @@ export default function StickyHeadTable() {
         prev.map((item, i) =>
           i === index
             ? {
-              ...item,
-              fromDate: formattedDate,
-              advanceSearch: {
-                ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
-                [name]: {
-                  // Update or add the new key within advanceSearch
-                  ...item.advanceSearch?.[name], // Spread existing values under this key, if any
-                  $gte: formattedDate, // Update or add the $lte key under the specified name
+                ...item,
+                fromDate: formattedDate,
+                advanceSearch: {
+                  ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
+                  [name]: {
+                    // Update or add the new key within advanceSearch
+                    ...item.advanceSearch?.[name], // Spread existing values under this key, if any
+                    $gte: formattedDate, // Update or add the $lte key under the specified name
+                  },
                 },
-              },
-            }
+              }
             : item,
         ),
       );
@@ -1399,17 +1414,17 @@ export default function StickyHeadTable() {
         prev.map((item, i) =>
           i === index
             ? {
-              ...item,
-              toDate: formattedDate,
-              advanceSearch: {
-                ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
-                [name]: {
-                  // Update or add the new key within advanceSearch
-                  ...item.advanceSearch?.[name], // Spread existing values under this key, if any
-                  $lte: formattedDate, // Update or add the $lte key under the specified name
+                ...item,
+                toDate: formattedDate,
+                advanceSearch: {
+                  ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
+                  [name]: {
+                    // Update or add the new key within advanceSearch
+                    ...item.advanceSearch?.[name], // Spread existing values under this key, if any
+                    $lte: formattedDate, // Update or add the $lte key under the specified name
+                  },
                 },
-              },
-            }
+              }
             : item,
         ),
       );
@@ -2337,13 +2352,13 @@ export default function StickyHeadTable() {
                         if (field?.isDummy) {
                           return field?.dummyField === "comma"
                             ? getCommaSeparatedValuesCountFromNestedKeys(
-                              row?.[field?.id],
-                              field?.refkey,
-                            )?.values
+                                row?.[field?.id],
+                                field?.refkey,
+                              )?.values
                             : getCommaSeparatedValuesCountFromNestedKeys(
-                              row?.[field?.id],
-                              field?.refkey,
-                            )?.count;
+                                row?.[field?.id],
+                                field?.refkey,
+                              )?.count;
                         }
                         if (
                           typeof row?.[field?.id] === "object" &&
@@ -2484,6 +2499,33 @@ export default function StickyHeadTable() {
                                   </div>
                                 )}
 
+                                {/* {isPrintVisible && ( */}
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  <GridHoverIcon
+                                    defaultIcon={printer}
+                                    hoverIcon={PrintHover}
+                                    altText="Print"
+                                    title={"Print"}
+                                    onClick={async () => {
+                                      handlePrint(row);
+                                      setModalVisible(true);
+                                    }}
+                                  />
+                                </div>
+                                {/* )} */}
+
+                                {isDeleteVisible && (
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <GridHoverIcon
+                                      defaultIcon={DeleteIcon2}
+                                      hoverIcon={DeleteHover}
+                                      altText="Delete"
+                                      title="Delete Record"
+                                      onClick={() => deleteController(row)}
+                                    />
+                                  </div>
+                                )}
+
                                 {isCopyVisible && (
                                   <div onClick={(e) => e.stopPropagation()}>
                                     <GridHoverIcon
@@ -2494,33 +2536,6 @@ export default function StickyHeadTable() {
                                       onClick={() =>
                                         addEditController(row, true)
                                       }
-                                    />
-                                  </div>
-                                )}
-
-                                {isPrintVisible && (
-                                  <div onClick={(e) => e.stopPropagation()}>
-                                    <GridHoverIcon
-                                      defaultIcon={printer}
-                                      hoverIcon={PrintHover}
-                                      altText="Print"
-                                      title={"Print"}
-                                      onClick={async () => {
-                                        handlePrint(row);
-                                        setModalVisible(true);
-                                      }}
-                                    />
-                                  </div>
-                                )}
-
-                                {isDeleteVisible && (
-                                  <div onClick={(e) => e.stopPropagation()}>
-                                    <GridHoverIcon
-                                      defaultIcon={DeleteIcon2}
-                                      hoverIcon={DeleteHover}
-                                      altText="Delete"
-                                      title="Delete Record"
-                                      onClick={() => deleteController(row)}
                                     />
                                   </div>
                                 )}
@@ -3039,11 +3054,11 @@ export default function StickyHeadTable() {
                           `}
                                     >
                                       {typeof row[fieldName.id] === "object" &&
-                                        row[fieldName.id] !== null
+                                      row[fieldName.id] !== null
                                         ? getNestedValue(
-                                          row[fieldName.id],
-                                          fieldName.refkey,
-                                        )
+                                            row[fieldName.id],
+                                            fieldName.refkey,
+                                          )
                                         : isDateFormat(row[fieldName.id])}
                                     </TableCell>
                                   )}
@@ -3058,13 +3073,13 @@ export default function StickyHeadTable() {
                                     >
                                       {fieldName.dummyField == "comma"
                                         ? getCommaSeparatedValuesCountFromNestedKeys(
-                                          row[fieldName.id],
-                                          fieldName.refkey,
-                                        ).values
+                                            row[fieldName.id],
+                                            fieldName.refkey,
+                                          ).values
                                         : getCommaSeparatedValuesCountFromNestedKeys(
-                                          row[fieldName.id],
-                                          fieldName.refkey,
-                                        ).count}
+                                            row[fieldName.id],
+                                            fieldName.refkey,
+                                          ).count}
                                     </TableCell>
                                   )}
                                 {typeof row[fieldName.id] !==
@@ -3114,25 +3129,6 @@ export default function StickyHeadTable() {
                                       }
                                     />
                                   )}
-                                  {isCopyVisible && (
-                                    <GridHoverIcon
-                                      defaultIcon={copyDoc} // Your default icon source
-                                      hoverIcon={CopyHover} // Your hovered icon source
-                                      altText="Copy"
-                                      title={"Copy"}
-                                      onClick={() =>
-                                        addEditController(row, true)
-                                      }
-                                    />
-                                  )}
-                                  {isRequiredAttachment && (
-                                    <GridHoverIcon
-                                      defaultIcon={attach} // Your default icon source
-                                      hoverIcon={attachmentIcon} // Your hovered icon source
-                                      altText="Attachment"
-                                      title={"Attachment"}
-                                    />
-                                  )}
                                   {/* {isPrintVisible && ( */}
                                   <GridHoverIcon
                                     defaultIcon={printer} // Your default icon source
@@ -3153,6 +3149,25 @@ export default function StickyHeadTable() {
                                       altText="Delete"
                                       title={"Delete Record"}
                                       onClick={() => deleteController(row)}
+                                    />
+                                  )}
+                                  {isCopyVisible && (
+                                    <GridHoverIcon
+                                      defaultIcon={copyDoc} // Your default icon source
+                                      hoverIcon={CopyHover} // Your hovered icon source
+                                      altText="Copy"
+                                      title={"Copy"}
+                                      onClick={() =>
+                                        addEditController(row, true)
+                                      }
+                                    />
+                                  )}
+                                  {isRequiredAttachment && (
+                                    <GridHoverIcon
+                                      defaultIcon={attach} // Your default icon source
+                                      hoverIcon={attachmentIcon} // Your hovered icon source
+                                      altText="Attachment"
+                                      title={"Attachment"}
                                     />
                                   )}
                                 </div>
@@ -3177,8 +3192,8 @@ export default function StickyHeadTable() {
                       </div>
                     </div>
                   )}
-                  {/* new model Akash */}
-                  <div>
+                  {/* new model Akash New */}
+                  {/* <div>
                     {openPrintModal && (
                       <PrintModal
                         setOpenPrintModal={setOpenPrintModal}
@@ -3189,7 +3204,7 @@ export default function StickyHeadTable() {
                         pageType={"searchPage"}
                       />
                     )}
-                  </div>
+                  </div> */}
                 </TableContainer>
               </Paper>
               <div className="flex items-center justify-end pt-2 px-4 text-black">
@@ -3235,6 +3250,7 @@ export default function StickyHeadTable() {
             submittedRecordId={submittedRecordId}
             submittedMenuId={submittedMenuId}
             openPrintModal={openPrintModal}
+            tableName={tableName}
             pageType={"searchPage"}
           />
         )}

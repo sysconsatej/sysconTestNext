@@ -14,7 +14,6 @@ body {
   box-sizing: border-box;
   page-break-after: always;
   padding: 5mm; /* creates spacing inside the page */
-
 }
 
 .main-border {
@@ -55,4 +54,11 @@ body {
   }
 }
 
+.parent {
+  display: flex;
+  flex-direction: column;
+}
 
+.footerWrap {
+  margin-top: auto; /* key line */
+}

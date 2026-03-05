@@ -96,9 +96,11 @@ import { getUserDetails } from "@/helper/userDetails";
 import { fetchReportData } from "@/services/auth/FormControl.services";
 import { encryptUrlFun } from "@/utils";
 import PrintModal from "@/components/Modal/printModal.jsx";
+import { useSelector } from "react-redux";
 
 export default function StickyHeadTable() {
   const router = useRouter();
+  const selectedMenuId = useSelector((state) => state?.counter?.selectedMenuId);
   const { clientId } = getUserDetails();
   const searchParams = useSearchParams();
   const search = JSON.parse(searchParams.get("menuName")).id;
@@ -166,6 +168,15 @@ export default function StickyHeadTable() {
   const [isPrintVisible, setIsPrintVisible] = useState(true);
   const [isCopyVisible, setIsCopyVisible] = useState(false);
   const [formControlData, setFormControlData] = useState([]);
+
+  const previousMenuIdRef = useRef();
+
+  useEffect(() => {
+    if (previousMenuIdRef.current !== selectedMenuId) {
+      setDataFetched(false);
+    }
+    previousMenuIdRef.current = selectedMenuId;
+  }, [selectedMenuId]);
 
   async function checkReportPresent(menuId) {
     if (menuId) {
@@ -279,7 +290,7 @@ export default function StickyHeadTable() {
       tableName: tableName,
       recordId: recordId.id,
       clientId: clientId,
-      menuId:search
+      menuId: search,
     };
     const data = await disableEdit(requestBody);
     if (data.success === false) {
@@ -308,7 +319,7 @@ export default function StickyHeadTable() {
 
   const handleReportClick = (reportId) => {
     const selectedReport = reportNames.find(
-      (report) => report.ReportName === reportId
+      (report) => report.ReportName === reportId,
     );
 
     if (selectedReport) {
@@ -318,19 +329,19 @@ export default function StickyHeadTable() {
         const selectedReportId = [SelectedRow]; // Assuming this should refer to the selected row or item
         setTemplateId(reportIdsArray);
         router.push(
-          `/reportTemplateCreator/viewEditer?templateId=${templateId}&reportId=${selectedReportId}&menuName=${search}`
+          `/reportTemplateCreator/viewEditer?templateId=${templateId}&reportId=${selectedReportId}&menuName=${search}`,
         );
       } else {
         const reportIdsArray = [selectedReport.ReportName.toString()];
         const selectedReportIds = reportIdsArray;
         sessionStorage.setItem(
           "selectedReportIds",
-          JSON.stringify(selectedReportIds)
+          JSON.stringify(selectedReportIds),
         );
 
         sessionStorage.setItem(
           "selectedReportsMenuId",
-          JSON.stringify(selectedReport.reportMenuId)
+          JSON.stringify(selectedReport.reportMenuId),
         );
 
         // If objectId is referring to reportId, ensure it's properly set
@@ -386,7 +397,7 @@ export default function StickyHeadTable() {
         setDropHeaderFields(tableHeadingsData.data[0]?.fields);
         setDataFetched(true);
         setIsRequiredAttachment(
-          tableHeadingsData.data[0]?.isRequiredAttachment
+          tableHeadingsData.data[0]?.isRequiredAttachment,
         );
         let requestData = {
           tableName: tableHeadingsData.data[0]?.tableName,
@@ -407,7 +418,7 @@ export default function StickyHeadTable() {
             setPageCount(Count);
           }
           setTotalPages(
-            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage)
+            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage),
           );
           setSearchOpen(false);
           setPage(1);
@@ -444,7 +455,7 @@ export default function StickyHeadTable() {
         ]);
         setDataFetched(true);
         setIsRequiredAttachment(
-          tableHeadingsData.data[0]?.isRequiredAttachment
+          tableHeadingsData.data[0]?.isRequiredAttachment,
         );
         let requestData = {
           tableName: tableHeadingsData.data[0]?.tableName,
@@ -466,7 +477,7 @@ export default function StickyHeadTable() {
             setPageCount(Count);
           }
           setTotalPages(
-            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage)
+            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage),
           );
           setSearchOpen(false);
           setPage(1);
@@ -500,7 +511,7 @@ export default function StickyHeadTable() {
             setPageCount(Count);
           }
           setTotalPages(
-            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage)
+            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage),
           );
           pageSelected(requestData.pageNo);
         } else {
@@ -608,7 +619,7 @@ export default function StickyHeadTable() {
         menuName: search,
         isCopy: isCopy || false,
         isView: isView || false,
-      })
+      }),
     );
 
     const addPageQueryString = encryptUrlFun({
@@ -629,12 +640,15 @@ export default function StickyHeadTable() {
 
   const deleteController = (data) => {
     console.log("deleteController", data);
-    const { clientId } = getUserDetails();
+    const { clientId ,userId} = getUserDetails();
     setDeleteData({
       id: data.id,
       tableName,
-      clientId,
       menuID: search,
+      clientId: parseInt(clientId),
+      updateBy:parseInt(userId),
+      deletedNo:data.id
+      //updateDate:Date.now()
     });
     setParaText("Do you want to delete this record?");
     setIsError(false);
@@ -754,14 +768,14 @@ export default function StickyHeadTable() {
       if (typeof Data[key] === "object" && Data[key] !== null) {
         let find = ProccessForTheCommaSeperated(
           Data[key],
-          keys.slice(1).join(".")
+          keys.slice(1).join("."),
         );
         value = [...value, find];
       }
       if (Array.isArray(Data[key])) {
         const keytoSend = keys.slice(1).join(".");
         let find = Data[key].map((item) =>
-          ProccessForTheCommaSeperated(item, keytoSend)
+          ProccessForTheCommaSeperated(item, keytoSend),
         );
         value = [...find];
       }
@@ -898,7 +912,7 @@ export default function StickyHeadTable() {
     index,
     newValue,
     dropPageNo,
-    searchValue
+    searchValue,
   ) => {
     try {
       const prevData = [...dynamic];
@@ -962,7 +976,7 @@ export default function StickyHeadTable() {
         });
       }
       setDropHeaderFields((prev) =>
-        prev.filter((item) => item.fieldname !== newValue.fieldname)
+        prev.filter((item) => item.fieldname !== newValue.fieldname),
       );
     } catch (error) {
       console.error(" error ", error);
@@ -1034,8 +1048,8 @@ export default function StickyHeadTable() {
                   },
                 },
               }
-            : item
-        )
+            : item,
+        ),
       );
     }
   };
@@ -1059,8 +1073,8 @@ export default function StickyHeadTable() {
                   },
                 },
               }
-            : item
-        )
+            : item,
+        ),
       );
     }
   };
@@ -1096,7 +1110,7 @@ export default function StickyHeadTable() {
 
     const removedDropData = headerFields.filter(
       (header) =>
-        !updatedItems.some((item) => header.fieldname === item.value.fieldname)
+        !updatedItems.some((item) => header.fieldname === item.value.fieldname),
     );
 
     const insertDropData = headerFields.find((item) => {
@@ -1511,7 +1525,7 @@ export default function StickyHeadTable() {
                         className={`w-[12rem] ${styles.inputField}  `}
                         value={
                           initialHeaderFields?.find(
-                            (option) => option.label === elem.value?.label
+                            (option) => option.label === elem.value?.label,
                           ) || null
                         }
                         noOptionsMessage={() => "No records found"}
@@ -1559,7 +1573,7 @@ export default function StickyHeadTable() {
                           value={elem.dropDownValues?.find(
                             (option) =>
                               option.value ===
-                              elem.advanceSearch?.[elem.value?.fieldname]
+                              elem.advanceSearch?.[elem.value?.fieldname],
                           )}
                           noOptionsMessage={() =>
                             dropHeaderOptions.length === 0
@@ -1732,7 +1746,7 @@ export default function StickyHeadTable() {
                                   handleFromDateChange(
                                     newValue,
                                     index,
-                                    elem.value.fieldname
+                                    elem.value.fieldname,
                                   );
                                 }}
                                 slots={{
@@ -1841,7 +1855,7 @@ export default function StickyHeadTable() {
                                   handleToDateChange(
                                     newValue,
                                     index,
-                                    elem.value.fieldname
+                                    elem.value.fieldname,
                                   );
                                 }}
                                 slots={{
@@ -2109,7 +2123,7 @@ export default function StickyHeadTable() {
                                   row[fieldName.id] !== null
                                     ? getNestedValue(
                                         row[fieldName.id],
-                                        fieldName.refkey
+                                        fieldName.refkey,
                                       )
                                     : isDateFormat(row[fieldName.id])}
                                 </TableCell>
@@ -2126,11 +2140,11 @@ export default function StickyHeadTable() {
                                   {fieldName.dummyField == "comma"
                                     ? getCommaSeparatedValuesCountFromNestedKeys(
                                         row[fieldName.id],
-                                        fieldName.refkey
+                                        fieldName.refkey,
                                       ).values
                                     : getCommaSeparatedValuesCountFromNestedKeys(
                                         row[fieldName.id],
-                                        fieldName.refkey
+                                        fieldName.refkey,
                                       ).count}
                                 </TableCell>
                               )}
@@ -2178,23 +2192,6 @@ export default function StickyHeadTable() {
                                   }
                                 />
                               )}
-                              {isCopyVisible && (
-                                <GridHoverIcon
-                                  defaultIcon={copyDoc} // Your default icon source
-                                  hoverIcon={CopyHover} // Your hovered icon source
-                                  altText="Copy"
-                                  title={"Copy"}
-                                  onClick={() => addEditController(row, true)}
-                                />
-                              )}
-                              {isRequiredAttachment && (
-                                <GridHoverIcon
-                                  defaultIcon={attach} // Your default icon source
-                                  hoverIcon={attachmentIcon} // Your hovered icon source
-                                  altText="Attachment"
-                                  title={"Attachment"}
-                                />
-                              )}
                               {/* {isPrintVisible && ( */}
                               <GridHoverIcon
                                 defaultIcon={printer} // Your default icon source
@@ -2215,6 +2212,23 @@ export default function StickyHeadTable() {
                                   altText="Delete"
                                   title={"Delete Record"}
                                   onClick={() => deleteController(row)}
+                                />
+                              )}
+                              {isCopyVisible && (
+                                <GridHoverIcon
+                                  defaultIcon={copyDoc} // Your default icon source
+                                  hoverIcon={CopyHover} // Your hovered icon source
+                                  altText="Copy"
+                                  title={"Copy"}
+                                  onClick={() => addEditController(row, true)}
+                                />
+                              )}
+                              {isRequiredAttachment && (
+                                <GridHoverIcon
+                                  defaultIcon={attach} // Your default icon source
+                                  hoverIcon={attachmentIcon} // Your hovered icon source
+                                  altText="Attachment"
+                                  title={"Attachment"}
                                 />
                               )}
                             </div>
@@ -2330,7 +2344,7 @@ function CustomizedInputBase({
 }) {
   const inputRef = useRef(null); // Ref to the Paper component
   const [searchInputGridData, setSearchInputGridData] = useState(
-    prevSearchInput || ""
+    prevSearchInput || "",
   );
 
   // Custom filter logic

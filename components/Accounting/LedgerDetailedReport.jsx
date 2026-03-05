@@ -54,18 +54,19 @@ export default function LedgerDetailedReport({
 
   if (!blocks.length) {
     return (
-      <Paper
-        sx={{
-          boxShadow: "none",
-          p: 2,
-          backgroundColor: "var(--commonBg)",
-          border: "1px solid var(--tableRowTextColor)",
-        }}
-      >
-        <Typography sx={{ color: "var(--tableRowTextColor)", fontSize: FONT }}>
-          No Data Found
-        </Typography>
-      </Paper>
+      <></>
+      // <Paper
+      //   sx={{
+      //     boxShadow: "none",
+      //     p: 2,
+      //     backgroundColor: "var(--commonBg)",
+      //     border: "1px solid var(--tableRowTextColor)",
+      //   }}
+      // >
+      //   <Typography sx={{ color: "var(--tableRowTextColor)", fontSize: FONT }}>
+      //     No Data Found
+      //   </Typography>
+      // </Paper>
     );
   }
 
@@ -164,7 +165,7 @@ export default function LedgerDetailedReport({
           const rowsWithBalance = rows.map((r) => {
             const debit = toNum(isLocal ? r?.debitAmountHC : r?.debitAmountFc);
             const credit = toNum(
-              isLocal ? r?.creditAmountHC : r?.creditAmountFc
+              isLocal ? r?.creditAmountHC : r?.creditAmountFc,
             );
             running = running + debit - credit;
             return { ...r, __balance: running };
@@ -256,7 +257,7 @@ export default function LedgerDetailedReport({
                     {renderOCRow(
                       "Opening",
                       openingValue,
-                      "rgba(126,155,207,0.06)"
+                      "rgba(126,155,207,0.06)",
                     )}
 
                     {/* ✅ COLUMN HEADINGS: Left except numeric Right */}
@@ -391,7 +392,7 @@ export default function LedgerDetailedReport({
                     {renderOCRow(
                       "Closing",
                       closingValue,
-                      "rgba(126,155,207,0.10)"
+                      "rgba(126,155,207,0.10)",
                     )}
                   </TableBody>
                 </Table>

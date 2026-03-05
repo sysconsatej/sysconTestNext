@@ -106,13 +106,14 @@ import { getUserDetails } from "@/helper/userDetails";
 import PrintModalVoucher from "@/components/Modal/printVoucherModal.jsx";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import { useSelector } from "react-redux";
 
 function onEditAndDeleteFunctionCall(
   functionData,
   newState,
   formControlData,
   values,
-  setStateVariable
+  setStateVariable,
 ) {
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
@@ -221,6 +222,16 @@ export default function StickyHeadTable() {
   const [isReportPresent, setisReportPresent] = useState(true);
   //const [defaultCompanyBranch, setDefaultCompanyBranch] = useState([]);
   const [operatorsBg, setOperatorsBg] = useState("blue");
+  const selectedMenuId = useSelector((state) => state?.counter?.selectedMenuId);
+
+  const previousMenuIdRef = useRef();
+
+  useEffect(() => {
+    if (previousMenuIdRef.current !== selectedMenuId) {
+      setDataFetched(false);
+    }
+    previousMenuIdRef.current = selectedMenuId;
+  }, [selectedMenuId]);
 
   console.log("=>", search);
 
@@ -281,7 +292,7 @@ export default function StickyHeadTable() {
   const tableRef = useRef(null);
   const { moveToRow, setMoveToRow } = useTableNavigation(
     tableRef,
-    gridData.length > 0 ? gridData : []
+    gridData.length > 0 ? gridData : [],
   );
 
   useEffect(() => {
@@ -332,6 +343,28 @@ export default function StickyHeadTable() {
   }, [searchParams]);
 
   useEffect(() => {
+    const PaperId = document.getElementById("paper");
+    let timerId = null;
+
+    const updatePosition = () => {
+      if (!timerId) {
+        timerId = setTimeout(() => {
+          if (PaperId) setScrollLeft(PaperId.scrollLeft);
+          timerId = null;
+        }, 50);
+      }
+    };
+
+    if (PaperId) {
+      PaperId.addEventListener("scroll", updatePosition);
+      return () => {
+        PaperId.removeEventListener("scroll", updatePosition);
+        if (timerId) clearTimeout(timerId);
+      };
+    }
+  }, []);
+
+  useEffect(() => {
     async function fetchUserData() {
       const { clientId, companyId, branchId, userId } = getUserDetails();
       try {
@@ -343,20 +376,12 @@ export default function StickyHeadTable() {
         };
         const fetchedUserData = await fetchReportData(menuAccessRequest);
         const menuAccessData = fetchedUserData.data[0];
-        console.log("Menu Access Data:", menuAccessData);
-        // setIsAddVisible(menuAccessData?.isAdd);
-        // setIsEditVisible(menuAccessData?.isEdit);
-        // setIsDeleteVisible(menuAccessData?.isDelete);
-        // setIsViewVisible(menuAccessData?.isView);
-        // setIsCopyVisible(menuAccessData?.isCopy);
-        // setIsPrintVisible(menuAccessData?.isPrint);
         setIsAddVisible(true);
         setIsEditVisible(true);
         setIsDeleteVisible(true);
         setIsViewVisible(true);
         setIsCopyVisible(true);
         setIsPrintVisible(true);
-        // setisAttachmentVisible(menuAccessData?.isPrint);
         setisAttachmentVisible(true);
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -411,12 +436,10 @@ export default function StickyHeadTable() {
   };
 
   function calculatePageNo() {
-    // If there's a search input, check if the user is navigating to other pages post-search
     if (searchInput.length > 0 && !isNewSearch) {
       setIsNewSearch(true);
       return 1; // Reset to page 1 for new searches or if the user is not navigating
     }
-    // Use the user-specified page number when there is no search input affecting the results
     return page == 0 ? 1 : page;
   }
   async function fetchData() {
@@ -424,7 +447,6 @@ export default function StickyHeadTable() {
     try {
       setLoader(true);
       if (!dataFetched) {
-        //const tableHeadingsData = await formControlMenuList(search);
         let tableHeadingsData = tableData;
         if (tableHeadingsData.success === false) {
           setHeaderFields([]);
@@ -451,7 +473,7 @@ export default function StickyHeadTable() {
         setDropHeaderFields(tableHeadingsData[0].data[0]?.fields);
         setDataFetched(true);
         setIsRequiredAttachment(
-          tableHeadingsData[0].data[0]?.isRequiredAttachment
+          tableHeadingsData[0].data[0]?.isRequiredAttachment,
         );
         // let requestData = {
         //   tableName: tableHeadingsData[0].data[0]?.tableName,
@@ -497,11 +519,11 @@ export default function StickyHeadTable() {
             setPageCount(Count);
           }
           setTotalPages(
-            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage)
+            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage),
           );
           console.log(
             "Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage)",
-            Math.ceil((Count !== 0 ? Count : pageCount) / 1)
+            Math.ceil((Count !== 0 ? Count : pageCount) / 1),
           );
 
           setSearchOpen(false);
@@ -541,7 +563,7 @@ export default function StickyHeadTable() {
         ]);
         setDataFetched(true);
         setIsRequiredAttachment(
-          tableHeadingsData.data[0]?.isRequiredAttachment
+          tableHeadingsData.data[0]?.isRequiredAttachment,
         );
         // let requestData = {
         //   tableName: tableHeadingsData.data[0]?.tableName,
@@ -588,7 +610,7 @@ export default function StickyHeadTable() {
             setPageCount(Count);
           }
           setTotalPages(
-            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage)
+            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage),
           );
           setSearchOpen(false);
           setPage(1);
@@ -634,10 +656,11 @@ export default function StickyHeadTable() {
             columns: "id",
             tableName: "tblVoucher",
             whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} and voucherTypeId= (select id from tblVoucherType where name='BANK RECEIPT')`,
-            clientIdCondition: `status = 1 ${columnSearchKeyName === ""
-              ? ""
-              : `and ${columnSearchKeyName} like '%${columnSearchKeyValue}%'`
-              } FOR JSON PATH, INCLUDE_NULL_VALUES`,
+            clientIdCondition: `status = 1 ${
+              columnSearchKeyName === ""
+                ? ""
+                : `and ${columnSearchKeyName} like '%${columnSearchKeyValue}%'`
+            } FOR JSON PATH, INCLUDE_NULL_VALUES`,
           };
           let Count = null;
           const VoucherDataCount = await fetchReportData(getVoucherDataCount);
@@ -657,7 +680,7 @@ export default function StickyHeadTable() {
             setPageCount(Count);
           }
           setTotalPages(
-            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage)
+            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage),
           );
           pageSelected(requestData.pageNo);
         } else {
@@ -693,10 +716,11 @@ export default function StickyHeadTable() {
             columns: "id",
             tableName: "tblVoucher",
             whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} and voucherTypeId= (select id from tblVoucherType where name='BANK RECEIPT')`,
-            clientIdCondition: `status = 1 ${columnSearchKeyName === ""
-              ? ""
-              : `and ${columnSearchKeyName} like '%${columnSearchKeyValue}%'`
-              } FOR JSON PATH, INCLUDE_NULL_VALUES`,
+            clientIdCondition: `status = 1 ${
+              columnSearchKeyName === ""
+                ? ""
+                : `and ${columnSearchKeyName} like '%${columnSearchKeyValue}%'`
+            } FOR JSON PATH, INCLUDE_NULL_VALUES`,
           };
           let Count = null;
           const VoucherDataCount = await fetchReportData(getVoucherDataCount);
@@ -716,7 +740,7 @@ export default function StickyHeadTable() {
             setPageCount(Count);
           }
           setTotalPages(
-            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage)
+            Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage),
           );
           pageSelected(requestData.pageNo);
           setGridData([]);
@@ -867,7 +891,7 @@ export default function StickyHeadTable() {
               func,
               data,
               formControlData,
-              data
+              data,
             );
             if (updatedData.alertShow == true) {
               setParaText(updatedData.message);
@@ -962,7 +986,7 @@ export default function StickyHeadTable() {
   // var headers = headerFields?.filter((field) => field.isGridView);
   var headers =
     formControlData?.gridConfig &&
-      typeof formControlData?.gridConfig === "string"
+    typeof formControlData?.gridConfig === "string"
       ? JSON.parse(formControlData.gridConfig)
       : headerFields?.filter((field) => field.isGridView);
 
@@ -1048,14 +1072,14 @@ export default function StickyHeadTable() {
       if (typeof Data[key] === "object" && Data[key] !== null) {
         let find = ProccessForTheCommaSeperated(
           Data[key],
-          keys.slice(1).join(".")
+          keys.slice(1).join("."),
         );
         value = [...value, find];
       }
       if (Array.isArray(Data[key])) {
         const keytoSend = keys.slice(1).join(".");
         let find = Data[key].map((item) =>
-          ProccessForTheCommaSeperated(item, keytoSend)
+          ProccessForTheCommaSeperated(item, keytoSend),
         );
         value = [...find];
       }
@@ -1072,11 +1096,11 @@ export default function StickyHeadTable() {
       setSelectedPageNumber(page);
       setRowsPerPage(value);
       setTotalPages(
-        Math.ceil((pageCount !== 0 ? pageCount : pageCount) / value)
+        Math.ceil((pageCount !== 0 ? pageCount : pageCount) / value),
       );
       console.log(
         "pageCount",
-        Math.ceil((pageCount !== 0 ? pageCount : pageCount) / value)
+        Math.ceil((pageCount !== 0 ? pageCount : pageCount) / value),
       );
     }
   };
@@ -1183,7 +1207,7 @@ export default function StickyHeadTable() {
     index,
     newValue,
     dropPageNo,
-    searchValue
+    searchValue,
   ) => {
     try {
       const prevData = [...dynamic];
@@ -1248,7 +1272,7 @@ export default function StickyHeadTable() {
         });
       }
       setDropHeaderFields((prev) =>
-        prev.filter((item) => item.fieldname !== newValue.fieldname)
+        prev.filter((item) => item.fieldname !== newValue.fieldname),
       );
     } catch (error) {
       console.error(" error ", error);
@@ -1310,19 +1334,19 @@ export default function StickyHeadTable() {
         prev.map((item, i) =>
           i === index
             ? {
-              ...item,
-              fromDate: formattedDate,
-              advanceSearch: {
-                ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
-                [name]: {
-                  // Update or add the new key within advanceSearch
-                  ...item.advanceSearch?.[name], // Spread existing values under this key, if any
-                  $gte: formattedDate, // Update or add the $lte key under the specified name
+                ...item,
+                fromDate: formattedDate,
+                advanceSearch: {
+                  ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
+                  [name]: {
+                    // Update or add the new key within advanceSearch
+                    ...item.advanceSearch?.[name], // Spread existing values under this key, if any
+                    $gte: formattedDate, // Update or add the $lte key under the specified name
+                  },
                 },
-              },
-            }
-            : item
-        )
+              }
+            : item,
+        ),
       );
     }
   };
@@ -1335,19 +1359,19 @@ export default function StickyHeadTable() {
         prev.map((item, i) =>
           i === index
             ? {
-              ...item,
-              toDate: formattedDate,
-              advanceSearch: {
-                ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
-                [name]: {
-                  // Update or add the new key within advanceSearch
-                  ...item.advanceSearch?.[name], // Spread existing values under this key, if any
-                  $lte: formattedDate, // Update or add the $lte key under the specified name
+                ...item,
+                toDate: formattedDate,
+                advanceSearch: {
+                  ...item.advanceSearch, // Spread existing advanceSearch to keep previous data
+                  [name]: {
+                    // Update or add the new key within advanceSearch
+                    ...item.advanceSearch?.[name], // Spread existing values under this key, if any
+                    $lte: formattedDate, // Update or add the $lte key under the specified name
+                  },
                 },
-              },
-            }
-            : item
-        )
+              }
+            : item,
+        ),
       );
     }
   };
@@ -1382,7 +1406,7 @@ export default function StickyHeadTable() {
     const updatedItems = [...dynamic];
     const removedDropData = headerFields.filter(
       (header) =>
-        !updatedItems.some((item) => header.fieldname === item.value.fieldname)
+        !updatedItems.some((item) => header.fieldname === item.value.fieldname),
     );
 
     const insertDropData = headerFields.find((item) => {
@@ -1822,15 +1846,15 @@ export default function StickyHeadTable() {
                         className={`w-[12rem] ${styles.inputField}  `}
                         value={
                           initialHeaderFields?.find(
-                            (option) => option.label === elem.value?.label
+                            (option) => option.label === elem.value?.label,
                           ) || null
                         }
                         noOptionsMessage={() => "No records found"}
                         onMenuOpen={() => {
                           setScrollPosition(0);
                         }}
-                        onMenuClose={() => { }}
-                        onFocus={() => { }}
+                        onMenuClose={() => {}}
+                        onFocus={() => {}}
                         onChange={(newValue) => {
                           callInputChangeFunc = false;
                           if (newValue) {
@@ -1867,7 +1891,7 @@ export default function StickyHeadTable() {
                           value={elem.dropDownValues?.find(
                             (option) =>
                               option.value ===
-                              elem.advanceSearch?.[elem.value?.fieldname]
+                              elem.advanceSearch?.[elem.value?.fieldname],
                           )}
                           noOptionsMessage={() =>
                             dropHeaderOptions.length === 0
@@ -2043,7 +2067,7 @@ export default function StickyHeadTable() {
                                   handleFromDateChange(
                                     newValue,
                                     index,
-                                    elem.value.fieldname
+                                    elem.value.fieldname,
                                   );
                                 }}
                                 slots={{
@@ -2154,7 +2178,7 @@ export default function StickyHeadTable() {
                                   handleToDateChange(
                                     newValue,
                                     index,
-                                    elem.value.fieldname
+                                    elem.value.fieldname,
                                   );
                                 }}
                                 slots={{
@@ -2428,11 +2452,11 @@ export default function StickyHeadTable() {
                           `}
                                 >
                                   {typeof row[fieldName.id] === "object" &&
-                                    row[fieldName.id] !== null
+                                  row[fieldName.id] !== null
                                     ? getNestedValue(
-                                      row[fieldName.id],
-                                      fieldName.refkey
-                                    )
+                                        row[fieldName.id],
+                                        fieldName.refkey,
+                                      )
                                     : isDateFormat(row[fieldName.id])}
                                 </TableCell>
                               )}
@@ -2443,13 +2467,13 @@ export default function StickyHeadTable() {
                                 <TableCell align="left" className="">
                                   {fieldName.dummyField == "comma"
                                     ? getCommaSeparatedValuesCountFromNestedKeys(
-                                      row[fieldName.id],
-                                      fieldName.refkey
-                                    ).values
+                                        row[fieldName.id],
+                                        fieldName.refkey,
+                                      ).values
                                     : getCommaSeparatedValuesCountFromNestedKeys(
-                                      row[fieldName.id],
-                                      fieldName.refkey
-                                    ).count}
+                                        row[fieldName.id],
+                                        fieldName.refkey,
+                                      ).count}
                                 </TableCell>
                               )}
                             {typeof row[fieldName.id] !==
@@ -2509,21 +2533,6 @@ export default function StickyHeadTable() {
                                   )}
 
                                   <GridHoverIcon
-                                    defaultIcon={copyDoc} // Your default icon source
-                                    hoverIcon={CopyHover} // Your hovered icon source
-                                    altText="Attachment Icon"
-                                    title={"Copy Record"}
-                                    onClick={() => addEditController(row, true)}
-                                  />
-                                  <GridHoverIcon
-                                    defaultIcon={attach} // Your default icon source
-                                    hoverIcon={attachmentIcon} // Your hovered icon source
-                                    altText="Attachment"
-                                    title={"Attachment"}
-                                  // style={{ visibility:'hidden'}}
-                                  />
-
-                                  <GridHoverIcon
                                     defaultIcon={printer} // Your default icon source
                                     hoverIcon={PrintHover} // Your hovered icon source
                                     altText="Print"
@@ -2542,6 +2551,21 @@ export default function StickyHeadTable() {
                                       onClick={() => deleteController(row)}
                                     />
                                   )}
+
+                                  <GridHoverIcon
+                                    defaultIcon={copyDoc} // Your default icon source
+                                    hoverIcon={CopyHover} // Your hovered icon source
+                                    altText="Attachment Icon"
+                                    title={"Copy Record"}
+                                    onClick={() => addEditController(row, true)}
+                                  />
+                                  <GridHoverIcon
+                                    defaultIcon={attach} // Your default icon source
+                                    hoverIcon={attachmentIcon} // Your hovered icon source
+                                    altText="Attachment"
+                                    title={"Attachment"}
+                                    // style={{ visibility:'hidden'}}
+                                  />
                                 </div>
                               </div>
                             </TableCell>
@@ -2577,6 +2601,29 @@ export default function StickyHeadTable() {
                                       }
                                     />
                                   )}
+
+                                  {isPrintVisible && (
+                                    <GridHoverIcon
+                                      defaultIcon={printer} // Your default icon source
+                                      hoverIcon={PrintHover} // Your hovered icon source
+                                      altText="Print"
+                                      title={"Print"}
+                                      onClick={async () => {
+                                        handlePrint(row);
+                                        setModalVisible(true);
+                                      }}
+                                    />
+                                  )}
+
+                                  {isDeleteVisible && (
+                                    <GridHoverIcon
+                                      defaultIcon={DeleteIcon2}
+                                      hoverIcon={DeleteHover}
+                                      altText="Delete"
+                                      title="Delete Record"
+                                      onClick={() => deleteController(row)}
+                                    />
+                                  )}
                                   {isCopyVisible && (
                                     <GridHoverIcon
                                       defaultIcon={copyDoc} // Your default icon source
@@ -2594,19 +2641,7 @@ export default function StickyHeadTable() {
                                       hoverIcon={attachmentIcon} // Your hovered icon source
                                       altText="Attachment"
                                       title={"Attachment"}
-                                    // style={{ visibility:'hidden'}}
-                                    />
-                                  )}
-                                  {isPrintVisible && (
-                                    <GridHoverIcon
-                                      defaultIcon={printer} // Your default icon source
-                                      hoverIcon={PrintHover} // Your hovered icon source
-                                      altText="Print"
-                                      title={"Print"}
-                                      onClick={async () => {
-                                        handlePrint(row);
-                                        setModalVisible(true);
-                                      }}
+                                      // style={{ visibility:'hidden'}}
                                     />
                                   )}
 
@@ -2620,15 +2655,6 @@ export default function StickyHeadTable() {
                                       handlePrint(row); // Then set modal visibility
                                     }}
                                   />
-                                  {isDeleteVisible && (
-                                    <GridHoverIcon
-                                      defaultIcon={DeleteIcon2}
-                                      hoverIcon={DeleteHover}
-                                      altText="Delete"
-                                      title="Delete Record"
-                                      onClick={() => deleteController(row)}
-                                    />
-                                  )}
                                 </div>
                               </div>
                             </TableCell>
@@ -2748,7 +2774,7 @@ function CustomizedInputBase({
 }) {
   const inputRef = useRef(null); // Ref to the Paper component
   const [searchInputGridData, setSearchInputGridData] = useState(
-    prevSearchInput || ""
+    prevSearchInput || "",
   );
 
   // Custom filter logic

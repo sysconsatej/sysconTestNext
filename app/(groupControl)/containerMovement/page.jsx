@@ -325,7 +325,7 @@ export default function AccordionUsage() {
           isBreak: false,
           dropdownFilter: null,
           controlDefaultValue: null,
-          functionOnChange: "",
+          functionOnChange: null,
           functionOnBlur: null,
           functionOnKeyPress: null,
           isEditableMode: "e",

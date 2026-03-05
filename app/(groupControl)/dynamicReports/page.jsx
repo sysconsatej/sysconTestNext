@@ -5,7 +5,11 @@ const BackEndUrl = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
 import React, { useState, useEffect, useRef, use } from "react";
 import styles from "@/app/app.module.css";
 import CustomeModal from "@/components/Modal/customModal";
-import { ledgerData } from "@/services/auth/FormControl.services.js";
+import {
+  ledgerData,
+  saveEditedReport,
+} from "@/services/auth/FormControl.services.js";
+import { uploadInvoicePurchase } from "@/helper/uploadInvoicePurchase.js";
 import {
   parentAccordionSection,
   accordianDetailsStyle,
@@ -103,6 +107,7 @@ export default function AddEditFormControll({ reportData }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = reportData ? reportData : searchParams.get("menuName");
+  const [saveSpName, setSaveSpName] = useState(null);
   const [parentsFields, setParentsFields] = useState([]);
   const [newState, setNewState] = useState({});
   const [formDataChange, SetFormDataChange] = useState({});
@@ -137,6 +142,7 @@ export default function AddEditFormControll({ reportData }) {
   const [isDataInitialized, setIsDataInitialized] = useState(false);
   const [paginatedData, setPaginatedData] = useState([]);
   const [finalPaginatedData, setFinalPaginatedData] = useState([]);
+  const [firstExcelData, setFirstExcelData] = useState([]);
   const [DateFormat, setDateFormat] = useState([]);
   const [clearFlag, setClearFlag] = useState({
     isClear: false,
@@ -147,6 +153,8 @@ export default function AddEditFormControll({ reportData }) {
   const [chartData, setChartData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [filteredSortData, setFilteredSortData] = useState([]);
+  const [exportToExcelSortedData, setExportToExcelSortedData] = useState([]);
+  const [sortedCount, setSortedCount] = useState(1);
   const [toggle, setToggle] = useState(true);
   const [menuType, setMenuType] = useState(null);
   const [menuName, setMenuName] = useState(null);
@@ -300,20 +308,119 @@ export default function AddEditFormControll({ reportData }) {
   }, [isSortingEnabled, grid, groupingDepth]);
 
   const handleRightClick = (event, columnId) => {
-    console.log("Right-clicked column ID:", columnId);
-
     event.preventDefault(); // Prevent the default context menu
     setInputVisible(true); // Show the input field
     setActiveColumn(columnId); // Set the active column to the one that was right-clicked
   };
 
+  // const handleFileAndUpdateState = (file, updateState) => {
+  //   const reader = new FileReader();
+  //   setFileNameUploaded(file?.name || "");
+  //   reader.onload = (e) => {
+  //     const result = e.target.result;
+
+  //     // Check for XML file by extension or content type
+  //     if (
+  //       file.name.endsWith(".xml") ||
+  //       file.type === "application/xml" ||
+  //       file.type === "text/xml" ||
+  //       file.name.endsWith(".XML")
+  //     ) {
+  //       const parser = new XMLParser({
+  //         ignoreAttributes: false,
+  //         attributeNamePrefix: "@",
+  //         ignoreNameSpace: true, // 👈 removes w:, ns2:, etc.
+  //         parseTagValue: true,
+  //         parseAttributeValue: true,
+  //         trimValues: true,
+  //       });
+
+  //       const jsonData = parser.parse(result);
+  //       updateState(jsonData);
+  //     } else {
+  //       const workbook = XLSX.read(result, { type: "array" });
+  //       const worksheetName = workbook.SheetNames[0];
+  //       const worksheet = workbook.Sheets[worksheetName];
+
+  //       const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+  //         defval: "",
+  //       });
+
+  //       updateState(jsonData);
+  //     }
+  //   };
+
+  //   // Read as text for XML, ArrayBuffer for Excel
+  //   if (
+  //     file.name.endsWith(".xml") ||
+  //     file.type === "application/xml" ||
+  //     file.type === "text/xml" ||
+  //     file.name.endsWith(".XML")
+  //   ) {
+  //     reader.readAsText(file);
+  //   } else if (
+  //     file?.name.toLowerCase().includes("coarri") ||
+  //     file?.name.toLowerCase().includes("codeco") ||
+  //     file.type.toLowerCase().includes(".dat") ||
+  //     file.type.toLowerCase().includes(".edi")
+  //   ) {
+  //     reader.onload = (e) => {
+  //       const text = String(e.target.result || "");
+  //       const lines = text
+  //         .replace(/\r\n/g, "\n")
+  //         .replace(/\r/g, "\n")
+  //         .split("\n")
+  //         .map((l) => l.trim())
+  //         .filter(Boolean)
+  //         .map((l) => l.replace(/'+$/, ""));
+  //       const arr = lines.map((line) => ({ ROW1: line }));
+  //       updateState(arr);
+  //     };
+  //     reader.readAsText(file);
+  //   } else {
+  //     reader.readAsArrayBuffer(file);
+  //   }
+  // };
+
   const handleFileAndUpdateState = (file, updateState) => {
     const reader = new FileReader();
     setFileNameUploaded(file?.name || "");
-    reader.onload = (e) => {
+
+    reader.onload = async (e) => {
       const result = e.target.result;
 
-      // Check for XML file by extension or content type
+      // ✅ PDF
+      if (
+        file.name.toLowerCase().endsWith(".pdf") ||
+        file.type === "application/pdf"
+      ) {
+        try {
+          if (menuType.toLowerCase() === "j") {
+            // ✅ Ensure ArrayBuffer
+            const bytes =
+              result instanceof ArrayBuffer
+                ? result
+                : result?.buffer instanceof ArrayBuffer
+                  ? result.buffer
+                  : null;
+
+            if (!bytes) throw new Error("Expected ArrayBuffer from FileReader");
+
+            const pdfJson = await uploadInvoicePurchase(bytes, file.name);
+            updateState(pdfJson);
+          }
+        } catch (err) {
+          console.error("PDF extract failed:", err);
+          updateState({
+            type: "pdf",
+            fileName: file.name,
+            error: "PDF extract failed",
+          });
+        }
+        return;
+      }
+
+      // ✅ XML
       if (
         file.name.endsWith(".xml") ||
         file.type === "application/xml" ||
@@ -323,29 +430,36 @@ export default function AddEditFormControll({ reportData }) {
         const parser = new XMLParser({
           ignoreAttributes: false,
           attributeNamePrefix: "@",
-          ignoreNameSpace: true, // 👈 removes w:, ns2:, etc.
+          ignoreNameSpace: true,
           parseTagValue: true,
           parseAttributeValue: true,
           trimValues: true,
         });
-
         const jsonData = parser.parse(result);
         updateState(jsonData);
-      } else {
-        const workbook = XLSX.read(result, { type: "array" });
-        const worksheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[worksheetName];
-
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-          defval: "",
-        });
-
-        updateState(jsonData);
+        return;
       }
+
+      // ✅ default: Excel
+      const workbook = XLSX.read(result, { type: "array" });
+      const worksheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[worksheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+      updateState(jsonData);
     };
 
-    // Read as text for XML, ArrayBuffer for Excel
+    // ✅ Decide read mode
     if (
+      file.name.toLowerCase().endsWith(".pdf") ||
+      file.type === "application/pdf"
+    ) {
+      console.log("[PDF] input file:", {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      });
+      reader.readAsArrayBuffer(file); // PDF.js needs ArrayBuffer
+    } else if (
       file.name.endsWith(".xml") ||
       file.type === "application/xml" ||
       file.type === "text/xml" ||
@@ -427,51 +541,119 @@ export default function AddEditFormControll({ reportData }) {
     return null;
   };
 
+  // const handleFieldValuesChange = (updatedValues) => {
+  //   const entries = Object.entries(updatedValues);
+  //   const hasFile = entries.some(([, value]) => value instanceof File);
+
+  //   if (hasFile) {
+  //     entries.forEach(([key, value]) => {
+  //       if (value instanceof File) {
+  //         handleFileAndUpdateState(value, (jsonData) => {
+  //           setNewState((prevState) => {
+  //             const newState = { ...prevState, [key]: jsonData };
+  //             return newState;
+  //           });
+  //           setFilterCondition((prevState) => {
+  //             const newFilterCondition = { ...prevState, [key]: jsonData };
+  //             return newFilterCondition;
+  //           });
+  //         });
+  //       } else {
+  //         setNewState((prevState) => {
+  //           const newState = { ...prevState, [key]: value };
+  //           return newState;
+  //         });
+  //         setFilterCondition((prevState) => {
+  //           const newFilterCondition = { ...prevState, [key]: value };
+  //           return newFilterCondition;
+  //         });
+  //         SetFormDataChange((prevState) => {
+  //           const newState = { ...prevState, ...updatedValues };
+  //           return newState;
+  //         });
+  //       }
+  //     });
+  //   } else {
+  //     setNewState((prevState) => {
+  //       const newState = { ...prevState, ...updatedValues };
+  //       return newState;
+  //     });
+  //     SetFormDataChange((prevState) => {
+  //       const newState = { ...prevState, ...updatedValues };
+  //       return newState;
+  //     });
+  //     setFilterCondition((prevState) => {
+  //       const newFilterCondition = { ...prevState, ...updatedValues };
+  //       return newFilterCondition;
+  //     });
+  //   }
+  // };
+
   const handleFieldValuesChange = (updatedValues) => {
     const entries = Object.entries(updatedValues);
-    const hasFile = entries.some(([, value]) => value instanceof File);
+
+    const hasFile = entries.some(([, value]) => {
+      if (value instanceof File) return true;
+      if (Array.isArray(value)) return value.some((v) => v instanceof File);
+      return false;
+    });
 
     if (hasFile) {
       entries.forEach(([key, value]) => {
+        // ✅ MULTI FILES
+        if (Array.isArray(value) && value.some((v) => v instanceof File)) {
+          const filesArr = value.filter((v) => v instanceof File);
+
+          Promise.all(
+            filesArr.map(
+              (file) =>
+                new Promise((resolve) => {
+                  handleFileAndUpdateState(file, (jsonData) =>
+                    resolve(jsonData),
+                  );
+                }),
+            ),
+          ).then((allJson) => {
+            // store array of extracted jsons
+            setNewState((prevState) => ({ ...prevState, [key]: allJson }));
+            setFilterCondition((prevState) => ({
+              ...prevState,
+              [key]: allJson,
+            }));
+            SetFormDataChange((prevState) => ({
+              ...prevState,
+              [key]: allJson,
+            }));
+          });
+
+          return;
+        }
+
+        // ✅ SINGLE FILE
         if (value instanceof File) {
           handleFileAndUpdateState(value, (jsonData) => {
-            setNewState((prevState) => {
-              const newState = { ...prevState, [key]: jsonData };
-              return newState;
-            });
-            setFilterCondition((prevState) => {
-              const newFilterCondition = { ...prevState, [key]: jsonData };
-              return newFilterCondition;
-            });
+            setNewState((prevState) => ({ ...prevState, [key]: jsonData }));
+            setFilterCondition((prevState) => ({
+              ...prevState,
+              [key]: jsonData,
+            }));
+            SetFormDataChange((prevState) => ({
+              ...prevState,
+              [key]: jsonData,
+            }));
           });
-        } else {
-          setNewState((prevState) => {
-            const newState = { ...prevState, [key]: value };
-            return newState;
-          });
-          setFilterCondition((prevState) => {
-            const newFilterCondition = { ...prevState, [key]: value };
-            return newFilterCondition;
-          });
-          SetFormDataChange((prevState) => {
-            const newState = { ...prevState, ...updatedValues };
-            return newState;
-          });
+          return;
         }
+
+        // ✅ NORMAL VALUE
+        setNewState((prevState) => ({ ...prevState, [key]: value }));
+        setFilterCondition((prevState) => ({ ...prevState, [key]: value }));
+        SetFormDataChange((prevState) => ({ ...prevState, ...updatedValues }));
       });
     } else {
-      setNewState((prevState) => {
-        const newState = { ...prevState, ...updatedValues };
-        return newState;
-      });
-      SetFormDataChange((prevState) => {
-        const newState = { ...prevState, ...updatedValues };
-        return newState;
-      });
-      setFilterCondition((prevState) => {
-        const newFilterCondition = { ...prevState, ...updatedValues };
-        return newFilterCondition;
-      });
+      setNewState((prevState) => ({ ...prevState, ...updatedValues }));
+      SetFormDataChange((prevState) => ({ ...prevState, ...updatedValues }));
+      setFilterCondition((prevState) => ({ ...prevState, ...updatedValues }));
     }
   };
 
@@ -515,7 +697,6 @@ export default function AddEditFormControll({ reportData }) {
   }
 
   async function fetchLedgerReportData(getSpName) {
-    console.log("fetchLedgerReportData", newState);
     const filterCondition = {
       fromDate: formatDate(newState?.fromDate),
       toDate: formatDate(newState?.toDate),
@@ -779,7 +960,6 @@ export default function AddEditFormControll({ reportData }) {
             financialYearId: financialYear,
             userId,
           });
-          console.log("fetchData =>>", fetchData);
 
           const rows = Array.isArray(fetchData?.data) ? fetchData.data : [];
 
@@ -1090,6 +1270,7 @@ export default function AddEditFormControll({ reportData }) {
             setPaginatedData(filteredTableData);
             setTableData(filteredTableData);
             setFinalPaginatedData(filteredTableData);
+            setFirstExcelData(filteredTableData);
             setFilteredSortData(filteredTableData);
             setIsDataInitialized(true);
             setIsDefaultDataShow(true);
@@ -1223,7 +1404,6 @@ export default function AddEditFormControll({ reportData }) {
       try {
         if (search !== null) {
           const originalUploads = newState;
-          console.log("originalUploads", originalUploads);
           const requestBodyForMenuReportDetails = {
             columns:
               "spName,reportCriteriaId,isDefaultDataShow,outputFileType,isSp",
@@ -1242,11 +1422,8 @@ export default function AddEditFormControll({ reportData }) {
             clientId,
           };
           let formatJson = removeSingleQuotes(json);
-          console.log("formatJson", formatJson);
           // const data = await fetchExcelData(spName, formatJson);
           const response = await fetchExcelDataInsert(spName, formatJson);
-
-          console.log("response", response);
           if (response.rowsAffected?.success) {
             return toast.success(`${response?.rowsAffected?.message}`);
           } else {
@@ -1406,7 +1583,6 @@ export default function AddEditFormControll({ reportData }) {
             const worksheet = workbook.addWorksheet("Report");
 
             // Add an image if required
-            console.log("imageUrl", imageUrl);
             const response = await fetch(imageUrl);
             const arrayBuffer = await response.arrayBuffer();
             const imageId = workbook.addImage({
@@ -1478,20 +1654,21 @@ export default function AddEditFormControll({ reportData }) {
               };
             });
 
-            const dataToExport = paginatedData.map((row) =>
+            //const dataToExport = finalPaginatedData.map((row) =>
+            const sourceRows =
+              sortedCount === 1 ? firstExcelData : exportToExcelSortedData;
+
+            const dataToExport = sourceRows.map((row) =>
               gridHeader.map((header) => {
-                const gridItem = grid.find(
-                  (g) => g?.fieldname === header.fieldname,
-                );
-                if (!gridItem) {
-                  console.warn(
-                    `No grid item found for fieldname: ${header?.fieldname}`,
-                  );
-                }
-                let value = row[gridItem?.fieldname] ?? ""; // Use nullish coalescing
+                const key = header?.fieldname;
+                if (!key) return "";
+
+                let value = row?.[key] ?? "";
+
                 if (typeof value === "string" && isValidDate(value)) {
                   value = moment(value).format("DD-MM-YYYY");
                 }
+
                 return value;
               }),
             );
@@ -2281,7 +2458,6 @@ export default function AddEditFormControll({ reportData }) {
     handleAnaylsisSubmit: async () => {
       if (search !== null) {
         const originalUploads = newState;
-        console.log("originalUploads", originalUploads);
         const requestBodyForMenuReportDetails = {
           columns:
             "spName,reportCriteriaId,isDefaultDataShow,outputFileType,isSp",
@@ -2909,7 +3085,6 @@ export default function AddEditFormControll({ reportData }) {
           getSpName,
         );
         await exportVerticalHeaderThenDataExcel(responseData, getSpName);
-        console.log("Go responseData =>:", responseData);
       } catch (error) {
         console.error("Error in Go Excel Second Row:", error);
       }
@@ -4245,7 +4420,6 @@ export default function AddEditFormControll({ reportData }) {
         toast.error(err?.message || "Excel export failed.");
       }
     },
-
     handleSubmitMultiple: async () => {
       setCurrentPage(1);
       setIsLoading(true);
@@ -4353,8 +4527,6 @@ export default function AddEditFormControll({ reportData }) {
           spName,
           filterCondition,
         );
-        console.log("fetchData =>>", fetchData);
-
         if (fetchData && fetchData.data?.length > 0) {
           // Serialize the data to a JSON string with indentation for formatting
           const jsonString = JSON.stringify(fetchData.data, null, 2);
@@ -4383,7 +4555,6 @@ export default function AddEditFormControll({ reportData }) {
             financialYearId: financialYear,
             userId,
           });
-          console.log("fetchData =>>", fetchData);
 
           const rows = Array.isArray(fetchData?.data) ? fetchData.data : [];
 
@@ -4696,6 +4867,7 @@ export default function AddEditFormControll({ reportData }) {
             setPaginatedData(filteredTableData);
             setTableData(filteredTableData);
             setFinalPaginatedData(filteredTableData);
+            setFirstExcelData(filteredTableData);
             setFilteredSortData(filteredTableData);
             setIsDataInitialized(true);
             setIsDefaultDataShow(true);
@@ -4724,11 +4896,37 @@ export default function AddEditFormControll({ reportData }) {
         };
         const res = await fetchDynamicReportSpData(spName, payload);
         const data = res?.data ?? res?.recordset ?? res?.recordsets?.[0] ?? res;
-        console.log("COARRI/CODECO upload response =>", data);
         toast.success("uploaded successfully");
         return data;
       } catch (error) {
         console.error("handleCoarriCodecoUpload error =>", error);
+        toast.error("upload failed");
+        throw error;
+      }
+    },
+    handleUploadPurchaseInvoice: async () => {
+      try {
+        const filterCondition = {
+          companyId,
+          branchId,
+          financialYear,
+          userId,
+          clientId,
+          data: newState?.invoiceUploads || [],
+        };
+        console.log("handleUploadPurchaseInvoice =>>", filterCondition);
+        let response = await saveEditedReport({
+          json: filterCondition,
+          spName: saveSpName,
+        });
+        if (response?.success) {
+          console.log("response", response);
+          return toast.success(response?.message);
+        } else {
+          return toast.error(response?.message);
+        }
+      } catch (error) {
+        console.error("handleUploadPurchaseInvoice error =>", error);
         toast.error("upload failed");
         throw error;
       }
@@ -5053,7 +5251,6 @@ export default function AddEditFormControll({ reportData }) {
   };
 
   useEffect(() => {
-    console.log("pagination useEffect called");
     const startIndex = (currentPageNumber - 1) * itemsPerPaginatedPage;
     const endIndex = startIndex + itemsPerPaginatedPage;
     const currentItemsPagination = fullPivotValues?.slice(startIndex, endIndex);
@@ -5063,7 +5260,7 @@ export default function AddEditFormControll({ reportData }) {
     );
     setPivotGrid(currentItemsPagination);
     setLastPagePagination(lastPagePagination);
-  }, [itemsPerPaginatedPage, currentPageNumber, paginatedData]);
+  }, [itemsPerPaginatedPage, currentPageNumber, paginatedData,itemsPerPage]);
 
   const onConfirm = async (conformData) => {
     if (conformData.isError) {
@@ -5110,6 +5307,7 @@ export default function AddEditFormControll({ reportData }) {
       let tempNewState = { ...newState };
       if (apiResponse.success) {
         const fetchedData = apiResponse.data[0];
+        console.log("fetchedData", fetchedData);
         setReportName(fetchedData.reportName);
         setNewpivotRowFields(fetchedData?.pivotRowFields);
         setNewpivotColFields(fetchedData?.pivotColumnFields);
@@ -5176,6 +5374,7 @@ export default function AddEditFormControll({ reportData }) {
         setDateCriteria(fetchedData.dateCriteria);
         setGroupingField(fetchedData.groupingDepth);
         setGroupingDepth(fetchedData.groupingDepth);
+        setSaveSpName(fetchedData?.spName);
         const updatedFields = await Promise.all(
           fetchedDataFields.map(async (field) => {
             const updatedField = { ...field };
@@ -5268,9 +5467,6 @@ export default function AddEditFormControll({ reportData }) {
         setFetchGridNew(fetchGrid);
         var grid = [];
 
-        console.log("grid", grid);
-        console.log("header", gridHeader);
-
         const requestBody = {
           columns: "apiPath",
           tableName: "tblApiDefinition",
@@ -5350,7 +5546,6 @@ export default function AddEditFormControll({ reportData }) {
         let isSpName = null;
         try {
           reportData = await fetchReportData(requestBodyForMenuReportDetails);
-          console.log("data ", reportData);
 
           if (reportData) {
             setSpName(reportData.data[0].spName);
@@ -5374,7 +5569,6 @@ export default function AddEditFormControll({ reportData }) {
           reportData?.data[0]?.isDefaultDataShow === true &&
           reportData?.data[0]?.outputFileType === null
         ) {
-          console.log("getSpName", getSpName);
           let responseData = await dynamicReportFilter(
             updatedFilterCondition,
             clientId,
@@ -5559,9 +5753,11 @@ export default function AddEditFormControll({ reportData }) {
     const startIndex = endIndex - itemsPerPage;
     if (isSortingEnabled === false) {
       setFinalPaginatedData(paginatedData?.slice(startIndex, endIndex));
+      setFirstExcelData(paginatedData);
       setDataForExcel(paginatedData);
     } else {
       setFinalPaginatedData(filteredSortData?.slice(startIndex, endIndex));
+      setFirstExcelData(filteredSortData);
       setDataForExcel(filteredSortData);
     }
   };
@@ -5574,7 +5770,6 @@ export default function AddEditFormControll({ reportData }) {
 
   // useEffect to handle initial load and react to page changes
   useEffect(() => {
-    console.log("useEffect for pagination called");
     updatePaginatedData(currentPage);
   }, [currentPage, itemsPerPage, paginatedData]);
 
@@ -5714,19 +5909,33 @@ export default function AddEditFormControll({ reportData }) {
     return true;
   }
 
+  // useEffect(() => {
+  //   function updateTableRowsColor() {
+  //     const newRowColors = {};
+  //     dataForExcel.forEach((item, index) => {
+  //       const bgColor = item.colorCodeNew || "transparent";
+  //       newRowColors[index] = bgColor;
+  //     });
+  //     setRowColorsForExcel(newRowColors);
+  //   }
+  //   if (dataForExcel?.length > 0) {
+  //     updateTableRowsColor();
+  //   }
+  // }, [dataForExcel]);
+
   useEffect(() => {
     function updateTableRowsColor() {
       const newRowColors = {};
-      dataForExcel.forEach((item, index) => {
+      finalPaginatedData.forEach((item, index) => {
         const bgColor = item.colorCodeNew || "transparent";
         newRowColors[index] = bgColor;
       });
       setRowColorsForExcel(newRowColors);
     }
-    if (dataForExcel?.length > 0) {
+    if (finalPaginatedData?.length > 0) {
       updateTableRowsColor();
     }
-  }, [dataForExcel]);
+  }, [finalPaginatedData]);
 
   let rowColors = {};
   const renderTableData = (data, rowIndex, colorCode) => {
@@ -5748,7 +5957,7 @@ export default function AddEditFormControll({ reportData }) {
       // Date time fixes for grouped cells
       if (!DateFormat && typeof content === "string" && isValidDate(content)) {
         content = moment(content).format("DD-MM-YYYY");
-      } 
+      }
       // else if (
       //   DateFormat &&
       //   typeof content === "string" &&
@@ -5886,7 +6095,8 @@ export default function AddEditFormControll({ reportData }) {
     } else {
       sortedData = sortJsonData(filteredSortData, dataKey, newSortDirection);
     }
-
+    setSortedCount((pre) => pre + 1);
+    setExportToExcelSortedData(sortedData);
     setFilteredSortData(sortedData);
     setSortColumn(columnId);
     setSortDirection(newSortDirection);
@@ -5895,6 +6105,7 @@ export default function AddEditFormControll({ reportData }) {
 
     if (isSortingEnabled) {
       setFinalPaginatedData(sortedData.slice(startIndex, endIndex));
+      setFirstExcelData(sortedData);
     }
   };
 
@@ -5947,6 +6158,7 @@ export default function AddEditFormControll({ reportData }) {
     const startIndex = endIndex - itemsPerPage;
     // Updating the paginated data
     setFinalPaginatedData(sortedData.slice(startIndex, endIndex));
+    setFirstExcelData(sortedData);
   };
 
   const handleGroupAndSortByDepth = (data, grid) => {
@@ -6093,8 +6305,6 @@ export default function AddEditFormControll({ reportData }) {
       return [];
     }
   };
-
-  console.log("analysisData", analysisData);
   return (
     <React.Fragment>
       <div className={`h-auto relative`}>
@@ -6712,65 +6922,6 @@ export default function AddEditFormControll({ reportData }) {
                           </Table>
                         </TableContainer>
                       </Paper>
-                      <div className="flex items-center justify-between pt-2 px-4 text-black">
-                        <div className="flex items-end ml-auto">
-                          <div className="mr-5">
-                            <Stack>
-                              <Pagination
-                                count={lastPagePagination}
-                                showFirstButton
-                                showLastButton
-                                sx={{ ...paginationStyle }}
-                                onChange={(event, value) => {
-                                  handlePageChange(value, fullPivotValues);
-                                }}
-                                renderItem={(item) => {
-                                  const isDisabled =
-                                    ((item.type === "first" ||
-                                      item.type === "previous") &&
-                                      pivotGrid === 1) ||
-                                    ((item.type === "last" ||
-                                      item.type === "next") &&
-                                      pivotGrid === lastPagePagination);
-                                  return (
-                                    <PaginationItem
-                                      {...item}
-                                      className={`${paginationStyles.txtColorDark}`}
-                                      sx={{
-                                        fontSize: 10,
-                                        height: 21,
-                                        width: 21,
-                                        minWidth: 0,
-                                        color: isDisabled
-                                          ? "grey"
-                                          : "var(--text-color-dark)",
-                                      }}
-                                    />
-                                  );
-                                }}
-                              />
-                            </Stack>
-                          </div>
-                          <input
-                            type="number"
-                            value={itemsPerPaginatedPage}
-                            onChange={(e) => {
-                              const newItemsPerPage = parseInt(
-                                e.target.value,
-                                10,
-                              );
-                              if (newItemsPerPage > 0) {
-                                setItemsPerPaginatedPage(newItemsPerPage);
-                                setCurrentPageNumber(1);
-                              }
-                            }}
-                            className={`border ${styles.txtColorDark} ${styles.pageBackground} border-gray-300 rounded-md p-2 h-[17px] w-14 text-[10px] mr-[15px] outline-gray-300 outline-0`}
-                          />
-                          <p className={`text-[10px] ${styles.txtColorDark}`}>
-                            {currentPage} of {lastPagePagination} Pages
-                          </p>
-                        </div>
-                      </div>
                     </>
                   )}
                   {menuType === "C" && (
@@ -7117,9 +7268,6 @@ function CustomizedInputBase({
       setCurrentPage(1); // Reset to first page after filtering
       return setGridData(originalData);
     }
-    // console.log("originalData", originalData);
-    // console.log("gridData", gridData);
-    // console.log("paginatedData", paginatedData);
 
     const lowercasedInput = searchValue.toLowerCase();
     const filtered = tableData.filter((item) => {

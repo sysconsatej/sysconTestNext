@@ -23,6 +23,7 @@ import {
   tallyDebitCredit,
   insertVoucherData,
   insertVoucherDataDynami,
+  getRoundOffData
 } from "@/services/auth/FormControl.services.js";
 import { ButtonPanel } from "@/components/Buttons/customeButton.jsx";
 import CustomeInputFields from "@/components/Inputs/customeInputFields";
@@ -240,7 +241,7 @@ export default function AddEditFormControll() {
   const [labelName, setLabelName] = useState("");
   const [isFormSaved, setIsFormSaved] = useState(false);
   const { clientId } = getUserDetails();
-
+  const [invoiceRoundOff, setInvoiceRoundOff] = useState("N");
   console.log("uriDecodedMenu.menuName", uriDecodedMenu?.menuName);
 
   useEffect(() => {
@@ -2074,103 +2075,228 @@ export default function AddEditFormControll() {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    console.log("changes in charges", newState?.tblInvoiceCharge);
-    let totalAmount = newState?.tblInvoiceCharge?.reduce((acc, item) => {
-      return acc + Number(item?.totalAmountHc) || 0;
-    }, 0);
-    let taxAmount = newState?.tblInvoiceCharge?.reduce((acc, item) => {
-      let temp = (item?.tblInvoiceChargeTax || [])?.reduce((acc1, item1) => {
-        if (item?.taxApplicable == "true" || item?.taxApplicable == true) {
-          return acc1 + Number(item1?.taxAmountHc) || 0;
-        } else {
-          return acc1;
-        }
-      }, 0);
-      return acc + temp;
-    }, 0);
+  // async function getRoundOffSetting(totalInvoiceAmount,totalInvoiceAmountFc,totalAmount,safeTaxAmount,safeTaxAmountFc,totalAmountFc) {
+  //   const { clientId } = getUserDetails();
+  //   const { voucherTypeId } = newState || {};
 
-    let totalAmountFc = newState?.tblInvoiceCharge?.reduce((acc, item) => {
-      return acc + Number(item?.totalAmountFc) || 0;
-    }, 0);
-    let taxAmountFc = newState?.tblInvoiceCharge?.reduce((acc, item) => {
-      let temp = (item?.tblInvoiceChargeTax || [])?.reduce((acc1, item1) => {
-        if (item?.taxApplicable == "true" || item?.taxApplicable == true) {
-          return acc1 + Number(item1?.taxAmountFc) || 0;
-        } else {
-          return acc1;
-        }
-        // return acc1 + Number(item1?.taxAmountFc)
-      }, 0);
-      return acc + temp;
-    }, 0);
-    taxAmount = Number.isNaN(taxAmount) ? 0 : taxAmount;
-    taxAmountFc = Number.isNaN(taxAmountFc) ? 0 : taxAmountFc;
-    setNewState((prev) => {
-      return {
+  //   if (!voucherTypeId) return;
+
+  //   const requestData = { voucherTypeId, clientId };
+
+  //   const fetchRoundOffData = await getRoundOffData(requestData);
+  //   console.log("fetchRoundOffData", fetchRoundOffData);
+
+  //   const ro = fetchRoundOffData?.Chargers?.InvoiceRoundOff ?? "N"
+  //   console.log("omibaba", ro);
+  //   setInvoiceRoundOff(String(ro || "N").toUpperCase());
+
+
+  //   if (String(invoiceRoundOff).toUpperCase() === "Y") {
+  //     setNewState((prev) => ({
+  //       ...prev,
+  //       invoiceAmount: totalAmount,
+  //       invoiceAmountFc: totalAmountFc,
+  //       taxAmount: safeTaxAmount,
+  //       taxAmountFc: safeTaxAmountFc,
+  //       totalInvoiceAmount: Math.round(totalInvoiceAmount),
+  //       totalInvoiceAmountFc: Math.round(totalInvoiceAmountFc),
+  //     }));
+
+  //   }
+  //   else {
+  //     setNewState((prev) => ({
+  //       ...prev,
+  //       invoiceAmount: totalAmount,
+  //       invoiceAmountFc: totalAmountFc,
+  //       taxAmount: safeTaxAmount,
+  //       taxAmountFc: safeTaxAmountFc,
+  //       totalInvoiceAmount,
+  //       totalInvoiceAmountFc,
+  //     }));
+  //   }
+  // }
+
+  // useEffect(() => {
+  //   console.log("changes in charges", newState?.tblInvoiceCharge);
+
+  //   const charges = newState?.tblInvoiceCharge || [];
+
+  //   const totalAmount = charges.reduce(
+  //     (acc, item) => acc + (Number(item?.totalAmountHc) || 0),
+  //     0
+  //   );
+  //   const taxAmount = charges.reduce((acc, item) => {
+  //     const isTaxApplicable = item?.taxApplicable === true || item?.taxApplicable === "true" || item?.taxApplicable === 1;
+
+  //     const temp = (item?.tblInvoiceChargeTax || []).reduce((acc1, item1) => {
+  //       return isTaxApplicable ? acc1 + (Number(item1?.taxAmountHc) || 0) : acc1;
+  //     }, 0);
+
+  //     return acc + temp;
+  //   }, 0);
+
+  //   const totalAmountFc = charges.reduce(
+  //     (acc, item) => acc + (Number(item?.totalAmountFc) || 0),
+  //     0
+  //   );
+
+  //   const taxAmountFc = charges.reduce((acc, item) => {
+  //     const isTaxApplicable = item?.taxApplicable === true || item?.taxApplicable === "true" || item?.taxApplicable === 1;
+
+  //     const temp = (item?.tblInvoiceChargeTax || []).reduce((acc1, item1) => {
+  //       return isTaxApplicable ? acc1 + (Number(item1?.taxAmountFc) || 0) : acc1;
+  //     }, 0);
+
+  //     return acc + temp;
+  //   }, 0);
+
+  //   const safeTaxAmount = Number.isNaN(taxAmount) ? 0 : taxAmount;
+  //   const safeTaxAmountFc = Number.isNaN(taxAmountFc) ? 0 : taxAmountFc;
+
+  //   let totalInvoiceAmount = totalAmount + safeTaxAmount;
+  //   let totalInvoiceAmountFc = totalAmountFc + safeTaxAmountFc;
+
+
+  //   getRoundOffSetting(totalInvoiceAmount,totalInvoiceAmountFc,totalAmount,safeTaxAmount,safeTaxAmountFc,totalAmountFc);
+
+
+  // }, [newState?.tblInvoiceCharge, newState?.tblInvoiceCharge?.length, invoiceRoundOff]);
+
+  async function getRoundOffSetting(
+    totalInvoiceAmount,
+    totalInvoiceAmountFc,
+    totalAmount,
+    safeTaxAmount,
+    safeTaxAmountFc,
+    totalAmountFc
+  ) {
+    const { clientId } = getUserDetails();
+    const { voucherTypeId } = newState || {};
+
+    if (!voucherTypeId) return;
+
+    const requestData = { voucherTypeId, clientId };
+
+    const fetchRoundOffData = await getRoundOffData(requestData);
+    console.log("fetchRoundOffData", fetchRoundOffData);
+
+    const ro = fetchRoundOffData?.Chargers?.InvoiceRoundOff ?? "N";
+    const roUpper = String(ro || "N").toUpperCase();
+    console.log("omibaba", roUpper);
+
+    setInvoiceRoundOff(roUpper);
+
+    const to2 = (n) => {
+      const x = Number(n) || 0;
+      const v = Math.round((x + Number.EPSILON) * 100) / 100;
+      return Object.is(v, -0) ? 0 : v;
+    };
+
+    const roundedHc = Math.round(Number(totalInvoiceAmount) || 0);
+    const roundedFc = Math.round(Number(totalInvoiceAmountFc) || 0);
+
+    const roundOffAmount = to2(roundedHc - (Number(totalInvoiceAmount) || 0));
+    const roundOffAmountFc = to2(roundedFc - (Number(totalInvoiceAmountFc) || 0));
+
+    if (roUpper === "Y") {
+      setNewState((prev) => ({
         ...prev,
         invoiceAmount: totalAmount,
         invoiceAmountFc: totalAmountFc,
-        taxAmount: taxAmount,
-        taxAmountFc: taxAmountFc,
-        totalInvoiceAmount: totalAmount + taxAmount,
-        totalInvoiceAmountFc: totalAmountFc + taxAmountFc,
-      };
-    });
-  }, [newState?.tblInvoiceCharge, newState?.tblInvoiceCharge?.length]);
+        taxAmount: safeTaxAmount,
+        taxAmountFc: safeTaxAmountFc,
+        totalInvoiceAmount: roundedHc,
+        totalInvoiceAmountFc: roundedFc,
 
-  // useEffect(() => {
-  //   const pb = newState?.paymentBank;
-  //   if (!pb) return;
+        // ✅ NEW fields
+        roundOffAmount,
+        roundOffAmountFc,
+      }));
+    } else {
+      setNewState((prev) => ({
+        ...prev,
+        invoiceAmount: totalAmount,
+        invoiceAmountFc: totalAmountFc,
+        taxAmount: safeTaxAmount,
+        taxAmountFc: safeTaxAmountFc,
+        totalInvoiceAmount,
+        totalInvoiceAmountFc,
 
-  //   setNewState((prev) => {
-  //     const ledgers = Array.isArray(prev?.tblVoucherLedger)
-  //       ? [...prev.tblVoucherLedger]
-  //       : [];
-  //     const pbStr = String(pb);
-  //     const row0 = ledgers.length
-  //       ? { ...ledgers[0] }
-  //       : {
-  //         tblVoucherLedgerDetails: [],
-  //         glIddropdown: [],
-  //         glId: "",
-  //         isChecked: true,
-  //         indexValue: 0,
-  //       };
-
-  //     if (String(row0.glId || "") === pbStr && ledgers.length) return prev;
-
-  //     row0.glId = pbStr;
-
-  //     if (Array.isArray(prev?.paymentBankdropdown) && prev.paymentBankdropdown[0]) {
-  //       row0.glIddropdown = [prev.paymentBankdropdown[0]];
-  //     }
-
-  //     if (ledgers.length) ledgers[0] = row0;
-  //     else ledgers.push(row0);
-
-  //     return { ...prev, tblVoucherLedger: ledgers };
-  //   });
-  // }, [newState?.paymentBank]);
-
+        roundOffAmount: 0,
+        roundOffAmountFc: 0,
+      }));
+    }
+  }
   useEffect(() => {
-    // Prevent calculation if tblInvoiceCharge is empty or not available
+    console.log("changes in charges", newState?.tblInvoiceCharge);
+
+    const charges = newState?.tblInvoiceCharge || [];
+
+    const totalAmount = charges.reduce(
+      (acc, item) => acc + (Number(item?.totalAmountHc) || 0),
+      0
+    );
+
+    const taxAmount = charges.reduce((acc, item) => {
+      const isTaxApplicable =
+        item?.taxApplicable === true ||
+        item?.taxApplicable === "true" ||
+        item?.taxApplicable === 1;
+
+      const temp = (item?.tblInvoiceChargeTax || []).reduce((acc1, item1) => {
+        return isTaxApplicable ? acc1 + (Number(item1?.taxAmountHc) || 0) : acc1;
+      }, 0);
+
+      return acc + temp;
+    }, 0);
+
+    const totalAmountFc = charges.reduce(
+      (acc, item) => acc + (Number(item?.totalAmountFc) || 0),
+      0
+    );
+
+    const taxAmountFc = charges.reduce((acc, item) => {
+      const isTaxApplicable =
+        item?.taxApplicable === true ||
+        item?.taxApplicable === "true" ||
+        item?.taxApplicable === 1;
+
+      const temp = (item?.tblInvoiceChargeTax || []).reduce((acc1, item1) => {
+        return isTaxApplicable ? acc1 + (Number(item1?.taxAmountFc) || 0) : acc1;
+      }, 0);
+
+      return acc + temp;
+    }, 0);
+
+    const safeTaxAmount = Number.isNaN(taxAmount) ? 0 : taxAmount;
+    const safeTaxAmountFc = Number.isNaN(taxAmountFc) ? 0 : taxAmountFc;
+
+    let totalInvoiceAmount = totalAmount + safeTaxAmount;
+    let totalInvoiceAmountFc = totalAmountFc + safeTaxAmountFc;
+
+    getRoundOffSetting(
+      totalInvoiceAmount,
+      totalInvoiceAmountFc,
+      totalAmount,
+      safeTaxAmount,
+      safeTaxAmountFc,
+      totalAmountFc
+    );
+  }, [newState?.tblInvoiceCharge, newState?.tblInvoiceCharge?.length, invoiceRoundOff]);
+  useEffect(() => {
     if (!Array.isArray(newState?.tblInvoiceCharge)) return;
 
-    // Calculate updated charges
     const updatedCharges = newState.tblInvoiceCharge.map((item) => {
       const qty = parseFloat(item.qty) || 0;
       const rate = parseFloat(item.rate) || 0;
       const exchangeRate = parseFloat(item.exchangeRate) || 0;
       const noOfDays = parseFloat(item.noOfDays);
 
-      // If noOfDays is null/undefined/0, ignore it in calculation
       const effectiveNoOfDays = isNaN(noOfDays) || noOfDays <= 0 ? 1 : noOfDays;
 
       const totalAmountFc = qty * rate * effectiveNoOfDays;
       const totalAmount = totalAmountFc * exchangeRate;
 
-      // Avoid unnecessary updates if values are already correct
       if (
         Number(item.totalAmountFc) === Number(totalAmountFc.toFixed(2)) &&
         Number(item.totalAmountHc) === Number(totalAmount.toFixed(2))
@@ -2467,11 +2593,26 @@ export default function AddEditFormControll() {
   // ✅ UPDATED: guard also tracks debit values (so uncheck + "0.00" forces recalculation)
   // ✅ UPDATED: prevents unnecessary setNewState loops by skipping if nothing changed
 
-  const allocPrevRef = useRef({ amtHC: "", amtFC: "", checks: [] });
+
+  const allocPrevRef = useRef({
+    amtHC: "",
+    amtFC: "",
+    checks: [],
+    parentLedger: [],
+  });
+  const allocInternalUpdateRef = useRef(false); // ✅ prevents max update depth loop
 
   useEffect(() => {
+    // ✅ STOP INFINITE LOOP:
+    // If this render was triggered by our own setNewState, skip once.
+    if (allocInternalUpdateRef.current) {
+      allocInternalUpdateRef.current = false;
+      return;
+    }
+
     const DBG = true;
     const tag = "[ALLOC_EFFECT]";
+    console.log(`STATE UPDATE TRIGGERED`)
 
     const toNum = (v) => {
       if (v === null || v === undefined || v === "") return 0;
@@ -2486,12 +2627,13 @@ export default function AddEditFormControll() {
 
     const asNum2 = (n) => round2(n);
 
-    // ✅ NEW: clamp to prevent negative balances/remaining (does NOT change existing flow)
     const clamp0 = (n) => Math.max(0, round2(n));
 
-    // ✅ pay amounts
-    const payHC = toNum(newState?.amtRec ?? 0);
-    const payFC = toNum(newState?.amtRecFC ?? 0);
+    // ✅ IMPORTANT: pay amounts must come from amtRec/amtRecFC (NOT balanceAmt*)
+    // const payHC = toNum(newState?.amtRec ?? 0);
+    // const payFC = toNum(newState?.amtRecFC ?? 0);
+    let payHC = toNum(newState?.amtRec ?? 0);
+    let payFC = toNum(newState?.amtRecFC ?? 0);
 
     const hasLedgers =
       Array.isArray(newState?.tblVoucherLedger) &&
@@ -2502,88 +2644,149 @@ export default function AddEditFormControll() {
       : [
         {
           __virtual: true,
-          tblVoucherLedgerDetails: Array.isArray(
-            newState?.tblVoucherLedgerDetails,
-          )
+          tblVoucherLedgerDetails: Array.isArray(newState?.tblVoucherLedgerDetails)
             ? newState.tblVoucherLedgerDetails
             : [],
         },
       ];
 
     const allDetails = ledgers.flatMap((l) =>
-      Array.isArray(l?.tblVoucherLedgerDetails)
-        ? l.tblVoucherLedgerDetails
-        : [],
+      Array.isArray(l?.tblVoucherLedgerDetails) ? l.tblVoucherLedgerDetails : []
     );
 
-    if (DBG) {
-      console.log(`${tag} RUN`, {
-        payHC,
-        payFC,
-        hasLedgers,
-        ledgersLen: ledgers.length,
-        allDetailsLen: allDetails.length,
-        snapshot: allDetails.map((r, i) => ({
-          i,
-          checked: !!r?.isChecked,
-          debit: r?.debitAmount,
-          debitFC: r?.debitAmountFc,
-          origHC: r?.__origBalHC,
-          origFC: r?.__origBalFC,
-          balHC: r?.balanceAmount,
-          balFC: r?.balanceAmountFc,
-        })),
-      });
-    }
-
     if (!allDetails.length) {
-      allocPrevRef.current = { amtHC: "", amtFC: "", checks: [] };
+      allocPrevRef.current = {
+        amtHC: "",
+        amtFC: "",
+        checks: [],
+        parentLedger: [],
+      };
       return;
     }
 
     // ✅ guard keys
-    const prev = allocPrevRef.current || { amtHC: "", amtFC: "", checks: [] };
-
+    const prev = allocPrevRef.current || {
+      amtHC: "",
+      amtFC: "",
+      checks: [],
+      parentLedger: [],
+    };
     const amtHCKey = String(newState?.amtRec ?? "");
     const amtFCKey = String(newState?.amtRecFC ?? "");
 
-    // ✅ IMPORTANT: track both checked + debit strings (so uncheck recalculates)
-    const checksNow = allDetails.map((r) => ({
-      c: !!r?.isChecked,
-      d: String(r?.debitAmount ?? ""),
-      df: String(r?.debitAmountFc ?? ""),
-    }));
+    const checksNow = ledgers.flatMap((ledger) => {
+      const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+        ? ledger.tblVoucherLedgerDetails
+        : [];
+
+      return details.map((r) => ({
+        k:
+          r?.voucherOutstandingId != null
+            ? String(r.voucherOutstandingId)
+            : String(r?.indexValue ?? ""),
+        c: !!r?.isChecked,
+        neg: !!r?.__isNegRow,
+
+        d: round2(toNum(r?.debitAmount)),
+        df: round2(toNum(r?.debitAmountFc)),
+        cr: round2(toNum(r?.creditAmount)),
+        crf: round2(toNum(r?.creditAmountFc)),
+        b: round2(toNum(r?.balanceAmount)),
+        bf: round2(toNum(r?.balanceAmountFc)),
+      }));
+    });
+
+    checksNow.sort((a, b) => (a.k > b.k ? 1 : a.k < b.k ? -1 : 0));
+
+    const parentLedgerNow = ledgers
+      .map((ledger, idx) => ({
+        k:
+          ledger?.voucherLedgerId != null
+            ? String(ledger.voucherLedgerId)
+            : String(ledger?.indexValue ?? idx),
+        d: round2(toNum(ledger?.debitAmount)),
+        df: round2(toNum(ledger?.debitAmountFc)),
+        cr: round2(toNum(ledger?.creditAmount)),
+        crf: round2(toNum(ledger?.creditAmountFc)),
+        b: round2(toNum(ledger?.balanceAmount)),
+        bf: round2(toNum(ledger?.balanceAmountFc)),
+      }))
+      .sort((a, b) => (a.k > b.k ? 1 : a.k < b.k ? -1 : 0));
+
+    const prevChecks = Array.isArray(prev.checks) ? [...prev.checks] : [];
+    prevChecks.sort((a, b) => (a.k > b.k ? 1 : a.k < b.k ? -1 : 0));
+    const prevParentLedger = Array.isArray(prev.parentLedger)
+      ? [...prev.parentLedger]
+      : [];
+    prevParentLedger.sort((a, b) => (a.k > b.k ? 1 : a.k < b.k ? -1 : 0));
 
     const sameChecks =
-      prev.checks.length === checksNow.length &&
-      prev.checks.every((v, i) => {
+      prevChecks.length === checksNow.length &&
+      prevChecks.every((v, i) => {
         const cur = checksNow[i] || {};
-        return v?.c === cur?.c && v?.d === cur?.d && v?.df === cur?.df;
+        return (
+          v?.k === cur?.k &&
+          v?.c === cur?.c &&
+          v?.neg === cur?.neg &&
+          v?.d === cur?.d &&
+          v?.df === cur?.df &&
+          v?.cr === cur?.cr &&
+          v?.crf === cur?.crf &&
+          v?.b === cur?.b &&
+          v?.bf === cur?.bf
+        );
+      });
+
+    const sameParentLedger =
+      prevParentLedger.length === parentLedgerNow.length &&
+      prevParentLedger.every((v, i) => {
+        const cur = parentLedgerNow[i] || {};
+        return (
+          v?.k === cur?.k &&
+          v?.d === cur?.d &&
+          v?.df === cur?.df &&
+          v?.cr === cur?.cr &&
+          v?.crf === cur?.crf &&
+          v?.b === cur?.b &&
+          v?.bf === cur?.bf
+        );
       });
 
     const willReturn =
-      prev.amtHC === amtHCKey && prev.amtFC === amtFCKey && sameChecks;
+      prev.amtHC === amtHCKey &&
+      prev.amtFC === amtFCKey &&
+      sameChecks &&
+      sameParentLedger;
 
     if (DBG) {
       console.log(`${tag} GUARD`, {
         prev,
         amtHCKey,
         amtFCKey,
-        checksNow,
         sameChecks,
+        sameParentLedger,
         willReturn,
       });
     }
 
     if (willReturn) return;
-
     allocPrevRef.current = {
       amtHC: amtHCKey,
       amtFC: amtFCKey,
       checks: checksNow,
+      parentLedger: parentLedgerNow,
     };
 
-    // PASS 1: build rows, set unchecked debit to "0.00", keep checked debits
+    let negAddHC = 0;
+    let negAddFC = 0;
+
+    const addAbsToParentIfChecked = (isChecked, balHC, balFC) => {
+      if (!isChecked) return;
+      if (balHC < 0) negAddHC = round2(negAddHC + Math.abs(balHC));
+      if (balFC < 0) negAddFC = round2(negAddFC + Math.abs(balFC));
+    };
+
+    // PASS 1
     let sumCheckedHC = 0;
     let sumCheckedFC = 0;
 
@@ -2592,74 +2795,120 @@ export default function AddEditFormControll() {
         ? ledger.tblVoucherLedgerDetails
         : [];
       if (!details.length) return ledger;
-
       const nextDetails = details.map((row) => {
         const isChecked = !!row?.isChecked;
+        console.log("ROw", row, isChecked);
+        if (isChecked) {
+          ledger.isChildChecked = true;
+        }
+        const curBalHC = toNum(row?.balanceAmount);
+        const curBalFC = toNum(row?.balanceAmountFc);
 
         const origBalHC =
-          row?.__origBalHC != null
-            ? toNum(row.__origBalHC)
-            : toNum(row?.balanceAmount);
+          row?.__origBalHC != null ? toNum(row.__origBalHC) : curBalHC;
         const origBalFC =
-          row?.__origBalFC != null
-            ? toNum(row.__origBalFC)
-            : toNum(row?.balanceAmountFc);
+          row?.__origBalFC != null ? toNum(row.__origBalFC) : curBalFC;
 
-        // ✅ unchecked → set debit "0.00" + restore balances (clamped to avoid negatives)
-        if (!isChecked) {
+        // ✅ NEGATIVE FIRST (permanent flag)
+        const isNegNow = curBalHC < 0 || curBalFC < 0;
+        if (isNegNow) {
+          addAbsToParentIfChecked(isChecked, curBalHC, curBalFC);
+
+          const absHC = Math.abs(curBalHC);
+          const absFC = Math.abs(curBalFC);
+
+          if (isChecked) {
+            payHC = payHC + absHC;
+            payFC = payFC + absFC;
+            return {
+              ...row,
+              __isNegRow: true,
+              __origBalHC: origBalHC,
+              __origBalFC: origBalFC,
+              debitAmount: asStr2(absHC),
+              debitAmountFc: asStr2(absFC),
+              creditAmount: "0.00",
+              creditAmountFc: "0.00",
+              balanceAmount: asNum2(0),
+              balanceAmountFc: asNum2(0),
+            };
+          }
           return {
             ...row,
+            __isNegRow: true,
             __origBalHC: origBalHC,
             __origBalFC: origBalFC,
             debitAmount: "0.00",
             debitAmountFc: "0.00",
-            creditAmount: row?.creditAmount ?? "",
-            creditAmountFc: row?.creditAmountFc ?? "",
-            balanceAmount: asNum2(clamp0(origBalHC)),
-            balanceAmountFc: asNum2(clamp0(origBalFC)),
+            creditAmount: "0.00",
+            creditAmountFc: "0.00",
+            balanceAmount: asNum2(origBalHC),
+            balanceAmountFc: asNum2(origBalFC),
           };
         }
 
-        // ✅ checked → keep existing debit if present (do not auto-increase)
-        const existingHC = toNum(row?.debitAmount);
-        const existingFC = toNum(row?.debitAmountFc);
+        const wasNeg = !!row?.__isNegRow;
 
-        // keep values within orig balances and clamp to >= 0
+        // non-negative unchecked
+        if (!isChecked) {
+          return {
+            ...row,
+            __isNegRow: wasNeg,
+            __origBalHC: origBalHC,
+            __origBalFC: origBalFC,
+            debitAmount: "0.00",
+            debitAmountFc: "0.00",
+            creditAmount: "0.00",
+            creditAmountFc: "0.00",
+            balanceAmount: asNum2(origBalHC),
+            balanceAmountFc: asNum2(origBalFC),
+          };
+        }
+        // checked non-negative => allocate based on original balance
+        const baseBalHC = curBalHC;
+        const baseBalFC = curBalFC;
+
+        const existingHC = toNum(row?.creditAmount);
+        const existingFC = toNum(row?.creditAmountFc);
+
         const keepHC =
-          existingHC > 0 ? clamp0(Math.min(existingHC, origBalHC)) : 0;
+          existingHC > 0 ? clamp0(Math.min(existingHC, baseBalHC)) : 0;
         const keepFC =
-          existingFC > 0 ? clamp0(Math.min(existingFC, origBalFC)) : 0;
+          existingFC > 0 ? clamp0(Math.min(existingFC, baseBalFC)) : 0;
 
         sumCheckedHC = round2(sumCheckedHC + keepHC);
         sumCheckedFC = round2(sumCheckedFC + keepFC);
+        console.log("row alloc", { keepHC, keepFC, sumCheckedHC, sumCheckedFC });
+
+        const rawBalHC = baseBalHC - keepHC;
+        const rawBalFC = baseBalFC - keepFC;
+
+        payHC = round2(payHC - keepHC);
+        payFC = round2(payFC - keepFC);
 
         return {
           ...row,
+          __isNegRow: wasNeg,
           __origBalHC: origBalHC,
           __origBalFC: origBalFC,
-          debitAmount: keepHC > 0 ? asStr2(keepHC) : "", // blank means "auto-fill later"
-          debitAmountFc: keepFC > 0 ? asStr2(keepFC) : "",
-          creditAmount: row?.creditAmount ?? "",
-          creditAmountFc: row?.creditAmountFc ?? "",
-          // ✅ clamp so balances never go negative
-          balanceAmount: asNum2(clamp0(origBalHC - keepHC)),
-          balanceAmountFc: asNum2(clamp0(origBalFC - keepFC)),
+          debitAmount: row?.debitAmount ?? "0.00",
+          debitAmountFc: row?.debitAmountFc ?? "0.00",
+          creditAmount: keepHC > 0 ? asStr2(keepHC) : "", // blank => pass2 fill
+          creditAmountFc: keepFC > 0 ? asStr2(keepFC) : "",
+          balanceAmount: asNum2(rawBalHC),
+          balanceAmountFc: asNum2(rawBalFC),
         };
       });
 
       return { ...ledger, tblVoucherLedgerDetails: nextDetails };
     });
 
-    // remaining after keeping explicit checked debits
-    // ✅ clamp so remaining doesn't go negative (prevents negative allocations later)
+    // let remHC = clamp0(newState?.balanceAmtHc - sumCheckedHC);
+    // let remFC = clamp0(newState?.balanceAmtFc - sumCheckedFC);
+
     let remHC = clamp0(payHC - sumCheckedHC);
     let remFC = clamp0(payFC - sumCheckedFC);
 
-    if (DBG) {
-      console.log(`${tag} PASS1`, { sumCheckedHC, sumCheckedFC, remHC, remFC });
-    }
-
-    // PASS 2: fill blank checked debits sequentially from remaining
     const filledLedgers = nextLedgers.map((ledger) => {
       const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
         ? ledger.tblVoucherLedgerDetails
@@ -2667,141 +2916,164 @@ export default function AddEditFormControll() {
       if (!details.length) return ledger;
 
       const nextDetails = details.map((row) => {
+        debugger;
         if (!row?.isChecked) return row;
 
-        const existingHC = toNum(row?.debitAmount);
-        const existingFC = toNum(row?.debitAmountFc);
-        if (existingHC > 0 || existingFC > 0) return row;
+        if (row?.__isNegRow) return row;
+
+        const curBalHC = toNum(row?.balanceAmount);
+        const curBalFC = toNum(row?.balanceAmountFc);
+        if (curBalHC < 0 || curBalFC < 0) return row;
 
         const origBalHC =
-          row?.__origBalHC != null
-            ? toNum(row.__origBalHC)
-            : toNum(row?.balanceAmount);
+          row?.__origBalHC != null ? toNum(row.__origBalHC) : curBalHC;
         const origBalFC =
-          row?.__origBalFC != null
-            ? toNum(row.__origBalFC)
-            : toNum(row?.balanceAmountFc);
+          row?.__origBalFC != null ? toNum(row.__origBalFC) : curBalFC;
 
-        // ✅ allocate only from non-negative remaining + within original balance
+        const existingHC = toNum(row?.creditAmount);
+        const existingFC = toNum(row?.creditAmountFc);
+        if (existingHC > 0 || existingFC > 0) return row;
+        console.log("ALLOCATING ROW", remHC, remFC, origBalHC, origBalFC, newState?.balanceAmtHc, newState?.balanceAmtFc);
         const allocHC = clamp0(Math.min(remHC, origBalHC));
         const allocFC = clamp0(Math.min(remFC, origBalFC));
 
         remHC = clamp0(remHC - allocHC);
         remFC = clamp0(remFC - allocFC);
 
+        const rawBalHC = origBalHC - allocHC;
+        const rawBalFC = origBalFC - allocFC;
+
         return {
           ...row,
-          debitAmount: allocHC > 0 ? asStr2(allocHC) : "0.00",
-          debitAmountFc: allocFC > 0 ? asStr2(allocFC) : "0.00",
-          // ✅ clamp so balances never go negative
-          balanceAmount: asNum2(clamp0(origBalHC - allocHC)),
-          balanceAmountFc: asNum2(clamp0(origBalFC - allocFC)),
+          creditAmount: allocHC > 0 ? asStr2(allocHC) : "0.00",
+          creditAmountFc: allocFC > 0 ? asStr2(allocFC) : "0.00",
+          balanceAmount: asNum2(rawBalHC),
+          balanceAmountFc: asNum2(rawBalFC),
         };
       });
 
       return { ...ledger, tblVoucherLedgerDetails: nextDetails };
     });
 
-    // ✅ Prevent setNewState loop if nothing actually changed
-    const computeSig = (stateObj) => {
-      const sLedgers =
-        Array.isArray(stateObj?.tblVoucherLedger) &&
-          stateObj.tblVoucherLedger.length
-          ? stateObj.tblVoucherLedger
-          : [
-            {
-              tblVoucherLedgerDetails: Array.isArray(
-                stateObj?.tblVoucherLedgerDetails,
-              )
-                ? stateObj.tblVoucherLedgerDetails
-                : [],
-            },
-          ];
+    // parent totals
+    const withParentTotals = filledLedgers.map((ledger) => {
+      const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+        ? ledger.tblVoucherLedgerDetails
+        : [];
 
-      const sAll = sLedgers.flatMap((l) =>
-        Array.isArray(l?.tblVoucherLedgerDetails)
-          ? l.tblVoucherLedgerDetails
-          : [],
+      const parentCreditHC = round2(
+        details.reduce((sum, r) => sum + toNum(r?.creditAmount), 0)
+      );
+      const parentCreditFC = round2(
+        details.reduce((sum, r) => sum + toNum(r?.creditAmountFc), 0)
       );
 
-      return JSON.stringify({
-        balHc: String(stateObj?.balanceAmtHc ?? ""),
-        balFc: String(stateObj?.balanceAmtFc ?? ""),
-        rows: sAll.map((r) => ({
-          c: !!r?.isChecked,
-          d: String(r?.debitAmount ?? ""),
-          df: String(r?.debitAmountFc ?? ""),
-          b: String(r?.balanceAmount ?? ""),
-          bf: String(r?.balanceAmountFc ?? ""),
-          o: String(r?.__origBalHC ?? ""),
-          of: String(r?.__origBalFC ?? ""),
-        })),
+      const parentDebitHC = round2(
+        details.reduce((sum, r) => sum + toNum(r?.debitAmount), 0)
+      );
+      const parentDebitFC = round2(
+        details.reduce((sum, r) => sum + toNum(r?.debitAmountFc), 0)
+      );
+
+      const prevCreditHC = round2(toNum(ledger?.creditAmount));
+      const prevCreditFC = round2(toNum(ledger?.creditAmountFc));
+      const prevDebitHC = round2(toNum(ledger?.debitAmount));
+      const prevDebitFC = round2(toNum(ledger?.debitAmountFc));
+
+      const nextCreditHC =
+        !ledger.isChildChecked
+          ? ledger?.creditAmount ?? asStr2(prevCreditHC)
+          : asStr2(parentCreditHC);
+      const nextCreditFC =
+       !ledger.isChildChecked
+          ? ledger?.creditAmountFc ?? asStr2(prevCreditFC)
+          : asStr2(parentCreditFC);
+      const nextDebitHC =
+        !ledger.isChildChecked
+          ? ledger?.debitAmount ?? asStr2(prevDebitHC)
+          : asStr2(parentDebitHC);
+      const nextDebitFC =
+        !ledger.isChildChecked
+          ? ledger?.debitAmountFc ?? asStr2(prevDebitFC)
+          : asStr2(parentDebitFC);
+
+      return {
+        ...ledger,
+        creditAmount: nextCreditHC,
+        creditAmountFc: nextCreditFC,
+        debitAmount: nextDebitHC,
+        debitAmountFc: nextDebitFC,
+      };
+    });
+
+    const totalCredite = withParentTotals.reduce(
+      (sum, ledger) =>
+        sum + toNum(ledger?.creditAmount),
+      0
+    );
+    const totalCreditFC = withParentTotals.reduce(
+      (sum, ledger) =>
+        sum + toNum(ledger?.creditAmountFc),
+      0
+    );
+
+    const totalDebitHC = withParentTotals.reduce(
+      (sum, ledger) => sum + toNum(ledger?.debitAmount),
+      0
+    );
+    const totalDebitFC = withParentTotals.reduce(
+      (sum, ledger) => sum + toNum(ledger?.debitAmountFc),
+      0
+    )
+
+
+    const parentBalHC = round2(newState?.amtRec ?? 0) + (totalDebitHC - totalCredite)
+    const parentBalFC = round2(newState?.amtRecFC ?? 0) + (totalDebitFC - totalCreditFC);
+
+    if (DBG) {
+      console.log(`${tag} FINAL`, {
+        payHC,
+        payFC,
+        sumCheckedHC,
+        sumCheckedFC,
+        remHC,
+        remFC,
+        negAddHC,
+        negAddFC,
+        parentBalHC,
+        parentBalFC,
       });
-    };
+    }
+
+    // ✅ mark that the next render is from our own setNewState
+    allocInternalUpdateRef.current = true;
 
     setNewState((prevState) => {
       const out = Array.isArray(prevState?.tblVoucherLedger)
         ? {
           ...prevState,
-          tblVoucherLedger: filledLedgers.filter((l) => !l?.__virtual),
-          balanceAmtHc: asStr2(remHC),
-          balanceAmtFc: asStr2(remFC),
+          tblVoucherLedger: withParentTotals.filter((l) => !l?.__virtual),
+          balanceAmtHc: asStr2(parentBalHC),
+          balanceAmtFc: asStr2(parentBalFC),
         }
         : {
           ...prevState,
           tblVoucherLedgerDetails:
             filledLedgers[0]?.tblVoucherLedgerDetails || [],
-          balanceAmtHc: asStr2(remHC),
-          balanceAmtFc: asStr2(remFC),
+          balanceAmtHc: asStr2(parentBalHC),
+          balanceAmtFc: asStr2(parentBalFC),
         };
-
-      if (computeSig(prevState) === computeSig(out)) {
-        if (DBG) console.log(`${tag} setNewState skipped (no diff)`);
-        return prevState;
-      }
-
-      if (DBG) {
-        console.log(`${tag} FINAL`, {
-          remHC,
-          remFC,
-          balanceAmtHc: out.balanceAmtHc,
-          balanceAmtFc: out.balanceAmtFc,
-        });
-      }
 
       return out;
     });
 
-    if (DBG)
-      console.log(
-        "====================================================================",
-      );
+    if (DBG) console.log("====================================================================");
   }, [
     newState?.amtRec,
     newState?.amtRecFC,
-    newState?.tblVoucherLedger,
-    newState?.tblVoucherLedgerDetails,
+    JSON.stringify(newState?.tblVoucherLedger),
+    JSON.stringify(newState?.tblVoucherLedgerDetails),
   ]);
-
-  //  useEffect(() => {
-  //     const list = newState?.tblVoucherLedgerDetails ?? [];
-  //     if (!list.length) return;
-
-  //     const sumField = (field) =>
-  //       list.reduce((sum, row) => sum + (parseFloat(row[field]) || 0), 0);
-
-  //     setTotals({
-  //       // osAmtFC: sumField("OsAmtFC").toFixed(2),
-  //       // osAmtHC: sumField("OsAmtHC").toFixed(2),
-  //       // allocatedAmtHC: sumField("allocatedAmtHC").toFixed(2),
-  //       // allocatedAmtFC: sumField("allocatedAmtFC").toFixed(2),
-  //       balanceAmtFC: sumField("balanceAmtFC").toFixed(2),
-  //       balanceAmtHC: sumField("balanceAmtHC").toFixed(2),
-  //       tdsAmtFC: sumField("tdsAmtFC").toFixed(2),
-  //       tdsAmtHC: sumField("tdsAmtHC").toFixed(2),
-  //     });
-  //   }, [newState?.tblVoucherLedgerDetails]);
-
   return (
     <div className={`h-screen relative`}>
       <form onSubmit={handleButtonClick.handleSubmit}>
@@ -3020,8 +3292,8 @@ function ParentAccordianComponent({
       }
       return;
     }
-    // let data = { ...result.values };
-    let data = { ...result?.newState };
+    let data = { ...result?.values };
+    // let data = { ...result?.newState };
     setNewState((pre) => {
       return {
         ...pre,
@@ -3046,7 +3318,7 @@ function ParentAccordianComponent({
       return;
     }
     // let data = { ...result.values };
-    let data = { ...result.newState };
+    let data = { ...result?.newState };
     setNewState((pre) => {
       return {
         ...pre,
@@ -3179,6 +3451,8 @@ function ChildAccordianComponent({
   const [containerWidth, setContainerWidth] = useState(0);
   const [calculateData, setCalculateData] = useState(0);
   const [dummyFieldArray, setDummyFieldArray] = useState([]);
+  const [tableBodyWidth, setTableBodyWidth] = useState("0px");
+
 
   const handleFieldChildrenValuesChange = (updatedValues) => {
     let Object = { ...childObject, ...updatedValues };
@@ -3362,17 +3636,26 @@ function ChildAccordianComponent({
       if (hasBlackValues(subChild)) {
         return;
       }
-      if (Array.isArray(tmpData[section.tableName])) {
-        tmpData[section.tableName].push({
+      const currentRows = Array.isArray(tmpData[section.tableName])
+        ? tmpData[section.tableName]
+        : [];
+      const nextRows = [
+        ...currentRows,
+        {
           ...subChild,
           isChecked: true,
-          indexValue: tmpData[section.tableName].length,
-        });
-      }
-      setNewState(tmpData);
-      setSubmitNewState(tmpData);
-      setOriginalData(tmpData);
-      setRenderedData(newState[section.tableName]);
+          indexValue: currentRows.length,
+        },
+      ];
+      const nextState = {
+        ...tmpData,
+        [section.tableName]: nextRows,
+      };
+
+      setNewState(nextState);
+      setSubmitNewState(nextState);
+      setOriginalData(nextState);
+      setRenderedData(nextRows?.slice(0, 10));
       setChildObject({});
       setInputFieldsVisible((prev) => !prev);
       if (islastTab == true) {
@@ -3630,6 +3913,8 @@ function ChildAccordianComponent({
     setActiveColumn(columnId); // Set the active column to the one that was right-clicked
     // setOriginalData(newState);
   };
+
+
 
   CustomizedInputBase.propTypes = {
     columnData: PropTypes.array,
@@ -4007,6 +4292,46 @@ function ChildAccordianComponent({
     }
   }, [inputFieldsVisible]);
 
+
+
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (entries && entries[0]) {
+        const width = Math.floor(entries[0].contentRect.width);
+        setContainerWidth(width);
+      }
+    });
+
+    if (tableRef.current) {
+      resizeObserver.observe(tableRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [tableRef.current]);
+
+  useEffect(() => {
+    const horiScroll = () => {
+      const right = Math.round(
+        Math.floor(
+          tableRef.current?.getBoundingClientRect()?.width +
+          tableRef.current?.scrollLeft
+        )
+      );
+      if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
+        setTableBodyWidth(`${right - 100}`);
+      } else {
+        setTableBodyWidth(`0`);
+      }
+    };
+    horiScroll();
+    tableRef.current?.addEventListener("scroll", horiScroll);
+    return () => {
+      tableRef.current?.removeEventListener("scroll", horiScroll);
+    };
+  }, [tableRef.current]);
+
   return (
     <>
       <Accordion
@@ -4214,79 +4539,102 @@ function ChildAccordianComponent({
                             {section.fields
                               .filter((elem) => elem.isGridView)
                               .map((field, index) => (
-                                <TableCell
-                                  key={index}
-                                  className={`${styles.cellHeading} cursor-pointer ${styles.tableChildHeader}`}
-                                  sx={{
-                                    ...childTableHeaderStyle,
-                                  }}
-                                  onContextMenu={(event) =>
-                                    handleRightClick(
-                                      event,
-                                      field.fieldname,
-                                      section,
-                                      section.fields,
-                                    )
-                                  } // Add the right-click handler here
-                                >
-                                  {index === 0 && (
-                                    // <IconButton
-                                    // disabled={typeof section.isAddFunctionality !== "undefined" ? !section.isAddFunctionality : false}
-                                    //   aria-label="Add"
-                                    //   className={`${styles.inputTextColor} `}
-                                    //   sx={{
-                                    //     ...styles.transparentBg,
-                                    //     "&:hover": {
-                                    //       ...styles.transparentBgHover,
-                                    //     },
-                                    //   }}
-                                    // >
-                                    //   <LightTooltip title="Add">
-                                    //     <AddOutlinedIcon
-                                    //       onClick={() => {
-                                    //         inputFieldsVisible == false &&
-                                    //           setInputFieldsVisible(
-                                    //             (prev) => !prev
-                                    //           );
-                                    //       }}
-                                    //     />
-                                    //   </LightTooltip>
-                                    // </IconButton>
-                                    <HoverIcon
-                                      defaultIcon={addLogo}
-                                      hoverIcon={plusIconHover}
-                                      altText={"Add"}
-                                      title={"Add"}
-                                      onClick={() => {
-                                        childButtonHandler(section, indexValue);
-                                      }}
-                                    />
-                                  )}
-                                  <span
-                                    className={`${styles.labelText}`}
-                                    onClick={() =>
-                                      handleSortBy(field.fieldname)
-                                    }
+                                <React.Fragment key={index}>
+                                  {(section?.showSrNo === true ||
+                                    section?.showSrNo === "true") &&
+                                    index === 0 && (
+                                      <TableCell
+                                        className={`${styles.cellHeading} cursor-pointer ${styles.tableChildHeader}`}
+                                        align="left"
+                                        sx={{
+                                          ...childTableHeaderStyle,
+                                          paddingLeft: "12px",
+                                          width: "64px",
+                                          minWidth: "64px",
+                                        }}
+                                      >
+                                        {index === 0 &&
+                                          (section?.showSrNo === true ||
+                                            section?.showSrNo === "true") && (
+                                            <HoverIcon
+                                              defaultIcon={addLogo}
+                                              hoverIcon={plusIconHover}
+                                              altText={"Add"}
+                                              title={"Add"}
+                                              onClick={() => {
+                                                childButtonHandler(
+                                                  section,
+                                                  indexValue
+                                                );
+                                              }}
+                                            />
+                                          )}
+                                        <span className={`${styles.labelText}`}>
+                                          Sr No.
+                                        </span>
+                                      </TableCell>
+                                    )}
+                                  <TableCell
+                                    className={`${styles.cellHeading} cursor-pointer ${styles.tableChildHeader}`}
+                                    sx={{
+                                      ...childTableHeaderStyle,
+                                      paddingLeft:
+                                        section?.showSrNo === true ||
+                                          section?.showSrNo === "true"
+                                          ? "29px !important"
+                                          : "0px !important",
+                                    }}
+                                    onContextMenu={(event) =>
+                                      handleRightClick(
+                                        event,
+                                        field.fieldname,
+                                        section,
+                                        section.fields,
+                                      )
+                                    } // Add the right-click handler here
                                   >
-                                    {field.yourlabel}
-                                  </span>
-                                  <span>
-                                    {isInputVisible &&
-                                      activeColumn === field.fieldname && ( // Conditionally render the input
-                                        <CustomizedInputBase
-                                          columnData={field}
-                                          setPrevSearchInput={
-                                            setPrevSearchInput
-                                          }
-                                          prevSearchInput={prevSearchInput}
-                                          controlerName={field.controlname}
+                                    {index === 0 &&
+                                      !(section?.showSrNo == true ||
+                                        section?.showSrNo == "true") && (
+                                        <HoverIcon
+                                          defaultIcon={addLogo}
+                                          hoverIcon={plusIconHover}
+                                          altText={"Add"}
+                                          title={"Add"}
+                                          onClick={() => {
+                                            childButtonHandler(
+                                              section,
+                                              indexValue
+                                            );
+                                          }}
                                         />
                                       )}
-                                  </span>
-                                  <span className="ml-1">
-                                    {renderSortIcon(field.fieldname)}
-                                  </span>
-                                </TableCell>
+                                    <span
+                                      className={`${styles.labelText}`}
+                                      onClick={() =>
+                                        handleSortBy(field.fieldname)
+                                      }
+                                    >
+                                      {field.yourlabel}
+                                    </span>
+                                    <span>
+                                      {isInputVisible &&
+                                        activeColumn === field.fieldname && ( // Conditionally render the input
+                                          <CustomizedInputBase
+                                            columnData={field}
+                                            setPrevSearchInput={
+                                              setPrevSearchInput
+                                            }
+                                            prevSearchInput={prevSearchInput}
+                                            controlerName={field.controlname}
+                                          />
+                                        )}
+                                    </span>
+                                    <span className="ml-1">
+                                      {renderSortIcon(field.fieldname)}
+                                    </span>
+                                  </TableCell>
+                                </React.Fragment>
                               ))}
                           </TableRow>
                         </TableHead>
@@ -4327,6 +4675,11 @@ function ChildAccordianComponent({
                               }
                               formControlData={formControlData}
                               setFormControlData={setFormControlData}
+                              showSrNo={
+                                section?.showSrNo === true ||
+                                section?.showSrNo === "true"
+                              }
+                              tableBodyWidth={tableBodyWidth}
                             />
                           ))}
                           <>
@@ -4341,32 +4694,57 @@ function ChildAccordianComponent({
                                   {section.fields
                                     .filter((elem) => elem.isGridView)
                                     .map((field, index) => (
-                                      <TableCell
-                                        align="left"
-                                        key={index}
-                                        className={`cursor-pointer ${styles.tableSubChildHeader} `}
-                                        sx={{
-                                          ...totalSumChildStyle,
-                                          paddingLeft:
-                                            index === 0 ? "29px" : "0px",
-                                        }}
-                                      >
-                                        <div className="relative ">
-                                          <div
-                                            className={`${childTableRowStyles} `}
-                                            style={{
-                                              backgroundColor: "#E0E0E0",
-                                            }}
-                                          >
-                                            {(field.type === "number" ||
-                                              field.type === "decimal" ||
-                                              field.type === "string") &&
-                                              field.gridTotal
-                                              ? columnTotals[field.fieldname]
-                                              : ""}
+                                      <React.Fragment key={index}>
+                                        <TableCell
+                                          align="left"
+                                          className={`cursor-pointer ${styles.tableSubChildHeader} `}
+                                          sx={{
+                                            ...totalSumChildStyle,
+                                            paddingLeft:
+                                              index === 0 ? "29px" : "0px",
+                                          }}
+                                        >
+                                          <div className="relative ">
+                                            <div
+                                              className={`${childTableRowStyles} `}
+                                              style={{
+                                                backgroundColor: "#E0E0E0",
+                                              }}
+                                            >
+                                              {(field.type === "number" ||
+                                                field.type === "decimal" ||
+                                                field.type === "string") &&
+                                                field.gridTotal
+                                                ? columnTotals[field.fieldname]
+                                                : ""}
+                                            </div>
                                           </div>
-                                        </div>
-                                      </TableCell>
+                                        </TableCell>
+                                        {(section?.showSrNo === true ||
+                                          section?.showSrNo === "true") &&
+                                          index === 0 && (
+                                            <TableCell
+                                              align="left"
+                                              className={`cursor-pointer ${styles.tableSubChildHeader} `}
+                                              sx={{
+                                                ...totalSumChildStyle,
+                                                paddingLeft: "12px",
+                                                width: "64px",
+                                                minWidth: "64px",
+                                              }}
+                                            >
+                                              <div className="relative ">
+                                                <div
+                                                  className={`${childTableRowStyles} `}
+                                                  style={{
+                                                    backgroundColor:
+                                                      "#E0E0E0",
+                                                  }}
+                                                />
+                                              </div>
+                                            </TableCell>
+                                          )}
+                                      </React.Fragment>
                                     ))}
                                 </TableRow>
                               )}

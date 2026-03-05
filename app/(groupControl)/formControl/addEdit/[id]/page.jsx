@@ -226,6 +226,8 @@ export default function AddEditFormControll() {
   const { clientId } = getUserDetails();
   const [clientName, setClientName] = useState(null);
 
+
+
   useEffect(() => {
     const fetchClientName = async () => {
       const requestBodyGrid = {
@@ -796,7 +798,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: true }
                 : field
           );
@@ -836,7 +838,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, isEditable: true }
                 : field
           );
@@ -941,7 +943,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: false }
                 : field
           );
@@ -981,7 +983,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, isEditable: false }
                 : field
           );
@@ -1574,7 +1576,7 @@ export default function AddEditFormControll() {
           // return;
           const submitData = formControlData?._onSubmitResults?.result?.values
             ? formControlData?._onSubmitResults?.result?.values
-            : submitNewState;
+            : newState //submitNewState;
           const cleanData = replaceNullStrings(submitData, ChildTableName);
           setIsFormSaved(true);
           let data = await handleSubmitApi(cleanData);
@@ -1990,7 +1992,7 @@ export default function AddEditFormControll() {
                 ],
                 buyCurrencyId:
                   item.buyCurrencyId !== null &&
-                  item.buyCurrencyId !== undefined
+                    item.buyCurrencyId !== undefined
                     ? String(item.buyCurrencyId)
                     : null,
                 buyCurrencyIddropdown: [
@@ -2001,7 +2003,7 @@ export default function AddEditFormControll() {
                 ],
                 sellCurrencyId:
                   item.sellCurrencyId !== null &&
-                  item.sellCurrencyId !== undefined
+                    item.sellCurrencyId !== undefined
                     ? String(item.sellCurrencyId)
                     : null,
                 sellCurrencyIddropdown: [
@@ -2012,12 +2014,12 @@ export default function AddEditFormControll() {
                 ],
                 buyExchangeRate:
                   item.buyExchangeRate !== null &&
-                  item.buyExchangeRate !== undefined
+                    item.buyExchangeRate !== undefined
                     ? String(item.buyExchangeRate)
                     : null,
                 sellExchangeRate:
                   item.sellExchangeRate !== null &&
-                  item.sellExchangeRate !== undefined
+                    item.sellExchangeRate !== undefined
                     ? String(item.sellExchangeRate)
                     : null,
               };
@@ -3050,12 +3052,12 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-                const parsedValue =
-                  typeof row[item.fieldname] === "number"
-                    ? row[item.fieldname]
-                    : parseFloat(row[item.fieldname] || 0);
-                return isNaN(parsedValue) ? sum : sum + parsedValue;
-              }, 0) // Calculate sum for 's' type
+              const parsedValue =
+                typeof row[item.fieldname] === "number"
+                  ? row[item.fieldname]
+                  : parseFloat(row[item.fieldname] || 0);
+              return isNaN(parsedValue) ? sum : sum + parsedValue;
+            }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -3187,7 +3189,7 @@ function ChildAccordianComponent({
       [section?.tableName]: newState[section?.tableName],
     });
   }, [newState]);
-  
+
   const renderMoreData = () => {
     // Calculate the index range to render
     const lastIndex = renderedData.length + 10;
@@ -3797,6 +3799,7 @@ function ChildAccordianComponent({
     handleChangeFunction: handleChangeFunction,
     onSave: onSave,
     revert: handleRevert,
+    showSrNo: section?.showSrNo === true || section?.showSrNo === "true",
   };
 
   useEffect(() => {
@@ -3804,7 +3807,7 @@ function ChildAccordianComponent({
       const right = Math.round(
         Math.floor(
           tableRef.current?.getBoundingClientRect()?.width +
-            tableRef.current?.scrollLeft
+          tableRef.current?.scrollLeft
         )
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
@@ -3925,7 +3928,7 @@ function ChildAccordianComponent({
                 />
               </LightTooltip>
               {isGridEdit && (
-                <LightTooltip title="Save 1"> 
+                <LightTooltip title="Save 1">
                   <SaveOutlinedIcon
                     sx={{
                       marginLeft: "8px",
@@ -4095,76 +4098,115 @@ function ChildAccordianComponent({
                             {section.fields
                               .filter((elem) => elem.isGridView)
                               .map((field, index) => (
-                                <TableCell
-                                  key={index}
-                                  className={`${styles.cellHeading} cursor-pointer `}
-                                  align="left"
-                                  sx={{
-                                    ...childTableHeaderStyle,
-                                    paddingLeft:
-                                      isView && index === 0
-                                        ? "29px"
-                                        : "0px !important",
-                                    zIndex: 10,
-                                  }}
-                                  onContextMenu={(event) =>
-                                    handleRightClick(
-                                      event,
-                                      field.fieldname,
-                                      section,
-                                      section.fields
-                                    )
-                                  } // Add the right-click handler here
-                                >
-                                  {!isView && index === 0 && (
-                                    <HoverIcon
-                                      defaultIcon={addLogo}
-                                      hoverIcon={plusIconHover}
-                                      altText={"Add"}
-                                      title={"Add"}
-                                      onClick={() => {
-                                        inputFieldsVisible == false &&
-                                          setInputFieldsVisible(
-                                            (prev) => !prev
-                                          );
-                                      }}
-                                    />
-                                  )}
+                                <React.Fragment key={index}>
 
-                                  <span
-                                    className={`${styles.labelText}`}
-                                    style={{
+                                  {(section?.showSrNo === true ||
+                                    section?.showSrNo === "true") &&
+                                    index === 0 && (
+                                      <TableCell
+                                        className={`${styles.cellHeading} cursor-pointer `}
+                                        align="left"
+                                        sx={{
+                                          ...childTableHeaderStyle,
+                                          paddingLeft: "12px",
+                                          width: "64px",
+                                          minWidth: "64px",
+                                          zIndex: 10,
+                                        }}
+                                      >
+                                        {!isView && index === 0 && (
+                                          <HoverIcon
+                                            defaultIcon={addLogo}
+                                            hoverIcon={plusIconHover}
+                                            altText={"Add"}
+                                            title={"Add"}
+                                            onClick={() => {
+                                              inputFieldsVisible == false &&
+                                                setInputFieldsVisible(
+                                                  (prev) => !prev
+                                                );
+                                            }}
+                                          />
+                                        )}
+                                        <span className={`${styles.labelText}`}>
+                                          Sr No.
+                                        </span>
+                                      </TableCell>
+                                    )}
+                                  <TableCell
+                                    className={`${styles.cellHeading} cursor-pointer `}
+                                    align="left"
+                                    sx={{
+                                      ...childTableHeaderStyle,
                                       paddingLeft:
-                                        isGridEdit && index == 0 ? "0px" : "0",
+                                        isView && index === 0
+                                          ? "29px"
+                                          : section?.showSrNo == true || section?.showSrNo == "true" ? "29px !important" : "0px !important",
+                                      zIndex: 10,
                                     }}
-                                    onClick={
-                                      !isView
-                                        ? () => handleSortBy(field.fieldname)
-                                        : undefined
-                                    }
+                                    onContextMenu={(event) =>
+                                      handleRightClick(
+                                        event,
+                                        field.fieldname,
+                                        section,
+                                        section.fields
+                                      )
+                                    } // Add the right-click handler here
                                   >
-                                    {field.yourlabel}
-                                  </span>
-                                  <span>
-                                    {!isView &&
-                                      isInputVisible &&
-                                      activeColumn === field.fieldname && ( // Conditionally render the input
-                                        <CustomizedInputBase
-                                          columnData={field}
-                                          setPrevSearchInput={
-                                            setPrevSearchInput
-                                          }
-                                          prevSearchInput={prevSearchInput}
-                                          controlerName={field.controlname}
-                                        />
-                                      )}
-                                  </span>
-                                  {!isView && (
-                                    <span className="ml-1">
-                                      {renderSortIcon(field.fieldname)}
+                                    {!isView && index === 0 && !(section?.showSrNo == true || section?.showSrNo == "true") && (
+                                      <HoverIcon
+                                        defaultIcon={addLogo}
+                                        hoverIcon={plusIconHover}
+                                        altText={"Add"}
+                                        title={"Add"}
+                                        onClick={() => {
+                                          inputFieldsVisible == false &&
+                                            setInputFieldsVisible(
+                                              (prev) => !prev
+                                            );
+                                        }}
+                                      />
+                                    )}
+
+                                    <span
+                                      className={`${styles.labelText}`}
+                                      style={{
+                                        paddingLeft:
+                                          isGridEdit && index == 0
+                                            ? "0px"
+                                            : "0",
+                                      }}
+                                      onClick={
+                                        !isView
+                                          ? () => handleSortBy(field.fieldname)
+                                          : undefined
+                                      }
+                                    >
+                                      {field.yourlabel}
                                     </span>
-                                  )}
-                                </TableCell>
+                                    <span>
+                                      {!isView &&
+                                        isInputVisible &&
+                                        activeColumn === field.fieldname && ( // Conditionally render the input
+                                          <CustomizedInputBase
+                                            columnData={field}
+                                            setPrevSearchInput={
+                                              setPrevSearchInput
+                                            }
+                                            prevSearchInput={prevSearchInput}
+                                            controlerName={field.controlname}
+                                          />
+                                        )}
+                                    </span>
+
+                                    {!isView && (
+                                      <span className="ml-1">
+                                        {renderSortIcon(field.fieldname)}
+                                      </span>
+                                    )}
+                                  </TableCell>
+
+                                </React.Fragment>
                               ))}
                           </TableRow>
                         </TableHead>
@@ -4194,7 +4236,7 @@ function ChildAccordianComponent({
                               isGridEdit={
                                 checker
                                   ? section?.gridEditableOnLoad?.toLowerCase() ===
-                                    "true"
+                                  "true"
                                   : isGridEdit
                               }
                               setIsGridEdit={setIsGridEdit}
@@ -4216,6 +4258,10 @@ function ChildAccordianComponent({
                               formControlData={formControlData}
                               setFormControlData={setFormControlData}
                               tableBodyWidhth={tableBodyWidhth}
+                              showSrNo={
+                                section?.showSrNo === true ||
+                                section?.showSrNo === "true"
+                              }
                             />
                           ))}
 
@@ -4237,30 +4283,50 @@ function ChildAccordianComponent({
                                   {section.fields
                                     .filter((elem) => elem.isGridView)
                                     .map((field, index) => (
-                                      <TableCell
-                                        align="left"
-                                        key={index}
-                                        sx={{
-                                          paddingLeft:
-                                            index === 0 ? "29px" : "0px",
-                                          ...totalSumChildStyle,
-                                        }}
-                                      >
-                                        <div className="relative font-bold">
-                                          <div
-                                            className={`${childTableRowStyles} `}
-                                          >
-                                            {(field.type === "number" ||
-                                              field.type === "decimal" ||
-                                              field.type === "string") &&
-                                            field.gridTotal
-                                              ? columnTotals[
+                                      <React.Fragment key={index}>
+                                        <TableCell
+                                          align="left"
+                                          sx={{
+                                            paddingLeft:
+                                              index === 0 ? "29px" : "0px",
+                                            ...totalSumChildStyle,
+                                          }}
+                                        >
+                                          <div className="relative font-bold">
+                                            <div
+                                              className={`${childTableRowStyles} `}
+                                            >
+                                              {(field.type === "number" ||
+                                                field.type === "decimal" ||
+                                                field.type === "string") &&
+                                                field.gridTotal
+                                                ? columnTotals[
                                                   field.fieldname
                                                 ].toString()
-                                              : ""}
+                                                : ""}
+                                            </div>
                                           </div>
-                                        </div>
-                                      </TableCell>
+                                        </TableCell>
+                                        {(section?.showSrNo === true ||
+                                          section?.showSrNo === "true") &&
+                                          index === 0 && (
+                                            <TableCell
+                                              align="left"
+                                              sx={{
+                                                ...totalSumChildStyle,
+                                                paddingLeft: "12px",
+                                                width: "64px",
+                                                minWidth: "64px",
+                                              }}
+                                            >
+                                              <div className="relative font-bold">
+                                                <div
+                                                  className={`${childTableRowStyles} `}
+                                                />
+                                              </div>
+                                            </TableCell>
+                                          )}
+                                      </React.Fragment>
                                     ))}
                                 </TableRow>
                               )}

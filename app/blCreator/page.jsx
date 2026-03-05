@@ -1,6 +1,5 @@
 "use client";
 /* eslint-disable */
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { decrypt } from "@/helper/security";
 import {
@@ -8,6 +7,7 @@ import {
   insertReportData,
 } from "@/services/auth/FormControl.services.js";
 import { getUserDetails } from "@/helper/userDetails";
+import { useSearchParams } from "next/navigation";
 import { Box, Button, MenuItem, TextField, Tooltip } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowDropDownRoundedIcon from "@mui/icons-material/ArrowDropDownRounded";
@@ -27,7 +27,6 @@ const PAPER_SIZES = [
   { id: "Legal", name: "Legal", w: 215.9, h: 355.6 },
   { id: "Tabloid", name: "Tabloid", w: 279.4, h: 431.8 },
 ];
-
 /** mm to px at 96dpi */
 const MM_TO_PX = 96 / 25.4;
 
@@ -62,6 +61,37 @@ function deepClone(v) {
   }
 }
 
+/** ---------- Data Schema helpers (for repeating tables) ---------- */
+function buildSchemaFromSample(sample) {
+  // Accept BL payload as array or object
+  const root = Array.isArray(sample) ? sample[0] : sample;
+  const arrays = {};
+  if (!root || typeof root !== "object") return { arrays };
+
+  for (const [k, v] of Object.entries(root)) {
+    if (Array.isArray(v) && v.length && v[0] && typeof v[0] === "object") {
+      // Collect union keys from first N rows (helps when some rows miss fields)
+      const limit = Math.min(v.length, 25);
+      const keySet = new Set();
+      for (let i = 0; i < limit; i++) {
+        const row = v[i];
+        if (row && typeof row === "object") {
+          Object.keys(row).forEach((kk) => keySet.add(kk));
+        }
+      }
+      arrays[k] = Array.from(keySet);
+    }
+  }
+  return { arrays };
+}
+
+function safeParseJson(text) {
+  try {
+    return { ok: true, value: JSON.parse(text) };
+  } catch (e) {
+    return { ok: false, error: e?.message || "Invalid JSON" };
+  }
+}
 
 /* =========================================================
    MULTI-PAGE HELPERS (Main + Attachments)
@@ -123,11 +153,16 @@ function syncActiveAliasesToPages(tpl, pageId) {
   if (!pages.length) return next;
 
   const idx = getActivePageIndex(next, pageId);
-  const cur = pages[idx] || pages[0] || { id: uid(), name: "Main", elements: [], groups: {} };
+  const cur = pages[idx] ||
+    pages[0] || { id: uid(), name: "Main", elements: [], groups: {} };
 
   // If legacy code updated next.elements/next.groups (active-page aliases),
   // persist them back into the active page. Otherwise keep existing page data.
-  const aliasEls = Array.isArray(next.elements) ? next.elements : (Array.isArray(cur.elements) ? cur.elements : []);
+  const aliasEls = Array.isArray(next.elements)
+    ? next.elements
+    : Array.isArray(cur.elements)
+      ? cur.elements
+      : [];
   const aliasGroups = next.groups || cur.groups || {};
 
   const p = { ...cur, elements: aliasEls, groups: aliasGroups };
@@ -153,7 +188,6 @@ function updateActivePage(tpl, pageId, updaterFn) {
   return attachActiveElementsAlias(next, updated.id);
 }
 
-
 /** ---------- Element defaults ---------- */
 function makeElement(type, x, y) {
   const base = {
@@ -167,6 +201,8 @@ function makeElement(type, x, y) {
     locked: false,
     hidden: false,
     groupId: null,
+    // Attachment band for repeating pages: body | header | footer
+    attachBand: "body",
     z: Date.now(),
     style: {
       bg: "transparent",
@@ -289,6 +325,13 @@ function makeElement(type, x, y) {
         merges: [],
         activeCell: null,
         range: null,
+        repeat: {
+          enabled: false,
+          arrayPath: "",
+          headerRow: true,
+          previewRows: 3,
+          columns: [],
+        },
       },
       style: { ...base.style, borderWidth: 0, bg: "transparent", padding: 0 },
     };
@@ -661,9 +704,31 @@ function escapeHtml(s = "") {
 
 const mm = (v) => `${Number(v || 0)}mm`;
 
+function normalizeTextAlign(v) {
+  const a = String(v ?? "")
+    .toLowerCase()
+    .trim();
+  if (!a) return "left";
+  if (["center", "centre", "middle"].includes(a)) return "center";
+  if (["right", "end", "flex-end"].includes(a)) return "right";
+  if (["left", "start", "flex-start"].includes(a)) return "left";
+  if (["justify"].includes(a)) return "justify";
+  return "left";
+}
+
+function normalizeVAlign(v) {
+  const x = String(v ?? "")
+    .toLowerCase()
+    .trim();
+  if (!x) return "top";
+  if (["middle", "center", "centre"].includes(x)) return "middle";
+  if (["bottom", "end", "flex-end"].includes(x)) return "bottom";
+  return "top";
+}
+
 function vAlignToAlignItems(vAlign) {
-  const va = (vAlign || "top").toLowerCase();
-  if (va === "middle" || va === "center") return "center";
+  const va = normalizeVAlign(vAlign);
+  if (va === "middle") return "center";
   if (va === "bottom") return "flex-end";
   return "flex-start";
 }
@@ -700,11 +765,86 @@ function cssFromStyle(style = {}) {
     parts.push(`border:none;`);
   }
 
-  const ta = (style.align || "left").toLowerCase();
+  const ta = normalizeTextAlign(
+    style.align ?? style.textAlign ?? style.hAlign ?? "left",
+  );
   parts.push(`text-align:${ta};`);
 
   return parts.join("");
 }
+
+// function templateToPrintableHTML({ wMm, hMm, elementsHtml, header }) {
+//   const showHeader = Boolean(
+//     header?.enabled && header?.src && header?.heightMm,
+//   );
+
+//   return `<!doctype html>
+// <html>
+// <head>
+// <meta charset="utf-8" />
+// <title>BL Print</title>
+// <style>
+//   @page { size:${wMm}mm ${hMm}mm; margin:0; }
+//   html, body {
+//     width:${wMm}mm;
+//     height:${hMm}mm;
+//     margin:0;
+//     padding:0;
+//     background:#fff;
+//     -webkit-print-color-adjust: exact !important;
+//     print-color-adjust: exact !important;
+//   }
+//   * {
+//     box-sizing:border-box;
+//     -webkit-print-color-adjust: exact !important;
+//     print-color-adjust: exact !important;
+//   }
+//   table{border-collapse:collapse;table-layout:fixed;width:100%;}
+//   td,th{display:table-cell;vertical-align:top;white-space:pre-wrap;word-break:break-word;padding:0;margin:0;}
+//   table *{box-sizing:border-box;}
+//   td>div,th>div{display:flex;}
+//   tr{page-break-inside:avoid;}
+//   .page {
+//     position: relative;
+//     width:${wMm}mm;
+//     height:${hMm}mm;
+//     overflow:hidden;
+//     background:#fff;
+//   }
+// </style>
+// </head>
+// <body>
+//   <div class="page">
+
+//     ${
+//       showHeader
+//         ? `
+//       <div style="
+//         position:absolute;
+//         top:0;
+//         left:0;
+//         width:${wMm}mm;
+//         height:${header.heightMm}mm;
+//         display:flex;
+//         align-items:center;
+//         justify-content:center;
+//         border-bottom:1px solid #e5e7eb;
+//       ">
+//         <img
+//           src="${header.src}"
+//           style="max-width:100%; max-height:100%; object-fit:contain;"
+//         />
+//       </div>
+//       `
+//         : ""
+//     }
+
+//     ${elementsHtml}
+
+//   </div>
+// </body>
+// </html>`;
+// }
 
 function templateToPrintableHTML({ wMm, hMm, elementsHtml, header }) {
   const showHeader = Boolean(
@@ -743,6 +883,15 @@ function templateToPrintableHTML({ wMm, hMm, elementsHtml, header }) {
     height:${hMm}mm;
     overflow:hidden;
     background:#fff;
+  }
+.page::after {
+    content:"";
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    border-bottom:1px solid #111;
+    pointer-events:none;
   }
 </style>
 </head>
@@ -921,14 +1070,24 @@ function renderTableToHtml(el) {
   const left = `${Number(el.x || 0)}mm`;
   const top = `${Number(el.y || 0)}mm`;
   const widthMm = Number(el.w || 10);
-  const heightMm = Number(el.h || 10);
+  const rawHeightMm = Number(el.h || 10);
+  const rowHUnit = String(t.rowHUnit || "").toLowerCase();
+  const heightMm =
+    rowHUnit === "mm"
+      ? rowH.reduce((a, b) => a + (Number(b) || 0), 0) || rawHeightMm
+      : rawHeightMm;
   const width = `${widthMm}mm`;
   const height = `${heightMm}mm`;
   const rotate = Number(el.rotate || 0);
-  const border = `${t.borderWidth ?? 1}px solid ${t.borderColor || "#111827"}`;
+  const borderW = t.borderWidth == null ? 0 : Number(t.borderWidth) || 0;
+  const border =
+    borderW > 0 ? `${borderW}px solid ${t.borderColor || "#111827"}` : "none";
 
-  const colMm = colW.map((w) => (Number(w) || 0) / totalW * widthMm);
-  const rowMm = rowH.map((h) => (Number(h) || 0) / totalH * heightMm);
+  const colMm = colW.map((w) => ((Number(w) || 0) / totalW) * widthMm);
+  const rowMm =
+    rowHUnit === "mm"
+      ? rowH.map((h) => Number(h) || 0)
+      : rowH.map((h) => ((Number(h) || 0) / totalH) * heightMm);
 
   function isCovered(r, c) {
     const m = findMergeAt(merges, r, c);
@@ -936,7 +1095,9 @@ function renderTableToHtml(el) {
     return !(m.r0 === r && m.c0 === c);
   }
 
-  const colgroupHtml = colMm.map((mmw) => `<col style="width:${mmw}mm">`).join("");
+  const colgroupHtml = colMm
+    .map((mmw) => `<col style="width:${mmw}mm">`)
+    .join("");
   let tbodyHtml = "";
 
   for (let r = 0; r < rows; r++) {
@@ -947,12 +1108,19 @@ function renderTableToHtml(el) {
       const m = findMergeAt(merges, r, c);
       const rs = m ? m.rs : 1;
       const cs = m ? m.cs : 1;
+      // const k = cellKey(r, c);
+      // const b = bindings[k];
+
+      // let label = "";
+      // if (b && b.label) label = b.label;
+      // else if (b && b.columnKey) label = `{{${b.columnKey}}}`;
+
       const k = cellKey(r, c);
       const b = bindings[k];
 
+      // ✅ always show token, never label
       let label = "";
-      if (b && b.label) label = b.label;
-      else if (b && b.columnKey) label = `{{${b.columnKey}}}`;
+      if (b && b.columnKey) label = `{{${b.columnKey}}}`;
 
       const csx = cellStyle[k] || {};
       const pad = csx.padding ?? t.cellPadding ?? 6;
@@ -960,8 +1128,15 @@ function renderTableToHtml(el) {
       const color = csx.color ?? "#0f172a";
       const fs = csx.fontSize ?? t.fontSize ?? 11;
       const fw = csx.fontWeight ?? 600;
-      const align = csx.align ?? "left";
-      const vAlign = csx.vAlign ?? "top";
+
+      // ✅ normalize alignment so values like "middle"/"centre"/"end" don't become invalid CSS
+      const align = normalizeTextAlign(
+        csx.align ?? csx.textAlign ?? csx.hAlign ?? t.align ?? "left",
+      );
+      const vAlign = normalizeVAlign(
+        csx.vAlign ?? csx.verticalAlign ?? t.vAlign ?? "top",
+      );
+
       const bc = csx.borderColor ?? t.gridColor ?? "#111827";
       const bw = csx.borderWidth ?? t.gridWidth ?? 1;
 
@@ -973,14 +1148,22 @@ function renderTableToHtml(el) {
         overflow:hidden;
       `;
 
-      // Inner keeps alignment without breaking table layout (no display:flex on td)
-      const innerCss = `
+      // ✅ Two-wrapper approach:
+      //    - outer flex handles vertical align
+      //    - inner block handles horizontal align via text-align (reliable for plain text)
+      const outerCss = `
         width:100%;
         height:100%;
         box-sizing:border-box;
         display:flex;
         align-items:${vAlignToAlignItems(vAlign)};
-        justify-content:${align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start"};
+      `;
+
+      const innerCss = `
+        width:100%;
+        box-sizing:border-box;
+        white-space:pre-wrap;
+        word-break:break-word;
         ${cssFromStyle({
           fontFamily: el.style?.fontFamily,
           fontSize: fs,
@@ -996,13 +1179,11 @@ function renderTableToHtml(el) {
         })}
         background:transparent;
         border:none;
-        white-space:pre-wrap;
-        word-break:break-word;
       `;
 
-      rowCells += `<td rowspan="${rs}" colspan="${cs}" style="${tdCss}"><div style="${innerCss}">${escapeHtml(
+      rowCells += `<td rowspan="${rs}" colspan="${cs}" style="${tdCss}"><div style="${outerCss}"><div style="${innerCss}">${escapeHtml(
         label,
-      )}</div></td>`;
+      )}</div></div></td>`;
     }
     tbodyHtml += `<tr style="height:${rowMm[r]}mm">${rowCells}</tr>`;
   }
@@ -1037,6 +1218,11 @@ function renderTableToHtml(el) {
 
 /** ---------- Main Page ---------- */
 export default function BlCreatorPage() {
+  const searchParams = useSearchParams();
+  const templateIdFromUrl = useMemo(() => {
+    const v = searchParams.get("id");
+    return v ? String(v) : "";
+  }, [searchParams]);
   const containerRef = useRef(null);
   const canvasStageRef = useRef(null);
   const canvasRef = useRef(null);
@@ -1046,6 +1232,7 @@ export default function BlCreatorPage() {
   const measureRef = useRef(null);
   const [headerLogo, setHeaderLogo] = useState(null);
   const historyRef = useRef({ stack: [], idx: -1 });
+  const autoLoadedTemplateIdRef = useRef("");
   const [blData, setBlData] = useState([]);
   const interactionRef = useRef({
     mode: null,
@@ -1063,8 +1250,11 @@ export default function BlCreatorPage() {
   const { clientId } = getUserDetails();
   const { companyId } = getUserDetails();
   const { userId } = getUserDetails();
-  const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [newTemplateName, setNewTemplateName] = useState("");
+  const isEditMode = Boolean(templateIdFromUrl);
+  const [editTemplateName, setEditTemplateName] = useState("");
+  const [schemaModalOpen, setSchemaModalOpen] = useState(false);
+  const [schemaJsonText, setSchemaJsonText] = useState("");
   const columns = useMemo(() => {
     const arr = Array.isArray(blData) ? blData : [];
 
@@ -1120,10 +1310,15 @@ export default function BlCreatorPage() {
 
   useEffect(() => {
     const fetchBlPrintTemplateData = async () => {
+      // If URL has no id, do not fetch/load any DB template
+      if (!templateIdFromUrl) {
+        setStoredTemplate([]);
+        return;
+      }
       const requestBodyMenu = {
         columns: "id,name,blPrintTemplateJson",
         tableName: "tblBlPrintTemplate",
-        whereCondition: `blOfId = '${companyId}' and clientId = ${clientId}`,
+        whereCondition: `blOfId = \'${companyId}\' and clientId = ${clientId} and id = ${templateIdFromUrl}`,
         clientIdCondition: `status = 1 FOR JSON PATH`,
       };
 
@@ -1138,17 +1333,22 @@ export default function BlCreatorPage() {
     };
 
     fetchBlPrintTemplateData();
-  }, [companyId, clientId]);
+  }, [companyId, clientId, templateIdFromUrl]);
 
-  // useEffect(() => {
-  //   if (
-  //     !selectedTemplateId &&
-  //     Array.isArray(storedTemplate) &&
-  //     storedTemplate.length
-  //   ) {
-  //     setSelectedTemplateId(String(storedTemplate[0].id));
+  // ✅ Edit mode: hydrate template name from fetched template record
+  useEffect(() => {
+    if (!templateIdFromUrl) {
+      setEditTemplateName("");
+      return;
+    }
+    if (!Array.isArray(storedTemplate) || storedTemplate.length === 0) return;
+    const picked = storedTemplate.find(
+      (t) => String(t.id) === String(templateIdFromUrl),
+    );
+    if (picked?.name) setEditTemplateName(String(picked.name));
+  }, [templateIdFromUrl, storedTemplate]);
+
   //   }
-  // }, [storedTemplate, selectedTemplateId]);
 
   const [template, setTemplate] = useState(() => {
     const paper = PAPER_SIZES.find((p) => p.id === "A4") || PAPER_SIZES[4];
@@ -1188,11 +1388,24 @@ export default function BlCreatorPage() {
   }, [template]);
 
   // keep templateRef synced immediately when needed (pointermove)
-  const setTemplateLive = (next) => {
+  // const setTemplateLive = (next) => {
+  //   // keep active page aliases alive for legacy code paths
+  //   const withPages = ensurePages(next);
+  //   const persisted = syncActiveAliasesToPages(withPages, activePageId);
+  //   const aliased = attachActiveElementsAlias(persisted, activePageId);
+  //   templateRef.current = aliased;
+  //   setTemplate(aliased);
+  // };
+
+  // keep templateRef synced immediately when needed (pointermove)
+  const setTemplateLive = (next, pageIdOverride = null) => {
+    const pid = pageIdOverride ?? activePageId;
+
     // keep active page aliases alive for legacy code paths
     const withPages = ensurePages(next);
-    const persisted = syncActiveAliasesToPages(withPages, activePageId);
-    const aliased = attachActiveElementsAlias(persisted, activePageId);
+    const persisted = syncActiveAliasesToPages(withPages, pid);
+    const aliased = attachActiveElementsAlias(persisted, pid);
+
     templateRef.current = aliased;
     setTemplate(aliased);
   };
@@ -1237,6 +1450,35 @@ export default function BlCreatorPage() {
     return { w: p.w, h: p.h };
   }, [template.paper]);
 
+  // Attachment page header/footer bands (mm)
+  const isAttachmentPage = (activePage?.name || "Main") !== "Main";
+  const attachBands = useMemo(() => {
+    if (!isAttachmentPage) {
+      return {
+        headerMm: 0,
+        footerMm: 0,
+        bodyTopMm: 0,
+        bodyBottomMm: paperMM.h,
+      };
+    }
+    const headerMmRaw = Number(activePage?.attachHeaderMm ?? 25);
+    const footerMmRaw = Number(activePage?.attachFooterMm ?? 25);
+    const headerMm = Number.isFinite(headerMmRaw) ? headerMmRaw : 25;
+    const footerMm = Number.isFinite(footerMmRaw) ? footerMmRaw : 25;
+    const bodyTopMm = clamp(headerMm, 0, paperMM.h);
+    const bodyBottomMmRaw = paperMM.h - clamp(footerMm, 0, paperMM.h);
+    const bodyBottomMm = Math.max(
+      bodyTopMm,
+      clamp(bodyBottomMmRaw, 0, paperMM.h),
+    );
+    return { headerMm: bodyTopMm, footerMm, bodyTopMm, bodyBottomMm };
+  }, [
+    isAttachmentPage,
+    activePage?.attachHeaderMm,
+    activePage?.attachFooterMm,
+    paperMM.h,
+  ]);
+
   const paperPX = useMemo(() => {
     return {
       w: paperMM.w * MM_TO_PX * ui.scale,
@@ -1266,26 +1508,44 @@ export default function BlCreatorPage() {
     pushHistory(hydrated);
   }
 
+  //   function switchToPage(nextPageId) {
+  //   if (!nextPageId) return;
+
+  //   // 1) persist current alias (template.elements/groups) into the CURRENT active page
+  //   const cur = ensurePages(templateRef.current);
+  //   const curPid = activePageId || cur.pages?.[0]?.id || null;
+
+  //   const persisted = syncActiveAliasesToPages(cur, curPid);
+
+  //   // 2) now hydrate alias from the NEXT page into template.elements/groups
+  //   const hydrated = attachActiveElementsAlias(persisted, nextPageId);
+
+  //   // ✅ update template without pushing history (page switch should not be undo step)
+  //   setTemplateLive(hydrated);
+
+  //   // ✅ update state
+  //   setActivePageId(nextPageId);
+  //   setSelectedIds(new Set());
+  // }
+
   function switchToPage(nextPageId) {
-  if (!nextPageId) return;
+    if (!nextPageId) return;
 
-  // 1) persist current alias (template.elements/groups) into the CURRENT active page
-  const cur = ensurePages(templateRef.current);
-  const curPid = activePageId || cur.pages?.[0]?.id || null;
+    // 1) persist current alias (template.elements/groups) into the CURRENT active page
+    const cur = ensurePages(templateRef.current);
+    const curPid = activePageId || cur.pages?.[0]?.id || null;
+    const persisted = syncActiveAliasesToPages(cur, curPid);
 
-  const persisted = syncActiveAliasesToPages(cur, curPid);
+    // 2) hydrate alias from the NEXT page into template.elements/groups
+    const hydrated = attachActiveElementsAlias(persisted, nextPageId);
 
-  // 2) now hydrate alias from the NEXT page into template.elements/groups
-  const hydrated = attachActiveElementsAlias(persisted, nextPageId);
+    // ✅ important: alias using the TARGET page id (not the old activePageId)
+    setTemplateLive(hydrated, nextPageId);
 
-  // ✅ update template without pushing history (page switch should not be undo step)
-  setTemplateLive(hydrated);
-
-  // ✅ update state
-  setActivePageId(nextPageId);
-  setSelectedIds(new Set());
-}
-
+    // ✅ update state
+    setActivePageId(nextPageId);
+    setSelectedIds(new Set());
+  }
 
   function undo() {
     const h = historyRef.current;
@@ -1387,53 +1647,75 @@ export default function BlCreatorPage() {
       : String(Date.now() + Math.random());
 
   const loadTemplate = (tpl) => {
-  if (!tpl) return;
+    if (!tpl) return;
 
-  const raw = typeof tpl === "string" ? JSON.parse(tpl) : tpl;
+    const raw = typeof tpl === "string" ? JSON.parse(tpl) : tpl;
 
-  // normalize full structure
-  let next = {
-    ...raw,
-    header: raw?.header ?? { enabled: false, heightMm: 0 },
-    pages: Array.isArray(raw?.pages) ? raw.pages : null,
-    elements: Array.isArray(raw?.elements) ? raw.elements : [],
-    groups: raw?.groups || {},
+    // normalize full structure
+    let next = {
+      ...raw,
+      header: raw?.header ?? { enabled: false, heightMm: 0 },
+      pages: Array.isArray(raw?.pages) ? raw.pages : null,
+      elements: Array.isArray(raw?.elements) ? raw.elements : [],
+      groups: raw?.groups || {},
+    };
+
+    // ✅ always ensure pages exist
+    next = ensurePages(next);
+
+    // ✅ ensure every element in every page has id (important!)
+    next.pages = (next.pages || []).map((p) => ({
+      ...p,
+      elements: Array.isArray(p?.elements)
+        ? p.elements.map((el) => ({ ...el, id: el?.id ?? makeId() }))
+        : [],
+      groups: p?.groups || {},
+    }));
+
+    // ✅ bind to first page always
+    const firstPageId = next.pages?.[0]?.id;
+
+    // clear interactions
+    if (interactionRef.current) {
+      interactionRef.current.mode = null;
+      interactionRef.current.start = null;
+      interactionRef.current.marquee = null;
+    }
+    clearSelection?.();
+
+    // ✅ IMPORTANT: hydrate alias to first page so preview matches
+    const hydrated = attachActiveElementsAlias(next, firstPageId);
+
+    // ✅ commit as new template state (history)
+    commit(hydrated);
+
+    // ✅ switch active page correctly
+    setActivePageId(firstPageId);
+    setSelectedIds(new Set());
   };
+  // ✅ Auto-load template directly from URL ?id=... (no dropdown)
+  useEffect(() => {
+    if (!templateIdFromUrl) return;
+    if (!Array.isArray(storedTemplate) || storedTemplate.length === 0) return;
 
-  // ✅ always ensure pages exist
-  next = ensurePages(next);
+    // prevent repeated loads for same id
+    if (autoLoadedTemplateIdRef.current === String(templateIdFromUrl)) return;
 
-  // ✅ ensure every element in every page has id (important!)
-  next.pages = (next.pages || []).map((p) => ({
-    ...p,
-    elements: Array.isArray(p?.elements)
-      ? p.elements.map((el) => ({ ...el, id: el?.id ?? makeId() }))
-      : [],
-    groups: p?.groups || {},
-  }));
+    const picked = storedTemplate.find(
+      (t) => String(t.id) === String(templateIdFromUrl),
+    );
+    if (!picked) return;
 
-  // ✅ bind to first page always
-  const firstPageId = next.pages?.[0]?.id;
+    autoLoadedTemplateIdRef.current = String(templateIdFromUrl);
 
-  // clear interactions
-  if (interactionRef.current) {
-    interactionRef.current.mode = null;
-    interactionRef.current.start = null;
-    interactionRef.current.marquee = null;
-  }
-  clearSelection?.();
-
-  // ✅ IMPORTANT: hydrate alias to first page so preview matches
-  const hydrated = attachActiveElementsAlias(next, firstPageId);
-
-  // ✅ commit as new template state (history)
-  commit(hydrated);
-
-  // ✅ switch active page correctly
-  setActivePageId(firstPageId);
-  setSelectedIds(new Set());
-};
-
+    try {
+      const jsonStr = picked.blPrintTemplateJson;
+      const tpl = typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
+      loadTemplate(tpl);
+    } catch (err) {
+      console.warn("Template JSON invalid:", picked.blPrintTemplateJson, err);
+    }
+  }, [templateIdFromUrl, storedTemplate]);
 
   const getEmptyTemplate = () => ({
     id: crypto.randomUUID(),
@@ -1814,6 +2096,23 @@ export default function BlCreatorPage() {
     return { x0, y0, x1, y1, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
   }
 
+  function clampYByAttachBand(y, elH, band) {
+    // Default (Main page): full page
+    if (!isAttachmentPage) return clamp(round2(y), 0, paperMM.h - 1);
+
+    const top = attachBands.bodyTopMm;
+    const bottom = attachBands.bodyBottomMm;
+    const safeBottom = Math.max(0, paperMM.h - elH);
+
+    if (band === "header") {
+      return clamp(round2(y), 0, Math.max(0, top - elH));
+    }
+    if (band === "footer") {
+      return clamp(round2(y), bottom, Math.max(bottom, safeBottom));
+    }
+    // body
+    return clamp(round2(y), top, Math.max(top, bottom - elH));
+  }
   function prepareSnapForSelection(selSet) {
     return {
       targets: buildSnapTargets(templateRef.current.elements || [], selSet),
@@ -1827,6 +2126,12 @@ export default function BlCreatorPage() {
           { axis: "y", v: 0, type: "edge" },
           { axis: "y", v: paperMM.h, type: "edge" },
           { axis: "y", v: paperMM.h / 2, type: "center" },
+          ...(isAttachmentPage && attachBands.bodyTopMm > 0
+            ? [{ axis: "y", v: attachBands.bodyTopMm, type: "band" }]
+            : []),
+          ...(isAttachmentPage && attachBands.bodyBottomMm < paperMM.h
+            ? [{ axis: "y", v: attachBands.bodyBottomMm, type: "band" }]
+            : []),
         ],
       },
     };
@@ -1848,7 +2153,9 @@ export default function BlCreatorPage() {
   function startDragNow(e, id, selSetOverride) {
     interactionRef.current.mode = "drag";
     interactionRef.current.start = getPointerMM(e);
-    interactionRef.current.startEls = deepClone((templateRef.current.elements || []));
+    interactionRef.current.startEls = deepClone(
+      templateRef.current.elements || [],
+    );
 
     const selSet = selSetOverride || new Set(selectedIds);
     selSet.add(id);
@@ -1887,7 +2194,9 @@ export default function BlCreatorPage() {
       interactionRef.current.mode = "pending";
       interactionRef.current.pendingId = el.id;
       interactionRef.current.start = getPointerMM(e);
-      interactionRef.current.startEls = deepClone((templateRef.current.elements || []));
+      interactionRef.current.startEls = deepClone(
+        templateRef.current.elements || [],
+      );
 
       const selSet = new Set(selectedIds);
       selSet.add(id);
@@ -1909,7 +2218,9 @@ export default function BlCreatorPage() {
 
     interactionRef.current.mode = "resize";
     interactionRef.current.start = getPointerMM(e);
-    interactionRef.current.startEls = deepClone((templateRef.current.elements || []));
+    interactionRef.current.startEls = deepClone(
+      templateRef.current.elements || [],
+    );
     interactionRef.current.handle = handle;
 
     const selSet = new Set([id]);
@@ -1930,7 +2241,9 @@ export default function BlCreatorPage() {
 
     interactionRef.current.mode = "rotate";
     interactionRef.current.start = start;
-    interactionRef.current.startEls = deepClone((templateRef.current.elements || []));
+    interactionRef.current.startEls = deepClone(
+      templateRef.current.elements || [],
+    );
     interactionRef.current.rotate = {
       id,
       cx,
@@ -1991,41 +2304,54 @@ export default function BlCreatorPage() {
     e.preventDefault();
   }
 
+  function patchActivePageMeta(patch) {
+    const cur = ensurePages(templateRef.current);
+    const pid = activePageId || cur?.pages?.[0]?.id || null;
+    if (!pid) return;
+    const next = deepClone(cur);
+    const idx = next.pages.findIndex((p) => p.id === pid);
+    if (idx === -1) return;
+    next.pages[idx] = { ...(next.pages[idx] || {}), ...(patch || {}) };
+    commit(next);
+  }
+
   function addAttachmentPage() {
-  const next = deepClone(ensurePages(templateRef.current));
-  const n = next.pages.length;
-  const id = uid();
+    const next = deepClone(ensurePages(templateRef.current));
+    const n = next.pages.length;
+    const id = uid();
 
-  next.pages.push({
-    id,
-    name: `Attachment ${n}`,
-    elements: [],
-    groups: {},
-  });
+    next.pages.push({
+      id,
+      name: `Attachment ${n}`,
+      elements: [],
+      groups: {},
+      // Attachment header/footer bands (mm)
+      attachHeaderMm: 25,
+      attachFooterMm: 25,
+    });
 
-  commit(next);        // save structure
-  switchToPage(id);    // ✅ bind editor to new attachment page
-  toast("Attachment added");
-}
+    commit(next); // save structure
+    switchToPage(id); // ✅ bind editor to new attachment page
+    toast("Attachment added");
+  }
 
-function deleteActiveAttachmentPage() {
-  const next = deepClone(ensurePages(templateRef.current));
-  if (!next.pages?.length || next.pages.length === 1)
-    return toast("Can't delete Main page");
+  function deleteActiveAttachmentPage() {
+    const next = deepClone(ensurePages(templateRef.current));
+    if (!next.pages?.length || next.pages.length === 1)
+      return toast("Can't delete Main page");
 
-  const currentId = activePageId || next.pages[0].id;
-  const idx = next.pages.findIndex((p) => p.id === currentId);
-  if (idx <= 0) return toast("Can't delete Main page");
+    const currentId = activePageId || next.pages[0].id;
+    const idx = next.pages.findIndex((p) => p.id === currentId);
+    if (idx <= 0) return toast("Can't delete Main page");
 
-  next.pages.splice(idx, 1);
-  commit(next);
+    next.pages.splice(idx, 1);
+    commit(next);
 
-  // ✅ switch to main after delete
-  switchToPage(next.pages[0].id);
+    // ✅ switch to main after delete
+    switchToPage(next.pages[0].id);
 
-  toast("Attachment deleted");
-}
-
+    toast("Attachment deleted");
+  }
 
   function deleteActivePage() {
     const cur = ensurePages(templateRef.current);
@@ -2050,6 +2376,26 @@ function deleteActiveAttachmentPage() {
     toast("Attachment deleted");
   }
 
+  // function switchToPage(nextPageId) {
+  //   if (!nextPageId) return;
+
+  //   // ✅ persist CURRENT active aliases (template.elements/groups) into the current page first
+  //   const cur = ensurePages(templateRef.current);
+  //   const curPid = activePageId || cur.pages?.[0]?.id || null;
+  //   const persisted = syncActiveAliasesToPages(cur, curPid);
+
+  //   // ✅ hydrate ACTIVE aliases from the target page
+  //   const aliased = attachActiveElementsAlias(persisted, nextPageId);
+
+  //   // reset selection/editing when switching
+  //   setSelectedIds(new Set());
+  //   setEditingId(null);
+
+  //   // page switch should NOT be an undo step
+  //   setTemplateLive(aliased);
+  //   setActivePageId(nextPageId);
+  // }
+
   function switchToPage(nextPageId) {
     if (!nextPageId) return;
 
@@ -2065,34 +2411,41 @@ function deleteActiveAttachmentPage() {
     setSelectedIds(new Set());
     setEditingId(null);
 
-    // page switch should NOT be an undo step
-    setTemplateLive(aliased);
+    // ✅ important: alias using the TARGET page id (not the old activePageId)
+    setTemplateLive(aliased, nextPageId);
     setActivePageId(nextPageId);
   }
 
-
   /** ---------- Table divider drag ---------- */
   function startTableColDrag(e, tableElId, colIdx) {
-    const el = (templateRef.current.elements || []).find((x) => x.id === tableElId);
+    const el = (templateRef.current.elements || []).find(
+      (x) => x.id === tableElId,
+    );
     if (!el || el.locked || el.type !== "table") return;
     if (!selectedIds.has(el.id)) setOnlySelected(el.id);
 
     interactionRef.current.mode = "table-col";
     interactionRef.current.start = getPointerMM(e);
-    interactionRef.current.startEls = deepClone((templateRef.current.elements || []));
+    interactionRef.current.startEls = deepClone(
+      templateRef.current.elements || [],
+    );
     interactionRef.current.table = { id: tableElId, colIdx };
     e.preventDefault();
     e.stopPropagation();
   }
 
   function startTableRowDrag(e, tableElId, rowIdx) {
-    const el = (templateRef.current.elements || []).find((x) => x.id === tableElId);
+    const el = (templateRef.current.elements || []).find(
+      (x) => x.id === tableElId,
+    );
     if (!el || el.locked || el.type !== "table") return;
     if (!selectedIds.has(el.id)) setOnlySelected(el.id);
 
     interactionRef.current.mode = "table-row";
     interactionRef.current.start = getPointerMM(e);
-    interactionRef.current.startEls = deepClone((templateRef.current.elements || []));
+    interactionRef.current.startEls = deepClone(
+      templateRef.current.elements || [],
+    );
     interactionRef.current.table = { id: tableElId, rowIdx };
     e.preventDefault();
     e.stopPropagation();
@@ -2160,7 +2513,7 @@ function deleteActiveAttachmentPage() {
         const yMax = Math.max(m.y0, m.y1);
 
         const hit = new Set(selectedIds);
-        for (const el of (templateRef.current.elements || [])) {
+        for (const el of templateRef.current.elements || []) {
           if (el.hidden || el.locked) continue;
           const ex0 = el.x,
             ex1 = el.x + el.w,
@@ -2271,7 +2624,11 @@ function deleteActiveAttachmentPage() {
           if (!sel.has(el.id) || el.locked) continue;
           const s0 = startMap.get(el.id) || el;
           el.x = clamp(round2(s0.x + finalDx), 0, paperMM.w - 1);
-          el.y = clamp(round2(s0.y + finalDy), 0, paperMM.h - 1);
+          el.y = clampYByAttachBand(
+            s0.y + finalDy,
+            el.h,
+            el.attachBand || "body",
+          );
         }
 
         setTemplateLive(next);
@@ -2322,7 +2679,7 @@ function deleteActiveAttachmentPage() {
         }
 
         el.x = clamp(round2(x), 0, paperMM.w - 1);
-        el.y = clamp(round2(y), 0, paperMM.h - 1);
+        el.y = clampYByAttachBand(y, h, el.attachBand || "body");
         el.w = clamp(round2(w), 1, paperMM.w);
         el.h = clamp(round2(h), 1, paperMM.h);
 
@@ -2401,7 +2758,9 @@ function deleteActiveAttachmentPage() {
         resetInteraction();
 
         if (!pointerMovedRef.current && id) {
-          const el = (templateRef.current.elements || []).find((x) => x.id === id);
+          const el = (templateRef.current.elements || []).find(
+            (x) => x.id === id,
+          );
           if (el && el.type === "text" && !el.locked) {
             setEditingId(id);
             setTextDraft(el.text || "");
@@ -2529,7 +2888,9 @@ function deleteActiveAttachmentPage() {
   /** ---------- ✅ Print / Export PDF ---------- */
   function printTemplate() {
     try {
-      const elementsHtml = renderElementsToHtml((templateRef.current.elements || []));
+      const elementsHtml = renderElementsToHtml(
+        templateRef.current.elements || [],
+      );
 
       const html = templateToPrintableHTML({
         wMm: paperMM.w,
@@ -2541,6 +2902,8 @@ function deleteActiveAttachmentPage() {
           src: headerLogo,
         },
       });
+
+      console.log("ak html", html);
 
       const iframe = document.createElement("iframe");
       iframe.style.position = "fixed";
@@ -2648,6 +3011,20 @@ function deleteActiveAttachmentPage() {
     commit(next);
   }
 
+  function saveDataSchemaFromJson() {
+    const parsed = safeParseJson(schemaJsonText || "");
+    if (!parsed.ok) {
+      toast(`Invalid JSON: ${parsed.error}`);
+      return;
+    }
+    const schema = buildSchemaFromSample(parsed.value);
+    const next = deepClone(templateRef.current);
+    next.dataSchema = schema;
+    commit(next);
+    toast("Data schema saved");
+    setSchemaModalOpen(false);
+  }
+
   function updateTableCellStyle(id, cellK, patch) {
     const next = deepClone(templateRef.current);
     const el = next.elements.find((x) => x.id === id);
@@ -2708,18 +3085,37 @@ function deleteActiveAttachmentPage() {
     toast("Unmerged");
   }
 
+  // function bindActiveTableCellToColumn(col) {
+  //   if (!primarySelected || primarySelected.type !== "table") return;
+  //   const t = primarySelected.table;
+  //   if (!t?.activeCell) return toast("Click a table cell first");
+  //   const k = cellKey(t.activeCell.r, t.activeCell.c);
+  //   const next = deepClone(templateRef.current);
+  //   const el = next.elements.find((x) => x.id === primarySelected.id);
+  //   if (!el || el.type !== "table") return;
+  //   el.table.bindings = el.table.bindings || {};
+  //   el.table.bindings[k] = { columnKey: col.key, label: col.label };
+  //   commit(next);
+  //   toast(`Bound to ${col.label}`);
+  // }
+
   function bindActiveTableCellToColumn(col) {
     if (!primarySelected || primarySelected.type !== "table") return;
     const t = primarySelected.table;
     if (!t?.activeCell) return toast("Click a table cell first");
+
     const k = cellKey(t.activeCell.r, t.activeCell.c);
     const next = deepClone(templateRef.current);
     const el = next.elements.find((x) => x.id === primarySelected.id);
     if (!el || el.type !== "table") return;
+
     el.table.bindings = el.table.bindings || {};
-    el.table.bindings[k] = { columnKey: col.key, label: col.label };
+
+    // ✅ store only the real field key; do NOT store label for rendering
+    el.table.bindings[k] = { columnKey: col.key };
+
     commit(next);
-    toast(`Bound to ${col.label}`);
+    toast(`Bound to {{${col.key}}}`);
   }
 
   /** ---------- Paper controls ---------- */
@@ -2809,7 +3205,7 @@ function deleteActiveAttachmentPage() {
     );
   }
 
-function Tabs({ value, onChange, tabs }) {
+  function Tabs({ value, onChange, tabs }) {
     return (
       <div style={styles.tabs}>
         {tabs.map((t) => (
@@ -2986,8 +3382,9 @@ function Tabs({ value, onChange, tabs }) {
                   if (e.key === "Escape") {
                     e.preventDefault();
                     const original =
-                      (templateRef.current.elements || []).find((x) => x.id === el.id)
-                        ?.text || "";
+                      (templateRef.current.elements || []).find(
+                        (x) => x.id === el.id,
+                      )?.text || "";
                     setTextDraft(original);
                     setEditingId(null);
                   }
@@ -3289,12 +3686,26 @@ function Tabs({ value, onChange, tabs }) {
                   const rs = m ? m.rs : 1;
                   const cs = m ? m.cs : 1;
 
+                  const repeat = t.repeat || {};
+                  const colsMeta = Array.isArray(repeat.columns)
+                    ? repeat.columns
+                    : [];
+                  const isRepeat = !!repeat.enabled && colsMeta.length > 0;
+
                   const b = bindings[cellKey(r, c)];
-                  const label = b?.label
-                    ? b.label
-                    : b?.columnKey
-                      ? `{{${b.columnKey}}}`
-                      : "";
+
+                  // Label rules:
+                  // - Normal table: show bound token for active cell binding
+                  // - Repeat table: row 0 is header labels, rows 1..N show {{fieldKey}} placeholders
+                  let label = "";
+                  if (isRepeat) {
+                    const cm = colsMeta[c];
+                    if (r === 0) label = cm?.label ?? cm?.key ?? "";
+                    else label = cm?.key ? `{{${cm.key}}}` : "";
+                  } else {
+                    // ✅ always show token, never label
+                    label = b?.columnKey ? `{{${b.columnKey}}}` : "";
+                  }
 
                   const csx = cellStyle[cellKey(r, c)] || {};
                   const cellPad =
@@ -3304,7 +3715,9 @@ function Tabs({ value, onChange, tabs }) {
                   const cellColor = csx.color ?? "#0f172a";
                   const cellFs = (csx.fontSize ?? t.fontSize ?? 11) * ui.scale;
                   const cellFw = csx.fontWeight ?? 600;
-                  const cellAlign = csx.align ?? "left";
+                  const cellAlign =
+                    csx.align ??
+                    (isRepeat ? colsMeta[c]?.align || "left" : "left");
                   const cellV = csx.vAlign ?? "top";
                   const cellBc = csx.borderColor ?? t.gridColor ?? "#111827";
                   const cellBw = csx.borderWidth ?? t.gridWidth ?? 1;
@@ -3515,227 +3928,166 @@ function Tabs({ value, onChange, tabs }) {
             onClick={deleteSelected}
           />
           <div style={styles.sep} />
-          <TextField
-            size="small"
-            label="New Template"
-            value={newTemplateName}
-            onChange={(e) => setNewTemplateName(e.target.value)}
-            placeholder="Enter template"
-            InputLabelProps={{
-              shrink: true,
-              sx: { fontSize: 10 },
-            }}
-            sx={{
-              minWidth: 100,
-              "& .MuiOutlinedInput-root": {
-                borderRadius: "10px",
-                background: "rgba(255,255,255,.92)",
-                color: "#0f172a",
-                minHeight: 32,
-                fontSize: 11,
-              },
-              "& .MuiOutlinedInput-input": {
-                padding: "6px 10px",
-              },
-            }}
-          />
-          <Button
-            size="small"
-            variant="contained"
-            disabled={!newTemplateName.trim()}
-            onClick={async () => {
-              if (!newTemplateName.trim()) return;
-
-              // ✅ get current editor template JSON
-              const templateJson = templateRef.current; // or your template state
-
-              const payload = {
-                TableName: "tblBlPrintTemplate",
-                Record: {
-                  name: newTemplateName.trim(),
-                  blOfId: companyId,
-                  clientId: clientId,
-                  draftFinal: "D",
-                  blPrintTemplateJson: JSON.stringify(templateJson),
-                  status: 1,
-                  createdBy: userId,
-                },
-                WhereCondition: null,
-              };
-
-              try {
-                if (historyRef.current?.stack?.length > 1) {
-                  const ok = window.confirm(
-                    "Loading a template will replace the current design. Continue?",
-                  );
-                  if (!ok) return;
-                }
-                await insertReportData(payload);
-
-                // refresh dropdown
-                setNewTemplateName("");
-              } catch (err) {
-                console.error("Error saving template", err);
-              }
-            }}
-            sx={{
-              height: 32,
-              ml: 1,
-              borderRadius: "10px",
-              textTransform: "none",
-              fontSize: 11,
-            }}
-          >
-            Save
-          </Button>
-
-          <Box sx={{ position: "relative", display: "inline-block" }}>
-            <TextField
-              select
-              size="small"
-              label="Load Template"
-              value={selectedTemplateId || ""}
-              onChange={(e) => {
-                const id = e.target.value;
-                if (!id) return; // ✅ disabled placeholder, force manual selection
-
-                setSelectedTemplateId(id);
-
-                const picked = (storedTemplate ?? []).find(
-                  (t) => String(t.id) === String(id),
-                );
-                if (!picked) return;
-
-                try {
-                  const jsonStr = picked.blPrintTemplateJson;
-                  const tpl =
-                    typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
-
-                  loadTemplate(tpl); // ✅ now template will load
-                } catch (err) {
-                  console.warn(
-                    "Template JSON invalid:",
-                    picked.blPrintTemplateJson,
-                    err,
-                  );
-                }
-              }}
-              SelectProps={{
-                displayEmpty: true,
-                IconComponent: ArrowDropDownRoundedIcon, // ✅ arrow on far right
-                renderValue: (val) => {
-                  if (!val) return "Select template";
-                  const picked = (storedTemplate ?? []).find(
-                    (t) => String(t.id) === String(val),
-                  );
-                  return picked?.name || "Select template";
-                },
-                MenuProps: {
-                  PaperProps: {
-                    sx: {
-                      mt: 0.5,
-                      "& .MuiMenuItem-root": {
-                        fontSize: 11,
-                        minHeight: 28,
-                        py: 0.5, // ✅ less top/bottom padding
-                      },
-                    },
+          {isEditMode ? (
+            <>
+              <TextField
+                size="small"
+                label="Template Name"
+                value={editTemplateName}
+                onChange={(e) => setEditTemplateName(e.target.value)}
+                placeholder="Template name"
+                InputLabelProps={{
+                  shrink: true,
+                  sx: { fontSize: 10 },
+                }}
+                sx={{
+                  minWidth: 120,
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "10px",
+                    background: "rgba(255,255,255,.92)",
+                    color: "#0f172a",
+                    minHeight: 32,
+                    fontSize: 11,
                   },
-                },
-              }}
-              InputLabelProps={{
-                shrink: true,
-                sx: { fontSize: 10 }, // ✅ small label like your screenshot
-              }}
-              sx={{
-                minWidth: 100,
-                maxWidth: 160,
-                // input root
-                "& .MuiOutlinedInput-root": {
+                  "& .MuiOutlinedInput-input": {
+                    padding: "6px 10px",
+                  },
+                }}
+              />
+              <Button
+                size="small"
+                variant="contained"
+                disabled={!editTemplateName.trim() || !templateIdFromUrl}
+                onClick={async () => {
+                  if (!templateIdFromUrl) return;
+                  if (!editTemplateName.trim()) return;
+
+                  const toSave = syncActiveAliasesToPages(
+                    templateRef.current,
+                    activePageId,
+                  );
+
+                  const payload = {
+                    TableName: "tblBlPrintTemplate",
+                    Record: {
+                      name: editTemplateName.trim(),
+                      blPrintTemplateJson: JSON.stringify(toSave),
+                    },
+                    WhereCondition: `id = ${templateIdFromUrl} and clientId = ${clientId}`,
+                  };
+
+                  try {
+                    await insertReportData(payload);
+                    toast("Template updated successfully");
+
+                    // keep local copy in sync
+                    setStoredTemplate((prev) => {
+                      const arr = Array.isArray(prev) ? prev.slice() : [];
+                      if (!arr.length) return prev;
+                      const idx = arr.findIndex(
+                        (t) => String(t.id) === String(templateIdFromUrl),
+                      );
+                      if (idx >= 0) {
+                        arr[idx] = {
+                          ...arr[idx],
+                          name: editTemplateName.trim(),
+                          blPrintTemplateJson:
+                            payload.Record.blPrintTemplateJson,
+                        };
+                        return arr;
+                      }
+                      return prev;
+                    });
+                  } catch (err) {
+                    console.error("Error updating template", err);
+                    toast("Update failed");
+                  }
+                }}
+                sx={{
+                  height: 32,
+                  ml: 1,
                   borderRadius: "10px",
-                  background: "rgba(255,255,255,.92)",
-                  color: "#0f172a",
-                  minHeight: 32,
+                  textTransform: "none",
                   fontSize: 11,
-                  pr: "52px", // ✅ space for X + arrow (very important)
-                },
-
-                // selected text area
-                "& .MuiSelect-select": {
-                  py: "6px",
-                  pl: "10px",
-                  pr: "0px",
-                  display: "flex",
-                  alignItems: "center",
-                },
-
-                // arrow position
-                "& .MuiSelect-icon": {
-                  right: 8,
-                  fontSize: 18,
-                },
-              }}
-              // ✅ This is the key: place clear button BEFORE arrow INSIDE the input
-              InputProps={{
-                endAdornment: selectedTemplateId ? (
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      right: 30, // ✅ just before arrow (arrow is at ~8)
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      zIndex: 2,
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Tooltip title="Clear">
-                      <CloseIcon
-                        onMouseDown={(e) => {
-                          e.preventDefault(); // ✅ stop select opening
-                          e.stopPropagation();
-                        }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setSelectedTemplateId("");
-                          loadTemplate(getEmptyTemplate());
-                          // optional: clear anything else related to template load
-                          // clearSelection();
-                          // setTemplateLive(emptyTemplate);
-                        }}
-                        sx={{
-                          fontSize: 34,
-                          color: "#000 !important",
-                          padding: "2px",
-                          cursor: "pointer",
-                        }}
-                      />
-                    </Tooltip>
-                  </Box>
-                ) : null,
-              }}
-            >
-              {/* ✅ disabled placeholder (forces manual selection) */}
-              <MenuItem
-                value=""
-                disabled
-                sx={{ fontSize: 11, minHeight: 28, py: 0.5 }}
+                }}
               >
-                <em>Select template</em>
-              </MenuItem>
+                Update
+              </Button>
+            </>
+          ) : (
+            <>
+              <TextField
+                size="small"
+                label="New Template"
+                value={newTemplateName}
+                onChange={(e) => setNewTemplateName(e.target.value)}
+                placeholder="Enter template"
+                InputLabelProps={{
+                  shrink: true,
+                  sx: { fontSize: 10 },
+                }}
+                sx={{
+                  minWidth: 120,
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "10px",
+                    background: "rgba(255,255,255,.92)",
+                    color: "#0f172a",
+                    minHeight: 32,
+                    fontSize: 11,
+                  },
+                  "& .MuiOutlinedInput-input": {
+                    padding: "6px 10px",
+                  },
+                }}
+              />
+              <Button
+                size="small"
+                variant="contained"
+                disabled={!newTemplateName.trim()}
+                onClick={async () => {
+                  if (!newTemplateName.trim()) return;
 
-              {(storedTemplate ?? []).map((t) => (
-                <MenuItem
-                  key={t.id}
-                  value={String(t.id)}
-                  sx={{ fontSize: 11, minHeight: 28, py: 0.5 }}
-                >
-                  {t.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
+                  const toSave = syncActiveAliasesToPages(
+                    templateRef.current,
+                    activePageId,
+                  );
+
+                  const payload = {
+                    TableName: "tblBlPrintTemplate",
+                    Record: {
+                      name: newTemplateName.trim(),
+                      blOfId: companyId,
+                      clientId: clientId,
+                      draftFinal: "D",
+                      blPrintTemplateJson: JSON.stringify(toSave),
+                      status: 1,
+                      createdBy: userId,
+                    },
+                    WhereCondition: null,
+                  };
+
+                  try {
+                    await insertReportData(payload);
+                    toast("Template saved successfully");
+                    setNewTemplateName("");
+                  } catch (err) {
+                    console.error("Error saving template", err);
+                    toast("Save failed");
+                  }
+                }}
+                sx={{
+                  height: 32,
+                  ml: 1,
+                  borderRadius: "10px",
+                  textTransform: "none",
+                  fontSize: 11,
+                }}
+              >
+                Save
+              </Button>
+            </>
+          )}
+
           <IconButton title="Save (local)" icon="save" onClick={saveLocal} />
           <IconButton title="Load (local)" icon="folder" onClick={loadLocal} />
           <IconButton
@@ -3901,7 +4253,10 @@ function Tabs({ value, onChange, tabs }) {
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button
                     type="button"
-                    style={{ ...styles.pill, ...(activeTool === "select" ? styles.pillActive : {}) }}
+                    style={{
+                      ...styles.pill,
+                      ...(activeTool === "select" ? styles.pillActive : {}),
+                    }}
                     onClick={() => setActiveTool("select")}
                     title="Select"
                   >
@@ -3909,7 +4264,10 @@ function Tabs({ value, onChange, tabs }) {
                   </button>
                   <button
                     type="button"
-                    style={{ ...styles.pill, ...(activeTool === "hand" ? styles.pillActive : {}) }}
+                    style={{
+                      ...styles.pill,
+                      ...(activeTool === "hand" ? styles.pillActive : {}),
+                    }}
                     onClick={() => setActiveTool("hand")}
                     title="Hand (Space)"
                   >
@@ -3919,59 +4277,133 @@ function Tabs({ value, onChange, tabs }) {
               </>
             ) : (
               <div style={styles.iconGrid}>
-                <button type="button" style={styles.iconPill} title="Align Left" onClick={() => alignSelected("left")}><Icon name="alignLeft" /></button>
-                <button type="button" style={styles.iconPill} title="Center X" onClick={() => alignSelected("centerX")}><Icon name="alignCenter" /></button>
-                <button type="button" style={styles.iconPill} title="Align Right" onClick={() => alignSelected("right")}><Icon name="alignRight" /></button>
-                <button type="button" style={styles.iconPill} title="Align Top" onClick={() => alignSelected("top")}><Icon name="alignTop" /></button>
-                <button type="button" style={styles.iconPill} title="Center Y" onClick={() => alignSelected("centerY")}><Icon name="alignMiddle" /></button>
-                <button type="button" style={styles.iconPill} title="Align Bottom" onClick={() => alignSelected("bottom")}><Icon name="alignBottom" /></button>
-                <button type="button" style={styles.iconPill} title="Bring to Front" onClick={bringToFront}><Icon name="front" /></button>
-                <button type="button" style={styles.iconPill} title="Send to Back" onClick={sendToBack}><Icon name="back" /></button>
+                <button
+                  type="button"
+                  style={styles.iconPill}
+                  title="Align Left"
+                  onClick={() => alignSelected("left")}
+                >
+                  <Icon name="alignLeft" />
+                </button>
+                <button
+                  type="button"
+                  style={styles.iconPill}
+                  title="Center X"
+                  onClick={() => alignSelected("centerX")}
+                >
+                  <Icon name="alignCenter" />
+                </button>
+                <button
+                  type="button"
+                  style={styles.iconPill}
+                  title="Align Right"
+                  onClick={() => alignSelected("right")}
+                >
+                  <Icon name="alignRight" />
+                </button>
+                <button
+                  type="button"
+                  style={styles.iconPill}
+                  title="Align Top"
+                  onClick={() => alignSelected("top")}
+                >
+                  <Icon name="alignTop" />
+                </button>
+                <button
+                  type="button"
+                  style={styles.iconPill}
+                  title="Center Y"
+                  onClick={() => alignSelected("centerY")}
+                >
+                  <Icon name="alignMiddle" />
+                </button>
+                <button
+                  type="button"
+                  style={styles.iconPill}
+                  title="Align Bottom"
+                  onClick={() => alignSelected("bottom")}
+                >
+                  <Icon name="alignBottom" />
+                </button>
+                <button
+                  type="button"
+                  style={styles.iconPill}
+                  title="Bring to Front"
+                  onClick={bringToFront}
+                >
+                  <Icon name="front" />
+                </button>
+                <button
+                  type="button"
+                  style={styles.iconPill}
+                  title="Send to Back"
+                  onClick={sendToBack}
+                >
+                  <Icon name="back" />
+                </button>
               </div>
             )}
-          <div style={styles.sidebarFooter}>
-            <div style={styles.sidebarFooterRow}>
-              <button
-                type="button"
-                style={styles.bottomBtn}
-                title="Grid"
-                onClick={() => setUi((s) => ({ ...s, showGrid: !s.showGrid }))}
-              >
-                <Icon name="grid" />
-              </button>
-              <button
-                type="button"
-                style={styles.bottomBtn}
-                title="Rulers"
-                onClick={() =>
-                  setUi((s) => ({ ...s, showRulers: !s.showRulers }))
-                }
-              >
-                <Icon name="ruler" />
-              </button>
-              <button
-                type="button"
-                style={styles.bottomBtn}
-                title="Snap"
-                onClick={() => setUi((s) => ({ ...s, snap: !s.snap }))}
-              >
-                <Icon name="mag" />
-              </button>
+            <div style={styles.sidebarFooter}>
+              <div style={styles.sidebarFooterRow}>
+                <button
+                  type="button"
+                  style={styles.bottomBtn}
+                  title="Grid"
+                  onClick={() =>
+                    setUi((s) => ({ ...s, showGrid: !s.showGrid }))
+                  }
+                >
+                  <Icon name="grid" />
+                </button>
+                <button
+                  type="button"
+                  style={styles.bottomBtn}
+                  title="Rulers"
+                  onClick={() =>
+                    setUi((s) => ({ ...s, showRulers: !s.showRulers }))
+                  }
+                >
+                  <Icon name="ruler" />
+                </button>
+                <button
+                  type="button"
+                  style={styles.bottomBtn}
+                  title="Snap"
+                  onClick={() => setUi((s) => ({ ...s, snap: !s.snap }))}
+                >
+                  <Icon name="mag" />
+                </button>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <button type="button" style={styles.bottomMini} onClick={zoomOut} title="Zoom out">
-                  −
-                </button>
-                <div style={{ fontWeight: 900, fontSize: 12, minWidth: 48, textAlign: "center" }}>
-                  {Math.round(ui.scale * 100)}%
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <button
+                    type="button"
+                    style={styles.bottomMini}
+                    onClick={zoomOut}
+                    title="Zoom out"
+                  >
+                    −
+                  </button>
+                  <div
+                    style={{
+                      fontWeight: 900,
+                      fontSize: 12,
+                      minWidth: 48,
+                      textAlign: "center",
+                    }}
+                  >
+                    {Math.round(ui.scale * 100)}%
+                  </div>
+                  <button
+                    type="button"
+                    style={styles.bottomMini}
+                    onClick={zoomIn}
+                    title="Zoom in"
+                  >
+                    +
+                  </button>
                 </div>
-                <button type="button" style={styles.bottomMini} onClick={zoomIn} title="Zoom in">
-                  +
-                </button>
               </div>
             </div>
-          </div>
-
           </div>
         </div>
 
@@ -4038,6 +4470,73 @@ function Tabs({ value, onChange, tabs }) {
                         background: "rgba(37,99,235,.65)",
                       }}
                     />
+                  )}
+                </div>
+              )}
+
+              {isAttachmentPage && (
+                <div
+                  className="blc-ui"
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    pointerEvents: "none",
+                    zIndex: 1,
+                  }}
+                >
+                  {/* Header band */}
+                  {attachBands.headerMm > 0 && (
+                    <>
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: 0,
+                          top: 0,
+                          width: "100%",
+                          height: attachBands.headerMm * MM_TO_PX * ui.scale,
+                          background: "rgba(2,6,23,.04)",
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: 0,
+                          top: attachBands.headerMm * MM_TO_PX * ui.scale,
+                          width: "100%",
+                          height: 1,
+                          background: "rgba(100,116,139,.45)",
+                        }}
+                      />
+                    </>
+                  )}
+
+                  {/* Footer band */}
+                  {attachBands.footerMm > 0 && (
+                    <>
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: 0,
+                          top: attachBands.bodyBottomMm * MM_TO_PX * ui.scale,
+                          width: "100%",
+                          height:
+                            (paperMM.h - attachBands.bodyBottomMm) *
+                            MM_TO_PX *
+                            ui.scale,
+                          background: "rgba(2,6,23,.04)",
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: 0,
+                          top: attachBands.bodyBottomMm * MM_TO_PX * ui.scale,
+                          width: "100%",
+                          height: 1,
+                          background: "rgba(100,116,139,.45)",
+                        }}
+                      />
+                    </>
                   )}
                 </div>
               )}
@@ -4185,6 +4684,34 @@ function Tabs({ value, onChange, tabs }) {
           ) : null}
           {rightTab === "fields" ? (
             <div style={styles.panelBody}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 10,
+                }}
+              >
+                <button
+                  style={stylesKV.actionBtn}
+                  onClick={() => {
+                    // Pre-fill with current schema JSON (optional)
+                    const existing = templateRef.current?.dataSchema;
+                    if (existing && Object.keys(existing || {}).length) {
+                      setSchemaJsonText(JSON.stringify(existing, null, 2));
+                    } else {
+                      setSchemaJsonText("");
+                    }
+                    setSchemaModalOpen(true);
+                  }}
+                  title="Paste a sample BL JSON to detect arrays like tblBlContainer / tblBLCharge"
+                >
+                  Data Schema
+                </button>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>
+                  Used for repeating table rows from arrays.
+                </div>
+              </div>
               <div style={styles.columns}>
                 {columns.map((c) => (
                   <button
@@ -4228,6 +4755,10 @@ function Tabs({ value, onChange, tabs }) {
                   <Inspector
                     el={primarySelected}
                     header={template.header}
+                    isAttachmentPage={isAttachmentPage}
+                    activePage={activePage}
+                    attachBands={attachBands}
+                    onUpdateActivePage={(patch) => patchActivePageMeta(patch)}
                     onUpdateHeader={(patch) => {
                       const next = JSON.parse(
                         JSON.stringify(templateRef.current),
@@ -4260,6 +4791,7 @@ function Tabs({ value, onChange, tabs }) {
                     onMerge={mergeSelectedCells}
                     onUnmerge={unmergeCell}
                     getCommonStyleValue={getCommonStyleValue}
+                    dataSchema={template?.dataSchema}
                   />
                 )}
               </div>
@@ -4267,6 +4799,99 @@ function Tabs({ value, onChange, tabs }) {
           ) : null}
         </div>
       </div>
+
+      {schemaModalOpen ? (
+        <div
+          onClick={() => setSchemaModalOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,23,42,.45)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "min(920px, 96vw)",
+              maxHeight: "90vh",
+              background: "#fff",
+              borderRadius: 16,
+              padding: 14,
+              boxShadow: "0 20px 60px rgba(0,0,0,.25)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 950 }}>
+                Data Schema (Paste Sample BL JSON)
+              </div>
+              <button
+                onClick={() => setSchemaModalOpen(false)}
+                style={styles.miniBtn}
+                title="Close"
+              >
+                <CloseIcon fontSize="small" />
+              </button>
+            </div>
+
+            <div style={{ fontSize: 12, opacity: 0.75 }}>
+              Paste a sample BL JSON (your API response). We will detect array
+              fields (e.g. <b>tblBlContainer</b>, <b>tblBLCharge</b>) and their
+              columns.
+            </div>
+
+            <textarea
+              value={schemaJsonText}
+              onChange={(e) => setSchemaJsonText(e.target.value)}
+              placeholder='Paste JSON here... Example: [{"shipperText":"...","tblBlContainer":[{"containerNo":"..."}]}]'
+              style={{
+                width: "100%",
+                minHeight: 260,
+                resize: "vertical",
+                border: "1px solid #e5e7eb",
+                borderRadius: 12,
+                padding: 10,
+                fontFamily:
+                  "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                fontSize: 12,
+                lineHeight: 1.35,
+              }}
+            />
+
+            <div
+              style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}
+            >
+              <button
+                onClick={() => setSchemaModalOpen(false)}
+                style={{ ...stylesKV.actionBtn, background: "#f3f4f6" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveDataSchemaFromJson}
+                style={stylesKV.actionBtn}
+              >
+                Save Schema
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {toastMsg ? <div style={styles.toast}>{toastMsg}</div> : null}
     </div>
   );
@@ -4276,6 +4901,11 @@ function Tabs({ value, onChange, tabs }) {
 function Inspector({
   el,
   header,
+  dataSchema,
+  isAttachmentPage,
+  activePage,
+  attachBands,
+  onUpdateActivePage,
   onUpdateHeader,
   onPatch,
   onStyle,
@@ -4382,6 +5012,52 @@ function Inspector({
           </div>
         )}
       </div>
+
+      {isAttachmentPage ? (
+        <div style={stylesKV.block}>
+          <div style={stylesKV.title}>Attachment Header / Footer</div>
+
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
+          >
+            <KV label="Header H (mm)">
+              <Num
+                value={activePage?.attachHeaderMm ?? 25}
+                step={1}
+                min={0}
+                onChange={(v) => onUpdateActivePage({ attachHeaderMm: v })}
+              />
+            </KV>
+            <KV label="Footer H (mm)">
+              <Num
+                value={activePage?.attachFooterMm ?? 25}
+                step={1}
+                min={0}
+                onChange={(v) => onUpdateActivePage({ attachFooterMm: v })}
+              />
+            </KV>
+          </div>
+
+          <div style={{ marginTop: 10 }}>
+            <KV label="This element belongs to">
+              <select
+                value={el.attachBand || "body"}
+                onChange={(e) => onPatch({ attachBand: e.target.value })}
+                style={stylesKV.select}
+              >
+                <option value="body">Body</option>
+                <option value="header">Header</option>
+                <option value="footer">Footer</option>
+              </select>
+            </KV>
+            <div style={{ fontSize: 11, opacity: 0.7, marginTop: 6 }}>
+              Header/Footer elements will be designed inside the shaded bands
+              and can be repeated on generated attachment pages.
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {isText ? (
         <div style={stylesKV.block}>
           <div style={stylesKV.title}>Text Mode</div>
@@ -4676,6 +5352,457 @@ function Inspector({
       {isTable ? (
         <div style={stylesKV.block}>
           <div style={stylesKV.title}>Table</div>
+
+          {/* Repeat rows from array (dynamic table) */}
+          {(() => {
+            const repeat = el.table?.repeat || {};
+            const arraysObj = dataSchema?.arrays || {};
+            const arrayKeys = Object.keys(arraysObj);
+
+            // Fallback options if schema not defined yet
+            const fallbackKeys = ["tblBlContainer", "tblBLCharge", "tblBlPkg"];
+            const options = Array.from(
+              new Set([...(arrayKeys || []), ...fallbackKeys]),
+            );
+
+            const selectedCols = Array.isArray(repeat.columns)
+              ? repeat.columns
+              : [];
+            const selectedKeys = new Set(selectedCols.map((c) => c.key));
+
+            // Fallback columns so user can select even before saving schema
+            const FALLBACK_ARRAY_FIELDS = {
+              tblBlContainer: [
+                "containerNo",
+                "size",
+                "type",
+                "sizeType",
+                "noOfPackages",
+                "package",
+                "grossWt",
+                "grossWtAndUnit",
+                "netWt",
+                "weightUnitCode",
+                "agentSealNo",
+                "customSealNo",
+                "createdDate",
+              ],
+              tblBLCharge: [
+                "code",
+                "description",
+                "qty",
+                "tariff",
+                "exRate",
+                "amount",
+                "currency",
+              ],
+              tblBlPkg: [
+                "packageCode",
+                "noOfPackages",
+                "grossWt",
+                "netWt",
+                "volume",
+              ],
+            };
+
+            const fieldsForArray =
+              repeat.arrayPath &&
+              Array.isArray(arraysObj?.[repeat.arrayPath]) &&
+              arraysObj[repeat.arrayPath].length
+                ? arraysObj[repeat.arrayPath]
+                : repeat.arrayPath &&
+                    Array.isArray(FALLBACK_ARRAY_FIELDS[repeat.arrayPath])
+                  ? FALLBACK_ARRAY_FIELDS[repeat.arrayPath]
+                  : [];
+
+            const ensureSizeFromSelected = (colsList) => {
+              const colsCount = Math.max(1, colsList.length || 1);
+              const rowsCount = Math.max(2, el.table?.rows || 2); // header + at least 1 preview row
+              const colW = Array(colsCount).fill(
+                Math.max(60, Math.floor(520 / colsCount)),
+              );
+              const rowH = [...(el.table?.rowH || [])];
+              while (rowH.length < rowsCount) rowH.push(32);
+              while (rowH.length > rowsCount) rowH.pop();
+              onTable({ cols: colsCount, rows: rowsCount, colW, rowH });
+            };
+
+            const toggleField = (fieldKey) => {
+              let colsList = [...selectedCols];
+              if (selectedKeys.has(fieldKey)) {
+                colsList = colsList.filter((c) => c.key !== fieldKey);
+              } else {
+                colsList.push({
+                  key: fieldKey,
+                  label: fieldKey,
+                  align: "left",
+                  widthMm: 30,
+                });
+              }
+              onTable({ repeat: { ...repeat, columns: colsList } });
+              ensureSizeFromSelected(colsList);
+            };
+
+            const setRepeatEnabled = (enabled) => {
+              const nextRepeat = { ...repeat, enabled: !!enabled };
+              // If enabling with empty arrayPath, pick first option
+              if (nextRepeat.enabled && !nextRepeat.arrayPath) {
+                nextRepeat.arrayPath = options[0] || "";
+              }
+              onTable({ repeat: nextRepeat });
+
+              // Ensure cols/rows if enabled and columns already selected
+              if (nextRepeat.enabled && (nextRepeat.columns || []).length) {
+                ensureSizeFromSelected(nextRepeat.columns || []);
+              }
+            };
+
+            const onChangeArray = (arrayPath) => {
+              const nextRepeat = { ...repeat, arrayPath };
+              const fields = arraysObj?.[arrayPath] || [];
+              // if no columns selected yet, auto-pick first 5 fields
+              if (
+                !Array.isArray(nextRepeat.columns) ||
+                !nextRepeat.columns.length
+              ) {
+                nextRepeat.columns = fields.slice(0, 5).map((f) => ({
+                  key: f,
+                  label: f,
+                  align: "left",
+                  widthMm: 30,
+                }));
+              }
+              onTable({ repeat: nextRepeat });
+              ensureSizeFromSelected(nextRepeat.columns || []);
+            };
+
+            return (
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: 10,
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 10,
+                  background: "#fafafa",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 900,
+                    marginBottom: 8,
+                    color: "#111827",
+                  }}
+                >
+                  Repeat Rows (Array)
+                </div>
+
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: "#111827",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={!!repeat.enabled}
+                    onChange={(e) => setRepeatEnabled(e.target.checked)}
+                  />
+                  Enable repeating table
+                </label>
+
+                {repeat.enabled ? (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      display: "flex",
+                      flexDirection: "column",
+                      color: "#111827",
+                      gap: 10,
+                    }}
+                  >
+                    <KV label="Array Name">
+                      <select
+                        value={repeat.arrayPath || ""}
+                        onChange={(e) => onChangeArray(e.target.value)}
+                        style={stylesKV.select}
+                      >
+                        <option value="">-- select --</option>
+                        {options.map((k) => (
+                          <option key={k} value={k}>
+                            {k}
+                          </option>
+                        ))}
+                      </select>
+                    </KV>
+
+                    {repeat.arrayPath ? (
+                      <>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 900,
+                            opacity: 0.75,
+                            color: "#111827",
+                          }}
+                        >
+                          Columns to show
+                        </div>
+
+                        {fieldsForArray?.length ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 6,
+                            }}
+                          >
+                            {fieldsForArray.map((f) => (
+                              <label
+                                key={f}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  fontSize: 12,
+                                  color: "#111827",
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedKeys.has(f)}
+                                  onChange={() => toggleField(f)}
+                                />
+                                {f}
+                              </label>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 12, opacity: 0.7 }}>
+                            No fields found for this array.
+                            <div
+                              style={{
+                                marginTop: 6,
+                                display: "flex",
+                                gap: 8,
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const k = window.prompt(
+                                    "Enter column key (fieldname) to add:",
+                                  );
+                                  const key = (k || "").trim();
+                                  if (!key) return;
+                                  if (selectedKeys.has(key)) return;
+                                  const nextCols = [
+                                    ...selectedCols,
+                                    {
+                                      key,
+                                      label: key,
+                                      align: "left",
+                                      widthMm: 30,
+                                    },
+                                  ];
+                                  const nextRepeat = {
+                                    ...repeat,
+                                    columns: nextCols,
+                                  };
+                                  onTable({ repeat: nextRepeat });
+                                  ensureSizeFromSelected(nextCols);
+                                }}
+                                style={{
+                                  padding: "6px 10px",
+                                  borderRadius: 8,
+                                  border: "1px solid #d1d5db",
+                                  background: "#fff",
+                                  cursor: "pointer",
+                                  fontWeight: 900,
+                                  fontSize: 12,
+                                }}
+                              >
+                                + Add column manually
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSchemaModalOpen(true)}
+                                style={{
+                                  padding: "6px 10px",
+                                  borderRadius: 8,
+                                  border: "1px solid #d1d5db",
+                                  background: "#fff",
+                                  cursor: "pointer",
+                                  fontWeight: 900,
+                                  fontSize: 12,
+                                }}
+                              >
+                                Open Data Schema
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedCols.length ? (
+                          <div style={{ marginTop: 10 }}>
+                            <div
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 900,
+                                opacity: 0.75,
+                                marginBottom: 6,
+                              }}
+                            >
+                              Selected column settings
+                            </div>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 8,
+                              }}
+                            >
+                              {selectedCols.map((col, idx) => (
+                                <div
+                                  key={col.key + idx}
+                                  style={{
+                                    display: "grid",
+                                    gridTemplateColumns:
+                                      "1fr 90px 90px 34px 34px",
+                                    gap: 8,
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <input
+                                    value={col.label ?? col.key}
+                                    onChange={(e) => {
+                                      const nextCols = [...selectedCols];
+                                      nextCols[idx] = {
+                                        ...nextCols[idx],
+                                        label: e.target.value,
+                                      };
+                                      onTable({
+                                        repeat: {
+                                          ...repeat,
+                                          columns: nextCols,
+                                        },
+                                      });
+                                    }}
+                                    style={{
+                                      width: "100%",
+                                      padding: "6px 8px",
+                                      border: "1px solid #e5e7eb",
+                                      borderRadius: 8,
+                                      fontSize: 12,
+                                    }}
+                                    placeholder="Header label"
+                                  />
+
+                                  <select
+                                    value={col.align || "left"}
+                                    onChange={(e) => {
+                                      const nextCols = [...selectedCols];
+                                      nextCols[idx] = {
+                                        ...nextCols[idx],
+                                        align: e.target.value,
+                                      };
+                                      onTable({
+                                        repeat: {
+                                          ...repeat,
+                                          columns: nextCols,
+                                        },
+                                      });
+                                    }}
+                                    style={stylesKV.select}
+                                  >
+                                    <option value="left">Left</option>
+                                    <option value="center">Center</option>
+                                    <option value="right">Right</option>
+                                  </select>
+
+                                  <input
+                                    type="number"
+                                    value={Number(col.widthMm ?? 30)}
+                                    onChange={(e) => {
+                                      const nextCols = [...selectedCols];
+                                      nextCols[idx] = {
+                                        ...nextCols[idx],
+                                        widthMm: Number(e.target.value || 0),
+                                      };
+                                      onTable({
+                                        repeat: {
+                                          ...repeat,
+                                          columns: nextCols,
+                                        },
+                                      });
+                                    }}
+                                    style={{
+                                      width: "100%",
+                                      padding: "6px 8px",
+                                      border: "1px solid #e5e7eb",
+                                      borderRadius: 8,
+                                      fontSize: 12,
+                                    }}
+                                    title="Preferred width (mm) for report layout"
+                                  />
+
+                                  <button
+                                    style={styles.miniBtn}
+                                    title="Move up"
+                                    onClick={() => {
+                                      if (idx === 0) return;
+                                      const nextCols = [...selectedCols];
+                                      const tmp = nextCols[idx - 1];
+                                      nextCols[idx - 1] = nextCols[idx];
+                                      nextCols[idx] = tmp;
+                                      onTable({
+                                        repeat: {
+                                          ...repeat,
+                                          columns: nextCols,
+                                        },
+                                      });
+                                    }}
+                                  >
+                                    ↑
+                                  </button>
+                                  <button
+                                    style={styles.miniBtn}
+                                    title="Move down"
+                                    onClick={() => {
+                                      if (idx === selectedCols.length - 1)
+                                        return;
+                                      const nextCols = [...selectedCols];
+                                      const tmp = nextCols[idx + 1];
+                                      nextCols[idx + 1] = nextCols[idx];
+                                      nextCols[idx] = tmp;
+                                      onTable({
+                                        repeat: {
+                                          ...repeat,
+                                          columns: nextCols,
+                                        },
+                                      });
+                                    }}
+                                  >
+                                    ↓
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })()}
 
           <div style={stylesKV.row}>
             <KV label="Rows">
@@ -5221,7 +6348,12 @@ const styles = {
   },
   leftSection: { padding: 12, minHeight: 0, overflow: "auto" },
   sidebarFooter: { padding: 12, borderTop: "1px solid rgba(148,163,184,.18)" },
-  sidebarFooterRow: { display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" },
+  sidebarFooterRow: {
+    display: "flex",
+    gap: 8,
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
 
   toolsRow: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 },
   toolIcon: {

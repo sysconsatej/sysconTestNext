@@ -7749,7 +7749,7 @@ const rptJobs = () => {
             className="uppercase text-center font-bold underline"
             style={{ fontSize: "14px" }}
           >
-            Container Release Order 
+            Container Release Order
           </h1>
         </div>
 
@@ -8127,6 +8127,13 @@ const rptJobs = () => {
               )}
             </td>
           </tr>
+          {clientId === 22 &&
+          jobData?.[0]?.carrierBookingNo?.toString().trim() ? (
+            <tr>
+              <th style={thStyle}>Carrier Booking No.</th>
+              <td style={tdStyle}>{jobData[0].carrierBookingNo}</td>
+            </tr>
+          ) : null}
         </table>
         <table style={{ width: "50%", borderCollapse: "collapse" }}>
           <tr>
@@ -8177,7 +8184,7 @@ const rptJobs = () => {
     );
   };
 
-  const  ContainerReleaseOrderContainerGrid = ({ rows = [] }) => {
+  const ContainerReleaseOrderContainerGrid = ({ rows = [] }) => {
     console.log("rows 3", rows);
 
     const tableStyle = {
@@ -8702,6 +8709,26 @@ const rptJobs = () => {
             }}
           >
             {text}
+          </p>
+          <p
+            className="text-black text-xs font-bold"
+            style={{
+              fontSize: "8px",
+              textAlign: "justify",
+              whiteSpace: "pre-line",
+            }}
+          >
+            For
+          </p>
+          <p
+            className="text-black text-xs font-bold"
+            style={{
+              fontSize: "8px",
+              textAlign: "justify",
+              whiteSpace: "pre-line",
+            }}
+          >
+            {jobData && jobData.length > 0 ? jobData[0].companyName : ""}
           </p>
         </div>
       </>

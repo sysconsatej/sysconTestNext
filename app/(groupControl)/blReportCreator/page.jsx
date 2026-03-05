@@ -167,7 +167,6 @@ export default function StickyHeadTable() {
   const searchParams = useSearchParams();
   const search = JSON.parse(searchParams.get("menuName"))?.id;
   const inputRef = useRef(null);
-  const selectedMenuId = useSelector((state) => state?.counter?.selectedMenuId);
   const { clientId } = getUserDetails();
   const { defaultCompanyId } = getUserDetails();
   const { defaultBranchId } = getUserDetails();
@@ -223,16 +222,7 @@ export default function StickyHeadTable() {
   const [isReportPresent, setisReportPresent] = useState(true);
   //const [defaultCompanyBranch, setDefaultCompanyBranch] = useState([]);
   const [operatorsBg, setOperatorsBg] = useState("blue");
-
-  console.log("=>", search);
-
-  const validateEdit = async (tableName, recordId) => {
-    addEditController(recordId);
-  };
-
-  const validateAdd = () => {
-    router.push("/voucher/bankPayment/search");
-  };
+  const selectedMenuId = useSelector((state) => state?.counter?.selectedMenuId);
 
   const previousMenuIdRef = useRef();
 
@@ -242,6 +232,27 @@ export default function StickyHeadTable() {
     }
     previousMenuIdRef.current = selectedMenuId;
   }, [selectedMenuId]);
+
+  console.log("=>", search);
+
+  const validateEdit = async (tableName, recordId) => {
+    addEditController(recordId);
+  };
+
+  const validateAdd = async (tableName) => {
+    // const requestBody = {
+    //   tableName: tableName,
+    // };
+    // const data = await disableAdd(requestBody);
+    // if (data.success === true) {
+    //   setParaText(data.message);
+    //   setIsError(false);
+    //   setOpenModal((prev) => !prev);
+    // } else {
+    //   addEditController("add");
+    // }
+    router.push("/blCreator");
+  };
 
   const [dynamic, setDynamic] = useState([
     {
@@ -332,6 +343,28 @@ export default function StickyHeadTable() {
   }, [searchParams]);
 
   useEffect(() => {
+    const PaperId = document.getElementById("paper");
+    let timerId = null;
+
+    const updatePosition = () => {
+      if (!timerId) {
+        timerId = setTimeout(() => {
+          if (PaperId) setScrollLeft(PaperId.scrollLeft);
+          timerId = null;
+        }, 50);
+      }
+    };
+
+    if (PaperId) {
+      PaperId.addEventListener("scroll", updatePosition);
+      return () => {
+        PaperId.removeEventListener("scroll", updatePosition);
+        if (timerId) clearTimeout(timerId);
+      };
+    }
+  }, []);
+
+  useEffect(() => {
     async function fetchUserData() {
       const { clientId, companyId, branchId, userId } = getUserDetails();
       try {
@@ -343,20 +376,12 @@ export default function StickyHeadTable() {
         };
         const fetchedUserData = await fetchReportData(menuAccessRequest);
         const menuAccessData = fetchedUserData.data[0];
-        console.log("Menu Access Data:", menuAccessData);
-        // setIsAddVisible(menuAccessData?.isAdd);
-        // setIsEditVisible(menuAccessData?.isEdit);
-        // setIsDeleteVisible(menuAccessData?.isDelete);
-        // setIsViewVisible(menuAccessData?.isView);
-        // setIsCopyVisible(menuAccessData?.isCopy);
-        // setIsPrintVisible(menuAccessData?.isPrint);
         setIsAddVisible(true);
         setIsEditVisible(true);
         setIsDeleteVisible(true);
         setIsViewVisible(true);
         setIsCopyVisible(true);
         setIsPrintVisible(true);
-        // setisAttachmentVisible(menuAccessData?.isPrint);
         setisAttachmentVisible(true);
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -411,12 +436,10 @@ export default function StickyHeadTable() {
   };
 
   function calculatePageNo() {
-    // If there's a search input, check if the user is navigating to other pages post-search
     if (searchInput.length > 0 && !isNewSearch) {
       setIsNewSearch(true);
       return 1; // Reset to page 1 for new searches or if the user is not navigating
     }
-    // Use the user-specified page number when there is no search input affecting the results
     return page == 0 ? 1 : page;
   }
   async function fetchData() {
@@ -424,7 +447,6 @@ export default function StickyHeadTable() {
     try {
       setLoader(true);
       if (!dataFetched) {
-        //const tableHeadingsData = await formControlMenuList(search);
         let tableHeadingsData = tableData;
         if (tableHeadingsData.success === false) {
           setHeaderFields([]);
@@ -453,22 +475,11 @@ export default function StickyHeadTable() {
         setIsRequiredAttachment(
           tableHeadingsData[0].data[0]?.isRequiredAttachment,
         );
-        // let requestData = {
-        //   tableName: tableHeadingsData[0].data[0]?.tableName,
-        //   pageNo: 1,
-        //   limit: rowsPerPage,
-        //   menuID: search,
-        //   label: sortData.label,
-        //   order: sortData.order,
-        //   search: advanceSearch,
-        //   searchQuery: searchInput,
-        // };
         let requestData = {
-          tableName: "tblVoucher",
+          tableName: "tblblPrintTemplate",
           fieldName: searchFieldData,
           clientId: clientId,
-          filterCondition:
-            "voucherTypeId= (select id from tblVoucherType where name='BANK PAYMENT')",
+          filterCondition: "",
           pageNo: 1,
           pageSize: rowsPerPage,
         };
@@ -476,8 +487,8 @@ export default function StickyHeadTable() {
         if (apiResponse.success === true && apiResponse.data?.length > 0) {
           const getVoucherDataCount = {
             columns: "id",
-            tableName: "tblVoucher",
-            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} and voucherTypeId= (select id from tblVoucherType where name='BANK PAYMENT')`,
+            tableName: "tblblPrintTemplate",
+            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId}`,
             clientIdCondition: `status = 1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
           };
           let Count = null;
@@ -555,11 +566,10 @@ export default function StickyHeadTable() {
         // };
         // const apiResponse = await masterTableList(requestData);
         let requestData = {
-          tableName: "tblVoucher",
+          tableName: "tblblPrintTemplate",
           fieldName: searchFieldData,
           clientId: clientId,
-          filterCondition:
-            "voucherTypeId= (select id from tblVoucherType where name='BANK PAYMENT')",
+          filterCondition: "",
           pageNo: 1,
           pageSize: rowsPerPage,
         };
@@ -567,8 +577,8 @@ export default function StickyHeadTable() {
         if (apiResponse.data?.length > 0) {
           const getVoucherDataCount = {
             columns: "id",
-            tableName: "tblVoucher",
-            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} and voucherTypeId= (select id from tblVoucherType where name='BANK PAYMENT')`,
+            tableName: "tblblPrintTemplate",
+            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId}`,
             clientIdCondition: `status = 1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
           };
           let Count = null;
@@ -618,11 +628,10 @@ export default function StickyHeadTable() {
         console.log("keyValue", columnSearchKeyValue);
 
         let requestData = {
-          tableName: "tblVoucher",
+          tableName: "tblblPrintTemplate",
           fieldName: searchFieldData,
           clientId: clientId,
-          filterCondition:
-            "voucherTypeId= (select id from tblVoucherType where name='BANK PAYMENT')",
+          filterCondition: "",
           pageNo: columnSearchKeyName === "" ? selectedPage : 1,
           pageSize: rowsPerPage,
           keyName: columnSearchKeyName,
@@ -632,8 +641,8 @@ export default function StickyHeadTable() {
         if (apiResponse.data?.length > 0) {
           const getVoucherDataCount = {
             columns: "id",
-            tableName: "tblVoucher",
-            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} and voucherTypeId= (select id from tblVoucherType where name='BANK PAYMENT')`,
+            tableName: "tblblPrintTemplate",
+            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} `,
             clientIdCondition: `status = 1 ${
               columnSearchKeyName === ""
                 ? ""
@@ -679,11 +688,10 @@ export default function StickyHeadTable() {
           console.log("keyValue", columnSearchKeyValue);
 
           let requestData = {
-            tableName: "tblVoucher",
+            tableName: "tblblPrintTemplate",
             fieldName: searchFieldData,
             clientId: clientId,
-            filterCondition:
-              "voucherTypeId= (select id from tblVoucherType where name='BANK PAYMENT')",
+            filterCondition: "",
             pageNo: columnSearchKeyName === "" ? selectedPage : 1,
             pageSize: rowsPerPage,
             keyName: columnSearchKeyName,
@@ -692,8 +700,8 @@ export default function StickyHeadTable() {
           const apiResponse = await fetchSearchPageData(requestData);
           const getVoucherDataCount = {
             columns: "id",
-            tableName: "tblVoucher",
-            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} and voucherTypeId= (select id from tblVoucherType where name='BANK PAYMENT')`,
+            tableName: "tblblPrintTemplate",
+            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId})`,
             clientIdCondition: `status = 1 ${
               columnSearchKeyName === ""
                 ? ""
@@ -898,9 +906,9 @@ export default function StickyHeadTable() {
         });
       }
       //router.push(`/formControl/addEdit//${queryString}`);
-      router.push(`/voucher/bankPayment/addEdit?id=${data?.id}`);
+      router.push(`/blCreator?id=${data?.id}`);
     } else if (data === "add") {
-      router.push(`/formControl/search/${addPageQueryString}`);
+      router.push(`/blCreator`);
     } else {
       console.error("Invalid data or index provided for navigation");
       // Handle the error or provide feedback to the user
@@ -1696,7 +1704,7 @@ export default function StickyHeadTable() {
 
   return (
     <div className="relative">
-      <CustomeBreadCrumb name="Bank Payment" />
+      <CustomeBreadCrumb name="BL Report Creator" />
       <div className="flex mb-3 justify-end -mt-[10px] ">
         <div className="flex justify-between h-[27px] border border-gray-100 rounded-[7px] shadow-md">
           <Stack direction="row" className="">
@@ -2498,18 +2506,6 @@ export default function StickyHeadTable() {
                                       }
                                     />
                                   )}
-                                  {isViewVisible && (
-                                    <GridHoverIcon
-                                      defaultIcon={viewIcon} // Your default icon source
-                                      hoverIcon={viewIconHover} // Your hovered icon source
-                                      altText={"view"}
-                                      title={"view"}
-                                      onClick={() =>
-                                        addEditController(row, false, true)
-                                      }
-                                    />
-                                  )}
-
                                   <GridHoverIcon
                                     defaultIcon={printer} // Your default icon source
                                     hoverIcon={PrintHover} // Your hovered icon source
@@ -2529,21 +2525,6 @@ export default function StickyHeadTable() {
                                       onClick={() => deleteController(row)}
                                     />
                                   )}
-
-                                  <GridHoverIcon
-                                    defaultIcon={copyDoc} // Your default icon source
-                                    hoverIcon={CopyHover} // Your hovered icon source
-                                    altText="Attachment Icon"
-                                    title={"Copy Record"}
-                                    onClick={() => addEditController(row, true)}
-                                  />
-                                  <GridHoverIcon
-                                    defaultIcon={attach} // Your default icon source
-                                    hoverIcon={attachmentIcon} // Your hovered icon source
-                                    altText="Attachment"
-                                    title={"Attachment"}
-                                    // style={{ visibility:'hidden'}}
-                                  />
                                 </div>
                               </div>
                             </TableCell>
@@ -2568,17 +2549,7 @@ export default function StickyHeadTable() {
                                       }
                                     />
                                   )}
-                                  {isViewVisible && (
-                                    <GridHoverIcon
-                                      defaultIcon={viewIcon} // Your default icon source
-                                      hoverIcon={viewIconHover} // Your hovered icon source
-                                      altText={"view"}
-                                      title={"view"}
-                                      onClick={() =>
-                                        addEditController(row, false, true)
-                                      }
-                                    />
-                                  )}
+
                                   {isPrintVisible && (
                                     <GridHoverIcon
                                       defaultIcon={printer} // Your default icon source
@@ -2591,6 +2562,7 @@ export default function StickyHeadTable() {
                                       }}
                                     />
                                   )}
+
                                   {isDeleteVisible && (
                                     <GridHoverIcon
                                       defaultIcon={DeleteIcon2}
@@ -2611,26 +2583,6 @@ export default function StickyHeadTable() {
                                       }
                                     />
                                   )}
-                                  {isAttachmentVisible && (
-                                    <GridHoverIcon
-                                      defaultIcon={attach} // Your default icon source
-                                      hoverIcon={attachmentIcon} // Your hovered icon source
-                                      altText="Attachment"
-                                      title={"Attachment"}
-                                      // style={{ visibility:'hidden'}}
-                                    />
-                                  )}
-
-                                  <GridHoverIcon
-                                    defaultIcon={printer} // Your default icon source
-                                    hoverIcon={PrintHover} // Your hovered icon source
-                                    altText="Template"
-                                    title={"Template"}
-                                    onClick={() => {
-                                      setNewModalVisible(true); // Then set modal visibility
-                                      handlePrint(row); // Then set modal visibility
-                                    }}
-                                  />
                                 </div>
                               </div>
                             </TableCell>
@@ -2853,23 +2805,16 @@ const tableData = [
     message: "Data fetched successfully....!",
     data: [
       {
-        tableName: "tblVoucher",
+        tableName: "tblblPrintTemplate",
         gridConfig:
-          '[{"fieldname":"voucherNo","controlname":"text","yourlabel":"Voucher No"},{"fieldname":"voucherDate","controlname":"date","yourlabel":"Voucher Date"},{"fieldname":"paymentByParty","referenceTable":"tblGeneralLedger","referenceColumn":"name","controlname":"dropdown","yourlabel":"Party Name"}]',
+          '[{"fieldname":"name","controlname":"text","yourlabel":"Template Name"},{"fieldname":"draftFinal","controlname":"text","yourlabel":"Draft / Final"}]',
       },
     ],
   },
 ];
 
 const searchFieldData = [
-  { fieldname: "voucherNo", controlname: "text", yourlabel: "Voucher No" },
-  { fieldname: "voucherDate", controlname: "date", yourlabel: "Voucher Date" },
-  {
-    fieldname: "paymentByParty",
-    referenceTable: "tblGeneralLedger",
-    referenceColumn: "name",
-    controlname: "dropdown",
-    yourlabel: "Party Name",
-  },
+  { fieldname: "name", controlname: "text", yourlabel: "Name" },
+  { fieldname: "draftFinal", controlname: "text", yourlabel: "Draft / Final" },
   { fieldname: "id", controlname: "text", yourlabel: "id" },
 ];

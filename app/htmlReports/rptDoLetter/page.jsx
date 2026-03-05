@@ -67,7 +67,7 @@ export default function rptDoLetter() {
       {
         clientId === 15 && localStorage.setItem("token", JSON.stringify(token));
       }
-    } catch { }
+    } catch {}
   }, []);
 
   // Hide print if hb=cfm (kept your original rule)
@@ -135,7 +135,7 @@ export default function rptDoLetter() {
           try {
             const tk = localStorage.getItem("token");
             if (tk) headers["x-access-token"] = JSON.parse(tk);
-          } catch { }
+          } catch {}
         }
 
         const body = { id: resolvedRecordId }; // minimal for public route
@@ -176,7 +176,7 @@ export default function rptDoLetter() {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const u = new URL(
       "/htmlReports/rptDoLetter",
-      origin || "http://localhost:3001"
+      origin || "http://localhost:3001",
     );
     if (encRid) u.searchParams.set("rid", encRid); // 🔐 encrypted id
     if (reportId)
@@ -451,20 +451,29 @@ export default function rptDoLetter() {
   // Calculate totals
   const totalGrossWt = containers.reduce(
     (sum, item) => sum + (parseFloat(item.grossWt) || 0),
-    0
+    0,
   );
   const totalPackages = containers.reduce(
     (sum, item) => sum + (parseFloat(item.noOfPackages) || 0),
-    0
+    0,
   );
   const weightUnit = containers[0]?.weightUnitCode || "";
   const packageUnit = containers[0]?.packageCode || "";
 
   const ImgSign = () => {
+    const storedUserData = localStorage.getItem("userData");
+    let signatureLogoPath = null;
+    if (storedUserData) {
+      const decryptedData = decrypt(storedUserData);
+      const userData = JSON.parse(decryptedData);
+      signatureLogoPath = userData[0]?.signatureLogoPath;
+    }
 
     return (
       <img
-        src={baseUrlNext + "/uploads/sign1.jpg"}
+        src={
+          signatureLogoPath ? baseUrlNext + signatureLogoPath : baseUrlNext + ""
+        }
         width="20%"
         height="15%"
       ></img>
@@ -4325,12 +4334,12 @@ export default function rptDoLetter() {
                           item?.destinationFreeDays
                         )} */}
                         {item?.doValidityDate != null &&
-                          String(item.doValidityDate).trim() !== ""
+                        String(item.doValidityDate).trim() !== ""
                           ? formatDateToYMDMonths(item?.doValidityDate)
                           : getValidTillDateNew(
-                            item?.dischargeDate,
-                            item?.destinationFreeDays
-                          )}
+                              item?.dischargeDate,
+                              item?.destinationFreeDays,
+                            )}
                       </p>
                     </th>
                   </tr>
@@ -4456,7 +4465,7 @@ export default function rptDoLetter() {
                 <div style={{ width: "15%" }} className="border-r  text-center">
                   {getValidTillDateNew(
                     data[0]?.arrivalDate,
-                    item?.destinationFreeDays
+                    item?.destinationFreeDays,
                   )}
                 </div>
                 <div style={{ width: "10%" }} className="border-r  text-center">
@@ -4465,7 +4474,10 @@ export default function rptDoLetter() {
                 <div style={{ width: "5%" }} className="border-r  text-center">
                   {item.size || ""}
                 </div>
-                <div style={{ width: "35%" }}>{formatDateToYMDMonths(data[0]?.doValidDate)}{" "}{item.remarks || ""}</div>
+                <div style={{ width: "35%" }}>
+                  {formatDateToYMDMonths(data[0]?.doValidDate)}{" "}
+                  {item.remarks || ""}
+                </div>
               </div>
             ))}
         </div>
@@ -4675,8 +4687,9 @@ export default function rptDoLetter() {
 
     const vesselVoy =
       row.vesselVoy ||
-      `${row.vesselName || ""}${row.voyageNo ? ` / ${row.voyageNo}` : ""
-        }`.trim();
+      `${row.vesselName || ""}${
+        row.voyageNo ? ` / ${row.voyageNo}` : ""
+      }`.trim();
 
     // shared classes
     const tblBase = "w-full table-auto text-[11px] text-black border-collapse";
@@ -4888,8 +4901,9 @@ export default function rptDoLetter() {
                           key={reportId}
                           ref={(el) => enquiryModuleRefs.current.push(el)}
                           id="Delivery Order"
-                          className={`relative bg-white shadow-lg black-text ${i < reportIds.length - 1 ? "report-spacing" : ""
-                            }`}
+                          className={`relative bg-white shadow-lg black-text ${
+                            i < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                           style={{
                             width: "210mm",
                             minHeight: "297mm",
@@ -4932,7 +4946,7 @@ export default function rptDoLetter() {
 
                         <div className="bg-gray-300 h-2 no-print" />
                       </>
-                    )
+                    ),
                   )}
                 </>
               );
@@ -4949,8 +4963,9 @@ export default function rptDoLetter() {
                           key={reportId}
                           ref={(el) => enquiryModuleRefs.current.push(el)}
                           id="Survey Letter"
-                          className={`relative bg-white shadow-lg black-text ${i < reportIds.length - 1 ? "report-spacing" : ""
-                            }`}
+                          className={`relative bg-white shadow-lg black-text ${
+                            i < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                           style={{
                             width: "210mm",
                             minHeight: "297mm",
@@ -4992,13 +5007,13 @@ export default function rptDoLetter() {
                         </div>
                         <div className="bg-gray-300 h-2 no-print" />
                       </>
-                    )
+                    ),
                   )}
                 </>
               );
             case "EMPTY OFF LOADING LETTER":
               const EmptyOffLoadingLetterData = Array.isArray(
-                EmptyOffLoadingLetterSizeChunks
+                EmptyOffLoadingLetterSizeChunks,
               )
                 ? EmptyOffLoadingLetterSizeChunks.filter(Boolean)
                 : [];
@@ -5015,8 +5030,9 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="EMPTY OFF LOADING LETTER"
-                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5069,8 +5085,9 @@ export default function rptDoLetter() {
                     key={reportId}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id="Destuffing letter"
-                    className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      }`}
+                    className={`relative bg-white shadow-lg black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       minHeight: "297mm",
@@ -5121,8 +5138,9 @@ export default function rptDoLetter() {
                           key={reportId}
                           ref={(el) => enquiryModuleRefs.current.push(el)}
                           id="CMC Letter"
-                          className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                            }`}
+                          className={`relative bg-white shadow-lg black-text ${
+                            index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                           style={{
                             width: "210mm",
                             minHeight: "297mm",
@@ -5165,7 +5183,7 @@ export default function rptDoLetter() {
                         </div>
                         <div className="bg-gray-300 h-2 no-print" />
                       </>
-                    )
+                    ),
                   )}
                 </>
               );
@@ -5176,8 +5194,9 @@ export default function rptDoLetter() {
                     key={reportId}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id="Customs Examination Order"
-                    className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      }`}
+                    className={`relative bg-white shadow-lg black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       minHeight: "297mm",
@@ -5230,8 +5249,9 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => (enquiryModuleRefs.current[index] = el)}
                         id="Bond Letter"
-                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5279,7 +5299,7 @@ export default function rptDoLetter() {
               );
             case "SEAL CUTTING LETTER":
               const SealCuttingLetterData = Array.isArray(
-                SealCuttingLetterSizeChunks
+                SealCuttingLetterSizeChunks,
               )
                 ? SealCuttingLetterSizeChunks.filter(Boolean)
                 : [];
@@ -5294,8 +5314,9 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="SEAL CUTTING LETTER"
-                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5347,8 +5368,9 @@ export default function rptDoLetter() {
                     key={reportId}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id="NOC For Console Party"
-                    className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      }`}
+                    className={`relative bg-white shadow-lg black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       minHeight: "297mm",
@@ -5391,7 +5413,7 @@ export default function rptDoLetter() {
               return (
                 <>
                   {(Array.isArray(deliveryOrderKenyaChunks) &&
-                    deliveryOrderKenyaChunks.length
+                  deliveryOrderKenyaChunks.length
                     ? deliveryOrderKenyaChunks
                     : [undefined]
                   ).map((container, index) => (
@@ -5400,8 +5422,9 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="Delivery Order"
-                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                         style={{
                           width: "210mm",
                           minHeight: "295mm",
@@ -5484,7 +5507,7 @@ export default function rptDoLetter() {
               );
             case "EMPTY CONTAINER OFF LOADING LETTER":
               const EmptyContainerOffLoadingLetterData = Array.isArray(
-                EmptyContainerOffLoadingLetterChunks
+                EmptyContainerOffLoadingLetterChunks,
               )
                 ? EmptyContainerOffLoadingLetterChunks.filter(Boolean)
                 : [];
@@ -5499,8 +5522,9 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="EMPTY CONTAINER OFF LOADING LETTER"
-                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5565,7 +5589,7 @@ export default function rptDoLetter() {
               );
             case "Empty Container Return Notification":
               const emptyContainerReturnNotificationData = Array.isArray(
-                EmptyContainerReturnNotificationChunks
+                EmptyContainerReturnNotificationChunks,
               )
                 ? EmptyContainerReturnNotificationChunks.filter(Boolean)
                 : [];
@@ -5580,8 +5604,9 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="Empty Container Return Notification"
-                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5700,8 +5725,9 @@ export default function rptDoLetter() {
                       key={reportId}
                       ref={(el) => enquiryModuleRefs.current.push(el)}
                       id="SAUDI DELIVERY ORDER"
-                      className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                      className={`relative bg-white shadow-lg black-text ${
+                        index < reportIds.length - 1 ? "report-spacing" : ""
+                      }`}
                       style={{
                         width: "210mm",
                         minHeight: "297mm",

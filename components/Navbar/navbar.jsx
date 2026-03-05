@@ -248,7 +248,12 @@ export default function NavbarPage() {
       fetchCompanyData(1, "", filterObject?.companyId),
       fetchBranchData(1, "", filterObject?.branchId, initialCompanyId),
       // ✅ company-aware FY
-      fetchFinancialYearData(1, "", filterObject?.financialYear, initialCompanyId),
+      fetchFinancialYearData(
+        1,
+        "",
+        filterObject?.financialYear,
+        initialCompanyId,
+      ),
     ])
       .then(([cd, bd, fd]) => {
         setCompanyData(cd || []);
@@ -442,7 +447,32 @@ export default function NavbarPage() {
     }
   };
 
-  const handleSelect = async (selectedValue, setState, selectedBy, updateColumn) => {
+  const updateLogo = async (companyId) => {
+    try {
+      const requestData = {
+        columns: "cpd.logo",
+        tableName: `tblCompanyParameter cp 
+          left join tblCompanyParameterDetails cpd on cpd.companyParameterId =  cp.id`,
+        whereCondition: `cp.companyId=${companyId}`,
+        clientIdCondition: `cp.status=1 and cpd.status=1 FOR JSON PATH , INCLUDE_NULL_VALUES `,
+      };
+      const { data } = await fetchReportData(requestData);
+      setUserDataSafe({
+        companyLogo: data?.[0]?.logo,
+      });
+    } catch (e) {
+      console.error("Logo fetch failed:", e);
+      // still set branch id, don't block UI
+      //setUserDataSafe({ defaultBranchId: branchId });
+    }
+  };
+
+  const handleSelect = async (
+    selectedValue,
+    setState,
+    selectedBy,
+    updateColumn,
+  ) => {
     const ud = getUserDataSafe();
     if (!ud) return;
 
@@ -451,6 +481,10 @@ export default function NavbarPage() {
       // handled below (includes header/footer)
       if (selectedValue?.value != null) {
         await updateBranchHeaderFooter(selectedValue.value);
+      }
+    } else if (updateColumn === "defaultCompanyId") {
+      if (selectedValue?.value != null) {
+        await updateLogo(selectedValue.value);
       }
     } else if (selectedValue?.value != null) {
       setUserDataSafe({ [updateColumn]: selectedValue.value });
@@ -502,13 +536,28 @@ export default function NavbarPage() {
     const dropValue = value ? value[0] : [];
     switch (selectedBy) {
       case "companyId":
-        handleSelect(dropValue, setSelectedCompany, selectedBy, "defaultCompanyId");
+        handleSelect(
+          dropValue,
+          setSelectedCompany,
+          selectedBy,
+          "defaultCompanyId",
+        );
         break;
       case "financialYear":
-        handleSelect(dropValue, setSelectedFinancialYear, selectedBy, "defaultFinYearId");
+        handleSelect(
+          dropValue,
+          setSelectedFinancialYear,
+          selectedBy,
+          "defaultFinYearId",
+        );
         break;
       case "branchId":
-        handleSelect(dropValue, setSelectedBranch, selectedBy, "defaultBranchId");
+        handleSelect(
+          dropValue,
+          setSelectedBranch,
+          selectedBy,
+          "defaultBranchId",
+        );
         break;
       default:
         break;
@@ -650,7 +699,9 @@ export default function NavbarPage() {
   };
 
   return (
-    <Navbar className={`${navbarStyles} shadow-none rounded-sm bg-[var(--navbarBg)]`}>
+    <Navbar
+      className={`${navbarStyles} shadow-none rounded-sm bg-[var(--navbarBg)]`}
+    >
       <div className={CompanyLogostyles1} style={{ width: "100%" }}>
         <div className="flex items-center justify-start">
           <Image
@@ -704,7 +755,10 @@ export default function NavbarPage() {
               <>
                 {/* Company */}
                 <div className="flex items-center">
-                  <div ref={companyDropdownRef} className="relative inline-block text-left">
+                  <div
+                    ref={companyDropdownRef}
+                    className="relative inline-block text-left"
+                  >
                     <div className="inline-flex items-center relative">
                       <HoverIcon
                         defaultIcon={officeIcon}
@@ -724,7 +778,10 @@ export default function NavbarPage() {
                         backspaceRemovesValue={false}
                         onChange={(newValue) => {
                           callInputChangeFuncRef.current = false;
-                          handleChangeValue(newValue ? [newValue] : null, "companyId");
+                          handleChangeValue(
+                            newValue ? [newValue] : null,
+                            "companyId",
+                          );
                           callInputChangeFuncRef.current = true;
                         }}
                         options={companyData}
@@ -760,7 +817,10 @@ export default function NavbarPage() {
 
                 {/* Branch */}
                 <div className="flex items-center">
-                  <div ref={branchDropdownRef} className="relative inline-block text-left">
+                  <div
+                    ref={branchDropdownRef}
+                    className="relative inline-block text-left"
+                  >
                     <div className="inline-flex items-center relative">
                       <HoverIcon
                         defaultIcon={officeIcon}
@@ -780,7 +840,10 @@ export default function NavbarPage() {
                         backspaceRemovesValue={false}
                         onChange={(newValue) => {
                           callInputChangeFuncRef.current = false;
-                          handleChangeValue(newValue ? [newValue] : null, "branchId");
+                          handleChangeValue(
+                            newValue ? [newValue] : null,
+                            "branchId",
+                          );
                           callInputChangeFuncRef.current = true;
                         }}
                         options={branchData}
@@ -809,7 +872,10 @@ export default function NavbarPage() {
                             callInputChangeFuncRef.current &&
                             e.action === "input-change"
                           ) {
-                            debouncedBranchFetch(value, selectedCompany || null);
+                            debouncedBranchFetch(
+                              value,
+                              selectedCompany || null,
+                            );
                           }
                         }}
                       />
@@ -834,7 +900,8 @@ export default function NavbarPage() {
                         backspaceRemovesValue={false}
                         value={
                           financialYearData?.find(
-                            (item) => item.value === parseInt(selectedFinancialYear),
+                            (item) =>
+                              item.value === parseInt(selectedFinancialYear),
                           ) || null
                         }
                         onChange={(newValue) => {
@@ -862,7 +929,12 @@ export default function NavbarPage() {
                         }
                         onMenuOpen={() => {
                           setPageNo(1);
-                          fetchFinancialYearData(1, "", null, selectedCompany || null);
+                          fetchFinancialYearData(
+                            1,
+                            "",
+                            null,
+                            selectedCompany || null,
+                          );
                         }}
                         onInputChange={(value, e) => {
                           if (
@@ -998,7 +1070,9 @@ export default function NavbarPage() {
                 <h3 className={`${styles.modalTextColor} text-[12px]`}>
                   www.sysconinfotech.com says
                 </h3>
-                <p className={`${styles.modalTextColor} text-black text-[12px] mt-4`}>
+                <p
+                  className={`${styles.modalTextColor} text-black text-[12px] mt-4`}
+                >
                   Do you want to close this form, all changes will be lost?
                 </p>
               </div>
@@ -1079,7 +1153,10 @@ export default function NavbarPage() {
                         isClearable={false}
                         backspaceRemovesValue={false}
                         onChange={(newValue) => {
-                          handleChangeValue(newValue ? [newValue] : null, "companyId");
+                          handleChangeValue(
+                            newValue ? [newValue] : null,
+                            "companyId",
+                          );
                         }}
                         options={companyData}
                         menuPortalTarget={
@@ -1116,7 +1193,10 @@ export default function NavbarPage() {
                         isClearable={false}
                         backspaceRemovesValue={false}
                         onChange={(newValue) => {
-                          handleChangeValue(newValue ? [newValue] : null, "branchId");
+                          handleChangeValue(
+                            newValue ? [newValue] : null,
+                            "branchId",
+                          );
                         }}
                         options={branchData}
                         menuPortalTarget={
@@ -1127,7 +1207,10 @@ export default function NavbarPage() {
                         }}
                         onInputChange={(value, e) => {
                           if (e.action === "input-change") {
-                            debouncedBranchFetch(value, selectedCompany || null);
+                            debouncedBranchFetch(
+                              value,
+                              selectedCompany || null,
+                            );
                           }
                         }}
                       />
@@ -1155,7 +1238,8 @@ export default function NavbarPage() {
                         styles={modalSelectStyles}
                         value={
                           financialYearData?.find(
-                            (item) => item.value === parseInt(selectedFinancialYear),
+                            (item) =>
+                              item.value === parseInt(selectedFinancialYear),
                           ) || null
                         }
                         isClearable={false}

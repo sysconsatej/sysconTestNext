@@ -194,7 +194,6 @@ const TrialBalance = () => {
     didRun.current = true;
 
     let active = true; // avoid setState after unmount
-
     const run = async () => {
       // 1) Set today's midnight as "YYYY-MM-DD 00:00:00"
       const now = new Date();
@@ -216,10 +215,18 @@ const TrialBalance = () => {
       try {
         const reportData = await fetchReportData(requestBody);
         if (!active) return;
-        if (reportData?.success === true && Array.isArray(reportData.data)) {
+        if (reportData?.success === true && Array.isArray(reportData?.data)) {
           const startDate = reportData.data[0]?.startDate; // e.g. "2025-10-16 00:00:00"
           if (startDate) {
             setNewState((prev) => ({ ...prev, fromDate: startDate }));
+          }
+          if (active) {
+            let fetchRequestBody = {
+              ...newState,
+              fromDate: startDate,
+              toDate: toDateStr,
+            };
+            await fetchTrialBalanceDataOnPageLoad(fetchRequestBody);
           }
         }
       } catch (e) {
@@ -234,7 +241,7 @@ const TrialBalance = () => {
     };
   }, []); // keep empty to run once on mount
 
-  useEffect(() => {
+  useEffect(async () => {
     const rt = searchParamsReportType ?? "";
     const bt = searchParamsBalanceType ?? "";
 
@@ -251,7 +258,7 @@ const TrialBalance = () => {
           ? prev
           : next;
       });
-      fetchTrialBalanceData();
+      await fetchTrialBalanceData();
     }
   }, [searchParamsReportType, searchParamsBalanceType]);
 
@@ -376,8 +383,8 @@ const TrialBalance = () => {
         newState?.suppressZero == true
           ? 1
           : newState?.suppressZero == false
-          ? 0
-          : null,
+            ? 0
+            : null,
     };
 
     const data = await trialBalanceReportData(requestBody);
@@ -399,6 +406,51 @@ const TrialBalance = () => {
       return;
     }
   };
+
+  const fetchTrialBalanceDataOnPageLoad = async (newState) => {
+    const { clientId } = getUserDetails();
+    const { defaultFinYearId } = getUserDetails();
+    const { defaultBranchId } = getUserDetails();
+    setLoader(true);
+    if (!newState?.fromDate || !newState?.toDate) {
+      toast.error("Please select From Date and To Date.");
+      return;
+    }
+    const requestBody = {
+      fromDate: formatDate(newState?.fromDate),
+      toDate: formatDate(newState?.toDate),
+      branchId: toIntOrNull(defaultBranchId),
+      clientId: toIntOrNull(clientId),
+      finYearId: toIntOrNull(defaultFinYearId),
+      tbGroupId: toIntOrNull(searchParamsTbGroupId),
+      suppressZero:
+        newState?.suppressZero == true
+          ? 1
+          : newState?.suppressZero == false
+            ? 0
+            : null,
+    };
+
+    const data = await trialBalanceReportData(requestBody);
+    if (data?.success == true && data?.data.length > 0) {
+      toast.success(data?.message);
+      setBalanceSheetData(data?.data?.length > 0 ? data?.data : null);
+      if (newState?.reportType && newState?.reportType !== selectedRadio) {
+        setSelectedRadio(newState?.reportType);
+      }
+      if (
+        newState?.balanceType &&
+        newState?.balanceType !== selectedRadioType
+      ) {
+        setSelectedRadioType(newState?.balanceType);
+      }
+    } else {
+      toast.error(data?.message || data?.error);
+      setBalanceSheetData([]);
+      return;
+    }
+  };
+
   return (
     <>
       <React.Fragment>

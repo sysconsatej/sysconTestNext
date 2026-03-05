@@ -294,7 +294,7 @@ Syscon Infotech Pvt Ltd Support Team</pre>`;
                   rounded-lg shadow
                   bg-gray-100 bg-opacity-60 backdrop-blur-[14px]
                   relative
-                  xl:absolute xl:top-16 xl:right-12
+                  xl:absolute xl:top-14 xl:right-12
                   xl:w-1/4 xl:max-w-none
                 "
               >
@@ -464,9 +464,9 @@ Syscon Infotech Pvt Ltd Support Team</pre>`;
           </div>
 
           {/* ✅ News slider ONLY on xl+ (removed for tablets as requested) */}
-          <div className="hidden xl:block absolute left-0 right-0 z-20 bottom-[72px]">
+          <div className="hidden xl:block absolute left-0 right-0 z-20 bottom-[60px]">
             <div className="mx-auto max-w-6xl px-6">
-              <div className="rounded-3xl bg-black/18 backdrop-blur-md p-3 border border-white/20 shadow-[0_14px_60px_rgba(0,0,0,0.35)]">
+              <div className="rounded-3xl bg-black/18 backdrop-blur-md p-2 border border-white/20 shadow-[0_14px_60px_rgba(0,0,0,0.35)]">
                 <NewsSlider />
               </div>
             </div>

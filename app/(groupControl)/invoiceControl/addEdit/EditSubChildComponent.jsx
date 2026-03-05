@@ -246,59 +246,59 @@ export default function EditSubChildComponent(props) {
     }
 
     // 2) ✅ IMPORTANT: update newState immutably so useEffect triggers
-    setNewState((prev) => {
-      // ---------- NESTED ledgers case ----------
-      if (Array.isArray(prev?.tblVoucherLedger) && prev.tblVoucherLedger.length) {
-        const nextLedgers = prev.tblVoucherLedger.map((ledger, li) => {
-          if (li !== ledgerIndex) return ledger;
+    // setNewState((prev) => {
+    //   // ---------- NESTED ledgers case ----------
+    //   if (Array.isArray(prev?.tblVoucherLedger) && prev.tblVoucherLedger.length) {
+    //     const nextLedgers = prev.tblVoucherLedger.map((ledger, li) => {
+    //       if (li !== ledgerIndex) return ledger;
 
-          const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
-            ? ledger.tblVoucherLedgerDetails
-            : [];
+    //       const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+    //         ? ledger.tblVoucherLedgerDetails
+    //         : [];
 
-          const nextDetails = details.map((d) => {
-            const sameRow =
-              (row?._id != null && d?._id === row._id) ||
-              (row?.indexValue != null && d?.indexValue === row.indexValue) ||
-              (row?.voucherOutstandingId != null &&
-                d?.voucherOutstandingId === row.voucherOutstandingId);
+    //       const nextDetails = details.map((d) => {
+    //         const sameRow =
+    //           (row?._id != null && d?._id === row._id) ||
+    //           (row?.indexValue != null && d?.indexValue === row.indexValue) ||
+    //           (row?.voucherOutstandingId != null &&
+    //             d?.voucherOutstandingId === row.voucherOutstandingId);
 
-            if (!sameRow) return d;
+    //         if (!sameRow) return d;
 
-            return {
-              ...d,
-              isChecked: checked,
-            };
-          });
+    //         return {
+    //           ...d,
+    //           isChecked: checked,
+    //         };
+    //       });
 
-          return { ...ledger, tblVoucherLedgerDetails: nextDetails };
-        });
+    //       return { ...ledger, tblVoucherLedgerDetails: nextDetails };
+    //     });
 
-        return { ...prev, tblVoucherLedger: nextLedgers };
-      }
+    //     return { ...prev, tblVoucherLedger: nextLedgers };
+    //   }
 
-      // ---------- FLAT details case ----------
-      const details = Array.isArray(prev?.tblVoucherLedgerDetails)
-        ? prev.tblVoucherLedgerDetails
-        : [];
+    //   // ---------- FLAT details case ----------
+    //   const details = Array.isArray(prev?.tblVoucherLedgerDetails)
+    //     ? prev.tblVoucherLedgerDetails
+    //     : [];
 
-      const nextDetails = details.map((d) => {
-        const sameRow =
-          (row?._id != null && d?._id === row._id) ||
-          (row?.indexValue != null && d?.indexValue === row.indexValue) ||
-          (row?.voucherOutstandingId != null &&
-            d?.voucherOutstandingId === row.voucherOutstandingId);
+    //   const nextDetails = details.map((d) => {
+    //     const sameRow =
+    //       (row?._id != null && d?._id === row._id) ||
+    //       (row?.indexValue != null && d?.indexValue === row.indexValue) ||
+    //       (row?.voucherOutstandingId != null &&
+    //         d?.voucherOutstandingId === row.voucherOutstandingId);
 
-        if (!sameRow) return d;
+    //     if (!sameRow) return d;
 
-        return {
-          ...d,
-          isChecked: checked,
-        };
-      });
+    //     return {
+    //       ...d,
+    //       isChecked: checked,
+    //     };
+    //   });
 
-      return { ...prev, tblVoucherLedgerDetails: nextDetails };
-    });
+    //   return { ...prev, tblVoucherLedgerDetails: nextDetails };
+    // });
   };
 
 //   const syncLedgerTotalsFromDetails = () => {
@@ -500,9 +500,10 @@ const syncLedgerTotalsFromDetails = () => {
                             tabIndex={-1}
                             disableRipple
                             inputProps={{ "aria-labelledby": field.fieldname }}
-                            onChange={(event) =>
+                            onChange={(event) =>{
+                             // alert('workimng'),
                               handleChange(event, subChildObject, index)
-                            }
+                            }}
                           />
                         </div>
 

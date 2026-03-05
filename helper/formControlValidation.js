@@ -28,7 +28,10 @@ import {
   fetchContainerNoData,
   getVoucher,
   getVoucherThirdLevelData,
-  getTariffChargeDetails
+  getTariffChargeDetails,
+  checkDischargeDoneForBLData,
+  checkJobCreatedAgainstBLData,
+  getBillingPartyOnBlData
 } from "@/services/auth/FormControl.services";
 import { getUserDetails } from "@/helper/userDetails";
 import moment from "moment";
@@ -135,6 +138,23 @@ const demoFunctionOnChange = (obj) => {
   };
   return endResult;
 };
+
+const demo = (obj = {}) => {
+  const { values = {}, fieldName = "", newState = {} } = obj;
+  if (typeof window !== "undefined") {
+    window.alert("demo function called");
+  }
+  return {
+    isCheck: false,
+    type: "success",
+    message: "demo function called",
+    values,
+    alertShow: false,
+    fieldName,
+    newState,
+  };
+};
+
 const demoFunctionOnBlur = (obj) => {
   const { args, values, fieldName, newState } = obj;
   // console.log("values", values, "args", typeof args)
@@ -607,12 +627,13 @@ const validateSameValues = (obj) => {
   const originField = formControlData?.fields?.find(
     (f) => f.fieldname === originKey
   );
+  let field = null;
   const originlabel = originField ? originField.yourlabel : field;
 
   const destinationField = formControlData?.fields?.find(
     (f) => f.fieldname === destinationKey
   );
-  let field = null;
+
   const destinationlabel = destinationField
     ? destinationField?.yourlabel
     : field;
@@ -2286,14 +2307,12 @@ const getJobCharges = async (obj) => {
 
     const updatedCharges = Array.isArray(Chargers) ? Chargers : [];
 
-    // ✅ Only update tblInvoiceCharge; do NOT spread all `values` (which may have stale billingPartyId)
     setStateVariable((prev) => ({
       ...prev,
       tblInvoiceCharge: updatedCharges,
     }));
   }
 };
-
 const validateContainerNo = (obj) => {
   const {
     args,
@@ -5687,7 +5706,7 @@ const setGLSacDetails = async (obj) => {
       ...prev,
       chargeGlId: glId,
       sacId: sacId,
-      sacIddropDown: sacId ? [{ value: sacId, label: sacName }] : null,
+      sacIddropdown: sacId ? [{ value: sacId, label: sacName }] : null,
       chargeGlIddropdown: glId ? [{ value: glId, label: glName }] : null,
     }));
 
@@ -9188,32 +9207,98 @@ const setBranchForContainerMovement = async (obj) => {
     };
   }
 };
+// const setBankByDefault = async (obj) => {
+//   const {
+//     args,
+//     values,
+//     fieldName,
+//     newState,
+//     formControlData,
+//     setFormControlData,
+//     setStateVariable,
+//   } = obj;
+
+//   try {
+//     const argNames = args.split(",").map((arg) => arg.trim());
+//     const currency = newState[argNames[0]];
+//     const { companyId, branchId } = getUserDetails();
+
+//     const request = {
+//       columns: "id,bankName,accountNo",
+//       tableName: "tblCompanyBranchBank",
+//       whereCondition: `companyId = ${companyId} AND companyBranchId = ${branchId} and currencyId = ${currency} and defaultBank='Y' `,
+//       clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+//     };
+
+//     const response = await fetchReportData(request);
+
+//     if (!response || !response.data || response.data.length === 0) {
+//       return {
+//         type: "warning",
+//         result: false,
+//         message: "No default Bank found for the selected Currency.",
+//       };
+//     }
+
+//     const bankId = response.data[0]?.id || "";
+
+//     // update state
+//     setStateVariable((prev) => ({
+//       ...prev,
+//       bankId: bankId,
+//     }));
+
+//     return {
+//       type: "success",
+//       result: true,
+//       newState: { ...newState, bankId: bankId },
+//       values: { ...values, bankId: bankId },
+//       message: "Data found!",
+//     };
+//   } catch (error) {
+//     console.error("Error fetching default bank:", error);
+//     return {
+//       type: "error",
+//       result: false,
+//       message: "Error fetching default bank. Please try again.",
+//     };
+//   }
+// };
+
 const setBankByDefault = async (obj) => {
-  const {
-    args,
-    values,
-    fieldName,
-    newState,
-    formControlData,
-    setFormControlData,
-    setStateVariable,
-  } = obj;
+  const { args, values, newState, setStateVariable } = obj;
 
   try {
-    const argNames = args.split(",").map((arg) => arg.trim());
-    const currency = newState[argNames[0]];
+    const argNames = (args || "").split(",").map((a) => a.trim()).filter(Boolean);
+    const currencyField = argNames[0] || "currencyId";
+
+    // ✅ read latest currency from values first (because previous function returns updated values)
+    const currency =
+      values?.[currencyField] ??
+      newState?.[currencyField] ??
+      values?.currencyId ??
+      newState?.currencyId;
+
+    if (currency == null || currency === "") {
+      return {
+        type: "warning",
+        result: false,
+        message: "Currency is not set yet, so default bank cannot be fetched.",
+      };
+    }
+
     const { companyId, branchId } = getUserDetails();
 
     const request = {
       columns: "id,bankName,accountNo",
       tableName: "tblCompanyBranchBank",
-      whereCondition: `companyId = ${companyId} AND companyBranchId = ${branchId} and currencyId = ${currency} and defaultBank='Y' `,
+      whereCondition: `companyId=${companyId} AND companyBranchId=${branchId} AND currencyId=${currency} AND defaultBank='Y'`,
       clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
     };
 
     const response = await fetchReportData(request);
 
-    if (!response || !response.data || response.data.length === 0) {
+    if (!response?.data?.length) {
       return {
         type: "warning",
         result: false,
@@ -9221,19 +9306,18 @@ const setBankByDefault = async (obj) => {
       };
     }
 
-    const bankId = response.data[0]?.id || "";
+    const bankId = response.data[0]?.id ?? "";
 
-    // update state
     setStateVariable((prev) => ({
       ...prev,
-      bankId: bankId,
+      bankId,
     }));
 
     return {
       type: "success",
       result: true,
-      newState: { ...newState, bankId: bankId },
-      values: { ...values, bankId: bankId },
+      newState: { ...newState, bankId },
+      values: { ...values, bankId },
       message: "Data found!",
     };
   } catch (error) {
@@ -9999,61 +10083,6 @@ const setNumberDays = async (obj = {}) => {
   return noDays;
 };
 
-// const calculateDetentionRate = async (obj, noDays) => {
-//   let {
-//     args,
-//     newState,
-//     formControlData,
-//     setFormControlData,
-//     values,
-//     fieldName,
-//     tableName,
-//     setStateVariable,
-//     onChangeHandler,
-//   } = obj;
-
-//   const { companyId, clientId, branchId, userId, financialYear } =
-//     getUserDetails();
-
-//   let argNames;
-//   let splitArgs = [];
-//   if (
-//     args === undefined ||
-//     args === null ||
-//     args === "" ||
-//     (typeof args === "object" && Object.keys(args).length === 0)
-//   ) {
-//     argNames = args;
-//   } else {
-//     argNames = args.split(",").map((arg) => arg.trim());
-//     for (const iterator of argNames) {
-//       splitArgs.push(iterator.split("."));
-//     }
-//   }
-//   const rate = [argNames[0]] || 0;
-//   const { businessSegmentId, blId } = newState;
-//   const { chargeId, noOfDays } = values;
-//   console.log("newState", newState);
-//   console.log("values", noDays , chargeId);
-
-//   const requestData = {
-//     blId: blId,
-//     noOfDays: noDays,
-//     clientId: clientId,
-//   };
-
-//   const fetchChargeDetails = await calculateDetentionRateData(requestData);
-
-//   if (fetchChargeDetails) {
-//     const { Chargers } = fetchChargeDetails;
-
-//     setStateVariable((prev) => ({
-//         ...prev,
-//         rate: Chargers[0].rate,
-//       }));
-
-//   }
-// };
 const calculateDetentionRate = async (obj, noDays) => {
   let {
     args,
@@ -10799,59 +10828,6 @@ const setRateBase = async (obj) => {
     };
   }
 };
-// const setVesselVoyageKenya = async (obj) => {
-//   const { args, values, fieldName, newState, setStateVariable } = obj;
-
-//   try {
-//     const argNames = args.split(",").map((arg) => arg.trim());
-//     const mblNo = newState[argNames[0]]; // e.g., chargeId
-
-//     const requestCharge = {
-//       columns: "consigneeText,podVesselId,podVoyageId",
-//       tableName: "tblBl",
-//       whereCondition: `id = ${mblNo}`,
-//       clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
-//     };
-//     const responseCharge = await fetchReportData(requestCharge);
-//     const consigneeText = responseCharge?.data?.[0]?.consigneeText;
-//     const podVesselId = responseCharge?.data?.[0]?.podVesselId;
-//     const podVoyageId = responseCharge?.data?.[0]?.podVoyageId;
-//     const updatedValues = {
-//       ...values,
-//       [vesselId]: podVesselId,
-//       [`${vesselId}dropdown`]: [{ value: podVesselId, label: name }],
-//        [voyageId]: podVoyageId,
-//       [`${voyageId}dropdown`]: [{ value: podVoyageId, label: name }],
-//     };
-
-//     setStateVariable((prev) => ({
-//       ...prev,
-//       [vesselId]: podVesselId,
-//       [`${vesselId}dropdown`]: [{ value: podVesselId, label: name }],
-//       [voyageId]: podVoyageId,
-//       [`${voyageId}dropdown`]: [{ value: podVoyageId, label: name }],
-//     }));
-
-//     return {
-//       type: "success",
-//       result: true,
-//       message: "Rate Basis set successfully!",
-//       values: updatedValues,
-//       newState: {
-//         ...newState,
-//         [vesselId]: id,
-//         [`${vesselId}dropdown`]: [{ value: id, label: name }],
-//       },
-//     };
-//   } catch (error) {
-//     console.error("Error in setRateBase:", error);
-//     return {
-//       type: "error",
-//       result: false,
-//       message: "Error while setting Rate Basis. Please try again.",
-//     };
-//   }
-// };
 
 const setVesselVoyageKenya = async (obj) => {
   const { args, values, fieldName, newState, setStateVariable } = obj;
@@ -10975,123 +10951,6 @@ const setVesselVoyageKenya = async (obj) => {
   }
 };
 
-// const getBlCharges = async (obj) => {
-//   let {
-//     args,
-//     newState,
-//     formControlData,
-//     setFormControlData,
-//     values,
-//     fieldName,
-//     tableName,
-//     setStateVariable,
-//   } = obj;
-
-//   console.log("newState", obj);
-
-//   let argNames;
-//   let splitArgs = [];
-//   if (
-//     args === undefined ||
-//     args === null ||
-//     args === "" ||
-//     (typeof args === "object" && Object.keys(args).length === 0)
-//   ) {
-//     argNames = args;
-//   } else {
-//     argNames = args.split(",").map((arg) => arg.trim());
-//     for (const iterator of argNames) {
-//       splitArgs.push(iterator.split("."));
-//     }
-//   }
-
-//   const {
-//     invoiceDate,
-//     businessSegmentId,
-//     placeOfSupplyStateId,
-//     sez,
-//     billingPartyId,
-//     ownStateId,
-//     blId,
-//   } = values;
-
-//   const { taxType, billingPartyBranchId, billingPartyStateId, totalInvoiceAmountFc } =
-//     newState;
-
-//   const { companyId, clientId, branchId, financialYear, userId } = getUserDetails();
-
-//   const requestData = {
-//     clientId,
-//     voucherType: newState?.voucherTypeId,
-//     DepartmentId: newState?.businessSegmentId || businessSegmentId || 0,
-//     blIds: newState?.blId || blId || 0,
-//     billingPartyId: newState?.billingPartyId || billingPartyId || 0,
-//     companyId,
-//     companyBranchId: branchId,
-//   };
-
-//   const fetchCharges = await getBlChargeDetails(requestData);
-
-//   if (fetchCharges) {
-//     console.log(fetchCharges);
-//     const { Chargers } = fetchCharges;
-
-//     for (let index = 0; index < (Chargers?.length || 0); index++) {
-//       Chargers[index].idx = index;
-//       Chargers[index].index = index;
-//       Chargers[index].indexValue = index;
-
-//       const chargeValues = Chargers[index];
-
-//       // Default numeric fields to avoid NaN
-//       const safeTotalAmount = Number(chargeValues.totalAmount) || 0;
-//       const safeTotalAmountFc = Number(chargeValues.totalAmountFc) || 0;
-//       const safeChargeGlId = chargeValues.chargeGlId || 0;
-//       const safeSacId = chargeValues.sacId || 0;
-
-//       const taxRequestData = {
-//         chargeId: chargeValues.chargeId || 0,
-//         invoiceDate: invoiceDate ? moment(invoiceDate).format("YYYY-MM-DD") : null,
-//         departmentId: businessSegmentId || 0,
-//         glId: safeChargeGlId,
-//         placeOfSupply_state: placeOfSupplyStateId || 0,
-//         SelectedParentInvId: null,
-//         sez: sez || false,
-//         customerId: billingPartyId || 0,
-//         ownStateId: ownStateId || 0,
-//         formControlId: newState?.menuID || 0,
-//         totalAmount: safeTotalAmount,
-//         totalAmountFc: safeTotalAmountFc,
-//         sacCodeId: safeSacId,
-//         totalAmountHc: safeTotalAmount,
-//         taxType: taxType || "G",
-//         companyId,
-//         branchId,
-//         finYearId: financialYear,
-//         userId,
-//         clientId,
-//         totalAmtInvoiceCurr: Number(totalInvoiceAmountFc) || 0,
-//         billingPartyBranch: billingPartyBranchId || 0,
-//         billingPartyState: billingPartyStateId || 0,
-//       };
-
-//       // Fetch tax per charge
-//       let fetchGST = await getTaxDetails(taxRequestData);
-
-//       if (fetchGST) {
-//         const { tblTax } = fetchGST;
-//         Chargers[index].tblInvoiceChargeTax =
-//           tblTax || chargeValues.tblInvoiceChargeTax || [];
-//       }
-//     }
-
-//     // Set the charges safely
-//     values.tblInvoiceCharge = Array.isArray(Chargers) ? Chargers : [];
-
-//     // Update state once
-//     setStateVariable((prev) => ({ ...prev, ...values }));
-//   }
-// };
 
 const getBlCharges = async (obj) => {
   const { newState, values, setStateVariable } = obj;
@@ -11305,7 +11164,7 @@ const setBillingPartyForJob = async (obj) => {
       result: true,
       message: "Billing party set successfully.",
       values: { ...values, billingPartyId: id || 0 },
-      newState: { ...newState, billingPartyId: id || 0 },
+      newState: { ...values, billingPartyId: id || 0 },
     };
   } catch (error) {
     console.error("Error in setBillingPartyForJob:", error);
@@ -12152,9 +12011,9 @@ const getBlChargesForTariff = async (obj) => {
     const argNames = Array.isArray(args)
       ? args.map((a) => String(a).trim())
       : String(args ?? "")
-          .split(",")
-          .map((a) => a.trim())
-          .filter(Boolean);
+        .split(",")
+        .map((a) => a.trim())
+        .filter(Boolean);
 
     const rateKey = argNames[0];
     const currencyIdKey = argNames[1];
@@ -12201,9 +12060,468 @@ const getBlChargesForTariff = async (obj) => {
   }
 };
 
+const arriDate = async (obj) => {
+  const {
+    args,
+    values,
+    fieldName,
+    newState,
+    formControlData,
+    setFormControlData,
+    setStateVariable,
+  } = obj;
+  const argNames = args.split(",").map((arg) => arg.trim());
+  const voyageId = values[argNames[0]];
+
+  const token = localStorage.getItem("token");
+
+  const request = {
+    columns: "*",
+    tableName: 'tblVoyageRoute',
+    whereCondition: `voyageId = ${voyageId} and status = 1`,
+    clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+  };
+  return fetchReportData(request).then((response) => {
+    const data = response.data;
+    const dueToValue = data[0]?.arrivalDate;
+    if (dueToValue !== undefined && dueToValue !== null) {
+      const updatedValues = {
+        ...values,
+        [argNames[1]]: dueToValue,
+      };
+      setStateVariable((prev) => ({
+        ...prev,
+        [argNames[1]]: dueToValue,
+      }));
+
+      return {
+        type: "success",
+        result: true,
+        newState: {
+          ...newState,
+        },
+        values: updatedValues,
+        message: "Data found !",
+      };
+    }
+  });
+};
+
+const sailDate = async (obj) => {
+  const {
+    args,
+    values,
+    fieldName,
+    newState,
+    formControlData,
+    setFormControlData,
+    setStateVariable,
+  } = obj;
+  const argNames = args.split(",").map((arg) => arg.trim());
+  const voyageId = values[argNames[0]];
+
+  const token = localStorage.getItem("token");
+
+  const request = {
+    columns: "*",
+    tableName: 'tblVoyageRoute',
+    whereCondition: `voyageId = ${voyageId} and status = 1`,
+    clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+  };
+  return fetchReportData(request).then((response) => {
+    const data = response.data;
+    const dueToValue = data[0]?.sailDate;
+    if (dueToValue !== undefined && dueToValue !== null) {
+      const updatedValues = {
+        ...values,
+        [argNames[1]]: dueToValue,
+      };
+      setStateVariable((prev) => ({
+        ...prev,
+        [argNames[1]]: dueToValue,
+      }));
+
+      return {
+        type: "success",
+        result: true,
+        newState: {
+          ...newState,
+        },
+        values: updatedValues,
+        message: "Data found !",
+      };
+    }
+  });
+};
+
+const checkJobAgainstBl = async (obj) => {
+  try {
+    const {
+      args,
+      newState,
+    } = obj;
+    const argNames = (args || "").split(",").map((a) => a.trim());
+    const blId = newState?.[argNames?.[0]];
+    if (!blId) {
+      toast.error("BL No is missing.");
+      return;
+    }
+    const requestData = {
+      blId: blId,
+      clientId: clientId
+    };
+    const res = await checkJobCreatedAgainstBLData(requestData);
+    const chargers = res?.Chargers ?? res?.data?.Chargers;
+    const jobId = chargers?.JobIds;
+    if (jobId == null || String(jobId).trim() === "") {
+      toast.error("Against this BL No booking is not created.");
+      return false;
+    }
+
+  } catch (err) {
+    console.error("checkJobAgainstBl error:", err);
+    toast.error("Failed to validate BL booking. Please try again.");
+  }
+};
+
+const checkDisChargeActivityBl = async (obj) => {
+  try {
+    const { args, newState, values, setStateVariable } = obj;
+
+    const argNames = (args || "").split(",").map((a) => a.trim());
+    const blId = newState?.[argNames?.[0]];
+
+    if (!blId) {
+      toast.error("BL No is missing.");
+      return false;
+    }
+
+    const token = localStorage.getItem("token");
+
+    // 1️⃣ Fetch BL row
+    const request = {
+      columns: "*",
+      tableName: "tblBl",
+      whereCondition: `id = ${blId} and status = 1`,
+      clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+    };
+
+    const response = await fetchReportData(request, token);
+
+    const mblNo = response?.data?.[0]?.mblNo;
+    const result = await checkDischargeDoneForBLData({ blno: mblNo });
+    console.log("result", result);
+
+    const chargers = result?.Chargers ?? result?.data?.Chargers;
+    const dischargeDone = chargers?.dischargeDone;
+
+    if (chargers?.message === "BL not found" || dischargeDone === "N") {
+      toast.error("Against this BL Discharge Activity is not there.");
+      return false;
+    }
+
+    if (dischargeDone === "Y") {
+      await getBlCharges({ newState, values, setStateVariable });
+      return true;
+    }
+    // toast.error("Unable to validate discharge status.");
+    //return false;
+  } catch (err) {
+    console.error("checkDisChargeActivityBl error:", err);
+    toast.error("Failed to validate BL discharge activity. Please try again.");
+    return false;
+  }
+};
+
+
+const checkRate = (obj) => {
+  try {
+    const { args, values, newState, setStateVariable } = obj;
+
+    const argNames = (args || "").split(",").map((a) => a.trim());
+    const flowedKey = argNames?.[0] || "flowedRate";
+    const rateKey = argNames?.[1] || "rate";
+
+    const toNum = (v) => {
+      const n = parseFloat(String(v ?? "").replace(/,/g, ""));
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const table = Array.isArray(newState?.tblInvoiceCharge)
+      ? newState.tblInvoiceCharge
+      : [];
+    if (!table.length) return;
+
+    const pickVal = (v) => {
+      if (v == null) return null;
+      if (Array.isArray(v) && v?.[0] && v[0].value != null) return v[0].value;
+      if (typeof v === "object" && v.value != null) return v.value;
+      return v;
+    };
+
+    let didInit = false;
+    const initTable = table.map((r) => {
+      const existing = toNum(r?.[flowedKey]);
+      if (existing > 0) return r;
+      didInit = true;
+      const base = toNum(r?.[rateKey] ?? r?.rateText);
+      return { ...r, [flowedKey]: base };
+    });
+
+    if (didInit) {
+      setStateVariable((prev) => ({ ...prev, tblInvoiceCharge: initTable }));
+    }
+
+    // ✅ 1) find edited row index (this is what makes it work for all rows)
+    let idx =
+      (Number.isFinite(+values?.idx) ? +values.idx : null) ??
+      (Number.isFinite(+values?.index) ? +values.index : null) ??
+      (Number.isFinite(+values?.indexValue) ? +values.indexValue : null) ??
+      (Number.isFinite(+newState?.selectedIndex) ? +newState.selectedIndex : null);
+
+    // ✅ 2) fallback match using keys (also supports dropdown objects)
+    if (!(Number.isFinite(idx) && idx >= 0 && idx < table.length)) {
+      const vBlId = pickVal(values?.blId);
+      const vChargeId = pickVal(values?.chargeId ?? values?.chargeIdText ?? values?.chargeIddropdown);
+      const vCurrencyId = pickVal(values?.currencyId ?? values?.currencyIdText ?? values?.currencyIddropdown);
+      const vRateBasisId = pickVal(values?.rateBasisId ?? values?.rateBasisIddropdown);
+      const vSizeId = pickVal(values?.sizeId ?? values?.sizeIddropdown);
+      const vTypeId = pickVal(values?.typeId ?? values?.typeIddropdown);
+
+      const key = (r) =>
+        `${pickVal(r?.blId)}|${pickVal(r?.chargeId)}|${pickVal(r?.currencyId)}|${pickVal(r?.rateBasisId)}|${pickVal(r?.sizeId)}|${pickVal(r?.typeId)}`;
+
+      const valKey = `${vBlId}|${vChargeId}|${vCurrencyId}|${vRateBasisId}|${vSizeId}|${vTypeId}`;
+
+      idx = table.findIndex((r) => key(r) === valKey);
+
+      // last fallback: chargeId + currencyId
+      if (idx < 0) {
+        idx = table.findIndex(
+          (r) =>
+            String(pickVal(r?.chargeId) ?? "") === String(vChargeId ?? "") &&
+            String(pickVal(r?.currencyId) ?? "") === String(vCurrencyId ?? "")
+        );
+      }
+    }
+
+    if (!(idx >= 0)) return;
+
+    // Use the newest row (after init)
+    const row = (didInit ? initTable : table)[idx];
+    if (!row) return;
+
+    const currentRate = toNum(values?.[rateKey] ?? row?.[rateKey] ?? row?.rateText);
+    const flowedRate = toNum(row?.[flowedKey]);
+
+    if (!(flowedRate > 0)) return;
+
+    // ✅ 3) validate
+    if (currentRate < flowedRate) {
+      toast.error(`Rate cannot be less than previous rate (${flowedRate.toFixed(2)}).`);
+
+      const updatedTable = [...(didInit ? initTable : table)];
+      updatedTable[idx] = {
+        ...updatedTable[idx],
+        [rateKey]: flowedRate.toFixed(2),
+        rateText: flowedRate.toFixed(2),
+        [flowedKey]: flowedRate,
+      };
+
+      setStateVariable((prev) => ({ ...prev, tblInvoiceCharge: updatedTable }));
+
+      return {
+        type: "success",
+        result: true,
+        newState: { ...newState },
+        values: { ...values, [rateKey]: flowedRate.toFixed(2), rateText: flowedRate.toFixed(2), [flowedKey]: flowedRate },
+        message: "Rate reverted",
+      };
+    }
+
+    return { type: "success", result: true, newState: { ...newState }, values };
+  } catch (err) {
+    console.error("check rate error:", err);
+  }
+};
+
+
+const setBillingPartyForBl = async (obj) => {
+  const { args, values, fieldName, newState, setStateVariable } = obj;
+
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+    const blId = newState[argNames[0]]; // e.g., "blId"
+    const requestData = {
+      blId: blId,
+      clientId: clientId,
+      voucherTypeId: newState?.voucherTypeId
+    };
+    const res = await getBillingPartyOnBlData(requestData);
+    const chargers = res?.Chargers ?? res?.data?.Chargers;
+    console.log("chargers", chargers)
+    const billingPartyId = chargers[0]?.id;
+    setStateVariable((prev) => ({
+      ...prev,
+      billingPartyId: billingPartyId || 0,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "Billing party set successfully.",
+      values: { ...values, billingPartyId: billingPartyId || 0 },
+      newState: { ...newState, billingPartyId: billingPartyId || 0 },
+    };
+
+  } catch (error) {
+    console.error("Error in setBillingPartyForBl:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Error while setting billing party. Please try again.",
+    };
+  }
+};
+
+const SetVehicleTyeChassiNo = async (obj) => {
+  const {
+    args,
+    values,
+    fieldName,
+    newState,
+    formControlData,
+    setFormControlData,
+    setStateVariable,
+  } = obj;
+  const argNames = args.split(",").map((arg) => arg.trim());
+  const vehicalId = values[argNames[0]];
+
+  const token = localStorage.getItem("token");
+
+  const request = {
+    columns: "*",
+    tableName: 'tblVehicle',
+    whereCondition: `id= ${vehicalId} and status = 1`,
+    clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+  };
+  return fetchReportData(request).then((response) => {
+    const data = response.data;
+    const vehicleData = data[0]?.vehicleTypeId;
+    const chaissData = data[0]?.chasisNo;
+
+    const updatedValues = {
+      ...values,
+      [argNames[1]]: vehicleData,
+      [argNames[2]]: chaissData,
+    };
+    setStateVariable((prev) => ({
+      ...prev,
+      [argNames[1]]: vehicleData,
+      [argNames[2]]: chaissData,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      newState: {
+        ...newState,
+      },
+      values: updatedValues,
+      message: "Data found !",
+    };
+
+  });
+};
+
+
+const pad2 = (n) => String(n).padStart(2, "0");
+
+// ✅ output: "2025-11-21 00:00:00"
+const toYMDStartOfDayString = (d) => {
+  const dt = d instanceof Date ? d : new Date(d);
+  if (Number.isNaN(dt.getTime())) return null;
+
+  const y = dt.getFullYear();
+  const m = pad2(dt.getMonth() + 1);
+  const day = pad2(dt.getDate());
+  return `${y}-${m}-${day} 00:00:00`;
+};
+
+const toDateObj = (v) => {
+  if (!v) return null;
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v;
+
+  const s = String(v).trim();
+  if (!s) return null;
+  const normalized = s.includes(" ") ? s.replace(" ", "T") : s;
+  const d = new Date(normalized);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const clampToStartOfDay = (d) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+
+const compareDatewithFin = async (obj) => {
+  const { args, newState, setStateVariable } = obj;
+
+  try {
+    const argNames = String(args || "")
+      .split(",")
+      .map((a) => a.trim())
+      .filter(Boolean);
+
+    const dateFieldName = argNames[0];
+    if (!dateFieldName) return;
+    const fieldDateRaw = newState?.[dateFieldName];
+    const { financialYear, clientId } = getUserDetails();
+    const requestData = {
+      columns: "startDate,endDate",
+      tableName: "tblFinancialYear",
+      whereCondition: `id = ${financialYear} and status = 1`,
+      clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+    };
+    const res = await fetchReportData(requestData);
+    const startDateRaw = res?.data?.[0]?.startDate;
+    const endDateRaw = res?.data?.[0]?.endDate;
+    const start = toDateObj(startDateRaw);
+    const end = toDateObj(endDateRaw);
+
+    if (!start || !end) {
+      console.warn("Financial year start/end not found", { startDateRaw, endDateRaw });
+      return;
+    }
+    const startD = clampToStartOfDay(start);
+    const endD = clampToStartOfDay(end);
+
+    const fieldDt = toDateObj(fieldDateRaw);
+    const fieldD = fieldDt ? clampToStartOfDay(fieldDt) : null;
+    const isValid =
+      fieldD &&
+      fieldD.getTime() >= startD.getTime() &&
+      fieldD.getTime() <= endD.getTime();
+
+    if (isValid) return;
+    setStateVariable((prev) => ({
+      ...prev,
+      [dateFieldName]: null, 
+    }));
+
+    toast.error("Please Take the correct FinancialYear");
+  } catch (error) {
+    console.error("Error in compareDatewithFin:", error);
+    toast.error("Error validating Financial Year date.");
+    return {
+      type: "error",
+      result: false,
+      message: "Error validating Financial Year date.",
+    };
+  }
+};
 export {
   setSameCurrencyFc,
   setSameCurrencyHc,
+  demo,
   demoFunctionOnChange,
   copyTableFunction,
   dateCheck,
@@ -12337,6 +12655,13 @@ export {
   setSameValue,
   //setBankVoucher
   setDateOnFinalInvoice,
-  getBlChargesForTariff
-
+  getBlChargesForTariff,
+  arriDate,
+  sailDate,
+  checkJobAgainstBl,
+  checkDisChargeActivityBl,
+  checkRate,
+  setBillingPartyForBl,
+  SetVehicleTyeChassiNo,
+  compareDatewithFin
 };

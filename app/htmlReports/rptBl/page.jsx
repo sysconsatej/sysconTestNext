@@ -318,8 +318,10 @@ function rptAirwayBill() {
 
   const cutTextDynamic = (fullText = "", keyText = "", mode = "main") => {
     const full = normBreaks(fullText);
-    const keyLines = splitNonEmptyLines(keyText);
     const modeLower = String(mode).toLowerCase();
+
+    // For MAIN we still use keyLines
+    const keyLines = splitNonEmptyLines(keyText);
 
     if (DEBUG_CUT) {
       console.log("=====================================");
@@ -333,6 +335,124 @@ function rptAirwayBill() {
       console.log("[cutTextDynamic] keyLines last(3) =", keyLines.slice(-3));
     }
 
+    // -----------------------------
+    // ATTACHMENT MODE ✅ (FORMAT KEYTEXT TO READABLE LINES)
+    // -----------------------------
+    if (modeLower === "attachment") {
+      const raw = normBreaks(keyText || "");
+      if (!raw.trim()) return "";
+
+      // Keep blank lines but split tokens
+      const rawLines = raw.split("\n");
+
+      const out = [];
+      let buf = "";
+
+      const pushBuf = () => {
+        const s = String(buf || "")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (s) out.push(s);
+        buf = "";
+      };
+
+      // helper checks
+      const isContainerStart = (s) =>
+        /\/\s*20'?/i.test(s) || /^[A-Z]{4}\d{6,}/.test(s);
+      const isEnos = (s) => /^ENOS\d+/i.test(s);
+      const isNum = (s) => /^\d+(\.\d+)?$/.test(String(s || "").trim());
+      const isKgs = (s) => /^KGS$/i.test(String(s || "").trim());
+      const isBoxes = (s) => /^BOXES$/i.test(String(s || "").trim());
+
+      // We will rebuild lines from tokenized input
+      for (let i = 0; i < rawLines.length; i++) {
+        const curRaw = rawLines[i] ?? "";
+        const cur = curRaw.replace(/\s+/g, " ").trim();
+
+        // preserve paragraph breaks if there are repeated empties
+        if (!cur) {
+          pushBuf();
+          // avoid multiple blank lines
+          if (out.length > 0 && out[out.length - 1] !== "") out.push("");
+          continue;
+        }
+
+        const next = (rawLines[i + 1] ?? "").replace(/\s+/g, " ").trim();
+        const next2 = (rawLines[i + 2] ?? "").replace(/\s+/g, " ").trim();
+
+        // 1) "Seal" + "No" => "Seal No"
+        if (/^Seal$/i.test(cur) && /^No$/i.test(next)) {
+          pushBuf();
+          out.push("Seal No");
+          i += 1;
+          continue;
+        }
+
+        // 2) ENOS... + NET => "ENOS... NET"
+        if (isEnos(cur) && /^NET$/i.test(next)) {
+          pushBuf();
+          out.push(`${cur} NET`);
+          i += 1;
+          continue;
+        }
+
+        // 3) "WT –" + value => "WT – 27510KGS" (value may already contain KGS)
+        if (/^WT\s*[–-]$/i.test(cur) && next) {
+          pushBuf();
+          out.push(`WT – ${next}`);
+          i += 1;
+          continue;
+        }
+
+        // 4) "GROSS" + "WT –" + value => "GROSS WT – value"
+        if (/^GROSS$/i.test(cur) && /^WT\s*[–-]$/i.test(next) && next2) {
+          pushBuf();
+          out.push(`GROSS WT – ${next2}`);
+          i += 2;
+          continue;
+        }
+
+        // 5) "KGS" + number + "BOXES" => "KGS 1003 BOXES"
+        if (isKgs(cur) && isNum(next) && isBoxes(next2)) {
+          pushBuf();
+          out.push(`KGS ${next} BOXES`);
+          i += 2;
+          continue;
+        }
+
+        // 6) If this line looks like a new container start, flush previous buffer first
+        if (isContainerStart(cur)) {
+          pushBuf();
+          out.push(cur);
+          continue;
+        }
+
+        // default: accumulate into buffer (space separated)
+        buf = buf ? `${buf} ${cur}` : cur;
+      }
+
+      pushBuf();
+
+      // cleanup: remove leading/trailing blank lines and collapse multiple blanks
+      const cleaned = [];
+      for (let i = 0; i < out.length; i++) {
+        const v = out[i];
+        if (v === "") {
+          if (cleaned.length === 0) continue;
+          if (cleaned[cleaned.length - 1] === "") continue;
+        }
+        cleaned.push(v);
+      }
+      while (cleaned.length && cleaned[0] === "") cleaned.shift();
+      while (cleaned.length && cleaned[cleaned.length - 1] === "")
+        cleaned.pop();
+
+      const result = cleaned.join("\n").trim();
+
+      if (DEBUG_CUT) console.log("[attach] RESULT:\n", result);
+      return result;
+    }
+
     // ✅ if no key => empty (your requirement)
     if (!full.trim() || keyLines.length === 0) {
       if (DEBUG_CUT) {
@@ -342,50 +462,7 @@ function rptAirwayBill() {
     }
 
     // -----------------------------
-    // ATTACHMENT MODE
-    // -----------------------------
-    if (modeLower === "attachment") {
-      const out = [];
-      for (let i = 0; i < keyLines.length; i++) {
-        let cur = keyLines[i];
-        let next = keyLines[i + 1];
-
-        if (DEBUG_CUT) console.log("[attach] cur =", cur, " next =", next);
-
-        // rule 1: endsWith ":" => merge with next
-        if (cur.endsWith(":") && next) {
-          const merged = `${cur} ${next}`.replace(/\s+/g, " ").trim();
-          if (DEBUG_CUT) console.log("[attach] merge ':' =>", merged);
-          out.push(merged);
-          i += 1;
-          continue;
-        }
-
-        // rule 2: very short token => merge with next
-        const isVeryShort =
-          cur.length <= 8 && /^[A-Z0-9/&.-]+$/i.test(cur) && next;
-
-        if (isVeryShort) {
-          const merged = `${cur} ${next}`.replace(/\s+/g, " ").trim();
-          if (DEBUG_CUT) console.log("[attach] merge short =>", merged);
-          out.push(merged);
-          i += 1;
-          continue;
-        }
-
-        out.push(cur);
-      }
-
-      const result = out
-        .join("\n")
-        .replace(/\n\s*\n+/g, "\n")
-        .trim();
-      if (DEBUG_CUT) console.log("[attach] RESULT:\n", result);
-      return result;
-    }
-
-    // -----------------------------
-    // MAIN MODE
+    // MAIN MODE (unchanged behavior)
     // -----------------------------
     const fullLines = splitNonEmptyLines(full);
 
@@ -427,7 +504,7 @@ function rptAirwayBill() {
       console.log("[main] endLineIdx =", endLineIdx);
     }
 
-    // 2) fuzzy fallback if strict fails (common in Goods when spaces/punct differ)
+    // 2) safer fuzzy fallback if strict fails
     if (endLineIdx < 0) {
       const endSoft = softNorm(endMarker);
       if (DEBUG_CUT)
@@ -435,9 +512,14 @@ function rptAirwayBill() {
 
       let fuzzyIdx = -1;
       const fuzzyMatches = [];
+
       for (let i = 0; i < fullLines.length; i++) {
         const lineSoft = softNorm(fullLines[i]);
-        if (lineSoft.includes(endSoft) || endSoft.includes(lineSoft)) {
+
+        if (!lineSoft || lineSoft.length < 6) continue;
+        if (!endSoft || endSoft.length < 6) continue;
+
+        if (lineSoft.includes(endSoft)) {
           fuzzyIdx = i;
           fuzzyMatches.push({ i, line: fullLines[i] });
         }
@@ -496,6 +578,161 @@ function rptAirwayBill() {
 
     return result;
   };
+
+  function cutDataFromBack(fullText = "", wantText = "", opts = {}) {
+    const {
+      debug = false,
+
+      // how many rare anchors to use
+      maxAnchors = 8,
+
+      // ignore super-short tokens
+      minTokenLen = 3,
+
+      // prefer tokens containing digits (usually IDs)
+      digitTokenBoost = true,
+    } = opts;
+
+    const normLF = (s) =>
+      String(s ?? "")
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n");
+
+    const soft = (s) =>
+      normLF(s)
+        .toUpperCase()
+        .replace(/[“”]/g, '"')
+        .replace(/[’]/g, "'")
+        .replace(/[–—]/g, "-")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const full = normLF(fullText);
+    const want = normLF(wantText);
+
+    if (!full.trim() || !want.trim()) return "";
+
+    const fullLines = full.split("\n"); // preserve original \n layout
+    const fullSoftLines = fullLines.map(soft);
+
+    // ---- tokenize want (dynamic)
+    const wantSoft = soft(want);
+    const wantTokens = wantSoft
+      .split(" ")
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .filter((t) => t.length >= minTokenLen);
+
+    if (wantTokens.length === 0) return "";
+
+    // ---- count token occurrences in full (by line) to find "rare anchors"
+    const tokenLineCount = new Map(); // token -> number of lines containing it
+    for (const tok of new Set(wantTokens)) {
+      let count = 0;
+      for (let i = 0; i < fullSoftLines.length; i++) {
+        if (fullSoftLines[i].includes(tok)) count++;
+      }
+      tokenLineCount.set(tok, count);
+    }
+
+    // ---- pick best anchors (rare + digit-heavy tokens preferred)
+    const scoredAnchors = [...tokenLineCount.entries()]
+      .filter(([, cnt]) => cnt > 0) // must exist in full somewhere
+      .map(([tok, cnt]) => {
+        // lower count = better anchor
+        let score = 1000 - cnt * 100;
+
+        // prefer tokens with digits (IDs) without hardcoding specific words
+        if (digitTokenBoost && /\d/.test(tok)) score += 200;
+
+        // prefer longer tokens a bit
+        score += Math.min(50, tok.length);
+
+        return { tok, cnt, score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, maxAnchors);
+
+    if (debug) {
+      console.log("[cutDataFromBack] full lines:", fullLines.length);
+      console.log("[cutDataFromBack] want tokens:", wantTokens.length);
+      console.log("[cutDataFromBack] anchors:", scoredAnchors);
+    }
+
+    if (scoredAnchors.length === 0) return "";
+
+    // ---- determine start & end lines using anchors
+    // Start: earliest line index among anchors that appear near the beginning of wantText
+    // End: latest line index among anchors that appear near the end of wantText
+    const posInWant = (tok) => wantTokens.indexOf(tok);
+
+    const beginAnchors = [...scoredAnchors]
+      .sort((a, b) => posInWant(a.tok) - posInWant(b.tok))
+      .slice(0, Math.min(4, scoredAnchors.length));
+
+    const endAnchors = [...scoredAnchors]
+      .sort((a, b) => posInWant(b.tok) - posInWant(a.tok))
+      .slice(0, Math.min(4, scoredAnchors.length));
+
+    let startIdx = Infinity;
+    for (const a of beginAnchors) {
+      for (let i = 0; i < fullSoftLines.length; i++) {
+        if (fullSoftLines[i].includes(a.tok)) {
+          startIdx = Math.min(startIdx, i);
+          break;
+        }
+      }
+    }
+
+    let endIdx = -1;
+    for (const a of endAnchors) {
+      for (let i = fullSoftLines.length - 1; i >= 0; i--) {
+        if (fullSoftLines[i].includes(a.tok)) {
+          endIdx = Math.max(endIdx, i);
+          break;
+        }
+      }
+    }
+
+    if (!Number.isFinite(startIdx) || endIdx < 0 || endIdx < startIdx)
+      return "";
+
+    // Slice from full using original formatting
+    let sliced = fullLines.slice(startIdx, endIdx + 1);
+
+    // ---- dynamic first-line refinement (NO hardcoded "SEAL NO")
+    // We build a short phrase from the *start* of wantText that is contained inside the first sliced line.
+    // Example: "Seal No" is contained within "RFID Seal No" => replace first line with "Seal No"
+    const firstLineSoft = soft(sliced[0]);
+
+    const wantRawTokens = want
+      .replace(/\r/g, "\n")
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    // Build the smallest prefix phrase (2..8 tokens) that appears in the first line
+    let replacement = "";
+    for (let k = 2; k <= Math.min(8, wantRawTokens.length); k++) {
+      const phrase = wantRawTokens.slice(0, k).join(" ");
+      if (soft(phrase) && firstLineSoft.includes(soft(phrase))) {
+        replacement = phrase;
+        break;
+      }
+    }
+
+    if (replacement) {
+      sliced[0] = replacement;
+    }
+
+    // cleanup: keep inner blank lines, just trim outer whitespace
+    const result = sliced.join("\n").trim();
+
+    if (debug) console.log("[cutDataFromBack] RESULT:\n", result);
+
+    return result;
+  }
+
   const AirwayBillPrintCharge = () => {
     console.log("data", reportData);
     return (
@@ -1500,9 +1737,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                   paddingLeft: "5px",
                 }}
-              >
-                Abhishek
-              </p>
+              ></p>
               <p
                 className="text-black font-normal"
                 style={{
@@ -6258,9 +6493,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                   paddingLeft: "5px",
                 }}
-              >
-                Abhishek
-              </p>
+              ></p>
               <p
                 className="text-black font-normal"
                 style={{
@@ -9624,9 +9857,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                   paddingLeft: "5px",
                 }}
-              >
-                Abhishek
-              </p>
+              ></p>
               <p
                 className="text-black font-normal"
                 style={{
@@ -12986,9 +13217,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                   paddingLeft: "5px",
                 }}
-              >
-                Abhishek
-              </p>
+              ></p>
               <p
                 className="text-black font-normal"
                 style={{
@@ -16352,9 +16581,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                   paddingLeft: "5px",
                 }}
-              >
-                Abhishek
-              </p>
+              ></p>
               <p
                 className="text-black font-normal"
                 style={{
@@ -20173,10 +20400,14 @@ function rptAirwayBill() {
                       margin: 0,
                     }}
                   >
-                    {cutTextDynamic(
+                    {/* {cutTextDynamic(
                       bldata?.marksNos || "",
                       bldata?.marksAndNosDetailsAttach || "",
                       "attachment",
+                    )} */}
+                    {(bldata?.marksAndNosDetailsAttach || "").replace(
+                      /\r\n|\r/g,
+                      "\n",
                     )}
                   </pre>
                 ) : null}
@@ -20200,10 +20431,14 @@ function rptAirwayBill() {
                       margin: 0,
                     }}
                   >
-                    {cutTextDynamic(
+                    {/* {cutTextDynamic(
                       bldata?.goodsDesc || "",
                       bldata?.goodsDescDetailsAttach || "",
                       "attachment",
+                    )} */}
+                    {(bldata?.goodsDescDetailsAttach || "").replace(
+                      /\r\n|\r/g,
+                      "\n",
                     )}
                   </pre>
                 ) : null}
@@ -20552,7 +20787,7 @@ function rptAirwayBill() {
                 <div className="pl-6" style={{ height: "60%" }}>
                   <img
                     src="https://api.artinshipping.com/sql-api/uploads/sbximg.png"
-                    alt="kanhaiya"
+                    alt="LOGO"
                     style={{
                       maxWidth: "93%",
                       height: "100%",
@@ -20800,10 +21035,7 @@ function rptAirwayBill() {
                   className="pt-1 pb-1 pl-2 pr-2 align-top text-left whitespace-pre-wrap break-words border-r border-black"
                   style={{ fontSize: "9px", height: "240px" }}
                 >
-                  {/* <pre className="text-left">
-                    {bldata?.marksAndNosDetails || bldata?.marksNos || ""}
-                  </pre> */}
-                  <pre
+                  {/* <pre
                     className="text-left whitespace-pre-wrap"
                     style={{ fontSize: "9px" }}
                   >
@@ -20811,6 +21043,15 @@ function rptAirwayBill() {
                       bldata?.marksNos || "",
                       bldata?.marksAndNosDetails || "",
                       "main",
+                    )}
+                  </pre> */}
+                  <pre
+                    className="text-left align-top"
+                    style={{ fontSize: "9px" }}
+                  >
+                    {(bldata?.marksAndNosDetails || "").replace(
+                      /\r\n|\r/g,
+                      "\n",
                     )}
                   </pre>
 
@@ -20860,7 +21101,7 @@ function rptAirwayBill() {
                   <div className="flex flex-col " style={{ height: "100%" }}>
                     {/* Top 60% */}
                     <div style={{ height: "60%" }}>
-                      <pre
+                      {/* <pre
                         className="text-left align-top"
                         style={{ fontSize: "9px" }}
                       >
@@ -20868,6 +21109,15 @@ function rptAirwayBill() {
                           bldata?.goodsDesc || "",
                           bldata?.goodsDescDetails || "",
                           "main",
+                        )}
+                      </pre> */}
+                      <pre
+                        className="text-left align-top"
+                        style={{ fontSize: "9px" }}
+                      >
+                        {(bldata?.goodsDescDetails || "").replace(
+                          /\r\n|\r/g,
+                          "\n",
                         )}
                       </pre>
                     </div>
@@ -21577,7 +21827,7 @@ function rptAirwayBill() {
               </div> */}
               <div>
                 {Array.isArray(bldata.tblBlContainer) &&
-                bldata.tblBlContainer.length < 4 ? (
+                  bldata.tblBlContainer.length < 4 ? (
                   <p></p>
                 ) : (
                   <p>– Continuing on Attach Sheet</p>
@@ -26179,6 +26429,1142 @@ function rptAirwayBill() {
     );
   };
 
+  const GSLBLREPORTS = () => {
+    return (
+      <div
+        className="text-black"
+        style={{
+          height: "280mm",
+          margin: "0 auto",
+          backgroundColor: "white",
+        }}
+      >
+        <div
+          className=""
+          style={{ fontSize: "10px", height: "100%", minHeight: "100%" }}
+        >
+          <div
+            className="flex font-bold"
+            style={{ height: "2%", minHeight: "2%", width: "100%" }}
+          >
+            <div className="text-right" style={{ width: "55%" }}>
+              BILL OF LADING
+            </div>
+            <div className="text-center" style={{ width: "45%" }}>
+              {bldata?.blType}
+            </div>
+          </div>
+          <div
+            className="flex border border-black"
+            style={{ height: "7%", minHeight: "7%" }}
+          >
+            <div className="border-r border-black" style={{ width: "60%" }}>
+              <div className="pl-6" style={{ height: "100%" }}>
+                <img
+                  src=""
+                  alt="logo"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain", // or "cover" depending on your needs
+                  }}
+                />
+              </div>
+            </div>
+            <div className="" style={{ width: "40%" }}>
+              <div
+                className="border-b border-black"
+                style={{ height: "50%", minHeight: "50%" }}
+              >
+                B/L No : {reportData?.blNo}
+              </div>
+              <div style={{ height: "50%", minHeight: "50%" }}>
+                <p>Shipment Reference No.</p> <p>{bldata?.jobNo}</p>
+              </div>
+            </div>
+          </div>
+          <div
+            className="flex"
+            style={{ height: "29%", minHeight: "29%", width: "100%" }}
+          >
+            <div
+              className="border-r border-b border-l border-black"
+              style={{ width: "50%", height: "100%", minHeight: "100%" }}
+            >
+              <div
+                className=" border-b  border-black"
+                style={{ height: "33%", minHeight: "33%" }}
+              >
+                <p
+                  className="text-black font-bold ml-1"
+                  style={{ fontSize: "9px" }}
+                >
+                  Shipper
+                </p>
+                <p className="text-black mt-1 ml-1" style={{ fontSize: "9px" }}>
+                  {bldata?.shipperName}
+                </p>
+                <p
+                  className="text-black word-break ml-1"
+                  style={{ width: "70%", fontSize: "9px" }}
+                >
+                  {bldata?.shipperAddress}
+                </p>
+              </div>
+              <div
+                className=" border-b  border-black"
+                style={{ height: "33%", minHeight: "33%" }}
+              >
+                <p
+                  className="text-black font-bold ml-1"
+                  style={{ fontSize: "9px" }}
+                >
+                  Consignee
+                </p>
+                <p className="text-black mt-1 ml-1" style={{ fontSize: "9px" }}>
+                  {bldata?.consigneeName}
+                </p>
+                <p
+                  className="text-black word-break ml-1"
+                  style={{ width: "70%", fontSize: "9px" }}
+                >
+                  {bldata?.consigneeAddress}
+                </p>
+              </div>
+              <div className=" " style={{ height: "34%", minHeight: "34%" }}>
+                <p
+                  className="text-black font-bold ml-1"
+                  style={{ fontSize: "9px" }}
+                >
+                  NOTIFY PARTIES
+                </p>
+                <p className="text-black mt-1 ml-1" style={{ fontSize: "9px" }}>
+                  {bldata?.notifyPartyName}
+                </p>
+                <p
+                  className="text-black word-break ml-1"
+                  style={{ width: "70%", fontSize: "9px" }}
+                >
+                  {bldata?.notifyPartyAddress}
+                </p>
+              </div>
+            </div>
+            <div
+              className="border-r border-b border-black"
+              style={{
+                width: "50%",
+                height: "100%",
+                minHeight: "100%",
+                maxHeight: "100%",
+              }}
+            >
+              <div
+                className=" border-b  border-black flex"
+                style={{
+                  height: "17%",
+                  minHeight: "17%",
+                  width: "100%",
+                  maxHeight: "17%",
+                }}
+              >
+                <div
+                  className=" border-r  border-black "
+                  style={{ width: "50%", fontSize: "9px" }}
+                >
+                  <p className="font-bold ml-1">
+                    NO. & SEQUENCES OF ORIGINAL B/L'S
+                  </p>
+                  <p className=" ml-1">{bldata?.noOfBl}</p>
+                </div>
+                <div style={{ width: "50%", fontSize: "9px" }}>
+                  <p className="font-bold ml-1">NO. OF RIDER PAGES</p>
+                  <p className=" ml-1">{bldata?.noOfBl}</p>
+                </div>
+              </div>
+              <div
+                className=" "
+                style={{ height: "83%", minHeight: "83%", maxHeight: "83%" }}
+              >
+                <p className="font-bold ml-1">POD / Agent Details</p>
+                <p className=" ml-1">{bldata?.polAgentName}</p>
+              </div>
+            </div>
+          </div>
+          <div
+            className="border-b border-r border-l border-black"
+            style={{ height: "6%", minHeight: "6%", maxHeight: "6%" }}
+          >
+            <div
+              className="border-b border-black flex"
+              style={{ height: "50%", minHeight: "50%", width: "100%" }}
+            >
+              <div className="border-r border-black" style={{ width: "33%" }}>
+                {" "}
+                <p className="font-bold ml-1">VESSEL & VOYAGE No.</p>
+                <p>
+                  {bldata?.polVessel} / {bldata?.polVoyage}
+                </p>
+              </div>
+              <div className="border-r border-black" style={{ width: "34%" }}>
+                {" "}
+                <p className="font-bold ml-1">PORT OF LOADING</p>
+                <p>{bldata?.pol}</p>
+              </div>
+              <div className="" style={{ width: "33%" }}>
+                {" "}
+                <p className="font-bold ml-1">PLACE OF RECEIPT</p>
+                <p>{bldata?.plr}</p>
+              </div>
+            </div>
+            <div
+              className="flex"
+              style={{ height: "50%", minHeight: "50%", maxHeight: "50%" }}
+            >
+              <div className="border-r border-black" style={{ width: "33%" }}>
+                {" "}
+                <p className="font-bold ml-1">MODE OF TRANSPORT</p>
+                <p>{bldata?.preCarriage}</p>
+              </div>
+              <div className="border-r border-black" style={{ width: "34%" }}>
+                {" "}
+                <p className="font-bold ml-1">PORT OF DISCHARGE</p>
+                <p>{bldata?.pod}</p>
+              </div>
+              <div className="" style={{ width: "33%" }}>
+                {" "}
+                <p className="font-bold ml-1">PORT OF DELIVERY</p>
+                <p>{bldata?.pod}</p>
+              </div>
+            </div>
+          </div>
+          <div
+            className="text-center border-r border-l border-b border-black"
+            style={{ height: "2%", minHeight: "2%", maxHeight: "2%" }}
+          >
+            <p>
+              PARTICULARS FURNISHED BY THE SHIPPER - NOT CHECKED BY CARRIER -
+              CARRIER NOT RESPONSIBLE
+            </p>
+          </div>
+          <div
+            className="border-r border-l border-b border-black"
+            style={{ height: "33%", minHeight: "33%", maxHeight: "33%" }}
+          >
+            <table
+              className="text-left"
+              style={{
+                width: "100%",
+                fontSize: "9px",
+                height: "100%",
+                tableLayout: "fixed",
+                borderCollapse: "collapse",
+              }}
+            >
+              <tbody style={{ height: "100%" }}>
+                <tr className="border-b border-black" style={{ height: "18%" }}>
+                  <th
+                    scope="col"
+                    className="pt-1 pb-1 pl-2 pr-2 text-left align-top border-r border-black"
+                    style={{ width: "19%" }}
+                  >
+                    Container No(s) <br />
+                    Seal / Marks & <br />
+                    Number
+                  </th>
+
+                  <th
+                    scope="col"
+                    className="pt-1 pb-1 pl-2 pr-2 text-left align-top border-r border-black"
+                    style={{ width: "13%" }}
+                  >
+                    Number of <br />
+                    Packages
+                  </th>
+
+                  <th
+                    scope="col"
+                    className="pt-1 pb-1 pl-2 pr-2 text-left align-top border-r border-black"
+                    style={{ width: "37%" }}
+                  >
+                    Description of goods <br />
+                    (said to contain)
+                  </th>
+
+                  <th
+                    scope="col"
+                    className="pt-1 pb-1 pl-2 pr-2 text-left align-top border-r border-black"
+                    style={{ width: "16%" }}
+                  >
+                    Gross Cargo Weight
+                  </th>
+
+                  <th
+                    scope="col"
+                    className="pt-1 pb-1 pl-2 pr-2 text-left align-top"
+                    style={{ width: "15%" }}
+                  >
+                    Net Weight
+                  </th>
+                </tr>
+
+                <tr style={{ height: "82%" }}>
+                  <td
+                    className="pt-1 pb-1 pl-2 pr-2 align-top text-left whitespace-pre-wrap break-words border-r border-black"
+                    style={{
+                      fontSize: "9px",
+                      height: "100%",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <pre
+                      className="text-left whitespace-pre-wrap"
+                      style={{ fontSize: "9px", margin: 0 }}
+                    >
+                      {cutTextDynamic(
+                        bldata?.marksNos || "",
+                        bldata?.marksAndNosDetails || "",
+                        "main",
+                      )}
+                    </pre>
+
+                    {Array.isArray(bldata?.tblBlContainer) && (
+                      <>
+                        {bldata.tblBlContainer.length <= 4 ? (
+                          bldata.tblBlContainer.slice(0, 4).map((c, idx) => (
+                            <div key={idx} className="leading-tight mt-2">
+                              <div>
+                                {c?.containerNo ?? ""}
+                                {c?.sizeType ? ` ${c.sizeType}` : ""}
+                                {c?.agentSealNo ?? ""} {c?.customSealNo ?? ""}
+                              </div>
+                              <div>PKGS: {c?.package ?? ""}</div>
+                              <div>GW: {c?.grossWt ?? ""}</div>
+                              <div>NW: {c?.netWt ?? ""}</div>
+                            </div>
+                          ))
+                        ) : (
+                          <div
+                            className="text-black font-bold mt-2"
+                            style={{ fontSize: "9px" }}
+                          >
+                            CONTAINER DETAILS ATTACHED AS PER AS PER ANNEXURE .
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </td>
+
+                  <td
+                    className="pt-1 pb-1 pl-2 pr-2 align-top text-center border-r border-black"
+                    style={{
+                      fontSize: "9px",
+                      height: "100%",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <pre className="text-center" style={{ margin: 0 }}>
+                      {bldata?.noOfPackages} {bldata?.packagesCode}
+                    </pre>
+                  </td>
+
+                  <td
+                    className="pt-1 pb-1 pl-2 pr-2 text-left border-r border-black"
+                    style={{
+                      fontSize: "9px",
+                      height: "100%",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div className="flex flex-col" style={{ height: "100%" }}>
+                      <div style={{ height: "60%", overflow: "hidden" }}>
+                        <pre
+                          className="text-left align-top"
+                          style={{ fontSize: "9px", margin: 0 }}
+                        >
+                          {cutTextDynamic(
+                            bldata?.goodsDesc || "",
+                            bldata?.goodsDescDetails || "",
+                            "main",
+                          )}
+                        </pre>
+                      </div>
+
+                      <div
+                        className="text-left"
+                        style={{
+                          height: "40%",
+                          maxWidth: "100%",
+                          width: "100%",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <pre
+                          className="text-left whitespace-pre-wrap break-words m-0"
+                          style={{
+                            fontSize: "9px",
+                            maxWidth: "100%",
+                            width: "100%",
+                            overflowWrap: "anywhere",
+                            wordBreak: "break-word",
+                            margin: 0,
+                          }}
+                        >
+                          {trimByWordCountBySup(bldata?.blClause, 50)}
+                        </pre>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td
+                    className="pt-1 pb-1 pl-2 pr-2 text-left border-r border-black"
+                    style={{
+                      fontSize: "9px",
+                      height: "100%",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div className="h-full flex items-start">
+                      <pre className="text-left" style={{ margin: 0 }}>
+                        {bldata?.grossWt} {bldata?.weightUnit}
+                      </pre>
+                    </div>
+                  </td>
+
+                  <td
+                    className="pt-1 pb-1 pl-2 pr-2 align-top text-left"
+                    style={{
+                      fontSize: "9px",
+                      height: "100%",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <pre className="text-left" style={{ margin: 0 }}>
+                      {bldata?.volumeWt} {bldata?.volumeUnitName}
+                    </pre>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div
+            className="border-r border-l border-b border-black flex"
+            style={{
+              height: "15%",
+              minHeight: "15%",
+              maxHeight: "15%",
+              width: "100%",
+            }}
+          >
+            <div className="border-r  border-black" style={{ width: "69%" }}>
+              <div className="border-b  border-black" style={{ height: "10%" }}>
+                <p>
+                  FREIGHT & CHARGES Cargo shall not be delivered unless Freight
+                  & Charged are paid
+                </p>
+              </div>
+              <div className="" style={{ height: "90%" }}></div>
+            </div>
+            <div className="" style={{ width: "31%", fontSize: "8.5px" }}>
+              <p>
+                Taken in Charge in apparently good condition, hercin at the
+                place ofreceipt, for transport and delivery as mentioned above,
+                unless otherwise stated. The MTO, in accordance with the
+                provision contained in the MTD, undertake to perform or to
+                procure the performance of the multimodal transport from the
+                place at which the goods are taken in charge, to the place
+                designated for deliveryу and assumes the responsiblity for such
+                transport. One of the MTPD(s) must be surrendered, duly endorsed
+                in exchange for the goods in witness where of the original MTD
+                all of this tenor and date have been singed in the number
+                indicated below one of which being accomplished the other(s) to
+                be void
+              </p>
+            </div>
+          </div>
+          <div
+            className="border-r border-l border-b border-black flex"
+            style={{
+              height: "4%",
+              minHeight: "4%",
+              maxHeight: "4%",
+              width: "100%",
+            }}
+          >
+            <div className="border-r border-black" style={{ width: "25%" }}>
+              {" "}
+              <p>FREIGHT CHARGES</p>
+              <p>{bldata?.totalFreightAndCharges}</p>
+            </div>
+            <div className="border-r border-black" style={{ width: "25%" }}>
+              {" "}
+              <p>FREIGHT PAYABLE AT</p>
+              <p>{bldata?.freightpayableAtText}</p>
+            </div>
+            <div className="border-r border-black" style={{ width: "25%" }}>
+              {" "}
+              <p>PLACE AND DATE OF ISSUE</p>
+              <p>
+                {bldata?.blIssuePlaceText} {bldata?.blIssueDate}
+              </p>
+            </div>
+            <div className="" style={{ width: "25%" }}>
+              {" "}
+              <p>TRANSNATIONAL SHIPPING INDIA PVT</p>
+              <p>{bldata?.freightpayableAtText}</p>
+            </div>
+          </div>
+          <div
+            className="text-center"
+            style={{ height: "2%", minHeight: "2%", maxHeight: "2%" }}
+          >
+            <p>TERMS CONTINUED ON REVERSE</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const GSLBLREPORTSAttachMent = ({
+    bldata = {},
+    tblBlContainer = [],
+    pageNo = 1,
+    totalPages = 1,
+  }) => {
+    const toNum = (v) => {
+      if (v === null || v === undefined || v === "") return 0;
+      const n = Number(String(v).replace(/,/g, "").trim());
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const fmt3 = (n) => (Number.isFinite(n) ? n.toFixed(3) : "");
+
+    const cntrCount = Array.isArray(tblBlContainer) ? tblBlContainer.length : 0;
+
+    const totalPackages = (tblBlContainer || []).reduce(
+      (s, r) => s + toNum(r?.package),
+      0,
+    );
+    const totalNetWt = (tblBlContainer || []).reduce(
+      (s, r) => s + toNum(r?.netWt),
+      0,
+    );
+
+    const totalGrossWt = (tblBlContainer || []).reduce((s, r) => {
+      const raw = r?.grossWtAndUnit ?? r?.grossWt ?? "";
+      const m = String(raw).match(/-?\d+(\.\d+)?/);
+      return s + toNum(m?.[0] ?? raw);
+    }, 0);
+
+    const sealText = (r) =>
+      [r?.agentSealNo, r?.customSealNo].filter(Boolean).join(" / ");
+
+    const blNoText = bldata?.blNo || bldata?.mblNo || bldata?.hblNo || "";
+    const vesselText = bldata?.polVessel || bldata?.vesselName || "";
+    const voyageText =
+      bldata?.polVoyage || bldata?.voyageNo || bldata?.voyage || "";
+
+    const styles = {
+      box: {
+        border: "1px solid #000",
+        fontSize: "10px",
+        color: "#000",
+        width: "100%",
+        background: "#fff",
+      },
+      row: { display: "flex", width: "100%" },
+      cell: { padding: "6px 8px", borderBottom: "1px solid #000" },
+      titleBar: {
+        display: "flex",
+        width: "100%",
+        borderBottom: "1px solid #000",
+        alignItems: "center",
+      },
+      titleCenter: {
+        width: "80%",
+        textAlign: "center",
+        fontWeight: 700,
+        padding: "6px 0",
+        letterSpacing: "0.4px",
+      },
+      pageBox: {
+        width: "20%",
+        textAlign: "right",
+        paddingRight: "8px",
+        fontWeight: 700,
+        fontSize: "10px",
+      },
+      label: { fontWeight: 700 },
+      tableHdr: {
+        fontWeight: 700,
+        borderBottom: "1px solid #000",
+        padding: "6px 8px",
+        background: "#fff",
+      },
+      td: { padding: "4px 8px", borderBottom: "1px solid #000" },
+      center: { textAlign: "center" },
+      right: { textAlign: "right" },
+    };
+
+    return (
+      <div style={styles.box}>
+        {/* ATTACHED SHEET header + page count (top right) */}
+        <div style={styles.titleBar}>
+          <div style={styles.titleCenter}>ATTACHED SHEET</div>
+          <div style={styles.pageBox}>
+            {totalPages > 1 ? `Page ${pageNo} / ${totalPages}` : ""}
+          </div>
+        </div>
+
+        {/* BL / VESSEL / VOYAGE line (like screenshot) */}
+        <div style={styles.row}>
+          <div style={{ ...styles.cell, width: "33.33%" }}>
+            <div style={styles.label}>BL NUMBER</div>
+            <div>{bldata && bldata.blNo}</div>
+          </div>
+
+          <div
+            style={{
+              ...styles.cell,
+              width: "33.33%",
+              borderLeft: "1px solid #000",
+              borderRight: "1px solid #000",
+            }}
+          >
+            <div style={styles.label}>VESSEL NAME</div>
+            <div>{bldata?.polVessel}</div>
+          </div>
+
+          <div style={{ ...styles.cell, width: "33.33%" }}>
+            <div style={styles.label}>VOYAGE</div>
+            <div>{bldata?.polVoyage}</div>
+          </div>
+        </div>
+
+        {/* MARKS / PKGS / DESC / GROSS header */}
+        <div style={styles.row}>
+          <div style={{ ...styles.tableHdr, width: "25%" }}>
+            MARKS AND <br /> NUMBERS
+          </div>
+
+          <div
+            style={{
+              ...styles.tableHdr,
+              width: "20%",
+              borderLeft: "1px solid #000",
+            }}
+          >
+            NO OF PKGS <br /> OR UNITS
+          </div>
+
+          <div
+            style={{
+              ...styles.tableHdr,
+              width: "35%",
+              borderLeft: "1px solid #000",
+            }}
+          >
+            KIND OF PACKAGES, <br />
+            DESCRIPTION OF GOODS
+          </div>
+
+          <div
+            style={{
+              ...styles.tableHdr,
+              width: "20%",
+              borderLeft: "1px solid #000",
+            }}
+          >
+            GROSS WT <br /> KGS
+          </div>
+        </div>
+
+        {/* note */}
+        <div style={{ ...styles.cell, ...styles.center, fontWeight: 700 }}>
+          14 DAYS FREE DETENTION AT DESTINATION.
+        </div>
+
+        {/* Detail table header */}
+        <div style={styles.row}>
+          <div style={{ ...styles.tableHdr, width: "20%" }}>CONTAINER</div>
+
+          <div
+            style={{
+              ...styles.tableHdr,
+              width: "12%",
+              borderLeft: "1px solid #000",
+            }}
+          >
+            TYPE
+          </div>
+
+          <div
+            style={{
+              ...styles.tableHdr,
+              width: "18%",
+              borderLeft: "1px solid #000",
+            }}
+          >
+            SEAL No
+          </div>
+
+          <div
+            style={{
+              ...styles.tableHdr,
+              width: "18%",
+              borderLeft: "1px solid #000",
+            }}
+          >
+            PACKAGES
+          </div>
+
+          <div
+            style={{
+              ...styles.tableHdr,
+              width: "16%",
+              borderLeft: "1px solid #000",
+            }}
+          >
+            NET WT(KGS)
+          </div>
+
+          <div
+            style={{
+              ...styles.tableHdr,
+              width: "16%",
+              borderLeft: "1px solid #000",
+            }}
+          >
+            GR WT(KGS)
+          </div>
+        </div>
+
+        {/* Rows */}
+        {(tblBlContainer || []).map((r, idx) => {
+          const grossRaw = r?.grossWtAndUnit ?? r?.grossWt ?? "";
+          const m = String(grossRaw).match(/-?\d+(\.\d+)?/);
+          const grossVal = toNum(m?.[0] ?? grossRaw);
+
+          return (
+            <div key={idx} style={styles.row}>
+              <div style={{ ...styles.td, width: "20%" }}>
+                {r?.containerNo ?? ""}
+              </div>
+
+              <div
+                style={{
+                  ...styles.td,
+                  width: "12%",
+                  borderLeft: "1px solid #000",
+                }}
+              >
+                {r?.sizeType ?? ""}
+              </div>
+
+              <div
+                style={{
+                  ...styles.td,
+                  width: "18%",
+                  borderLeft: "1px solid #000",
+                }}
+              >
+                {sealText(r)}
+              </div>
+
+              <div
+                style={{
+                  ...styles.td,
+                  width: "18%",
+                  borderLeft: "1px solid #000",
+                }}
+              >
+                {r?.package ? `${r.package} ${r?.packageUnit || ""}` : ""}
+              </div>
+
+              <div
+                style={{
+                  ...styles.td,
+                  width: "16%",
+                  borderLeft: "1px solid #000",
+                  ...styles.right,
+                }}
+              >
+                {r?.netWt !== undefined && r?.netWt !== null
+                  ? fmt3(toNum(r?.netWt))
+                  : ""}
+              </div>
+
+              <div
+                style={{
+                  ...styles.td,
+                  width: "16%",
+                  borderLeft: "1px solid #000",
+                  ...styles.right,
+                }}
+              >
+                {grossVal ? fmt3(grossVal) : ""}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Footer totals line like screenshot */}
+        <div style={{ ...styles.row, borderBottom: "1px solid #000" }}>
+          <div style={{ ...styles.cell, width: "35%" }}>
+            <div style={{ fontWeight: 700 }}>CNTR Count : {cntrCount}</div>
+          </div>
+
+          <div style={{ ...styles.cell, width: "25%", ...styles.right }}>
+            <div style={{ fontWeight: 700 }}>Total :</div>
+            <div style={{ fontWeight: 700 }}>
+              {totalPackages ? totalPackages.toLocaleString() : ""}
+            </div>
+          </div>
+
+          <div style={{ ...styles.cell, width: "20%", ...styles.right }}>
+            <div style={{ fontWeight: 700 }}>
+              {totalNetWt ? fmt3(totalNetWt) : ""}
+            </div>
+          </div>
+
+          <div style={{ ...styles.cell, width: "20%", ...styles.right }}>
+            <div style={{ fontWeight: 700 }}>
+              {totalGrossWt ? fmt3(totalGrossWt) : ""}
+            </div>
+          </div>
+        </div>
+
+        {/* Rider footer */}
+        <div
+          style={{ padding: "8px 8px", textAlign: "center", fontSize: "10px" }}
+        >
+          {"********************  "}
+          End of Rider Sheet {blNoText}
+          {"  ********************"}
+        </div>
+      </div>
+    );
+  };
+  const BLTGK1 = () => {
+    return (
+      <div
+        className="text-black"
+        style={{
+          height: "280mm",
+          margin: "0 auto",
+          backgroundColor: "white",
+        }}
+      ><div className="border-t border-l border-r  border border-black font-bold text-center " style={{ height: "5%", minHeight: "5%", maxHeight: "5%" }}>
+          <span>COMBINED TRANSPORT DOCUMENT BILL OF LADING</span>
+        </div>
+        <div className="border-r border-l border-black flex" style={{ height: "22%", width: "100%", fontSize: "10px", minHeight: "22%", maxHeight: "22%" }}>
+          <div className="border-r border-black" style={{ width: "50%" }}>
+            <div className="border-b border-black" style={{ height: "33%" }}>shipper</div>
+            <div className="border-b border-black" style={{ height: "33%" }}>consignee</div>
+            <div style={{ height: "34%" }}>notify party</div>
+          </div>
+          <div style={{ width: "50%", fontSize: "10px" }}>
+            <div className="border-b border-black" style={{ height: "23%" }}>blno:</div>
+            <div className="border-b border-black" style={{ height: "43%" }}>image</div>
+            <div style={{ height: "34%" }}>delivery agent</div>
+          </div>
+        </div>
+        <div className="border-r border-l border-b border-t border-black flex" style={{ height: "4%", width: "100%", fontSize: "10px", minHeight: "4%", maxHeight: "4%" }}>
+          <div className="border-r border-black " style={{ width: "25%" }}>vessel</div>
+          <div className="border-r border-black " style={{ width: "25%" }}>voyage</div>
+          <div className="border-r border-black " style={{ width: "25%" }}>place of receipt</div>
+          <div style={{ width: "25%" }}>place of delivery</div>
+        </div>
+        <div className="border-r border-l border-black flex" style={{ height: "4%", width: "100%", fontSize: "10px", minHeight: "4%", maxHeight: "4%" }}>
+          <div className="border-r border-black " style={{ width: "25%" }}>port of loading</div>
+          <div className="border-r border-black " style={{ width: "25%" }}>port of discharge</div>
+          <div className="border-r border-black " style={{ width: "25%" }}></div>
+          <div style={{ width: "25%" }}></div>
+        </div>
+        <div className="border-r border-l border-t border-black text-center font-bold" style={{ height: "3%", fontSize: "11px", minHeight: "3%", maxHeight: "3%" }}>
+          PARTICULAR FURNISHED BY SHIPPER-CARRIER NOT RESPONSIBLE
+        </div>
+        {/* <div className="border-r border-l border-t border-black" style={{ height: "30%", fontSize: "10px", minHeight: "30%", maxHeight: "30%" }}>lesson</div> */}
+        <div
+          className="flex border-r border-l border-t border-black"
+          style={{
+            height: "30%",
+            width: "100%",
+            minHeight: "30%",
+            maxHeight: "30%",
+          }}
+        >
+          <table style={{ width: "100%", height: "100%", fontSize: "9px" }}>
+            <thead>
+              <tr>
+                <th style={{ width: "18%", textAlign: "center" }}>
+                  Marks & No.(s) /<br />
+                  Container No.(s)
+                </th>
+
+                <th style={{ width: "13%", textAlign: "center" }}>
+                  Number and Type of<br />
+                  Package
+                </th>
+
+                <th style={{ width: "35%", textAlign: "center" }}>
+                  DESCRIPTION OF GOODS
+                </th>
+
+                <th style={{ width: "17%", textAlign: "center" }}>
+                  GROSS WEIGHT<br />
+                  (KGS)
+                </th>
+
+                <th className="p-1" style={{ width: "17%", textAlign: "center" }}>
+                  MEASUREMENT<br />
+                  (M3)
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr>
+                <td
+                  className="p-2 align-top"
+                  style={{ textAlign: "center", whiteSpace: "pre-wrap" }}
+                >
+                  {bldata?.marksAndNosDetails}
+                </td>
+
+                <td
+                  className="p-2 align-top"
+                  style={{ textAlign: "center", whiteSpace: "pre-wrap" }}
+                >
+                  {bldata?.noOfPackages} {bldata?.packagesCode}
+                </td>
+
+                <td
+                  className="p-2 align-top"
+                  style={{ textAlign: "center", whiteSpace: "pre-wrap" }}
+                >
+                  <div>{bldata?.goodsDescDetails}</div>
+
+                  <div style={{ marginTop: "8px" }}>
+                    {trimByWordCount
+                      ? trimByWordCount(bldata?.blClause, 60)
+                      : ""}
+                  </div>
+                </td>
+
+                <td
+                  className="p-2 align-top"
+                  style={{ textAlign: "center", whiteSpace: "pre-wrap" }}
+                >
+                  {bldata?.grossWt} {bldata?.weightUnit}
+                </td>
+
+                <td
+                  className="p-2 align-top"
+                  style={{ textAlign: "center", whiteSpace: "pre-wrap" }}
+                >
+                  {bldata?.volume} {bldata?.volumeUnitName}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="border-r border-l border-black  font-bold" style={{ height: "2%", fontSize: "11px", minHeight: "2%", maxHeight: "2%" }}>
+          above particulars as declared by shipper ,but without responsibility of or representation by Carrier
+        </div>
+        <div className="border border-black flex" style={{ height: "10%", fontSize: "10px", minHeight: "10%", maxHeight: "10%", width: "100%" }}>
+          <div className="" style={{ width: "20%" }}>rate</div>
+          <div className="" style={{ width: "20%" }}>unit</div>
+          <div className="" style={{ width: "20%" }}>currency</div>
+          <div className="" style={{ width: "20%" }}>prepaid</div>
+          <div className="" style={{ width: "20%" }}>collect</div>
+        </div>
+        <div className="border-r border-l border-b border-black flex" style={{ height: "20%", fontSize: "10px", minHeight: "20%", maxHeight: "20%", width: "100%" }}>
+          <div className="border-r  border-black" style={{ width: "50%" }}></div>
+          <div className="" style={{ width: "50%", fontSize: "9px" }}>
+            PRINCIPAL SPECIFIC TERMS & CONDITIONS
+            RECEIVED FOR SHIPMENT from the MERCHANT in apparent good order and condition unless otherwise stated herein, the GOODS mentioned above to be transported as provided herein, by any
+            mode of transport for all or any part of the Carriage, SUBJECT TO ALL THE TERMS AND CONDITIONS
+            appear- ing on the face and back hereof and in the CARRIER’S applicable Tariff, to which the
+            Merchant agrees by accepting this BILL OF LADING. Where applicable law requires and not
+            otherwise, one original Bill OF LADING must be surrendered, duly endorsed, in exchange for the
+            GOODS or CONTAINER(S) or other PACKAGE(S), the others to stand void. If a ‘Non-Negotiable’ BILL
+            OF LADING is issued, neither an original nor a copy need be sur-rendered in exchange for delivery
+            unless applicable law so requires
+            signed on behalf of the carrier SATT SHIPPING LINE
+
+          </div>
+        </div>
+
+
+
+      </div>
+    );
+  };
+  const BLTGK1BLATTACHMENT = ({
+    tblBlContainer = [],
+    pageNo = 1,
+    totalPages = 1,
+  }) => {
+    // ✅ helpers
+    const toNum = (v) => {
+      if (v === null || v === undefined || v === "") return 0;
+      const n = Number(String(v).replace(/,/g, "").trim());
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    // ✅ totals (based on your fields)
+    const totalNetWt = tblBlContainer.reduce(
+      (sum, r) => sum + toNum(r?.netWt),
+      0,
+    );
+
+    // grossWtAndUnit may be "123.45 KGS" -> take numeric part
+    const totalGrossWt = tblBlContainer.reduce((sum, r) => {
+      const raw = r?.grossWtAndUnit ?? r?.grossWt ?? "";
+      const num = String(raw).match(/-?\d+(\.\d+)?/);
+      return sum + toNum(num?.[0]);
+    }, 0);
+
+    // ✅ unit (prefer first available)
+    const unit =
+      tblBlContainer.find((x) => x?.weightUnit)?.weightUnitCode ||
+      (tblBlContainer.find((x) =>
+        (x?.grossWtAndUnit ?? "").toString().match(/[a-zA-Z]+/),
+      ) &&
+        tblBlContainer
+          .find((x) => (x?.grossWtAndUnit ?? "").toString().match(/[a-zA-Z]+/))
+          ?.grossWtAndUnit?.toString()
+          .match(/[a-zA-Z]+/)?.[0]) ||
+      "";
+
+    return (
+      <>
+        <div className="border border-black">
+          <div
+            className="text-center border-b border-black font-bold"
+            style={{ fontSize: "10px" }}
+          >
+            NON-NEGOTIABLE SEA WAYBILL
+          </div>
+
+          <div
+            className="flex text-center border-b border-black bg-gray-300 font-bold"
+            style={{ fontSize: "10px" }}
+          >
+            <div style={{ width: "80%" }}>ATTACHED SHEET</div>
+            <div style={{ width: "20%" }}>
+              {totalPages > 1 ? `Page ${pageNo} / ${totalPages}` : ""}
+            </div>
+          </div>
+
+          <div className="flex border-black border-b"></div>
+
+          <div
+            className="flex text-center border-black border-b font-bold "
+            style={{ width: "100%", fontSize: "10px" }}
+          >
+            <div
+              className="border-black border-r bg-gray-300 "
+              style={{ width: "20%" }}
+            >
+              TANK NUMBER
+            </div>
+            <div
+              className="border-black border-r bg-gray-300 "
+              style={{ width: "40%" }}
+            >
+              SEAL No.
+            </div>
+            <div
+              className="border-black border-r bg-gray-300 "
+              style={{ width: "20%" }}
+            >
+              NET WEIGHT
+            </div>
+            <div className=" bg-gray-300 " style={{ width: "20%" }}>
+              GROSS WEIGHT
+            </div>
+          </div>
+
+          {/* ✅ rows */}
+          {tblBlContainer.map((r, idx) => {
+            const sealNo = [r?.agentSealNo, r?.customSealNo]
+              .filter(Boolean)
+              .join(" / ");
+            const netWeight = [r?.netWt, r?.weightUnitCode]
+              .filter(Boolean)
+              .join(" ");
+            const grossWeight = r?.grossWtAndUnit ?? ""; // as per your field
+
+            return (
+              <div
+                key={idx}
+                className="flex text-center border-black border-b"
+                style={{ width: "100%", fontSize: "10px" }}
+              >
+                <div className="border-black border-r" style={{ width: "20%" }}>
+                  {r?.containerNo ?? ""}
+                </div>
+
+                <div className="border-black border-r" style={{ width: "40%" }}>
+                  {sealNo}
+                </div>
+
+                <div className="border-black border-r" style={{ width: "20%" }}>
+                  {netWeight}
+                </div>
+
+                <div style={{ width: "20%" }}>{grossWeight}</div>
+              </div>
+            );
+          })}
+
+          {/* ✅ TOTALS ROW (now filled) */}
+          <div
+            className="flex text-center bg-gray-300 font-bold"
+            style={{ fontSize: "10px" }}
+          >
+            <div className="border-black border-r" style={{ width: "60%" }}>
+              Total net weight
+              <br />
+              Total gross weight
+            </div>
+
+            <div className="border-black border-r" style={{ width: "20%" }}>
+              {totalNetWt ? `${totalNetWt.toFixed(3)} ${unit}` : ""}
+            </div>
+
+            <div className="" style={{ width: "20%" }}>
+              {" "}
+              {totalGrossWt ? `${totalGrossWt.toFixed(3)} ${unit}` : ""}
+            </div>
+          </div>
+
+          <div
+            className="flex text-center  bg-gray-300 border-t border-black font-bold"
+            style={{ fontSize: "10px" }}
+          >
+            <div className="border-black border-r" style={{ width: "20%" }}>
+              Total no <br />
+              of packages
+            </div>
+            <div className="border-black border-r" style={{ width: "40%" }}>
+              {" "}
+              {bldata?.noOfPackages} {bldata?.packagesCode}
+            </div>
+            <div className="border-black border-r" style={{ width: "20%" }}>
+              Freight:prepaid
+            </div>
+            <div style={{ width: "20%" }}>
+              {reportData?.freightPrepaidCollect}
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  };
+
   return (
     <main>
       <div className="mt-5">
@@ -26375,9 +27761,8 @@ function rptAirwayBill() {
                   <div
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
-                    className={`bg-white ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    }`}
+                    className={`bg-white ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      }`}
                     style={{
                       width: "297mm", // A4 landscape width
                       height: "210mm", // A4 landscape height
@@ -26601,8 +27986,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -26977,8 +28362,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -27159,6 +28544,14 @@ function rptAirwayBill() {
               );
             }
             case "BL DRAFT SBX": {
+              const result = cutDataFromBack(
+                bldata?.marksNos || "",
+                bldata?.marksAndNosDetailsAttach || "",
+                { debug: true }, // optional
+              );
+
+              console.log("cutDataFromBack RESULT:", result);
+
               // --- utilities (inline) ---
               const splitLines = (txt) =>
                 txt ? String(txt).split(/\r?\n/) : [];
@@ -27366,8 +28759,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
 
                       const showThisPage =
@@ -27672,9 +29065,8 @@ function rptAirwayBill() {
                   key: "No of Packages",
                   header: "Packages",
                   render: (c) =>
-                    `${c.noOfPackages || ""}${" "}${
-                      c.packageCode || ""
-                    }`.trim(),
+                    `${c.noOfPackages || ""}${" "}${c.packageCode || ""
+                      }`.trim(),
                   align: "center",
                 },
                 {
@@ -27759,8 +29151,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -28128,8 +29520,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -28504,8 +29896,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -28880,8 +30272,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -29286,6 +30678,162 @@ function rptAirwayBill() {
                           }}
                         >
                           <YMSBLAttachMent
+                            tblBlContainer={pageRows}
+                            pageNo={pageIdx + 1}
+                            totalPages={totalPages}
+                          />
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              );
+            }
+            case "GSLBLREPORTS": {
+              const containers = Array.isArray(bldata?.tblBlContainer)
+                ? bldata.tblBlContainer
+                : [];
+              const PER_PAGE = 20;
+
+              const pages = [];
+              for (let i = 0; i < containers.length; i += PER_PAGE) {
+                pages.push(containers.slice(i, i + PER_PAGE));
+              }
+              const totalPages = pages.length;
+
+              return (
+                // ✅ SINGLE WRAPPER REF — captures main + all attachment pages
+                <div
+                  key={index}
+                  ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                  data-report={`seaway-${index}`}
+                  style={{ width: "210mm", margin: "auto" }}
+                  className="mt-5"
+                >
+                  <style jsx global>{`
+                    @media print {
+                      .page {
+                        page-break-after: always;
+                      }
+                      .page:last-child {
+                        page-break-after: auto;
+                      }
+                      .no-print {
+                        display: none !important;
+                      }
+                    }
+                  `}</style>
+
+                  {/* ================= MAIN PAGE ================= */}
+                  <div
+                    className="page bg-white"
+                    style={{
+                      width: "210mm",
+                      minHeight: "297mm", // ✅ use minHeight (avoid hiding content)
+                      boxSizing: "border-box",
+                      padding: "5mm",
+                      fontFamily: "Arial, sans-serif",
+                    }}
+                  >
+                    {GSLBLREPORTS()}
+                  </div>
+
+                  {/* ✅ show attachments only when data exists */}
+                  {containers.length > 0 && (
+                    <>
+                      <div className="bg-gray-300 h-2 no-print" />
+
+                      {pages.map((pageRows, pageIdx) => (
+                        <div
+                          key={pageIdx}
+                          className="page bg-white text-black"
+                          style={{
+                            width: "210mm",
+                            minHeight: "297mm", // ✅ minHeight not fixed height
+                            boxSizing: "border-box",
+                            padding: "5mm",
+                            fontFamily: "Arial, sans-serif",
+                          }}
+                        >
+                          <GSLBLREPORTSAttachMent
+                            tblBlContainer={pageRows}
+                            pageNo={pageIdx + 1}
+                            totalPages={totalPages}
+                          />
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              );
+            }
+            case "BLTGK1": {
+              const containers = Array.isArray(bldata?.tblBlContainer)
+                ? bldata.tblBlContainer
+                : [];
+              const PER_PAGE = 20;
+
+              const pages = [];
+              for (let i = 0; i < containers.length; i += PER_PAGE) {
+                pages.push(containers.slice(i, i + PER_PAGE));
+              }
+              const totalPages = pages.length;
+
+              return (
+                // ✅ SINGLE WRAPPER REF — captures main + all attachment pages
+                <div
+                  key={index}
+                  ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                  data-report={`seaway-${index}`}
+                  style={{ width: "210mm", margin: "auto" }}
+                  className="mt-5"
+                >
+                  <style jsx global>{`
+                    @media print {
+                      .page {
+                        page-break-after: always;
+                      }
+                      .page:last-child {
+                        page-break-after: auto;
+                      }
+                      .no-print {
+                        display: none !important;
+                      }
+                    }
+                  `}</style>
+
+                  {/* ================= MAIN PAGE ================= */}
+                  <div
+                    className="page bg-white"
+                    style={{
+                      width: "210mm",
+                      minHeight: "297mm", // ✅ use minHeight (avoid hiding content)
+                      boxSizing: "border-box",
+                      padding: "5mm",
+                      fontFamily: "Arial, sans-serif",
+                    }}
+                  >
+                    {BLTGK1()}
+                  </div>
+
+                  {/* ✅ show attachments only when data exists */}
+                  {containers.length > 0 && (
+                    <>
+                      <div className="bg-gray-300 h-2 no-print" />
+
+                      {pages.map((pageRows, pageIdx) => (
+                        <div
+                          key={pageIdx}
+                          className="page bg-white text-black"
+                          style={{
+                            width: "210mm",
+                            minHeight: "297mm", // ✅ minHeight not fixed height
+                            boxSizing: "border-box",
+                            padding: "5mm",
+                            fontFamily: "Arial, sans-serif",
+                          }}
+                        >
+                          <BLTGK1BLATTACHMENT
                             tblBlContainer={pageRows}
                             pageNo={pageIdx + 1}
                             totalPages={totalPages}

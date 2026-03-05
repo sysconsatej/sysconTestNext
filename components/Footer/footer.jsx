@@ -9,14 +9,14 @@ export default function Footer() {
       className="
         fixed left-0 right-0 bottom-0 z-[1000]
         flex items-center justify-end
-        px-4 py-3
+        px-4 py-2
         bg-blue-600/95 backdrop-blur-md
         border-t border-white/20
       "
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
     >
       <p className="text-white text-[13px] sm:text-[14px] font-semibold tracking-wide">
-        © {currentYear} SYSCON PVT LTD.
+        © {currentYear} SYSCON INFOTECH PVT LTD.
       </p>
     </footer>
   );

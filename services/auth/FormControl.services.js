@@ -271,7 +271,7 @@ export async function dynamicDropDownFieldsData(data) {
       },
       body: JSON.stringify(requestData),
     }).then((response) => response.json());
-    console.log("dropdown api", response);
+    // console.log("dropdown api", response);
     return response;
   } catch (error) {
     console.log(error);
@@ -2331,6 +2331,129 @@ export async function getTariffChargeDetails(data) {
     const token = localStorage.getItem("token");
     const response = await fetch(
       `${baseUrl}/Sql/api/spInvoice/getTariffChargeDetails`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(data),
+      },
+    ).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+
+
+export async function commanPostService({ url, data }) {
+  try {
+    const storedUserData = localStorage.getItem("userData");
+    const decryptedData = decrypt(storedUserData);
+    const userData = JSON.parse(decryptedData);
+    const clientId = userData[0].clientId;
+    let insertedData = {
+      ...data,
+      clientId: clientId,
+      loginCompany: sessionStorage.getItem("companyId"),
+      loginBranch: sessionStorage.getItem("branchId"),
+      loginfinYear: sessionStorage.getItem("financialYear"),
+    };
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${baseUrlSQl}${url}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": JSON.parse(token),
+      },
+      body: JSON.stringify(insertedData),
+    }).then((response) => response.json());
+
+    if (response["success"]) {
+      return response;
+    } else {
+      return response;
+    }
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
+export async function getRoundOffData(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${baseUrl}/Sql/api/spInvoice/getRoundOffSettings`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(data),
+      },
+    ).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+
+export async function checkDischargeDoneForBLData(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${baseUrl}/Sql/api/spInvoice/checkDischargeDoneForBL`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(data),
+      },
+    ).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+
+export async function checkJobCreatedAgainstBLData(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${baseUrl}/Sql/api/spInvoice/checkJobCreatedAginstBl`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(data),
+      },
+    ).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+
+export async function getBillingPartyOnBlData(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${baseUrl}/Sql/api/spInvoice/getBillingPartyOnBl`,
       {
         method: "POST",
         headers: {

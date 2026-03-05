@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable */
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import styles from "@/app/app.module.css";
 import CustomeModal from "@/components/Modal/customModal";
 import { parentAccordionSection, accordianDetailsStyle } from "@/app/globalCss";
@@ -17,6 +17,7 @@ import {
   insertExcelDataInDatabase,
   saveEditedReport,
   mergeBl,
+  emailPDF,
 } from "@/services/auth/FormControl.services.js";
 import { ButtonPanel } from "@/components/Buttons/customeButton.jsx";
 import { CustomSpinner } from "@/components/Spinner/spinner";
@@ -87,7 +88,12 @@ import {
 import { parse } from "dotenv";
 import { decrypt } from "@/helper/security";
 import { data } from "autoprefixer";
+import MultiQrPrint from "@/components/MultiQrPrint/page";
 const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import CloseIcon from "@mui/icons-material/Close";
 
 export default function AddEditFormControll({ reportData }) {
   const searchParams = useSearchParams();
@@ -181,8 +187,11 @@ export default function AddEditFormControll({ reportData }) {
   const [editableErrors, setEditableErrors] = useState(false);
   const [editableErrorsData, setEditableErrorsData] = useState([]);
   const [selectedControlsData, setSelectedControlsData] = useState([]);
-
-  console.log("selectedControlsData =>", selectedControlsData);
+  const [selectedRowFullData, setSelectedRowFullData] = useState([]);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrItems, setQrItems] = useState([]);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [codeType, setCodeType] = useState("Q"); // "Q" = QR, "B" = Barcode
 
   useEffect(() => {
     if (menuType == "C") {
@@ -251,6 +260,10 @@ export default function AddEditFormControll({ reportData }) {
         })
         .filter(Boolean);
       setFullRowJson(fullSelectedRowJson);
+      if (fullSelectedRowJson?.length) {
+        const rows = fullSelectedRowJson.map((x) => x?.record ?? x);
+        setSelectedRowFullData(rows.length > 1 ? rows : []);
+      }
     } else {
       setFullRowJson([]);
     }
@@ -464,9 +477,9 @@ export default function AddEditFormControll({ reportData }) {
     }
   };
 
-  const handleChangeData = () => {};
+  const handleChangeData = () => { };
   console.log("finalPaginatedData", finalPaginatedData);
-  useEffect(() => {}, [newState, filterCondition]);
+  useEffect(() => { }, [newState, filterCondition]);
 
   function sortJsonData(data, columnId, sortDirection = "asc") {
     if (!columnId) return data;
@@ -974,7 +987,6 @@ export default function AddEditFormControll({ reportData }) {
         console.log("Error handling Excel upload:", error);
       }
     },
-
     handleExportToExcel: async () => {
       if (isDefaultDataShow === false && outputFileFormat === "Excel") {
         const filterCondition = null;
@@ -2222,7 +2234,7 @@ export default function AddEditFormControll({ reportData }) {
             if (typeof raw === "string") {
               try {
                 raw = JSON.parse(raw);
-              } catch {}
+              } catch { }
             }
             const rows = Array.isArray(raw) ? raw : [];
             if (rows.length === 0) {
@@ -2510,8 +2522,13 @@ export default function AddEditFormControll({ reportData }) {
             spName: saveSpName,
           });
 
-          if (response?.data[0]?.success === true || response?.data?.success === true) {
-            return toast.success(response?.data[0]?.message || response?.data?.message);
+          if (
+            response?.data[0]?.success === true ||
+            response?.data?.success === true
+          ) {
+            return toast.success(
+              response?.data[0]?.message || response?.data?.message,
+            );
           }
           toast.error(response.data[0].message);
           setEditableErrors(true);
@@ -2581,7 +2598,13 @@ export default function AddEditFormControll({ reportData }) {
         const userData = JSON.parse(decryptedData);
         const userId = userData[0]?.id;
         try {
-          const selectedJobNos = selectedRows.map((row) => row["Booking No"]);
+          // const selectedJobNos = selectedRowFullData.map(
+          //   (row) => row["Booking No"],
+          // );
+
+          const selectedJobNos = selectedRowFullData.map(
+            (row) => row["ID"] || row["Id"] || row["id"],
+          );
 
           const removeDropdownFields = (obj) => {
             const newObj = { ...obj };
@@ -2596,24 +2619,33 @@ export default function AddEditFormControll({ reportData }) {
           const filterConditionWithoutDropdowns =
             removeDropdownFields(filterCondition);
 
+          const updatedCondition = {
+            ...filterConditionWithoutDropdowns,
+            companyId,
+            branchId,
+            financialYear,
+            userId,
+            clientId,
+          };
+
           const bookingNoArray = selectedJobNos.map((jobNo) => ({ jobNo }));
 
           const requestBody = {
-            vesselId: filterConditionWithoutDropdowns?.vesselId,
-            voyageId: filterConditionWithoutDropdowns?.voyageId,
-            userId: userId,
-            bookingNos: JSON.stringify(bookingNoArray),
-            clientId: clientId,
+            ...updatedCondition,
+            data: bookingNoArray,
           };
 
-          const mergeBlData = await mergeBl(requestBody);
+          // const mergeBlData = await mergeBl(requestBody);
 
-          if (
-            mergeBlData &&
-            Array.isArray(mergeBlData) &&
-            mergeBlData.length > 0
-          ) {
-            toast.success("Merge BL created successfully!");
+          let mergeBlData = await saveEditedReport({
+            json: requestBody,
+            spName: saveSpName,
+          });
+
+          if (mergeBlData.success === true) {
+            toast.success(
+              `${mergeBlData?.message || "Merge BL created successfully."}`,
+            );
           } else {
             toast.error("Failed to create Merge BL. No data returned.");
           }
@@ -2626,6 +2658,752 @@ export default function AddEditFormControll({ reportData }) {
     handleCreateSplitBL: async () => {
       alert("Create Split BL");
     },
+    handleSendEmailPosCan: async () => {
+      try {
+        if (selectedIds.length === 0) {
+          toast.info("No valid IDs found in selected rows");
+          return;
+        }
+
+        const filterConditionWithoutDropdowns =
+          removeDropdownFields(filterCondition);
+
+        // 3) Request payload
+        const filterConditionData = {
+          ...filterConditionWithoutDropdowns,
+          data: selectedIds,
+        };
+
+        //const fetchedData = await fetchDynamicReportData(requestBody);
+        const fetchedData = await dynamicReportFilter(
+          filterConditionData,
+          clientId,
+          spName,
+          // "CANReportBlData",
+        );
+
+        const data = fetchedData?.data;
+        console.log(fetchedData?.data, "[][][][");
+
+        if (!Array.isArray(data) || data.length === 0) {
+          toast.info("No data returned to email");
+          return;
+        }
+        let successCount = 0;
+        let failureCount = 0;
+        let blNo = null;
+
+        for (const item of data) {
+          try {
+            blNo = item?.blNo || "";
+            const html = generatedHtmlReport(item);
+            const emailPayload = {
+              tailwindLocalPath: "./assets/css/tailwind.min.css",
+              to: item?.emailTo || "",
+              cc: item?.emailCC || "",
+              htmlContent: html,
+              pdfFilename: "Post Cargo Arrival Notice",
+              subject: "Post Cargo Arrival Notice",
+            };
+
+            const resp = await emailPDF(emailPayload);
+            if (resp?.success) {
+              successCount++;
+              toast.success(`Email Send Successfully To BlNo: ${blNo}`);
+            } else {
+              failureCount++;
+              toast.error(resp?.message || "Failed to send one email");
+            }
+          } catch (err) {
+            failureCount++;
+          }
+        }
+
+        if (successCount > 0) {
+        }
+        if (failureCount > 0) {
+        }
+        console.log("Fetched Data:", data);
+        // console.log("Selected Rows:", tableFormData);
+      } catch (e) {
+        toast.error(e?.message || "Something went wrong.");
+      } finally {
+        //setEmailLoading(false);
+      }
+    },
+    handleSendEmailPreCan: async () => {
+      try {
+        if (selectedIds.length === 0) {
+          toast.info("No valid IDs found in selected rows");
+          return;
+        }
+
+        const filterConditionWithoutDropdowns =
+          removeDropdownFields(filterCondition);
+
+        // 3) Request payload
+        const filterConditionData = {
+          ...filterConditionWithoutDropdowns,
+          data: selectedIds,
+        };
+
+        //const fetchedData = await fetchDynamicReportData(requestBody);
+        const fetchedData = await dynamicReportFilter(
+          filterConditionData,
+          clientId,
+          spName,
+          // "CANReportBlData",
+        );
+
+        const data = fetchedData?.data;
+        console.log(fetchedData?.data, "[][][][");
+
+        if (!Array.isArray(data) || data.length === 0) {
+          toast.info("No data returned to email");
+          return;
+        }
+        let successCount = 0;
+        let failureCount = 0;
+        let blNo = null;
+
+        for (const item of data) {
+          try {
+            blNo = item?.blNo || "";
+            const html = generatedHtmlReportPre(item);
+            const emailPayload = {
+              tailwindLocalPath: "./assets/css/tailwind.min.css",
+              to: item?.emailTo || "",
+              cc: item?.emailCC || "",
+              htmlContent: html,
+              pdfFilename: "Pre Cargo Arrival Notice",
+              subject: "Pre Cargo Arrival Notice",
+            };
+
+            const resp = await emailPDF(emailPayload);
+            if (resp?.success) {
+              successCount++;
+              toast.success(`Email Send Successfully To BlNo: ${blNo}`);
+            } else {
+              failureCount++;
+              toast.error(resp?.message || "Failed to send one email");
+            }
+          } catch (err) {
+            failureCount++;
+          }
+        }
+
+        if (successCount > 0) {
+        }
+        if (failureCount > 0) {
+        }
+        console.log("Fetched Data:", data);
+        // console.log("Selected Rows:", tableFormData);
+      } catch (e) {
+        toast.error(e?.message || "Something went wrong.");
+      } finally {
+        //setEmailLoading(false);
+      }
+    },
+
+    handleGenerateQRCodeBarCode: useCallback(async () => {
+      try {
+        setQrLoading(true);
+
+        const storedUserData = localStorage.getItem("userData");
+        let userData = null;
+        if (storedUserData) {
+          const decryptedData = decrypt(storedUserData);
+          userData = JSON.parse(decryptedData);
+        }
+
+        const removeDropdownFields = (obj) => {
+          const newObj = { ...obj };
+          Object.keys(newObj).forEach((key) => {
+            if (key.endsWith("dropdown")) delete newObj[key];
+          });
+          return newObj;
+        };
+
+        const getRowId = (row) => row?.Id ?? row?.id ?? row?.ID;
+
+        const updatedSelectedRows = finalPaginatedData.filter((row) =>
+          selectedRows.some((selected) => getRowId(selected) === getRowId(row)),
+        );
+
+        // if you actually need row cleanup, keep it; otherwise remove it
+        const cleanRows = updatedSelectedRows.map((row) => {
+          const newRow = { ...row };
+          Object.keys(newRow).forEach((key) => {
+            if (key.endsWith("dropdown")) delete newRow[key];
+          });
+          return newRow;
+        });
+
+        const filterConditionWithoutDropdowns =
+          removeDropdownFields(filterCondition);
+
+        const updatedCondition = {
+          ...filterConditionWithoutDropdowns,
+          companyId,
+          branchId,
+          financialYear,
+          userId,
+          clientId,
+        };
+
+        const payload = {
+          ...updatedCondition,
+          data: selectedIds, // what your SP expects
+        };
+
+        console.log("dataToGetSelectedRowData", dataToGetSelectedRowData);
+        setCodeType(updatedCondition.qb);
+        const response = await saveEditedReport({
+          json: payload,
+          spName: saveSpName,
+        });
+
+        const items = response?.data || [];
+        setQrItems(items);
+        setQrOpen(true);
+      } catch (error) {
+        console.error("Error generating QR/Bar Code:", error);
+        toast.error(error?.message || "Failed to generate QR codes");
+      } finally {
+        setQrLoading(false);
+      }
+    }, [
+      selectedIds,
+      finalPaginatedData,
+      selectedRows,
+      filterCondition,
+      companyId,
+      branchId,
+      financialYear,
+      userId,
+      clientId,
+      saveEditedReport,
+      saveSpName,
+    ]),
+    // handleHide: async () => {
+    //   setParentsFields((prev) => {
+    //     if (!prev) return prev;
+
+    //     // ✅ works for your JSON shape: { default: [...] }
+    //     return Object.fromEntries(
+    //       Object.entries(prev).map(([sectionKey, fields]) => {
+    //         if (!Array.isArray(fields)) return [sectionKey, fields];
+
+    //         return [
+    //           sectionKey,
+    //           fields.map((f) =>
+    //             f?.fieldname === "arrivalDate"
+    //               ? { ...f, isControlShow: true }
+    //               : f
+    //           ),
+    //         ];
+    //       })
+    //     );
+    //   });
+    // },
+    handleHide: async () => {
+      setParentsFields((prev) => {
+        if (!prev) return prev;
+
+        return Object.fromEntries(
+          Object.entries(prev).map(([sectionKey, fields]) => {
+            if (!Array.isArray(fields)) return [sectionKey, fields];
+
+            return [
+              sectionKey,
+              fields.map((f) =>
+                f?.isControlShow === false ? { ...f, isControlShow: true } : f
+              ),
+            ];
+          })
+        );
+      });
+    },
+
+  };
+
+  console.log('omkar=>', parentsFields)
+  const generatedHtmlReport = (item) => {
+    function formatDateToYMD(dateStr) {
+      if (!dateStr) return "";
+      const date = new Date(dateStr);
+      if (isNaN(date)) return "";
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+
+    const storedUserData = localStorage.getItem("userData");
+    if (!storedUserData) return "";
+
+    const decryptedData = decrypt(storedUserData);
+    const userData = JSON.parse(decryptedData);
+    const headerLogoPath = userData?.[0]?.headerLogoPath || "";
+
+    const goodsDesc = String(item?.goodsDesc ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const html = `
+<div style="width:210mm; min-height:297mm; background-color:#fff; font-family:Arial, sans-serif;">
+
+  <!-- ✅ HEADER IMAGE (NO CROP) -->
+  <div style="
+    width:210mm;
+    height:150px;
+    background:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  ">
+    <img
+      src="${baseUrlNext}${headerLogoPath}"
+      alt="header"
+      style="
+        width:100%;
+        height:100%;
+        object-fit:contain;
+        object-position:center;
+        display:block;
+      "
+    />
+  </div>
+
+  <!-- BODY -->
+  <div style="padding:10px 20px;">
+
+    <!-- To + Message -->
+    <div style="display:flex; justify-content:space-between; gap:20px; width:100%;">
+      <div style="width:40%; font-size:10px; color:#000; line-height:1.35; font-weight:700;">
+        To,<br/>
+        ${item?.consigneeName || ""}<br/>
+        ${item?.consigneeNameAndAddress || ""}<br/>
+      </div>
+
+      <div style="width:60%; font-size:12px; color:#000; line-height:1.5;">
+        Please find system generated Cargo Arrival Notice of your shipment.<br/>
+        Please arrange to pay all local charges and take delivery of your shipment once discharged.<br/>
+        Looking forward to your valuable support.<br/>
+      </div>
+    </div>
+
+    <!-- BL No / BL Date -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-top:10px;">
+      <div style="display:flex; gap:6px; width:30%; font-size:12px; line-height:1.2; color:#000;">
+        <span style="font-weight:700;">B/L No.:</span>
+        <span>${item?.blNo || ""}</span>
+      </div>
+      <div style="display:flex; gap:6px; width:70%; font-size:12px; line-height:1.2; color:#000;">
+        <span style="font-weight:700;">B/L Date:</span>
+        <span>${formatDateToYMD(item?.blData || "")}</span>
+      </div>
+    </div>
+
+    <!-- Details lines -->
+    <div style="margin-top:6px; font-size:12px; line-height:1.35; color:#000;">
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">Vessel - Voyage:</span>
+        <span>${item?.podVessel || ""} - ${item?.podVoyage || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">IGM No.:</span>
+        <span>${item?.igmNo || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">IGM Date:</span>
+        <span>${item?.igmDate || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">Line No.:</span>
+        <span>${item?.itemNo || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">CIN Type/No:</span>
+        <span>${item?.cinType || ""} / ${item?.cinNo || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">CSN No:</span>
+        <span>${item?.csnNo || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">CSN Date:</span>
+        <span>${item?.csnDate || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">E.T.A:</span>
+        <span>${item?.eta || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">Port of Loading:</span>
+        <span>${item?.pol || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">Port of Discharge:</span>
+        <span>${item?.pod || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">Port of Delivery:</span>
+        <span>${item?.fpd || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">Type of Delivery:</span>
+        <span>${item?.cargoTypeName || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">Bond Number:</span>
+        <span>${item?.carrierBondNo || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">Vendor:</span>
+        <span>${item?.movementCarrierName || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">Mode of Transport:</span>
+        <span>${item?.postCarriage || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">Notify Party Name:</span>
+        <span>${item?.notifyPartyName || ""}</span>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <span style="font-weight:700;">Notify Party Address:</span>
+        <span>${item?.notifyPartyAddress || ""}</span>
+      </div>
+    </div>
+
+    <!-- Goods Desc -->
+    <div style="margin-top:8px; font-size:12px; line-height:1.35; color:#000;">
+      <span style="font-weight:700;">Description of Goods:</span>
+      <span style="
+        font-weight:400;
+        margin-left:6px;
+        white-space:normal;
+        word-break:break-word;
+        overflow-wrap:anywhere;
+      ">${goodsDesc}</span>
+    </div>
+
+  </div>
+
+  <!-- Container Table -->
+  <div style="padding:10px 20px 0 20px;">
+    <table cellpadding="0" cellspacing="0"
+      style="width:100%; border-collapse:collapse; font-size:10px; color:#000;">
+      <thead>
+        <tr>
+          <th style="border:1px solid #000; padding:5px; text-align:left;">Container No.</th>
+          <th style="border:1px solid #000; padding:5px; text-align:left;">Size</th>
+          <th style="border:1px solid #000; padding:5px; text-align:left;">Seal No.</th>
+          <th style="border:1px solid #000; padding:5px; text-align:right;">No. of Packages</th>
+          <th style="border:1px solid #000; padding:5px; text-align:left;">Package Type</th>
+          <th style="border:1px solid #000; padding:5px; text-align:left;">Type</th>
+          <th style="border:1px solid #000; padding:5px; text-align:right;">Gross Wt</th>
+          <th style="border:1px solid #000; padding:5px; text-align:right;">Container Gross Wt</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${Array.isArray(item?.tblBlContainer) && item.tblBlContainer.length
+        ? item.tblBlContainer
+          .map(
+            (c) => `
+          <tr>
+            <td style="border:1px solid #000; padding:5px; text-align:left;">${c?.containerNo ?? ""}</td>
+            <td style="border:1px solid #000; padding:5px; text-align:left;">${c?.size ?? ""}</td>
+            <td style="border:1px solid #000; padding:5px; text-align:left;">${c?.agentSealNo ?? c?.customSealNo ?? ""
+              }</td>
+            <td style="border:1px solid #000; padding:5px; text-align:right;">${c?.noOfPackages ?? ""}</td>
+            <td style="border:1px solid #000; padding:5px; text-align:left;">${c?.package ?? ""}</td>
+            <td style="border:1px solid #000; padding:5px; text-align:left;">${c?.type ?? ""}</td>
+            <td style="border:1px solid #000; padding:5px; text-align:right;">${c?.grossWt ?? ""}</td>
+            <td style="border:1px solid #000; padding:5px; text-align:right;">${c?.grossWt ?? ""}</td>
+          </tr>
+        `,
+          )
+          .join("")
+        : `
+          <tr>
+            <td colspan="8" style="border:1px solid #000; padding:8px; text-align:center;">
+              No container data
+            </td>
+          </tr>
+        `
+      }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Footer text -->
+  <div style="padding:10px 20px;">
+    <div style="display:flex; gap:6px; font-size:12px; line-height:1.35; color:#000; margin-top:6px;">
+      <span style="font-weight:700;">Remarks:</span>
+      <span>${item?.remarks || ""}</span>
+    </div>
+
+    <div style="margin:8px 0; font-size:12px; line-height:1.5; color:#000;">
+      <p style="margin:0;">
+        This is to inform you that the above consignment is expected to arrive on above vessel.
+        Kindly arrange to present original bills of lading duly discharged and obtain Delivery Order to clear the goods from the Port
+        / CFS / ICD premises on payment of all relative charges as applicable within normal / granted free days time of landing of
+        container / cargo at Port / CFS / ICD or else detention charges will be applicable as per prevailing tariff.
+        You are also requested to note that if you fail to take the delivery of cargo within 60 days of landing at Port / CFS / ICD,
+        your cargo may be auctioned / de-stuffed under section 61 &amp; 62 of Major Port Trust Act, 1963 or TAMP or Section-48 of
+        the Customs Act,1962.
+      </p>
+    </div>
+
+    <div style="display:flex; gap:6px; font-size:12px; line-height:1.35; color:#000; margin-top:6px;">
+      <span style="font-weight:700;">Disclaimer:</span>
+      <span>NO responsibility shall be attached to the carrier or its Agents for failure to notify about shipment arrival.</span>
+    </div>
+  </div>
+
+</div>
+`;
+
+    return html;
+  };
+
+  const generatedHtmlReportPre = (item) => {
+    function formatDateToYMD(dateStr) {
+      if (!dateStr) return "";
+      const date = new Date(dateStr);
+      if (isNaN(date)) return "";
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+
+    // Optional: prevents HTML breaking when values contain &, <, >
+    const escapeHtml = (v) => {
+      const s = String(v ?? "");
+      return s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    };
+
+    const storedUserData = localStorage.getItem("userData");
+    if (!storedUserData) return "";
+
+    const decryptedData = decrypt(storedUserData);
+    const userData = JSON.parse(decryptedData);
+
+    // you were reading this but not using it (keeping it as-is)
+    const headerLogoPath = userData?.[0]?.headerLogoPath || "";
+
+    // Make sure headerImg exists in your scope:
+    // const headerImg = `${baseUrl}/${headerLogoPath}`;  // example if needed
+
+    const goodsDesc = String(item?.goodsDesc ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    // If you already have formatBlData, keep it.
+    // Otherwise fallback to formatDateToYMD.
+    const fmtBlDate =
+      typeof formatBlData === "function"
+        ? (v) => formatBlData(v)
+        : (v) => formatDateToYMD(v);
+
+    const html = `
+<div style="width:210mm; min-height:297mm; background:#fff; box-sizing:border-box;">
+
+  <!-- ✅ HEADER IMAGE (NO CUT / NO CROP) -->
+  <div style="
+    width:210mm;
+    height:150px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#fff;
+    overflow:visible;
+  ">
+    <img
+      src="${headerImg}"
+      alt="header"
+      style="
+        max-width:100%;
+        max-height:150px;
+        width:auto;
+        height:auto;
+        object-fit:contain;
+        display:block;
+      "
+    />
+  </div>
+
+  <!-- Body -->
+  <div style="padding:10px 20px 0 20px; box-sizing:border-box;">
+
+    <!-- To + Message -->
+    <div style="display:flex; justify-content:space-between; gap:14px; width:100%;">
+      <div style="width:38%; font-size:10px; line-height:1.35; color:#000; font-weight:700;">
+        To,<br/>
+        ${escapeHtml(item?.consigneeName || "")}<br/>
+        ${escapeHtml(item?.consigneeNameAndAddress || "")}<br/>
+      </div>
+
+      <div style="width:62%; font-size:12px; line-height:1.45; color:#000;">
+        Please find system generated Cargo Arrival Notice of your shipment.<br/>
+        Please arrange to pay all local charges and take delivery of your shipment once discharged.<br/>
+        Looking forward to your valuable support.<br/>
+      </div>
+    </div>
+
+    <!-- BL No / Date -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%; margin-top:10px;">
+      <div style="display:flex; gap:6px; width:30%; font-size:12px; line-height:1.2; color:#000;">
+        <span style="font-weight:700;">B/L No.:</span>
+        <span>${escapeHtml(item?.blNo || "")}</span>
+      </div>
+
+      <div style="display:flex; gap:6px; width:70%; font-size:12px; line-height:1.2; color:#000;">
+        <span style="font-weight:700;">B/L Date.:</span>
+        <span>${escapeHtml(fmtBlDate(item?.blData || ""))}</span>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:6px; font-size:12px; line-height:1.2; color:#000; margin-top:6px;">
+      <span style="font-weight:700;">Vessel - Voyage:</span>
+      <span>${escapeHtml(item?.podVessel || "")} - ${escapeHtml(item?.podVoyage || "")}</span>
+    </div>
+
+    <div style="display:flex; gap:6px; font-size:12px; line-height:1.2; color:#000; margin-top:6px;">
+      <span style="font-weight:700;">E.T.A:</span>
+      <span>${escapeHtml(item?.eta || "")}</span>
+    </div>
+
+    <div style="display:flex; gap:6px; font-size:12px; line-height:1.2; color:#000; margin-top:6px;">
+      <span style="font-weight:700;">Port of Loading:</span>
+      <span>${escapeHtml(item?.pol || "")}</span>
+    </div>
+
+    <div style="display:flex; gap:6px; font-size:12px; line-height:1.2; color:#000; margin-top:6px;">
+      <span style="font-weight:700;">Port of Discharge:</span>
+      <span>${escapeHtml(item?.pod || "")}</span>
+    </div>
+
+    <div style="display:flex; gap:6px; font-size:12px; line-height:1.2; color:#000; margin-top:6px;">
+      <span style="font-weight:700;">Port of Delivery:</span>
+      <span>${escapeHtml(item?.fpd || "")}</span>
+    </div>
+
+    <!-- Description -->
+    <div style="margin-top:8px; font-size:12px; line-height:1.35; color:#000;">
+      <span style="font-weight:700;">Description of Goods:</span>
+      <span style="
+        font-weight:400;
+        margin-left:6px;
+        white-space:normal;
+        word-break:break-word;
+        overflow-wrap:anywhere;
+      ">
+        ${escapeHtml(goodsDesc)}
+      </span>
+    </div>
+
+    <!-- Container Table -->
+    <div style="margin-top:10px;">
+      <table cellpadding="0" cellspacing="0"
+        style="width:100%; border-collapse:collapse; font-size:10px; color:#000;">
+        <thead>
+          <tr>
+            <th style="border:1px solid #000; padding:5px; text-align:left;">Container No.</th>
+            <th style="border:1px solid #000; padding:5px; text-align:left;">Size</th>
+            <th style="border:1px solid #000; padding:5px; text-align:left;">Seal No.</th>
+            <th style="border:1px solid #000; padding:5px; text-align:right;">No. of Packages</th>
+            <th style="border:1px solid #000; padding:5px; text-align:left;">Package Type</th>
+            <th style="border:1px solid #000; padding:5px; text-align:left;">Type</th>
+            <th style="border:1px solid #000; padding:5px; text-align:right;">Gross Wt</th>
+            <th style="border:1px solid #000; padding:5px; text-align:right;">Container Gross Wt</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Array.isArray(item?.tblBlContainer) && item.tblBlContainer.length
+        ? item.tblBlContainer
+          .map(
+            (c) => `
+            <tr>
+              <td style="border:1px solid #000; padding:5px; text-align:left;">${escapeHtml(c?.containerNo ?? "")}</td>
+              <td style="border:1px solid #000; padding:5px; text-align:left;">${escapeHtml(c?.size ?? "")}</td>
+              <td style="border:1px solid #000; padding:5px; text-align:left;">${escapeHtml(c?.agentSealNo ?? c?.customSealNo ?? "")}</td>
+              <td style="border:1px solid #000; padding:5px; text-align:right;">${escapeHtml(c?.noOfPackages ?? "")}</td>
+              <td style="border:1px solid #000; padding:5px; text-align:left;">${escapeHtml(c?.package ?? "")}</td>
+              <td style="border:1px solid #000; padding:5px; text-align:left;">${escapeHtml(c?.type ?? "")}</td>
+              <td style="border:1px solid #000; padding:5px; text-align:right;">${escapeHtml(c?.grossWt ?? "")}</td>
+              <td style="border:1px solid #000; padding:5px; text-align:right;">${escapeHtml(c?.grossWt ?? "")}</td>
+            </tr>
+          `,
+          )
+          .join("")
+        : `
+            <tr>
+              <td colspan="8" style="border:1px solid #000; padding:8px; text-align:center;">
+                No container data
+              </td>
+            </tr>
+          `
+      }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Remarks -->
+    <div style="display:flex; gap:6px; font-size:12px; line-height:1.35; color:#000; margin-top:10px;">
+      <span style="font-weight:700;">Remarks:</span>
+      <span>${escapeHtml(item?.remarks || "")}</span>
+    </div>
+
+    <!-- Long Paragraph -->
+    <div style="margin:10px 0 0 0; font-size:12px; line-height:1.5; color:#000;">
+      <p style="margin:0;">
+        This is to inform you that the above consignment is expected to arrive on above vessel.
+        Kindly arrange to present original bills of lading duly discharged and obtain Delivery Order to clear the goods from the Port
+        / CFS / ICD premises on payment of all relative charges as applicable with in normal / granted free days time of landing of
+        container / cargo at Port / CFS / ICD or else detention charges will be applicable as per prevailing tariff.
+        You are also requested to note that if you fail to take the delivery of cargo within 60 days of landing at Port / CFS / ICD,
+        your cargo may be auctioned / de-stuffed under section 61 &amp; 62 of Major Port Trust Act, 1963 or TAMP or Section-48 of
+        the Customs Act,1962.
+      </p>
+    </div>
+
+    <!-- Disclaimer -->
+    <div style="display:flex; gap:6px; font-size:12px; line-height:1.35; color:#000; margin-top:10px;">
+      <span style="font-weight:700;">Disclaimer:</span>
+      <span>NO responsibility shall be attached to the carrier or its Agents for failure to notify about shipment arrival.</span>
+    </div>
+
+  </div>
+</div>
+`;
+
+    return html;
   };
 
   // Build column list from first row of editableErrorsData
@@ -3428,8 +4206,7 @@ export default function AddEditFormControll({ reportData }) {
 
               if (overlap) {
                 toast.error(
-                  `Range [${currentFrom} - ${currentTo}] overlaps with row ${
-                    i + 1
+                  `Range [${currentFrom} - ${currentTo}] overlaps with row ${i + 1
                   } range [${otherFrom} - ${otherTo}]`,
                 );
                 currentRow[fieldKey] = null;
@@ -3496,34 +4273,34 @@ export default function AddEditFormControll({ reportData }) {
             const enrichedRow = {
               ...latestRow,
               ...(latestRow["Nominated Area"] == null ||
-              latestRow["Nominated Area"] === ""
+                latestRow["Nominated Area"] === ""
                 ? {
-                    "Nominated Area":
-                      nominatedAreaItem?.value?.toString() || "",
-                    "Nominated Areadropdown": nominatedAreaItem
-                      ? [nominatedAreaItem]
-                      : [],
-                  }
+                  "Nominated Area":
+                    nominatedAreaItem?.value?.toString() || "",
+                  "Nominated Areadropdown": nominatedAreaItem
+                    ? [nominatedAreaItem]
+                    : [],
+                }
                 : {}),
               ...(latestRow["DPD Desciption"] == null ||
-              latestRow["DPD Desciption"] === ""
+                latestRow["DPD Desciption"] === ""
                 ? {
-                    "DPD Desciption":
-                      dpdDescriptionItem?.value?.toString() || "",
-                    "DPD Desciptiondropdown": dpdDescriptionItem
-                      ? [dpdDescriptionItem]
-                      : [],
-                  }
+                  "DPD Desciption":
+                    dpdDescriptionItem?.value?.toString() || "",
+                  "DPD Desciptiondropdown": dpdDescriptionItem
+                    ? [dpdDescriptionItem]
+                    : [],
+                }
                 : {}),
               ...(latestRow["Third CFS Desciption"] == null ||
-              latestRow["Third CFS Desciption"] === ""
+                latestRow["Third CFS Desciption"] === ""
                 ? {
-                    "Third CFS Desciption":
-                      thirdCfsDescriptionItem?.value?.toString() || "",
-                    "Third CFS Desciptiondropdown": thirdCfsDescriptionItem
-                      ? [thirdCfsDescriptionItem]
-                      : [],
-                  }
+                  "Third CFS Desciption":
+                    thirdCfsDescriptionItem?.value?.toString() || "",
+                  "Third CFS Desciptiondropdown": thirdCfsDescriptionItem
+                    ? [thirdCfsDescriptionItem]
+                    : [],
+                }
                 : {}),
             };
 
@@ -3630,10 +4407,8 @@ export default function AddEditFormControll({ reportData }) {
         const prevTo = parseInt(data[i]?.To, 10);
         if (!isNaN(prevTo) && from <= prevTo) {
           toast.error(
-            `Row ${
-              rowIndex + 1
-            }: 'From' must be greater than all previous rows' 'To' (conflict with Row ${
-              i + 1
+            `Row ${rowIndex + 1
+            }: 'From' must be greater than all previous rows' 'To' (conflict with Row ${i + 1
             })`,
           );
           return false;
@@ -3657,7 +4432,7 @@ export default function AddEditFormControll({ reportData }) {
           isValidDate(content)
         ) {
           content = moment(content).format("DD-MM-YYYY");
-        } 
+        }
         // else if (
         //   DateFormat &&
         //   typeof content === "string" &&
@@ -3688,7 +4463,7 @@ export default function AddEditFormControll({ reportData }) {
                     getSelectedRows(rowIndex);
                   }}
 
-                  // You can add checked/unchecked logic here as needed
+                // You can add checked/unchecked logic here as needed
                 />
               </TableCell>
               <TableCell
@@ -3969,12 +4744,12 @@ export default function AddEditFormControll({ reportData }) {
         ...data,
       };
     });
-    setSubmitNewState((pre) => {
-      return {
-        ...pre,
-        ...data,
-      };
-    });
+    // setSubmitNewState((pre) => {
+    //   return {
+    //     ...pre,
+    //     ...data,
+    //   };
+    // });
   }
   function handleBlurFunction(result) {
     if (result?.isCheck === false) {
@@ -4044,6 +4819,7 @@ export default function AddEditFormControll({ reportData }) {
       console.error("Report not found for the given reportId.");
     }
   };
+  console.log('parentsFields =>', parentsFields)
   return (
     <React.Fragment>
       <div className={`h-auto relative`}>
@@ -4251,7 +5027,7 @@ export default function AddEditFormControll({ reportData }) {
                                           <span>
                                             {isInputVisible &&
                                               activeColumn ===
-                                                item.fieldname && ( //added for function call
+                                              item.fieldname && ( //added for function call
                                                 <CustomizedInputBase
                                                   columnData={item}
                                                   setPrevSearchInput={
@@ -4457,6 +5233,292 @@ export default function AddEditFormControll({ reportData }) {
                       </div>
                     ) : null)}
 
+                  {editableErrors === false &&
+                    isDefaultDataShow &&
+                    outputFileType &&
+                    menuType === "Q" &&
+                    (isLoading ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          height: "50vh",
+                        }}
+                      >
+                        <CustomSpinner />
+                      </div>
+                    ) : initialLoadComplete && paginatedData?.length > 0 ? (
+                      <Paper
+                        sx={{
+                          ...(toggle
+                            ? displayReportTablePaperToggleStyles
+                            : displayReportTablePaperStyles),
+                          displayTablePaperStyles,
+                        }}
+                      >
+                        <TableContainer
+                          id="paper"
+                          ref={rowRefs}
+                          className={`${styles.thinScrollBar} ${styles.tableContainer} `}
+                          sx={{
+                            ...(toggle
+                              ? displayReportTableContainerToggleStyles
+                              : displayReportTableContainerStyles),
+                            position: "relative !important",
+                            displayTableContainerStyles,
+                          }}
+                        >
+                          <Table
+                            stickyHeader
+                            aria-label="sticky table"
+                            style={{
+                              border: "1px solid grey",
+                              borderCollapse: "collapse",
+                              borderSpacing: 0,
+                            }}
+                            className={`min-w-full text-sm overflow-auto ${styles.stripedRow} ${styles.hideScrollbar} ${styles.thinScrollBar}`}
+                          >
+                            <TableHead
+                              className={`${styles.inputTextColor}`}
+                              sx={{ ...displaytableHeadStyles }}
+                            >
+                              <TableRow className={`${styles.tblHead}`}>
+                                {gridHeader.map((item, headIdx) => (
+                                  <React.Fragment key={item.fieldname}>
+                                    {headIdx == 0 ? (
+                                      <>
+                                        <TableCell
+                                          key={`select-${headIdx}`}
+                                          style={{
+                                            minWidth: item.minWidth,
+                                            width: item.width,
+                                            position: "sticky",
+                                          }}
+                                          className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <input
+                                              type="checkbox"
+                                              checked={
+                                                selectedRow.size ===
+                                                dataToGetSelectedRowData.length
+                                                //finalPaginatedData.length
+                                              }
+                                              onChange={(e) => {
+                                                if (e.target.checked) {
+                                                  const allIndexes = new Set(
+                                                    dataToGetSelectedRowData.map(
+                                                      //finalPaginatedData.map(
+                                                      // (_, idx) => idx
+                                                      (_, idx) => _?.rowIndex,
+                                                    ),
+                                                  );
+                                                  setselectedRow(allIndexes);
+                                                } else {
+                                                  setselectedRow(new Set());
+                                                  setselectedRows([]);
+                                                }
+                                              }}
+                                            />
+                                            <span>Select</span>
+                                          </div>
+                                        </TableCell>
+
+                                        <TableCell
+                                          key={item.fieldname}
+                                          style={{
+                                            minWidth: item.minWidth,
+                                            width: item.width,
+                                            position: "sticky",
+                                            cursor: isSortingEnabled
+                                              ? "pointer"
+                                              : "default",
+                                          }}
+                                          className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
+                                          onContextMenu={(event) =>
+                                            handleRightClick(
+                                              event,
+                                              item.fieldname,
+                                            )
+                                          }
+                                        >
+                                          <span
+                                            onClick={() => {
+                                              if (isSortingEnabled) {
+                                                setSortingFieldName(
+                                                  item.fieldname,
+                                                );
+                                                handleSort(
+                                                  item?.fieldname,
+                                                  item?.label,
+                                                );
+                                              }
+                                            }}
+                                          >
+                                            {item.label}
+                                            {sortColumn === item.fieldname &&
+                                              (sortDirection === "asc" ? (
+                                                <ArrowDownwardIcon />
+                                              ) : (
+                                                <ArrowUpwardIcon />
+                                              ))}
+                                          </span>
+                                          <span>
+                                            {isInputVisible &&
+                                              activeColumn ===
+                                              item.fieldname && ( //added for function call
+                                                <CustomizedInputBase
+                                                  columnData={item}
+                                                  setPrevSearchInput={
+                                                    setPrevSearchInput
+                                                  }
+                                                  prevSearchInput={
+                                                    prevSearchInput
+                                                  }
+                                                  setInputVisible={
+                                                    setInputVisible
+                                                  }
+                                                  isInputVisible={
+                                                    isInputVisible
+                                                  }
+                                                  setDataToGetSelectedRowData={
+                                                    setDataToGetSelectedRowData
+                                                  }
+                                                  setSelectedIds={
+                                                    setSelectedIds
+                                                  }
+                                                  setselectedRow={
+                                                    setselectedRow
+                                                  }
+                                                  setGridData={
+                                                    setFinalPaginatedData
+                                                  }
+                                                  originalData={paginatedData}
+                                                  gridData={finalPaginatedData}
+                                                  setCurrentPage={
+                                                    setCurrentPage
+                                                  }
+                                                />
+                                              )}
+                                          </span>
+                                        </TableCell>
+                                      </>
+                                    ) : (
+                                      <TableCell
+                                        key={item.fieldname}
+                                        style={{
+                                          minWidth: item.minWidth,
+                                          width: item.width,
+                                          position: "sticky",
+                                          cursor: isSortingEnabled
+                                            ? "pointer"
+                                            : "default",
+                                        }}
+                                        className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
+                                        onContextMenu={(event) =>
+                                          handleRightClick(
+                                            event,
+                                            item.fieldname,
+                                          )
+                                        }
+                                      >
+                                        <span
+                                          onClick={() => {
+                                            if (isSortingEnabled) {
+                                              setSortingFieldName(
+                                                item.fieldname,
+                                              );
+                                              handleSort(
+                                                item?.fieldname,
+                                                item?.label,
+                                              );
+                                            }
+                                          }}
+                                        >
+                                          {item.label}
+                                          {sortColumn === item.fieldname &&
+                                            (sortDirection === "asc" ? (
+                                              <ArrowDownwardIcon />
+                                            ) : (
+                                              <ArrowUpwardIcon />
+                                            ))}
+                                        </span>
+                                        <span>
+                                          {isInputVisible &&
+                                            activeColumn === item.fieldname && ( //rohit
+                                              <CustomizedInputBase
+                                                columnData={item}
+                                                setPrevSearchInput={
+                                                  setPrevSearchInput
+                                                }
+                                                prevSearchInput={
+                                                  prevSearchInput
+                                                }
+                                                setInputVisible={
+                                                  setInputVisible
+                                                }
+                                                setDataToGetSelectedRowData={
+                                                  setDataToGetSelectedRowData
+                                                }
+                                                isInputVisible={isInputVisible}
+                                                setGridData={setPaginatedData}
+                                                originalData={tableData}
+                                                gridData={paginatedData}
+                                                setCurrentPage={setCurrentPage}
+                                              />
+                                            )}
+                                        </span>
+                                      </TableCell>
+                                    )}
+                                  </React.Fragment>
+                                ))}
+                              </TableRow>
+                            </TableHead>
+
+                            <TableBody
+                              id="bodyRow"
+                              style={{
+                                overflow: "auto",
+                                marginTop: "30px",
+                                border: "1px solid grey",
+                              }}
+                              className="text-gray-900 dark:text-white"
+                            >
+                              {finalPaginatedData.map((data, rowIndex) => (
+                                <TableRow
+                                  key={data.fieldname}
+                                  ref={(el) => {
+                                    if (rowRefs.current) {
+                                      rowRefs.current[rowIndex] = el;
+                                    }
+                                  }}
+                                  style={{ border: "1px solid grey" }}
+                                  className={`${styles.tableCellHoverEffect} ${styles.hh} rounded-lg p-0 opacity-1 z-0`}
+                                  sx={{
+                                    ...(toggledThemeValue
+                                      ? displayTableRowStylesNoHover
+                                      : displaytableRowStyles),
+                                  }}
+                                >
+                                  {renderTableData(
+                                    data,
+                                    rowIndex,
+                                    data.colorCodeNew,
+                                    data?.rowIndex,
+                                  )}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Paper>
+                    ) : initialLoadComplete ? (
+                      <div style={{ textAlign: "center", marginTop: "20px" }}>
+                        <Typography variant="h6">Data Not Found</Typography>
+                      </div>
+                    ) : null)}
+
                   {/* Render a static table if menuType is "E" */}
                   {editableErrors && editableErrorsData.length > 0 && (
                     <Paper
@@ -4649,6 +5711,34 @@ export default function AddEditFormControll({ reportData }) {
             labelValue={labelName}
           />
         )}
+        <Dialog
+          open={qrOpen}
+          onClose={() => setQrOpen(false)}
+          maxWidth="lg"
+          fullWidth
+        >
+          <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            Warehouse QR
+            <div style={{ flex: 1 }} />
+            <IconButton onClick={() => setQrOpen(false)}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+
+          <DialogContent dividers sx={{ background: "#fff" }}>
+            {qrLoading ? (
+              <div style={{ padding: 16 }}>Generating...</div>
+            ) : (
+              <MultiQrPrint
+                items={qrItems}
+                columns={1}
+                cardHeight={240}
+                qrScale={0.8}
+                codeType={codeType}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
 
       <>

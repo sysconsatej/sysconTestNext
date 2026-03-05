@@ -1,6 +1,6 @@
 "use client";
 /* eslint-disable */
-import React, { useState, useEffect, useRef,useMemo  } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import TableCell from "@mui/material/TableCell";
 import LightTooltip from "@/components/Tooltip/customToolTip";
 import Image from "next/image";
@@ -120,6 +120,7 @@ RowComponent.propTypes = {
   formControlData: PropTypes.any,
   setFormControlData: PropTypes.any,
   tableBodyWidhth: PropTypes.string,
+  showSrNo: PropTypes.bool,
 };
 export default function RowComponent({
   row,
@@ -154,6 +155,7 @@ export default function RowComponent({
   formControlData,
   setFormControlData,
   tableBodyWidhth,
+  showSrNo = false,
 }) {
   const dispatch = useDispatch();
   const [childValuseObj, setChildValuseObj] = useState({ ...row });
@@ -465,138 +467,138 @@ export default function RowComponent({
       ? { right: tableBodyWidhth + "px", width: "auto" }
       : { left: tableBodyWidhth + "px", width: "auto" };
 
-  
-const didInitCopyRef = useRef(false);
-const prevFirstRowRef = useRef(""); // (kept, but now stores JSON of patch)
-const rowOverridesRef = useRef({}); // { [rowIndex]: Set(fieldNames) }
 
-const stableSignature = (obj) => {
-  const normalize = (v) => {
-    if (v instanceof Date) return v.toISOString();
+  const didInitCopyRef = useRef(false);
+  const prevFirstRowRef = useRef(""); // (kept, but now stores JSON of patch)
+  const rowOverridesRef = useRef({}); // { [rowIndex]: Set(fieldNames) }
 
-    // dayjs/moment-like
-    if (v && typeof v === "object") {
-      if (typeof v.toDate === "function") return v.toDate().toISOString();
-      if (v.$d instanceof Date) return v.$d.toISOString();
-    }
+  const stableSignature = (obj) => {
+    const normalize = (v) => {
+      if (v instanceof Date) return v.toISOString();
 
-    return v;
+      // dayjs/moment-like
+      if (v && typeof v === "object") {
+        if (typeof v.toDate === "function") return v.toDate().toISOString();
+        if (v.$d instanceof Date) return v.$d.toISOString();
+      }
+
+      return v;
+    };
+
+    const keys = Object.keys(obj || {}).sort();
+    const out = {};
+    for (const k of keys) out[k] = normalize(obj[k]);
+    return JSON.stringify(out);
   };
 
-  const keys = Object.keys(obj || {}).sort();
-  const out = {};
-  for (const k of keys) out[k] = normalize(obj[k]);
-  return JSON.stringify(out);
-};
+  const PROTECT_KEYS = useMemo(
+    () =>
+      new Set([
+        "id",
+        "containerTransactionId",
+        "indexValue",
+        "createdDate",
+        "createdBy",
+        "updatedDate",
+        "updatedBy",
+        "deletedNo",
+        "clientId",
+        "status",
+        "containerNo",
+        "containerId",
+        "containerIdDropdown",
+      ]),
+    []
+  );
 
-const PROTECT_KEYS = useMemo(
-  () =>
-    new Set([
-      "id",
-      "containerTransactionId",
-      "indexValue",
-      "createdDate",
-      "createdBy",
-      "updatedDate",
-      "updatedBy",
-      "deletedNo",
-      "clientId",
-      "status",
-      "containerNo",
-      "containerId",
-      "containerIdDropdown",
-    ]),
-  []
-);
+  // ✅ SAME NAME (updated behavior: only changed field(s) copied)
+  const copyFirstRowToAllRowsExceptContainer = () => {
+    const rows = newState?.tblContainerTransactionDetails;
+    if (!Array.isArray(rows) || rows.length < 2) return;
 
-// ✅ SAME NAME (updated behavior: only changed field(s) copied)
-const copyFirstRowToAllRowsExceptContainer = () => {
-  const rows = newState?.tblContainerTransactionDetails;
-  if (!Array.isArray(rows) || rows.length < 2) return;
+    const firstRow = rows[0] || {};
 
-  const firstRow = rows[0] || {};
-
-  // patch = everything from row 0 except protected keys
-  const patch = {};
-  Object.keys(firstRow).forEach((k) => {
-    if (!PROTECT_KEYS.has(k)) patch[k] = firstRow[k];
-  });
-
-  // store snapshot of row0 patch
-  const currentPatchStr = stableSignature(patch);
-
-  // 1) don’t auto-copy on initial load
-  if (!didInitCopyRef.current) {
-    didInitCopyRef.current = true;
-    prevFirstRowRef.current = currentPatchStr;
-    return;
-  }
-
-  // 2) compute ONLY changed keys vs previous patch
-  const prevPatchStr = prevFirstRowRef.current || "";
-  if (prevPatchStr === currentPatchStr) return; // no changes
-
-  let prevPatchObj = {};
-  try {
-    prevPatchObj = prevPatchStr ? JSON.parse(prevPatchStr) : {};
-  } catch {
-    prevPatchObj = {};
-  }
-
-  const changedKeys = [];
-  const allKeys = new Set([...Object.keys(prevPatchObj), ...Object.keys(patch)]);
-  allKeys.forEach((k) => {
-    if (PROTECT_KEYS.has(k)) return;
-    // compare via stableSignature to handle date/dayjs
-    const a = stableSignature({ v: prevPatchObj[k] });
-    const b = stableSignature({ v: patch[k] });
-    if (a !== b) changedKeys.push(k);
-  });
-
-  // update stored patch snapshot
-  prevFirstRowRef.current = currentPatchStr;
-
-  if (changedKeys.length === 0) return;
-
-  const updatedRows = rows.map((r, i) => {
-    if (i === 0 || !r) return r;
-
-    const overrides = rowOverridesRef.current?.[i]; // Set(keys) or undefined
-
-    // ✅ apply only changed keys (and respect overrides per row)
-    const safePatch = {};
-    changedKeys.forEach((k) => {
-      if (!overrides || !overrides.has(k)) safePatch[k] = patch[k];
+    // patch = everything from row 0 except protected keys
+    const patch = {};
+    Object.keys(firstRow).forEach((k) => {
+      if (!PROTECT_KEYS.has(k)) patch[k] = firstRow[k];
     });
 
-    // nothing to apply for this row
-    if (Object.keys(safePatch).length === 0) return r;
+    // store snapshot of row0 patch
+    const currentPatchStr = stableSignature(patch);
 
-    return { ...r, ...safePatch };
-  });
+    // 1) don’t auto-copy on initial load
+    if (!didInitCopyRef.current) {
+      didInitCopyRef.current = true;
+      prevFirstRowRef.current = currentPatchStr;
+      return;
+    }
 
-  setNewState((prev) => ({
-    ...prev,
-    tblContainerTransactionDetails: updatedRows,
-  }));
-};
+    // 2) compute ONLY changed keys vs previous patch
+    const prevPatchStr = prevFirstRowRef.current || "";
+    if (prevPatchStr === currentPatchStr) return; // no changes
 
-useEffect(() => {
-  copyFirstRowToAllRowsExceptContainer();
-}, [
-  stableSignature(
-    (() => {
-      const rows = newState?.tblContainerTransactionDetails;
-      const r0 = Array.isArray(rows) && rows[0] ? rows[0] : {};
-      const patch = {};
-      Object.keys(r0).forEach((k) => {
-        if (!PROTECT_KEYS.has(k)) patch[k] = r0[k];
+    let prevPatchObj = {};
+    try {
+      prevPatchObj = prevPatchStr ? JSON.parse(prevPatchStr) : {};
+    } catch {
+      prevPatchObj = {};
+    }
+
+    const changedKeys = [];
+    const allKeys = new Set([...Object.keys(prevPatchObj), ...Object.keys(patch)]);
+    allKeys.forEach((k) => {
+      if (PROTECT_KEYS.has(k)) return;
+      // compare via stableSignature to handle date/dayjs
+      const a = stableSignature({ v: prevPatchObj[k] });
+      const b = stableSignature({ v: patch[k] });
+      if (a !== b) changedKeys.push(k);
+    });
+
+    // update stored patch snapshot
+    prevFirstRowRef.current = currentPatchStr;
+
+    if (changedKeys.length === 0) return;
+
+    const updatedRows = rows.map((r, i) => {
+      if (i === 0 || !r) return r;
+
+      const overrides = rowOverridesRef.current?.[i]; // Set(keys) or undefined
+
+      // ✅ apply only changed keys (and respect overrides per row)
+      const safePatch = {};
+      changedKeys.forEach((k) => {
+        if (!overrides || !overrides.has(k)) safePatch[k] = patch[k];
       });
-      return patch;
-    })()
-  ),
-  newState?.tblContainerTransactionDetails?.length,
-]);
+
+      // nothing to apply for this row
+      if (Object.keys(safePatch).length === 0) return r;
+
+      return { ...r, ...safePatch };
+    });
+
+    setNewState((prev) => ({
+      ...prev,
+      tblContainerTransactionDetails: updatedRows,
+    }));
+  };
+
+  useEffect(() => {
+    copyFirstRowToAllRowsExceptContainer();
+  }, [
+    stableSignature(
+      (() => {
+        const rows = newState?.tblContainerTransactionDetails;
+        const r0 = Array.isArray(rows) && rows[0] ? rows[0] : {};
+        const patch = {};
+        Object.keys(r0).forEach((k) => {
+          if (!PROTECT_KEYS.has(k)) patch[k] = r0[k];
+        });
+        return patch;
+      })()
+    ),
+    newState?.tblContainerTransactionDetails?.length,
+  ]);
 
 
 
@@ -620,37 +622,72 @@ useEffect(() => {
             {fields
               .filter((elem) => elem.isGridView)
               .map((field, index) => (
-                <TableCell
-                  align="left"
-                  key={index}
-                  sx={{
-                    ...gridSectionStyles,
-                    paddingLeft: index === 0 ? "29px" : "0px",
-                  }}
-                >
-                  <div className="relative">
-                    <div
-                      className={`${childTableRowStyles} overflow-hidden whitespace-nowrap`}
-                      style={{ maxWidth: "200px" }}
+                <React.Fragment key={index}>
+                  {showSrNo && index === 0 && (
+                    <TableCell
+                      align="left"
+                      sx={{
+                        ...gridSectionStyles,
+                        paddingLeft: "29px",
+                        width: "64px",
+                        minWidth: "64px",
+                      }}
                     >
-                      {field.controlname === "dropdown" ||
-                        field.controlname === "multiselect"
-                        ? (
-                          row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                          row[`${field.fieldname}Dropdown`]
-                        )?.length > 50
+                      <div className="relative">
+                        {index == 0 && (
+                          <div className={` ${styles.iconContainer}`}>
+                            <div className="absolute left-[-7px] top-[-2px] cursor-pointer">
+                              <Checkbox
+                                edge="start"
+                                sx={{
+                                  ...checkBoxStyle,
+                                }}
+                                checked={row.isChecked}
+                                tabIndex={-1}
+                                disableRipple
+                                inputProps={{ "aria-labelledby": field.fieldname }}
+                                onChange={(event) =>
+                                  handleChange(event, row, childIndex)
+                                }
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className={`${childTableRowStyles} font-medium`}>
+                        {childIndex + 1}
+                      </div>
+                    </TableCell>
+                  )}
+                  <TableCell
+                    align="left"
+                    sx={{
+                      ...gridSectionStyles,
+                      paddingLeft: index === 0 ? "29px" : showSrNo ? "29px" : "0px",
+                    }}
+                  >
+                    <div className="relative">
+                      <div
+                        className={`${childTableRowStyles} overflow-hidden whitespace-nowrap`}
+                        style={{ maxWidth: "200px" }}
+                      >
+                        {field.controlname === "dropdown" ||
+                          field.controlname === "multiselect"
                           ? (
                             row[`${field.fieldname}dropdown`]?.[0]?.label ||
                             row[`${field.fieldname}Dropdown`]
-                          )?.slice(0, 50) + "..."
-                          : row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                          row[`${field.fieldname}Dropdown`] ||
-                          ""
-                        : isDateFormat(row[`${field.fieldname}`]) || ""}
-                    </div>
+                          )?.length > 50
+                            ? (
+                              row[`${field.fieldname}dropdown`]?.[0]?.label ||
+                              row[`${field.fieldname}Dropdown`]
+                            )?.slice(0, 50) + "..."
+                            : row[`${field.fieldname}dropdown`]?.[0]?.label ||
+                            row[`${field.fieldname}Dropdown`] ||
+                            ""
+                          : isDateFormat(row[`${field.fieldname}`]) || ""}
+                      </div>
 
-                    {index == 0 && (
-                      <div className={` ${styles.iconContainer}`}>
+                      {!showSrNo && index == 0 && <div className={` ${styles.iconContainer}`}>
                         <div className="absolute left-[-7px] top-[-2px] cursor-pointer">
                           <Checkbox
                             edge="start"
@@ -666,10 +703,11 @@ useEffect(() => {
                             }
                           />
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
+                      </div>}
+                    </div>
+                  </TableCell>
+
+                </React.Fragment>
               ))}
             <div
               className={`group-hover:visible flex flex-nowrap justify-end invisible absolute`}
@@ -758,42 +796,59 @@ useEffect(() => {
             {fields
               .filter((elem) => elem.isGridView)
               .map((field, index) => (
-                <TableCell
-                  key={index}
-                  align="left"
-                  sx={{
-                    padding: "0 ",
-                    lineHeight: "0",
-                    fontSize: "12px",
-                    position: "relative",
-                  }}
-                >
-                  <Box className="flex gap-4">
-                    {childName != "tblVoucherLedgerDetails" && index === 0 ? (
-                      <ActionButton
-                        onDelete={() => deleteChildRecord(childIndex)}
-                        key={index}
-                        onCopy={() => copyDocument(childValuseObj)}
-                        hover={hoveredIcon}
-                        copyImagepath={copyDoc}
-                        deleteImagePath={DeleteIcon2}
+                <React.Fragment key={index}>
+                  <TableCell
+                    align="left"
+                    sx={{
+                      padding: "0 ",
+                      lineHeight: "0",
+                      fontSize: "12px",
+                      position: "relative",
+                    }}
+                  >
+                    <Box className="flex gap-4">
+                      {childName != "tblVoucherLedgerDetails" && index === 0 ? (
+                        <ActionButton
+                          onDelete={() => deleteChildRecord(childIndex)}
+                          key={index}
+                          onCopy={() => copyDocument(childValuseObj)}
+                          hover={hoveredIcon}
+                          copyImagepath={copyDoc}
+                          deleteImagePath={DeleteIcon2}
+                        />
+                      ) : (
+                        <></>
+                      )}
+                      <GridInputFields
+                        fieldData={field}
+                        indexValue={index}
+                        onValuesChange={(e) =>
+                          handleValuesChangeOfChildGrid(e, index)
+                        }
+                        values={childValuseObj}
+                        inEditMode={inEditMode}
+                        onChangeHandler={null}
+                        onBlurHandler={null}
                       />
-                    ) : (
-                      <></>
-                    )}
-                    <GridInputFields
-                      fieldData={field}
-                      indexValue={index}
-                      onValuesChange={(e) =>
-                        handleValuesChangeOfChildGrid(e, index)
-                      }
-                      values={childValuseObj}
-                      inEditMode={inEditMode}
-                      onChangeHandler={null}
-                      onBlurHandler={null}
-                    />
-                  </Box>
-                </TableCell>
+                    </Box>
+                  </TableCell>
+                  {showSrNo && index === 0 && (
+                    <TableCell
+                      align="left"
+                      sx={{
+                        padding: "0 8px",
+                        lineHeight: "0",
+                        fontSize: "12px",
+                        width: "64px",
+                        minWidth: "64px",
+                      }}
+                    >
+                      <Box className="flex items-center h-full pl-1 text-xs font-semibold">
+                        {childIndex + 1}
+                      </Box>
+                    </TableCell>
+                  )}
+                </React.Fragment>
               ))}
           </TableRow>
         </>

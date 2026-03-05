@@ -30,14 +30,11 @@ function rptWarehouse() {
   const enquiryModuleRefs = useRef([]);
   const chunkSize = 15;
 
-  console.log("data=>", data);
-
   useEffect(() => {
     const storedReportIds = sessionStorage.getItem("selectedReportIds");
     if (storedReportIds) {
       let reportIds = JSON.parse(storedReportIds);
       reportIds = Array.isArray(reportIds) ? reportIds : [reportIds];
-      console.log("Retrieved Report IDs:", reportIds);
       setReportIds(reportIds);
     } else {
       console.log("No Report IDs found in sessionStorage");
@@ -52,7 +49,7 @@ function rptWarehouse() {
           const token = localStorage.getItem("token");
           if (!token) throw new Error("No token found");
           const requestBody = {
-            filterCondition: `${id}`,
+            recordId: id,
           };
           const response = await fetch(
             `${baseUrl}/Sql/api/Reports/warehouseData`,
@@ -117,9 +114,9 @@ function rptWarehouse() {
   // build containers safely
   const containers = Array.isArray(header?.warehouseTransactionDetails)
     ? header.warehouseTransactionDetails.map((item, i) => ({
-      ...item,
-      containerNoIndex: i,
-    }))
+        ...item,
+        containerNoIndex: i,
+      }))
     : [];
 
   // chunks
@@ -151,187 +148,134 @@ function rptWarehouse() {
     };
 
     return (
-      <table
-        className="mt-1"
-        width="100%"
-        border="0"
-        cellSpacing="0"
-        cellPadding="0"
-      >
-        <tr className="border-black border">
-          <td width="49%" valign="top">
-            <table
-              className="border-black border-r"
-              width="100%"
-              border="0"
-              cellSpacing="0"
-              cellPadding="0"
-            >
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Customer Name:
-                </th>
-                <td className="item-center" style={tdStyle}>
-                  {data && data?.customerName}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Address:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.customerAddress}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Kind Attn:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.kindAttn}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Tel:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.telephoneNo}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Email:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.emailId}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Customer Ref No:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.customerRefNo}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  P.O.No.:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.poNo}
-                </td>
-              </tr>
-            </table>
-          </td>
-          <td width="51%" valign="top">
-            <table
-              width="100%"
-              border="0"
-              cellSpacing="0"
-              cellPadding="0"
-            >
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  GIN No.:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.ginNo}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  GIN Date:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.ginDate}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Transporter Name:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.transporterName}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Transporter Ref.No.:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.transporterRefNo}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Vehicle No.:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.vehicleNo}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  B/L/AWB/LR No.:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.blAwrLrNo}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                ><span></span>
-                </th>
-                <td align="left" style={tdStyle}>
-                  <span style={{ color: "white" }}>s</span></td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
+      <>
+        <table
+          className="mt-1"
+          width="100%"
+          border="0"
+          cellSpacing="0"
+          cellPadding="0"
+        >
+          <tr className="border-black border">
+            <td width="49%" valign="top">
+              <table
+                className="border-black border-r"
+                width="100%"
+                border="0"
+                cellSpacing="0"
+                cellPadding="0"
+              >
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Customer Name:
+                  </th>
+                  <td className="item-center" style={tdStyle}>
+                    {data && data?.customerName}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Address:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.customerAddress}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Tel:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.telephoneNo}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Email:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.emailId}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Customer Ref No:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.customerRefNo}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    P.O.No.:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.poNo}
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <td width="51%" valign="top">
+              <table width="100%" border="0" cellSpacing="0" cellPadding="0">
+                <tr>
+                  <th align="left" style={thStyle}>
+                    GIN No.:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.referenceNo}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    GIN Date:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.referenceDate}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Transporter Name:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.transporterName}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Transporter Ref.No.:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.transporterRefNo}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Vehicle No.:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.vehicleNo}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    B/L/AWB/LR No.:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.blAwrLrNo}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <div className="mt-1" style={{ width: "100%", fontSize: "9px" }}>
+          <p>
+            <span className="font-bold">Remarks : </span>
+            {data && data?.remarks}
+          </p>
+        </div>
+      </>
     );
   };
   const VesselModuleGoodsDeliveryNote = () => {
@@ -374,10 +318,7 @@ function rptWarehouse() {
               cellPadding="0"
             >
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Customer Name:
                 </th>
                 <td className="item-center" style={tdStyle}>
@@ -385,10 +326,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Address:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -396,10 +334,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Kind Attn:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -407,10 +342,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Tel:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -418,10 +350,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Email:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -429,10 +358,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Customer Ref No:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -440,10 +366,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   GOUT .No.:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -453,17 +376,9 @@ function rptWarehouse() {
             </table>
           </td>
           <td width="51%" valign="top">
-            <table
-              width="100%"
-              border="0"
-              cellSpacing="0"
-              cellPadding="0"
-            >
+            <table width="100%" border="0" cellSpacing="0" cellPadding="0">
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   GD No.:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -471,10 +386,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   GD Date:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -482,10 +394,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Deliver to:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -493,10 +402,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Deliver Address:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -504,31 +410,28 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                ><span></span>
+                <th align="left" style={thStyle}>
+                  <span></span>
                 </th>
                 <td align="left" style={tdStyle}>
-                  <span style={{ color: "white" }}>s</span></td>
+                  <span style={{ color: "white" }}>s</span>
+                </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                ><span></span>
+                <th align="left" style={thStyle}>
+                  <span></span>
                 </th>
                 <td align="left" style={tdStyle}>
-                  <span style={{ color: "white" }}>s</span></td>
+                  <span style={{ color: "white" }}>s</span>
+                </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                ><span></span>
+                <th align="left" style={thStyle}>
+                  <span></span>
                 </th>
                 <td align="left" style={tdStyle}>
-                  <span style={{ color: "white" }}>s</span></td>
+                  <span style={{ color: "white" }}>s</span>
+                </td>
               </tr>
             </table>
           </td>
@@ -576,10 +479,7 @@ function rptWarehouse() {
               cellPadding="0"
             >
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Customer Name:
                 </th>
                 <td className="item-center" style={tdStyle}>
@@ -587,10 +487,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Address:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -598,10 +495,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Kind Attn:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -609,10 +503,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Tel:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -620,10 +511,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Email:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -631,10 +519,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Customer Ref No:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -642,91 +527,72 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  GIN .No.: 
+                <th align="left" style={thStyle}>
+                  GIN .No.:
                 </th>
                 <td align="left" style={tdStyle}>
-                  {data && data?.ginNo}
+                  {data && data?.referenceNo}
                 </td>
               </tr>
             </table>
           </td>
           <td width="51%" valign="top">
-            <table
-              width="100%"
-              border="0"
-              cellSpacing="0"
-              cellPadding="0"
-            >
+            <table width="100%" border="0" cellSpacing="0" cellPadding="0">
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   GRN No.:
                 </th>
                 <td align="left" style={tdStyle}>
-                  {data && data?.grnNo}
+                  {data && data?.referenceNo}
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   GRN Date:
                 </th>
                 <td align="left" style={tdStyle}>
-                  {data && data?.grnDate}
+                  {data && data?.referenceDate}
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                ><span></span>
+                <th align="left" style={thStyle}>
+                  <span></span>
                 </th>
                 <td align="left" style={tdStyle}>
-                  <span style={{ color: "white" }}>s</span></td>
+                  <span style={{ color: "white" }}>s</span>
+                </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                ><span></span>
+                <th align="left" style={thStyle}>
+                  <span></span>
                 </th>
                 <td align="left" style={tdStyle}>
-                  <span style={{ color: "white" }}>s</span></td>
+                  <span style={{ color: "white" }}>s</span>
+                </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                ><span></span>
+                <th align="left" style={thStyle}>
+                  <span></span>
                 </th>
                 <td align="left" style={tdStyle}>
-                  <span style={{ color: "white" }}>s</span></td>
+                  <span style={{ color: "white" }}>s</span>
+                </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                ><span></span>
+                <th align="left" style={thStyle}>
+                  <span></span>
                 </th>
                 <td align="left" style={tdStyle}>
-                  <span style={{ color: "white" }}>s</span></td>
+                  <span style={{ color: "white" }}>s</span>
+                </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                ><span></span>
+                <th align="left" style={thStyle}>
+                  <span></span>
                 </th>
                 <td align="left" style={tdStyle}>
-                  <span style={{ color: "white" }}>s</span></td>
+                  <span style={{ color: "white" }}>s</span>
+                </td>
               </tr>
             </table>
           </td>
@@ -757,193 +623,283 @@ function rptWarehouse() {
     };
 
     return (
-      <table
-        className="mt-1"
-        width="100%"
-        border="0"
-        cellSpacing="0"
-        cellPadding="0"
-      >
-        <tr className="border-black border">
-          <td width="49%" valign="top">
-            <table
-              className="border-black border-r"
-              width="100%"
-              border="0"
-              cellSpacing="0"
-              cellPadding="0"
-            >
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Customer Name:
-                </th>
-                <td className="item-center" style={tdStyle}>
-                  {data && data?.customerName}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Address:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.customerAddress}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Kind Attn:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.kindAttn}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Tel:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.telephoneNo}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Email:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.emailId}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Customer Ref No:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.customerRefNo}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  S.O.No.:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.soNo}
-                </td>
-              </tr>
-            </table>
-          </td>
-          <td width="51%" valign="top">
-            <table
-              width="100%"
-              border="0"
-              cellSpacing="0"
-              cellPadding="0"
-            >
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  GOUT No.:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.goutNo}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  GOUT Date:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.goutDate}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Deliver to:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.delivertoName}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Deliver Address:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.deliveryAddress}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Transporter Name:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.transporterName}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Transporter Ref.No.:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.transporterRefNo}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Vehicle No.:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.vehicleNo}
-                </td>
-              </tr>
-
-            </table>
-          </td>
-        </tr>
-      </table>
+      <>
+        <table
+          className="mt-1"
+          width="100%"
+          border="0"
+          cellSpacing="0"
+          cellPadding="0"
+        >
+          <tr className="border-black border">
+            <td width="49%" valign="top">
+              <table
+                className="border-black border-r"
+                width="100%"
+                border="0"
+                cellSpacing="0"
+                cellPadding="0"
+              >
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Customer Name:
+                  </th>
+                  <td className="item-center" style={tdStyle}>
+                    {data && data?.customerName}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Address:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.customerAddress}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Tel:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.telephoneNo}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Email:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.emailId}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Customer Ref No:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.customerRefNo}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    S.O.No.:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.soNo}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    B/L/AWB/LR No.:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.blAwrLrNo}
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <td width="51%" valign="top">
+              <table width="100%" border="0" cellSpacing="0" cellPadding="0">
+                <tr>
+                  <th align="left" style={thStyle}>
+                    GOUT No.:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.goutNo}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    GOUT Date:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.goutDate}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Deliver to:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.delivertoName}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Deliver Address:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.deliveryAddress}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Transporter Name:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.transporterName}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Transporter Ref.No.:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.transporterRefNo}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Vehicle No.:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.vehicleNo}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <div className="mt-1" style={{ width: "100%", fontSize: "9px" }}>
+          <p>
+            <span className="font-bold">Remarks : </span>
+            {data && data?.remarks}
+          </p>
+        </div>
+      </>
     );
   };
   const VesselPurchaseOrderKn = () => {
+    const thStyle = {
+      width: "12%",
+      textAlign: "left",
+      paddingTop: "2px",
+      paddingLeft: "5px",
+      paddingRight: "2px",
+      paddingBottom: "2px",
+      verticalAlign: "top",
+      fontSize: `9px`,
+    };
+    const tdStyle = {
+      width: "38%",
+      textAlign: "left",
+      paddingTop: "2px",
+      paddingLeft: "5px",
+      paddingRight: "2px",
+      paddingBottom: "2px",
+      verticalAlign: "top",
+      fontSize: `9px`,
+    };
+
+    return (
+      <>
+        <table
+          className="mt-1"
+          width="100%"
+          border="0"
+          cellSpacing="0"
+          cellPadding="0"
+        >
+          <tr className="border-black border">
+            <td width="49%" valign="top">
+              <table
+                className="border-black border-r"
+                width="100%"
+                border="0"
+                cellSpacing="0"
+                cellPadding="0"
+              >
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Customer Name:
+                  </th>
+                  <td className="item-center" style={tdStyle}>
+                    {data && data?.customerName}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Address:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.customerAddress}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Tel:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.telephoneNo}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Email:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.emailId}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Delivery Date:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.deliveryDate}
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <td width="51%" valign="top">
+              <table width="100%" border="0" cellSpacing="0" cellPadding="0">
+                <tr>
+                  <th align="left" style={thStyle}>
+                    S.O.No.:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.soNo}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    S.O. Date:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.soData}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Deliver To:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.delivertoName}
+                  </td>
+                </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Deliver Address:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.deliveryAddress}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <div className="mt-1" style={{ width: "100%", fontSize: "9px" }}>
+          <p>
+            <span className="font-bold">Remarks : </span>
+            {data && data?.remarks}
+          </p>
+        </div>
+      </>
+    );
+  };
+
+  const VesselPurchaseOrder = () => {
     const thStyle = {
       width: "12%",
       textAlign: "left",
@@ -983,10 +939,7 @@ function rptWarehouse() {
               cellPadding="0"
             >
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Customer Name:
                 </th>
                 <td className="item-center" style={tdStyle}>
@@ -994,10 +947,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Address:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -1005,21 +955,7 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Kind Attn:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.kindAttn}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Tel:
                 </th>
                 <td align="left" style={tdStyle}>
@@ -1027,121 +963,48 @@ function rptWarehouse() {
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
+                <th align="left" style={thStyle}>
                   Email:
                 </th>
                 <td align="left" style={tdStyle}>
-                  {data && data?.emailId}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Customer Ref No:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.customerRefNo}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  P.O.No.:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.poNo}
+                  {data && data?.email}
                 </td>
               </tr>
             </table>
           </td>
           <td width="51%" valign="top">
-            <table
-              width="100%"
-              border="0"
-              cellSpacing="0"
-              cellPadding="0"
-            >
+            <table width="100%" border="0" cellSpacing="0" cellPadding="0">
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  GIN No.:
+                <th align="left" style={thStyle}>
+                  P.O.No.:
                 </th>
                 <td align="left" style={tdStyle}>
-                  {data && data?.ginNo}
+                  {data && data?.referenceNo}
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  GIN Date:
+                <th align="left" style={thStyle}>
+                  P.O. Date:
                 </th>
                 <td align="left" style={tdStyle}>
-                  {data && data?.ginDate}
+                  {data && data?.referenceDate}
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Transporter Name:
+                <th align="left" style={thStyle}>
+                  Cargo Owner:
                 </th>
                 <td align="left" style={tdStyle}>
-                  {data && data?.transporterName}
+                  {data && data?.cargoOwnerName}
                 </td>
               </tr>
               <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Transporter Ref.No.:
+                <th align="left" style={thStyle}>
+                  ETA
                 </th>
                 <td align="left" style={tdStyle}>
-                  {data && data?.transporterRefNo}
+                  {data && data?.eta}
                 </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  Vehicle No.:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.vehicleNo}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                >
-                  B/L/AWB/LR No.:
-                </th>
-                <td align="left" style={tdStyle}>
-                  {data && data?.blAwrLrNo}
-                </td>
-              </tr>
-              <tr>
-                <th
-                  align="left"
-                  style={thStyle}
-                ><span></span>
-                </th>
-                <td align="left" style={tdStyle}>
-                  <span style={{ color: "white" }}>s</span></td>
               </tr>
             </table>
           </td>
@@ -1149,102 +1012,965 @@ function rptWarehouse() {
       </table>
     );
   };
+
+  // const TableInwardsNote = ({ chunkContainers }) => {
+  //   const rows = Array.isArray(chunkContainers?.chunkContainers)
+  //     ? chunkContainers?.chunkContainers
+  //     : [];
+
+  //   // ✅ Only width control added (you can change anytime)
+  //   const colWidths = [
+  //     "19%", // Product Type
+  //     "11%", // Product
+  //     "8%", // Quantity
+  //     "10%", // No. of pkjs
+  //     "9%", // Gross Wt.
+  //     "13%", // Customer Batch No.
+  //     "10%", // Customer Lot No.
+  //     "10%", // Section
+  //     "10%", // SubSection
+  //   ];
+
+  //   const cellStyle = (i) => ({
+  //     width: colWidths[i],
+  //     minWidth: colWidths[i],
+  //     maxWidth: colWidths[i],
+  //   });
+
+  //   return (
+  //     <div className="w-full mt-2 border border-black">
+  //       {/* HEADER */}
+  //       <div className="bg-gray-800 flex w-full">
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(0)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Product Type
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(1)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Product
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(2)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Quantity
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(3)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             No. of pkgs
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(4)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Gross Wt.
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(5)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Customer Batch No.
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(6)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Customer Lot No.
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(7)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Section
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(8)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             SubSection
+  //           </p>
+  //         </div>
+  //       </div>
+
+  //       {/* BODY */}
+  //       <div className="w-full">
+  //         {(rows.length > 0 ? rows : [{}]).map((item, index) => (
+  //           <div
+  //             key={item?.id ?? index}
+  //             className={`flex w-full ${
+  //               index % 2 === 0 ? "bg-white" : "bg-gray-200"
+  //             }`} // stripes
+  //           >
+  //             {/* Product */}
+  //             <div
+  //               className="border border-black p-1 text-center align-middle"
+  //               style={cellStyle(0)}
+  //             >
+  //               <p
+  //                 className="text-black font-normal"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.itemName || ""}
+  //               </p>
+  //             </div>
+
+  //             {/* Product Type */}
+  //             <div className="border border-black p-1" style={cellStyle(1)}>
+  //               <p
+  //                 className="text-black font-normal text-center"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.itemTypeName || ""}
+  //               </p>
+  //             </div>
+
+  //             {/* Quantity */}
+  //             <div className="border border-black p-1" style={cellStyle(2)}>
+  //               <p
+  //                 className="text-black text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.qty ?? ""}
+  //               </p>
+  //             </div>
+
+  //             {/* No. of pkjs */}
+  //             <div className="border border-black p-1" style={cellStyle(3)}>
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.noOfPackages ?? ""} {item.packageCode || ""}
+  //               </p>
+  //             </div>
+
+  //             {/* Gross Wt. */}
+  //             <div className="border border-black p-1" style={cellStyle(4)}>
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {(item.grossWt ?? "") + " " + (item.wtUnitCode || "")}
+  //               </p>
+  //             </div>
+
+  //             {/* Customer Batch No. */}
+  //             <div className="border border-black p-1" style={cellStyle(5)}>
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.customerbatchNo || ""}
+  //               </p>
+  //             </div>
+
+  //             {/* Customer Lot No. */}
+  //             <div className="border border-black p-1" style={cellStyle(6)}>
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.customerLotNo || ""}
+  //               </p>
+  //             </div>
+
+  //             {/* Section */}
+  //             <div className="border border-black p-1" style={cellStyle(7)}>
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.sectionName || ""}
+  //               </p>
+  //             </div>
+
+  //             {/* SubSection */}
+  //             <div className="border border-black p-1" style={cellStyle(8)}>
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.sectionSubName || ""}
+  //               </p>
+  //             </div>
+  //           </div>
+  //         ))}
+  //       </div>
+  //     </div>
+  //   );
+  // };
+
   const TableInwardsNote = ({ chunkContainers }) => {
     const rows = Array.isArray(chunkContainers?.chunkContainers)
       ? chunkContainers?.chunkContainers
       : [];
 
-    return (
-      <table className="w-full mt-2 table-fixed border border-black border-collapse">
-        <thead className="bg-gray-800" >
-          <tr>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                Product
-              </p>
-            </th>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                Product Type
-              </p>
-            </th>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                Quantity
-              </p>
-            </th>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                No. of pkjs
-              </p>
-            </th>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                Gross Wt.
-              </p>
-            </th>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                Customer Batch No.
-              </p>
-            </th>
-          </tr>
-        </thead>
+    // ✅ 10 columns now (ETA added) — must match header+body count
+    const colWidths = [
+      "11%", // 0 Product Code
+      "23%", // 1 Product
+      "13%", // 2 Customer Batch No.
+      "10%", // 3 Customer Lot No.
+      "8%", // 4 Quantity
+      "10%", // 5 No. of pkgs
+      "9%", // 6 Gross Wt.
+      //"12%", // 7 ETA
+      "8%", // 8 Section
+      "8%", // 9 SubSection
+    ];
 
-        <tbody>
+    const cellStyle = (i) => ({
+      width: colWidths[i],
+      minWidth: colWidths[i],
+      maxWidth: colWidths[i],
+    });
+
+    return (
+      <div className="w-full mt-2 border border-black">
+        {/* HEADER */}
+        <div className="bg-gray-800 flex w-full">
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(0)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Product Code
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(1)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Product
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(2)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Customer Batch No.
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(3)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Customer Lot No.
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(4)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Quantity
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(5)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              No. of pkgs
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(6)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Gross Wt.
+            </p>
+          </div>
+
+          {/* <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(7)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              ETA
+            </p>
+          </div> */}
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(7)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Section
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(8)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              SubSection
+            </p>
+          </div>
+        </div>
+
+        {/* BODY */}
+        <div className="w-full">
           {(rows.length > 0 ? rows : [{}]).map((item, index) => (
-            <tr
+            <div
               key={item?.id ?? index}
-              className={index % 2 === 0 ? "bg-white" : "bg-gray-200"} // stripes
+              className={`flex w-full ${index % 2 === 0 ? "bg-white" : "bg-gray-200"}`}
             >
+              {/* Product Code */}
+              <div
+                className="border border-black p-1 text-center align-middle"
+                style={cellStyle(0)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {item.itemCode || ""}
+                </p>
+              </div>
+
               {/* Product */}
-              <td className="w-1/8 border border-black p-1 text-center align-middle">
-                <p className="text-black font-normal" style={{ fontSize: "9px" }}>
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(1)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
                   {item.itemTypeName || ""}
                 </p>
-              </td>
-
-              {/* Product Type */}
-              <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center" style={{ fontSize: "9px" }}>
-                  {item.itemName || ""}
-                </p>
-              </td>
-
-              {/* Quantity */}
-              <td className="w-1/8 border border-black p-1">
-                <p className="text-black text-center align-middle" style={{ fontSize: "9px" }}>
-                  {item.qty ?? ""}
-                </p>
-              </td>
-
-              {/* No. of pkjs */}
-              <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
-                  {item.noOfPackages ?? ""} {item.packageCode || ""}
-                </p>
-              </td>
-
-              {/* Gross Wt. */}
-              <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
-                  {(item.grossWt ?? "") + " " + (item.wtUnitCode || "")}
-                </p>
-              </td>
+              </div>
 
               {/* Customer Batch No. */}
-              <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(2)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
                   {item.customerbatchNo || ""}
                 </p>
-              </td>
-            </tr>
-          ))}
-        </tbody>
+              </div>
 
-      </table>
+              {/* Customer Lot No. */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(3)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {item.customerLotNo || ""}
+                </p>
+              </div>
+
+              {/* Quantity */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(4)}
+              >
+                <p className="text-black" style={{ fontSize: "8px" }}>
+                  {item.qty ?? ""}
+                </p>
+              </div>
+
+              {/* No. of pkgs */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(5)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {item.noOfPackages ?? ""} {item.packageCode || ""}
+                </p>
+              </div>
+
+              {/* Gross Wt. */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(6)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {(item.grossWt ?? "") +
+                    (item.wtUnitCode ? ` ${item.wtUnitCode}` : "")}
+                </p>
+              </div>
+
+              {/* ETA */}
+              {/* <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(7)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {data && data?.eta}
+                </p>
+              </div> */}
+
+              {/* Section */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(7)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {item.sectionName || ""}
+                </p>
+              </div>
+
+              {/* SubSection */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(8)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {item.sectionSubName || ""}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   };
+
+  // const TableOutwardNote = ({ chunkContainers }) => {
+  //   const rows = Array.isArray(chunkContainers?.chunkContainers)
+  //     ? chunkContainers?.chunkContainers
+  //     : [];
+
+  //   // ✅ Only width control added (you can change anytime)
+  //   const colWidths = [
+  //     "19%", // Product Type
+  //     "11%", // Product
+  //     "8%", // Quantity
+  //     "10%", // No. of pkjs
+  //     "9%", // Gross Wt.
+  //     "13%", // Customer Batch No.
+  //     "10%", // Customer Lot No.
+  //     "10%", // Section
+  //     "10%", // SubSection
+  //   ];
+
+  //   const cellStyle = (i) => ({
+  //     width: colWidths[i],
+  //     minWidth: colWidths[i],
+  //     maxWidth: colWidths[i],
+  //   });
+
+  //   return (
+  //     <div className="w-full mt-2 border border-black">
+  //       {/* HEADER */}
+  //       <div className="bg-gray-800 flex w-full">
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(0)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Product Type
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(1)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Product
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(2)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Quantity
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(3)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             No. of pkgs
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(4)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Gross Wt.
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(5)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Customer Batch No.
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(6)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Customer Lot No.
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(7)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             Section
+  //           </p>
+  //         </div>
+
+  //         <div
+  //           className="border border-black p-1 text-center"
+  //           style={cellStyle(8)}
+  //         >
+  //           <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+  //             SubSection
+  //           </p>
+  //         </div>
+  //       </div>
+
+  //       {/* BODY */}
+  //       <div className="w-full">
+  //         {(rows.length > 0 ? rows : [{}]).map((item, index) => (
+  //           <div
+  //             key={item?.id ?? index}
+  //             className={`flex w-full ${
+  //               index % 2 === 0 ? "bg-white" : "bg-gray-200"
+  //             }`} // stripes
+  //           >
+  //             {/* Product */}
+  //             <div
+  //               className="border border-black p-1 text-center align-middle"
+  //               style={cellStyle(0)}
+  //             >
+  //               <p
+  //                 className="text-black font-normal"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.itemName || ""}
+  //               </p>
+  //             </div>
+
+  //             {/* Product Type */}
+  //             <div className="border border-black p-1" style={cellStyle(1)}>
+  //               <p
+  //                 className="text-black font-normal text-center"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.itemTypeName || ""}
+  //               </p>
+  //             </div>
+
+  //             {/* Quantity */}
+  //             <div className="border border-black p-1" style={cellStyle(2)}>
+  //               <p
+  //                 className="text-black text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.qty ?? ""}
+  //               </p>
+  //             </div>
+
+  //             {/* No. of pkjs */}
+  //             <div className="border border-black p-1" style={cellStyle(3)}>
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.noOfPackages ?? ""} {item.packageCode || ""}
+  //               </p>
+  //             </div>
+
+  //             {/* Gross Wt. */}
+  //             <div className="border border-black p-1" style={cellStyle(4)}>
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {(item.grossWt ?? "") + " " + (item.wtUnitCode || "")}
+  //               </p>
+  //             </div>
+
+  //             {/* Customer Batch No. */}
+  //             <div className="border border-black p-1" style={cellStyle(5)}>
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.customerbatchNo || ""}
+  //               </p>
+  //             </div>
+
+  //             {/* Customer Lot No. */}
+  //             <div className="border border-black p-1" style={cellStyle(6)}>
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.customerLotNo || ""}
+  //               </p>
+  //             </div>
+
+  //             {/* Section */}
+  //             <div className="border border-black p-1" style={cellStyle(7)}>
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.sectionName || ""}
+  //               </p>
+  //             </div>
+
+  //             {/* SubSection */}
+  //             <div className="border border-black p-1" style={cellStyle(8)}>
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "8px" }}
+  //               >
+  //                 {item.sectionSubName || ""}
+  //               </p>
+  //             </div>
+  //           </div>
+  //         ))}
+  //       </div>
+  //     </div>
+  //   );
+  // };
+
+  const TableOutwardNote = ({ chunkContainers }) => {
+    const rows = Array.isArray(chunkContainers?.chunkContainers)
+      ? chunkContainers?.chunkContainers
+      : [];
+
+    // ✅ 10 columns now (ETA added) — must match header+body count
+    const colWidths = [
+      "11%", // 0 Product Code
+      "23%", // 1 Product
+      "13%", // 2 Customer Batch No.
+      "10%", // 3 Customer Lot No.
+      "8%", // 4 Quantity
+      "10%", // 5 No. of pkgs
+      "9%", // 6 Gross Wt.
+      //"12%", // 7 ETA
+      "8%", // 8 Section
+      "8%", // 9 SubSection
+    ];
+
+    const cellStyle = (i) => ({
+      width: colWidths[i],
+      minWidth: colWidths[i],
+      maxWidth: colWidths[i],
+    });
+
+    return (
+      <div className="w-full mt-2 border border-black">
+        {/* HEADER */}
+        <div className="bg-gray-800 flex w-full">
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(0)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Product Code
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(1)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Product
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(2)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Customer Batch No.
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(3)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Customer Lot No.
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(4)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Quantity
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(5)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              No. of pkgs
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(6)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Gross Wt.
+            </p>
+          </div>
+
+          {/* <div
+              className="border border-black p-1 text-center"
+              style={cellStyle(7)}
+            >
+              <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+                ETA
+              </p>
+            </div> */}
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(7)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              Section
+            </p>
+          </div>
+
+          <div
+            className="border border-black p-1 text-center"
+            style={cellStyle(8)}
+          >
+            <p className="text-white font-bold" style={{ fontSize: "8px" }}>
+              SubSection
+            </p>
+          </div>
+        </div>
+
+        {/* BODY */}
+        <div className="w-full">
+          {(rows.length > 0 ? rows : [{}]).map((item, index) => (
+            <div
+              key={item?.id ?? index}
+              className={`flex w-full ${index % 2 === 0 ? "bg-white" : "bg-gray-200"}`}
+            >
+              {/* Product Code */}
+              <div
+                className="border border-black p-1 text-center align-middle"
+                style={cellStyle(0)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {item.itemCode || ""}
+                </p>
+              </div>
+
+              {/* Product */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(1)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {item.itemName || ""}
+                </p>
+              </div>
+
+              {/* Customer Batch No. */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(2)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {item.customerbatchNo || ""}
+                </p>
+              </div>
+
+              {/* Customer Lot No. */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(3)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {item.customerLotNo || ""}
+                </p>
+              </div>
+
+              {/* Quantity */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(4)}
+              >
+                <p className="text-black" style={{ fontSize: "8px" }}>
+                  {item.qty ?? ""}
+                </p>
+              </div>
+
+              {/* No. of pkgs */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(5)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {item.noOfPackages ?? ""} {item.packageCode || ""}
+                </p>
+              </div>
+
+              {/* Gross Wt. */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(6)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {(item.grossWt ?? "") +
+                    (item.wtUnitCode ? ` ${item.wtUnitCode}` : "")}
+                </p>
+              </div>
+
+              {/* ETA */}
+              {/* <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(7)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {data && data?.eta}
+                </p>
+              </div> */}
+
+              {/* Section */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(7)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {item.sectionName || ""}
+                </p>
+              </div>
+
+              {/* SubSection */}
+              <div
+                className="border border-black p-1 text-center"
+                style={cellStyle(8)}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "8px" }}
+                >
+                  {item.sectionSubName || ""}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const TableDeliveryNote = ({ chunkContainers }) => {
     const rows = Array.isArray(chunkContainers?.chunkContainers)
       ? chunkContainers?.chunkContainers
@@ -1252,7 +1978,7 @@ function rptWarehouse() {
 
     return (
       <table className="w-full mt-2 table-fixed border border-black border-collapse">
-        <thead className="bg-gray-800" >
+        <thead className="bg-gray-800">
           <tr>
             <th className="w-1/8 border border-black p-1">
               <p className="text-white font-bold" style={{ fontSize: "9px" }}>
@@ -1271,7 +1997,7 @@ function rptWarehouse() {
             </th>
             <th className="w-1/8 border border-black p-1">
               <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                No. of pkjs
+                No. of pkgs
               </p>
             </th>
             <th className="w-1/8 border border-black p-1">
@@ -1295,49 +2021,66 @@ function rptWarehouse() {
             >
               {/* Product */}
               <td className="w-1/8 border border-black p-1 text-center align-middle">
-                <p className="text-black font-normal" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.itemTypeName || ""}
                 </p>
               </td>
 
               {/* Product Type */}
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal text-center"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.itemName || ""}
                 </p>
               </td>
 
               {/* Quantity */}
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.qty ?? ""}
                 </p>
               </td>
 
               {/* No. of pkjs */}
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.noOfPackages ?? ""} {item.packageCode || ""}
                 </p>
               </td>
 
               {/* Gross Wt. */}
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {(item.grossWt ?? "") + " " + (item.wtUnitCode || "")}
                 </p>
               </td>
 
               {/* Customer Batch No. */}
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.customerbatchNo || ""}
                 </p>
               </td>
             </tr>
           ))}
         </tbody>
-
       </table>
     );
   };
@@ -1348,7 +2091,7 @@ function rptWarehouse() {
 
     return (
       <table className="w-full mt-2 table-fixed border border-black border-collapse">
-        <thead className="bg-gray-800" >
+        <thead className="bg-gray-800">
           <tr>
             <th className="w-1/8 border border-black p-1">
               <p className="text-white font-bold" style={{ fontSize: "9px" }}>
@@ -1367,7 +2110,7 @@ function rptWarehouse() {
             </th>
             <th className="w-1/8 border border-black p-1">
               <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                No. of pkjs
+                No. of pkgs
               </p>
             </th>
             <th className="w-1/8 border border-black p-1">
@@ -1406,163 +2149,94 @@ function rptWarehouse() {
             >
               {/* Product */}
               <td className="w-1/8 border border-black p-1 text-center align-middle">
-                <p className="text-black font-normal" style={{ fontSize: "9px" }}>
-                  {item.itemTypeName || ""}
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "9px" }}
+                >
+                    {item.itemName || ""}
                 </p>
               </td>
 
               {/* Product Type */}
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center" style={{ fontSize: "9px" }}>
-                  {item.itemName || ""}
+                <p
+                  className="text-black font-normal text-center"
+                  style={{ fontSize: "9px" }}
+                >
+                 {item.itemTypeName || ""}
                 </p>
               </td>
 
               {/* Quantity */}
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.qty ?? ""}
                 </p>
               </td>
 
               {/* No. of pkjs */}
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.noOfPackages ?? ""} {item.packageCode || ""}
                 </p>
               </td>
 
               {/* Gross Wt. */}
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {(item.grossWt ?? "") + " " + (item.wtUnitCode || "")}
                 </p>
               </td>
 
               {/* Customer Batch No. */}
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.customerbatchNo || ""}
                 </p>
               </td>
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.section || ""}
                 </p>
               </td>
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.subSection || ""}
                 </p>
               </td>
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.status || ""}
                 </p>
               </td>
             </tr>
           ))}
         </tbody>
-
       </table>
     );
   };
-  const TableOutwardNote = ({ chunkContainers }) => {
-    const rows = Array.isArray(chunkContainers?.chunkContainers)
-      ? chunkContainers?.chunkContainers
-      : [];
 
-    return (
-      <table className="w-full mt-2 table-fixed border border-black border-collapse">
-        <thead className="bg-gray-800" >
-          <tr>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                Product
-              </p>
-            </th>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                Product Type
-              </p>
-            </th>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                Quantity
-              </p>
-            </th>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                No. of pkjs
-              </p>
-            </th>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                Gross Wt.
-              </p>
-            </th>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                Customer Batch No.
-              </p>
-            </th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {(rows.length > 0 ? rows : [{}]).map((item, index) => (
-            <tr
-              key={item?.id ?? index}
-              className={index % 2 === 0 ? "bg-white" : "bg-gray-200"} // stripes
-            >
-              {/* Product */}
-              <td className="w-1/8 border border-black p-1 text-center align-middle">
-                <p className="text-black font-normal" style={{ fontSize: "9px" }}>
-                  {item.itemTypeName || ""}
-                </p>
-              </td>
-
-              {/* Product Type */}
-              <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center" style={{ fontSize: "9px" }}>
-                  {item.itemName || ""}
-                </p>
-              </td>
-
-              {/* Quantity */}
-              <td className="w-1/8 border border-black p-1">
-                <p className="text-black text-center align-middle" style={{ fontSize: "9px" }}>
-                  {item.qty ?? ""}
-                </p>
-              </td>
-
-              {/* No. of pkjs */}
-              <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
-                  {item.noOfPackages ?? ""} {item.packageCode || ""}
-                </p>
-              </td>
-
-              {/* Gross Wt. */}
-              <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
-                  {(item.grossWt ?? "") + " " + (item.wtUnitCode || "")}
-                </p>
-              </td>
-
-              {/* Customer Batch No. */}
-              <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
-                  {item.customerbatchNo || ""}
-                </p>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-
-      </table>
-    );
-  };
   const TablePurchaseOrderKn = ({ chunkContainers }) => {
     const rows = Array.isArray(chunkContainers?.chunkContainers)
       ? chunkContainers?.chunkContainers
@@ -1570,16 +2244,11 @@ function rptWarehouse() {
 
     return (
       <table className="w-full mt-2 table-fixed border border-black border-collapse">
-        <thead className="bg-gray-800" >
+        <thead className="bg-gray-800">
           <tr>
             <th className="w-1/8 border border-black p-1">
               <p className="text-white font-bold" style={{ fontSize: "9px" }}>
                 Product
-              </p>
-            </th>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                Product Type
               </p>
             </th>
             <th className="w-1/8 border border-black p-1">
@@ -1589,17 +2258,12 @@ function rptWarehouse() {
             </th>
             <th className="w-1/8 border border-black p-1">
               <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                No. of pkjs
+                No. of pkgs
               </p>
             </th>
             <th className="w-1/8 border border-black p-1">
               <p className="text-white font-bold" style={{ fontSize: "9px" }}>
                 Gross Wt.
-              </p>
-            </th>
-            <th className="w-1/8 border border-black p-1">
-              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
-                Customer Batch No.
               </p>
             </th>
           </tr>
@@ -1613,52 +2277,360 @@ function rptWarehouse() {
             >
               {/* Product */}
               <td className="w-1/8 border border-black p-1 text-center align-middle">
-                <p className="text-black font-normal" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.itemTypeName || ""}
-                </p>
-              </td>
-
-              {/* Product Type */}
-              <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center" style={{ fontSize: "9px" }}>
-                  {item.itemName || ""}
                 </p>
               </td>
 
               {/* Quantity */}
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.qty ?? ""}
                 </p>
               </td>
 
               {/* No. of pkjs */}
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.noOfPackages ?? ""} {item.packageCode || ""}
                 </p>
               </td>
 
               {/* Gross Wt. */}
               <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
                   {(item.grossWt ?? "") + " " + (item.wtUnitCode || "")}
-                </p>
-              </td>
-
-              {/* Customer Batch No. */}
-              <td className="w-1/8 border border-black p-1">
-                <p className="text-black font-normal text-center align-middle" style={{ fontSize: "9px" }}>
-                  {item.customerbatchNo || ""}
                 </p>
               </td>
             </tr>
           ))}
         </tbody>
-
       </table>
     );
   };
+
+  const TableSalesOrder = ({ chunkContainers }) => {
+    const rows = Array.isArray(chunkContainers?.chunkContainers)
+      ? chunkContainers?.chunkContainers
+      : [];
+
+    return (
+      <table className="w-full mt-2 table-fixed border border-black border-collapse">
+        <thead className="bg-gray-800">
+          <tr>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+                Product Code
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+                Product
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+                Quantity
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+                No. of pkgs
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+                Gross Wt.
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+                ETA
+              </p>
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {(rows.length > 0 ? rows : [{}]).map((item, index) => (
+            <tr
+              key={item?.id ?? index}
+              className={index % 2 === 0 ? "bg-white" : "bg-gray-200"} // stripes
+            >
+              <td className="w-1/8 border border-black p-1 text-center align-middle">
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "9px" }}
+                >
+                  {item.itemCode || ""}
+                </p>
+              </td>
+
+              {/* Product */}
+              <td className="w-1/8 border border-black p-1 text-center align-middle">
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "9px" }}
+                >
+                  {item.itemName || ""}
+                </p>
+              </td>
+
+              {/* Quantity */}
+              <td className="w-1/8 border border-black p-1">
+                <p
+                  className="text-black text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
+                  {item.qty ?? ""}
+                </p>
+              </td>
+
+              {/* No. of pkjs */}
+              <td className="w-1/8 border border-black p-1">
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
+                  {item.noOfPackages ?? ""} {item.packageCode || ""}
+                </p>
+              </td>
+
+              {/* Gross Wt. */}
+              <td className="w-1/8 border border-black p-1">
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
+                  {(item.grossWt ?? "") + " " + (item.wtUnitCode || "")}
+                </p>
+              </td>
+
+              {/* ETA Wt. */}
+              <td className="w-1/8 border border-black p-1">
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
+                  {data && data?.eta}
+                </p>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  };
+
+  // const TablePurchaseOrder = ({ chunkContainers }) => {
+  //   const rows = Array.isArray(chunkContainers?.chunkContainers)
+  //     ? chunkContainers?.chunkContainers
+  //     : [];
+
+  //   return (
+  //     <table className="w-full mt-2 table-fixed border border-black border-collapse">
+  //       <thead className="bg-gray-800">
+  //         <tr>
+  //           <th className="w-1/8 border border-black p-1">
+  //             <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+  //               Product
+  //             </p>
+  //           </th>
+  //           <th className="w-1/8 border border-black p-1">
+  //             <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+  //               Quantity
+  //             </p>
+  //           </th>
+  //           <th className="w-1/8 border border-black p-1">
+  //             <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+  //               No. of pkgs
+  //             </p>
+  //           </th>
+  //           <th className="w-1/8 border border-black p-1">
+  //             <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+  //               Gross Wt.
+  //             </p>
+  //           </th>
+  //         </tr>
+  //       </thead>
+
+  //       <tbody>
+  //         {(rows.length > 0 ? rows : [{}]).map((item, index) => (
+  //           <tr
+  //             key={item?.id ?? index}
+  //             className={index % 2 === 0 ? "bg-white" : "bg-gray-200"} // stripes
+  //           >
+  //             {/* Product */}
+  //             <td className="w-1/8 border border-black p-1 text-center align-middle">
+  //               <p
+  //                 className="text-black font-normal"
+  //                 style={{ fontSize: "9px" }}
+  //               >
+  //                 {item.itemName || ""}
+  //               </p>
+  //             </td>
+
+  //             {/* Quantity */}
+  //             <td className="w-1/8 border border-black p-1">
+  //               <p
+  //                 className="text-black text-center align-middle"
+  //                 style={{ fontSize: "9px" }}
+  //               >
+  //                 {item.qty ?? ""}
+  //               </p>
+  //             </td>
+
+  //             {/* No. of pkjs */}
+  //             <td className="w-1/8 border border-black p-1">
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "9px" }}
+  //               >
+  //                 {item.noOfPackages ?? ""} {item.packageCode || ""}
+  //               </p>
+  //             </td>
+
+  //             {/* Gross Wt. */}
+  //             <td className="w-1/8 border border-black p-1">
+  //               <p
+  //                 className="text-black font-normal text-center align-middle"
+  //                 style={{ fontSize: "9px" }}
+  //               >
+  //                 {(item.grossWt ?? "") + " " + (item.wtUnitCode || "")}
+  //               </p>
+  //             </td>
+  //           </tr>
+  //         ))}
+  //       </tbody>
+  //     </table>
+  //   );
+  // };
+
+  const TablePurchaseOrder = ({ chunkContainers }) => {
+    const rows = Array.isArray(chunkContainers?.chunkContainers)
+      ? chunkContainers?.chunkContainers
+      : [];
+
+    return (
+      <table className="w-full mt-2 table-fixed border border-black border-collapse">
+        <thead className="bg-gray-800">
+          <tr>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+                Product Code
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+                Product
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+                Quantity
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+                No. of pkgs
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+                Gross Wt.
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-white font-bold" style={{ fontSize: "9px" }}>
+                ETA
+              </p>
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {(rows.length > 0 ? rows : [{}]).map((item, index) => (
+            <tr
+              key={item?.id ?? index}
+              className={index % 2 === 0 ? "bg-white" : "bg-gray-200"} // stripes
+            >
+              <td className="w-1/8 border border-black p-1 text-center align-middle">
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "9px" }}
+                >
+                  {item.itemCode || ""}
+                </p>
+              </td>
+
+              {/* Product */}
+              <td className="w-1/8 border border-black p-1 text-center align-middle">
+                <p
+                  className="text-black font-normal"
+                  style={{ fontSize: "9px" }}
+                >
+                  {item.itemName || ""}
+                </p>
+              </td>
+
+              {/* Quantity */}
+              <td className="w-1/8 border border-black p-1">
+                <p
+                  className="text-black text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
+                  {item.qty ?? ""}
+                </p>
+              </td>
+
+              {/* No. of pkjs */}
+              <td className="w-1/8 border border-black p-1">
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
+                  {item.noOfPackages ?? ""} {item.packageCode || ""}
+                </p>
+              </td>
+
+              {/* Gross Wt. */}
+              <td className="w-1/8 border border-black p-1">
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
+                  {(item.grossWt ?? "") + " " + (item.wtUnitCode || "")}
+                </p>
+              </td>
+
+              {/* ETA Wt. */}
+              <td className="w-1/8 border border-black p-1">
+                <p
+                  className="text-black font-normal text-center align-middle"
+                  style={{ fontSize: "9px" }}
+                >
+                  {data && data?.eta}
+                </p>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  };
+
   const GoodsInwardsNote = (chunkContainers) => (
     <div>
       <div className="mx-auto text-black">
@@ -1682,13 +2654,13 @@ function rptWarehouse() {
               className="text-center font-semibold"
               style={{ fontSize: "11px", color: "black" }}
             >
-              {data && data?.companyName}
+              {data && data?.warehouseName}
             </p>
             <p
               className="text-center mb-2 font-semibold"
               style={{ fontSize: "11px", color: "black" }}
             >
-              {data && data?.companyAddress}
+              {data && data?.warehouseAddress}
             </p>
           </div>
           <div style={{ width: "100%" }}>
@@ -1697,9 +2669,9 @@ function rptWarehouse() {
           <div
             style={{
               width: "100%",
-              height: "450px",
-              maxHeight: "450px",
-              minHeight: "450px",
+              height: "460px",
+              maxHeight: "490px",
+              minHeight: "460px",
             }}
           >
             <TableInwardsNote chunkContainers={chunkContainers} />
@@ -1904,13 +2876,13 @@ function rptWarehouse() {
               className="text-center font-semibold"
               style={{ fontSize: "11px", color: "black" }}
             >
-              {data && data?.companyName}
+              {data && data?.warehouseName}
             </p>
             <p
               className="text-center mb-2 font-semibold"
               style={{ fontSize: "11px", color: "black" }}
             >
-              {data && data?.companyAddress}
+              {data && data?.warehouseAddress}
             </p>
           </div>
           <div style={{ width: "100%" }}>
@@ -1920,10 +2892,11 @@ function rptWarehouse() {
             style={{
               width: "100%",
               height: "450px",
-              maxHeight: "450px",
+              maxHeight: "490px",
               minHeight: "450px",
             }}
           >
+            {/* <TableOutwardNote chunkContainers={chunkContainers} /> */}
             <TableOutwardNote chunkContainers={chunkContainers} />
           </div>
           <div
@@ -1955,7 +2928,7 @@ function rptWarehouse() {
       </div>
     </div>
   );
-  const PurchaseOrderKn = (chunkContainers) => (
+  const PurchaseOrder = (chunkContainers) => (
     <div>
       <div className="mx-auto text-black">
         <div>
@@ -1988,7 +2961,7 @@ function rptWarehouse() {
             </p>
           </div>
           <div style={{ width: "100%" }}>
-            <VesselPurchaseOrderKn/>
+            <VesselPurchaseOrder />
           </div>
           <div
             style={{
@@ -1998,7 +2971,7 @@ function rptWarehouse() {
               minHeight: "450px",
             }}
           >
-            <TablePurchaseOrderKn chunkContainers={chunkContainers} />
+            <TablePurchaseOrder chunkContainers={chunkContainers} />
           </div>
           <div
             style={{
@@ -2029,6 +3002,83 @@ function rptWarehouse() {
       </div>
     </div>
   );
+
+  const SalesOrder = (chunkContainers) => (
+    <div>
+      <div className="mx-auto text-black">
+        <div>
+          <div>
+            <CompanyImgModule />
+          </div>
+          <div className="text-center">
+            <h1
+              style={{
+                fontWeight: "bold",
+                fontSize: "16px",
+                color: "black",
+              }}
+            >
+              SALES ORDER
+            </h1>
+          </div>
+          <div>
+            <p
+              className="text-center font-semibold"
+              style={{ fontSize: "11px", color: "black" }}
+            >
+              {data && data?.companyName}
+            </p>
+            <p
+              className="text-center mb-2 font-semibold"
+              style={{ fontSize: "11px", color: "black" }}
+            >
+              {data && data?.companyAddress}
+            </p>
+          </div>
+          <div style={{ width: "100%" }}>
+            <VesselPurchaseOrderKn />
+          </div>
+          <div
+            style={{
+              width: "100%",
+              height: "450px",
+              maxHeight: "490px",
+              minHeight: "450px",
+            }}
+          >
+            {/* <TablePurchaseOrderKn chunkContainers={chunkContainers} /> */}
+            <TableSalesOrder chunkContainers={chunkContainers} />
+          </div>
+          <div
+            style={{
+              width: "100%",
+            }}
+          >
+            <p style={{ fontSize: "11px" }}>
+              We acknowledge the receipt of goods stated above
+            </p>
+            <p style={{ fontSize: "11px" }} className="mt-2">
+              For <span className="font-bold">{data && data?.companyName}</span>
+            </p>
+            <p style={{ fontSize: "11px" }} className="mt-1 font-bold">
+              {data && data?.createdByName}
+            </p>
+            <p style={{ fontSize: "11px" }} className="mt-1">
+              Authorized signatory
+            </p>
+            <div style={{ fontSize: "11px" }} className="mt-8">
+              <div className="grid grid-cols-3 w-full items-center">
+                <p className="text-left">Printed By:</p>
+                <p className="text-center">Printed On:</p>
+                <p className="text-right">Received By:</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <main>
       <div className="mt-5">
@@ -2141,7 +3191,7 @@ function rptWarehouse() {
               );
             }
             case "GOODS RECEIPT NOTE": {
-              const GRN_CHUNK_SIZE = 10;
+              const GRN_CHUNK_SIZE = 8;
 
               // ✅ Extract rows from ANY possible chunk shape
               const getRowsFromChunk = (c) => {
@@ -2166,7 +3216,9 @@ function rptWarehouse() {
                 }
 
                 // fallback: if it has ONLY one array prop, use it
-                const firstArrayKey = Object.keys(c).find((k) => Array.isArray(c[k]));
+                const firstArrayKey = Object.keys(c).find((k) =>
+                  Array.isArray(c[k]),
+                );
                 if (firstArrayKey) return c[firstArrayKey];
 
                 return [];
@@ -2174,14 +3226,24 @@ function rptWarehouse() {
 
               const buildChunks = (arr, size) => {
                 const out = [];
-                for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+                for (let i = 0; i < arr.length; i += size)
+                  out.push(arr.slice(i, i + size));
                 return out;
               };
 
               // ✅ DEBUG (keep for now)
-              console.log("[GRN] chunks type:", Array.isArray(chunks) ? "array" : typeof chunks);
-              console.log("[GRN] chunks length:", Array.isArray(chunks) ? chunks.length : 0);
-              console.log("[GRN] chunks[0] keys:", chunks?.[0] ? Object.keys(chunks[0]) : "no chunks[0]");
+              console.log(
+                "[GRN] chunks type:",
+                Array.isArray(chunks) ? "array" : typeof chunks,
+              );
+              console.log(
+                "[GRN] chunks length:",
+                Array.isArray(chunks) ? chunks.length : 0,
+              );
+              console.log(
+                "[GRN] chunks[0] keys:",
+                chunks?.[0] ? Object.keys(chunks[0]) : "no chunks[0]",
+              );
               console.log("[GRN] chunks[0] preview:", chunks?.[0]);
 
               // ✅ 1) Flatten all rows from existing `chunks`
@@ -2212,7 +3274,11 @@ function rptWarehouse() {
                       <div
                         key={`${reportId}-${i}`}
                         ref={(el) => (enquiryModuleRefs.current[refIndex] = el)}
-                        className={i < pages.length - 1 ? "report-spacing bg-white" : "bg-white"}
+                        className={
+                          i < pages.length - 1
+                            ? "report-spacing bg-white"
+                            : "bg-white"
+                        }
                         style={{
                           width: "210mm",
                           height: "297mm",
@@ -2292,7 +3358,7 @@ function rptWarehouse() {
                 </React.Fragment>
               );
             }
-            case "Purchase Order KN": {
+            case "Purchase Order": {
               // ✅ same chunk logic you showed: normalize + always render at least 1 page
               const ginPages = Array.isArray(chunks)
                 ? chunks.filter(Boolean)
@@ -2334,7 +3400,57 @@ function rptWarehouse() {
                             fontFamily: "Arial sans-serif !important",
                           }}
                         >
-                          {PurchaseOrderKn({ chunkContainers })}
+                          {PurchaseOrder({ chunkContainers })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </React.Fragment>
+              );
+            }
+            case "Sales Order": {
+              // ✅ same chunk logic you showed: normalize + always render at least 1 page
+              const ginPages = Array.isArray(chunks)
+                ? chunks.filter(Boolean)
+                : [];
+              const pages = ginPages.length > 0 ? ginPages : [undefined];
+
+              return (
+                <React.Fragment key={reportId}>
+                  {pages.map((chunkContainers, i) => {
+                    // ✅ build a unique ref index so multiple pages don't overwrite report refs
+                    const refIndex = index + i;
+
+                    return (
+                      <div
+                        key={`${reportId}-${i}`}
+                        ref={(el) => (enquiryModuleRefs.current[refIndex] = el)}
+                        className={
+                          i < pages.length - 1
+                            ? "report-spacing bg-white"
+                            : "bg-white"
+                        }
+                        style={{
+                          width: "210mm",
+                          height: "297mm",
+                          margin: "auto",
+                          boxSizing: "border-box",
+                          padding: "5mm",
+                          display: "flex",
+                          flexDirection: "column",
+                          marginBottom: "22px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            flex: 1,
+                            width: "100%",
+                            padding: "8px",
+                            boxSizing: "border-box",
+                            fontFamily: "Arial sans-serif !important",
+                          }}
+                        >
+                          {SalesOrder({ chunkContainers })}
                         </div>
                       </div>
                     );

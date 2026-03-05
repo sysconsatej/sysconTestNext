@@ -72,7 +72,7 @@ const NewsSlider = () => {
   return (
     <>
       {/* ✅ Readable design: solid white cards + subtle blur + strong text contrast */}
-      <div className="w-full flex justify-center px-6">
+      <div className="w-full flex justify-center px-6  mt-2">
         <div className="w-full max-w-6xl grid grid-cols-2 gap-5">
           {cards.map((c) => (
             <div
@@ -87,12 +87,12 @@ const NewsSlider = () => {
               "
             >
               {/* header (high contrast) */}
-              <div className="px-5 py-4 bg-white">
+              <div className="px-5 py-2 bg-white">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div
                       className="
-                        h-9 w-9 rounded-xl
+                        h-8 w-9 rounded-xl
                         bg-gray-100 border border-gray-200
                         flex items-center justify-center
                         text-gray-800
@@ -104,7 +104,6 @@ const NewsSlider = () => {
                       <p className="text-[14px] font-semibold text-gray-900">
                         {c.title}
                       </p>
-                      <div className={`h-[3px] w-24 rounded-full ${c.headerLine}`} />
                     </div>
                   </div>
 
@@ -125,7 +124,7 @@ const NewsSlider = () => {
               {/* body */}
               <div className="px-5 pb-5">
                 {!c.items?.length ? (
-                  <div className="text-[12px] text-gray-700 pt-3">
+                  <div className="text-[12px] text-gray-700 pt-2">
                     {c.empty}
                   </div>
                 ) : (
@@ -137,7 +136,7 @@ const NewsSlider = () => {
                     prevArrow={false}
                     nextArrow={false}
                     navigation={false}
-                    className="overflow-hidden h-[120px]"
+                    className="overflow-hidden h-[90px]"
                   >
                     {c.items.map((item) => {
                       const content = item?.content || "";
@@ -147,14 +146,14 @@ const NewsSlider = () => {
                         <div key={item?.id} className="h-full w-full pt-3">
                           {/* title */}
                           <p
-                            className="text-[12px] font-semibold mb-1"
+                            className="text-[11px] font-semibold mb-1"
                             style={{ color: item?.nameColor || "#111827" }}
                           >
                             {item?.name || ""}
                           </p>
 
                           {/* text */}
-                          <p className="text-gray-800 text-[12px] leading-5">
+                          <p className="text-gray-800 text-[11px] leading-5">
                             {truncate(content, 40)}{" "}
                             {long && (
                               <button
