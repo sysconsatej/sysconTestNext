@@ -8,7 +8,15 @@ import {
 } from "@/services/auth/FormControl.services.js";
 import { getUserDetails } from "@/helper/userDetails";
 import { useSearchParams } from "next/navigation";
-import { Box, Button, MenuItem, TextField, Tooltip } from "@mui/material";
+import {
+  Box,
+  Button,
+  Checkbox,
+  ListItemText,
+  MenuItem,
+  TextField,
+  Tooltip,
+} from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowDropDownRoundedIcon from "@mui/icons-material/ArrowDropDownRounded";
 
@@ -34,31 +42,187 @@ const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const round2 = (n) => Math.round(n * 100) / 100;
 
-function deepClone(v) {
-  // Prefer structuredClone when available; fall back safely.
-  if (v === undefined) return undefined;
-  if (v === null) return null;
+function deepClone(obj) {
+  return obj ? JSON.parse(JSON.stringify(obj)) : obj;
+}
 
-  try {
-    // Most modern browsers + Node 17+
-    // eslint-disable-next-line no-undef
-    if (typeof structuredClone === "function") return structuredClone(v);
-  } catch {}
+function buildPageMaps(tpl) {
+  const pages = normalizePages(tpl);
+  const byId = new Map();
 
-  try {
-    const s = JSON.stringify(v);
-    if (s === undefined) {
-      // JSON can't represent this value (e.g. function); do a shallow-ish clone fallback
-      if (Array.isArray(v)) return v.map((x) => deepClone(x));
-      if (typeof v === "object") return { ...v };
-      return v;
+  pages.forEach((p, pageIndex) => {
+    (p.elements || []).forEach((el) => {
+      if (el?.id) byId.set(el.id, { el, pageIndex });
+    });
+  });
+
+  return { pages, byId };
+}
+
+function applyNeighborConstraints(tpl, refTpl, iterations = 4) {
+  if (!tpl || !refTpl) return tpl;
+
+  const out = deepClone(tpl);
+
+  const { pages: outPages, byId: outById } = buildPageMaps(out);
+  const { byId: refById } = buildPageMaps(refTpl);
+
+  const get = (id) => (id ? outById.get(id) : null);
+  const getRef = (id) => (id ? refById.get(id) : null);
+
+  const bottomOf = (el) => Number(el?.y || 0) + Number(el?.h || 0);
+  const rightOf = (el) => Number(el?.x || 0) + Number(el?.w || 0);
+
+  // gap computed from reference template so spacing remains identical to your design
+  const gapTop = (refEl, refTop) =>
+    Number(refEl?.y || 0) - (Number(refTop?.y || 0) + Number(refTop?.h || 0));
+
+  const gapLeft = (refEl, refLeft) =>
+    Number(refEl?.x || 0) - (Number(refLeft?.x || 0) + Number(refLeft?.w || 0));
+
+  for (let pass = 0; pass < iterations; pass++) {
+    // stable order: top->bottom, then z
+    const all = [];
+    outPages.forEach((p, pi) => {
+      (p.elements || []).forEach((el) => {
+        all.push({ el, pi });
+      });
+    });
+    all.sort(
+      (a, b) =>
+        Number(a.el?.y || 0) - Number(b.el?.y || 0) ||
+        Number(a.el?.z || 0) - Number(b.el?.z || 0),
+    );
+
+    for (const { el, pi } of all) {
+      const nb = el?.neighbors || {};
+      if (!nb) continue;
+
+      const refRec = getRef(el.id);
+      const refEl = refRec?.el;
+
+      // --- TOP constraint: keep y attached to topId bottom + original gap ---
+      if (nb.topId) {
+        const topRec = get(nb.topId);
+        const refTopRec = getRef(nb.topId);
+
+        if (
+          topRec &&
+          refEl &&
+          refTopRec &&
+          topRec.pageIndex === pi &&
+          refRec.pageIndex === refTopRec.pageIndex
+        ) {
+          const g = gapTop(refEl, refTopRec.el);
+          el.y = bottomOf(topRec.el) + g;
+        }
+      }
+
+      // --- LEFT constraint: keep x attached to leftId right + original gap ---
+      if (nb.leftId) {
+        const leftRec = get(nb.leftId);
+        const refLeftRec = getRef(nb.leftId);
+
+        if (
+          leftRec &&
+          refEl &&
+          refLeftRec &&
+          leftRec.pageIndex === pi &&
+          refRec.pageIndex === refLeftRec.pageIndex
+        ) {
+          const g = gapLeft(refEl, refLeftRec.el);
+          el.x = rightOf(leftRec.el) + g;
+        }
+      }
+
+      // --- SPECIAL: stretch LINEV between topId and bottomId (keeps side borders attached)
+      const t = String(el.type || "").toLowerCase();
+      const isLineV = t === "linev" || t === "vline" || t === "line_vertical";
+      const isLineH = t === "lineh" || t === "hline" || t === "line_horizontal";
+
+      if (isLineV && nb.topId && nb.bottomId) {
+        const topRec = get(nb.topId);
+        const botRec = get(nb.bottomId);
+        const refTopRec = getRef(nb.topId);
+        const refBotRec = getRef(nb.bottomId);
+
+        if (
+          topRec &&
+          botRec &&
+          refEl &&
+          refTopRec &&
+          refBotRec &&
+          topRec.pageIndex === pi &&
+          botRec.pageIndex === pi &&
+          refTopRec.pageIndex === refRec.pageIndex &&
+          refBotRec.pageIndex === refRec.pageIndex
+        ) {
+          // preserve original offsets of the line endpoints
+          const refTop = refTopRec.el;
+          const refBot = refBotRec.el;
+
+          const refLineTopGap = Number(refEl.y || 0) - Number(refTop.y || 0);
+          const refLineBottomGap =
+            Number(refBot.y || 0) +
+            Number(refBot.h || 0) -
+            (Number(refEl.y || 0) + Number(refEl.h || 0));
+
+          const newY = Number(topRec.el.y || 0) + refLineTopGap;
+          const newBottom = bottomOf(botRec.el) - refLineBottomGap;
+
+          el.y = newY;
+          el.h = Math.max(0.1, newBottom - newY);
+        }
+      }
+
+      if (isLineH && nb.leftId && nb.rightId) {
+        const leftRec = get(nb.leftId);
+        const rightRec = get(nb.rightId);
+        const refLeftRec = getRef(nb.leftId);
+        const refRightRec = getRef(nb.rightId);
+
+        if (
+          leftRec &&
+          rightRec &&
+          refEl &&
+          refLeftRec &&
+          refRightRec &&
+          leftRec.pageIndex === pi &&
+          rightRec.pageIndex === pi &&
+          refLeftRec.pageIndex === refRec.pageIndex &&
+          refRightRec.pageIndex === refRec.pageIndex
+        ) {
+          const refLeft = refLeftRec.el;
+          const refRight = refRightRec.el;
+
+          const refLineLeftGap = Number(refEl.x || 0) - Number(refLeft.x || 0);
+          const refLineRightGap =
+            Number(refRight.x || 0) +
+            Number(refRight.w || 0) -
+            (Number(refEl.x || 0) + Number(refEl.w || 0));
+
+          const newX = Number(leftRec.el.x || 0) + refLineLeftGap;
+          const newRight = rightOf(rightRec.el) - refLineRightGap;
+
+          el.x = newX;
+          el.w = Math.max(0.1, newRight - newX);
+        }
+      }
     }
-    return JSON.parse(s);
-  } catch {
-    if (Array.isArray(v)) return v.slice();
-    if (typeof v === "object") return { ...v };
-    return v;
   }
+
+  // write back updated pages -> template.pages
+  // normalizePages() returns synthetic objects, so we update original template pages by id
+  if (Array.isArray(out.pages)) {
+    for (const p of out.pages) {
+      const pNorm = outPages.find((pp) => pp.id === p.id) || null;
+      if (pNorm) p.elements = pNorm.elements;
+    }
+  } else {
+    out.elements = outPages[0]?.elements || out.elements;
+  }
+
+  return out;
 }
 
 /** ---------- Data Schema helpers (for repeating tables) ---------- */
@@ -93,6 +257,21 @@ function safeParseJson(text) {
   }
 }
 
+function normalizeCanGrowColumns(value) {
+  if (!Array.isArray(value)) return [];
+
+  const seen = new Set();
+  return value
+    .map((v) => String(v || "").trim())
+    .filter(Boolean)
+    .filter((v) => {
+      const key = v.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 /* =========================================================
    MULTI-PAGE HELPERS (Main + Attachments)
    Backward-compat: keep `template.elements` pointing to ACTIVE page elements.
@@ -116,6 +295,209 @@ function ensurePages(tpl) {
     elements,
     groups,
   };
+}
+
+/* =========================================================
+   NEIGHBOR MAP (for report binding / flow positioning)
+   - Adds el.neighbors { topId,bottomId,leftId,rightId }
+   - Safe: does NOT change x/y/w/h; only metadata.
+   - Computed per page (Main + Attachments) based on geometry overlap.
+========================================================= */
+
+function ensureElementNeighbors(el) {
+  if (!el || typeof el !== "object") return el;
+  if (el.neighbors && typeof el.neighbors === "object") return el;
+  return {
+    ...el,
+    neighbors: { topId: null, bottomId: null, leftId: null, rightId: null },
+  };
+}
+
+function overlapRatio1D(a0, a1, b0, b1) {
+  const inter = Math.max(0, Math.min(a1, b1) - Math.max(a0, b0));
+  const minLen = Math.max(0.0001, Math.min(a1 - a0, b1 - b0));
+  return inter / minLen;
+}
+
+function computeNeighborsForElements(elements) {
+  const els = (Array.isArray(elements) ? elements : [])
+    .filter((e) => e && !e.hidden)
+    .map((e) => ensureElementNeighbors(e));
+
+  const byId = new Map();
+  for (const e of els) {
+    if (e.id != null) byId.set(String(e.id), e);
+  }
+
+  const pickAbove = (e) => {
+    const ex0 = Number(e.x || 0),
+      ex1 = ex0 + Number(e.w || 0);
+    const ey0 = Number(e.y || 0);
+    let best = null;
+    let bestBottom = -Infinity;
+
+    for (const o of els) {
+      if (o === e) continue;
+      const ox0 = Number(o.x || 0),
+        ox1 = ox0 + Number(o.w || 0);
+      const oy0 = Number(o.y || 0),
+        oy1 = oy0 + Number(o.h || 0);
+
+      // must be above (allow tiny epsilon)
+      if (oy1 > ey0 + 0.2) continue;
+
+      // must overlap horizontally at least a bit
+      const ov = overlapRatio1D(ex0, ex1, ox0, ox1);
+      if (ov < 0.15) continue;
+
+      if (oy1 > bestBottom) {
+        bestBottom = oy1;
+        best = o;
+      }
+    }
+    return best;
+  };
+
+  const pickBelow = (e) => {
+    const ex0 = Number(e.x || 0),
+      ex1 = ex0 + Number(e.w || 0);
+    const ey1 = Number(e.y || 0) + Number(e.h || 0);
+    let best = null;
+    let bestTop = Infinity;
+
+    for (const o of els) {
+      if (o === e) continue;
+      const ox0 = Number(o.x || 0),
+        ox1 = ox0 + Number(o.w || 0);
+      const oy0 = Number(o.y || 0);
+
+      // must be below
+      if (oy0 < ey1 - 0.2) continue;
+
+      const ov = overlapRatio1D(ex0, ex1, ox0, ox1);
+      if (ov < 0.15) continue;
+
+      if (oy0 < bestTop) {
+        bestTop = oy0;
+        best = o;
+      }
+    }
+    return best;
+  };
+
+  const pickLeft = (e) => {
+    const ey0 = Number(e.y || 0),
+      ey1 = ey0 + Number(e.h || 0);
+    const ex0 = Number(e.x || 0);
+    let best = null;
+    let bestRight = -Infinity;
+
+    for (const o of els) {
+      if (o === e) continue;
+      const oy0 = Number(o.y || 0),
+        oy1 = oy0 + Number(o.h || 0);
+      const ox1 = Number(o.x || 0) + Number(o.w || 0);
+
+      if (ox1 > ex0 + 0.2) continue;
+
+      const ov = overlapRatio1D(ey0, ey1, oy0, oy1);
+      if (ov < 0.15) continue;
+
+      if (ox1 > bestRight) {
+        bestRight = ox1;
+        best = o;
+      }
+    }
+    return best;
+  };
+
+  const pickRight = (e) => {
+    const ey0 = Number(e.y || 0),
+      ey1 = ey0 + Number(e.h || 0);
+    const ex1 = Number(e.x || 0) + Number(e.w || 0);
+    let best = null;
+    let bestLeft = Infinity;
+
+    for (const o of els) {
+      if (o === e) continue;
+      const oy0 = Number(o.y || 0),
+        oy1 = oy0 + Number(o.h || 0);
+      const ox0 = Number(o.x || 0);
+
+      if (ox0 < ex1 - 0.2) continue;
+
+      const ov = overlapRatio1D(ey0, ey1, oy0, oy1);
+      if (ov < 0.15) continue;
+
+      if (ox0 < bestLeft) {
+        bestLeft = ox0;
+        best = o;
+      }
+    }
+    return best;
+  };
+
+  const updated = els.map((e) => {
+    const top = pickAbove(e);
+    const bottom = pickBelow(e);
+    const left = pickLeft(e);
+    const right = pickRight(e);
+
+    const nextNeighbors = {
+      topId: top?.id ?? null,
+      bottomId: bottom?.id ?? null,
+      leftId: left?.id ?? null,
+      rightId: right?.id ?? null,
+    };
+
+    // keep stable object refs where possible
+    const prev = e.neighbors || {};
+    const same =
+      (prev.topId ?? null) === (nextNeighbors.topId ?? null) &&
+      (prev.bottomId ?? null) === (nextNeighbors.bottomId ?? null) &&
+      (prev.leftId ?? null) === (nextNeighbors.leftId ?? null) &&
+      (prev.rightId ?? null) === (nextNeighbors.rightId ?? null);
+
+    return same ? e : { ...e, neighbors: nextNeighbors };
+  });
+
+  return { updated, changed: updated.some((e, i) => e !== els[i]) };
+}
+
+function ensureNeighborsInTemplate(tpl) {
+  const t = ensurePages(tpl);
+  const pages = Array.isArray(t?.pages) ? t.pages : [];
+  let changed = false;
+
+  const nextPages = pages.map((p) => {
+    const els = Array.isArray(p?.elements) ? p.elements : [];
+    const { updated, changed: ch } = computeNeighborsForElements(els);
+    if (ch) changed = true;
+    return { ...p, elements: updated };
+  });
+
+  return changed ? { ...t, pages: nextPages } : t;
+}
+
+function templateHasMissingNeighbors(tpl) {
+  const t = ensurePages(tpl);
+  const pages = Array.isArray(t?.pages) ? t.pages : [];
+  for (const p of pages) {
+    const els = Array.isArray(p?.elements) ? p.elements : [];
+    for (const el of els) {
+      if (!el || el.hidden) continue;
+      if (!el.neighbors || typeof el.neighbors !== "object") return true;
+      const n = el.neighbors;
+      if (
+        !("topId" in n) ||
+        !("bottomId" in n) ||
+        !("leftId" in n) ||
+        !("rightId" in n)
+      )
+        return true;
+    }
+  }
+  return false;
 }
 
 function getActivePageIndex(tpl, pageId) {
@@ -773,79 +1155,6 @@ function cssFromStyle(style = {}) {
   return parts.join("");
 }
 
-// function templateToPrintableHTML({ wMm, hMm, elementsHtml, header }) {
-//   const showHeader = Boolean(
-//     header?.enabled && header?.src && header?.heightMm,
-//   );
-
-//   return `<!doctype html>
-// <html>
-// <head>
-// <meta charset="utf-8" />
-// <title>BL Print</title>
-// <style>
-//   @page { size:${wMm}mm ${hMm}mm; margin:0; }
-//   html, body {
-//     width:${wMm}mm;
-//     height:${hMm}mm;
-//     margin:0;
-//     padding:0;
-//     background:#fff;
-//     -webkit-print-color-adjust: exact !important;
-//     print-color-adjust: exact !important;
-//   }
-//   * {
-//     box-sizing:border-box;
-//     -webkit-print-color-adjust: exact !important;
-//     print-color-adjust: exact !important;
-//   }
-//   table{border-collapse:collapse;table-layout:fixed;width:100%;}
-//   td,th{display:table-cell;vertical-align:top;white-space:pre-wrap;word-break:break-word;padding:0;margin:0;}
-//   table *{box-sizing:border-box;}
-//   td>div,th>div{display:flex;}
-//   tr{page-break-inside:avoid;}
-//   .page {
-//     position: relative;
-//     width:${wMm}mm;
-//     height:${hMm}mm;
-//     overflow:hidden;
-//     background:#fff;
-//   }
-// </style>
-// </head>
-// <body>
-//   <div class="page">
-
-//     ${
-//       showHeader
-//         ? `
-//       <div style="
-//         position:absolute;
-//         top:0;
-//         left:0;
-//         width:${wMm}mm;
-//         height:${header.heightMm}mm;
-//         display:flex;
-//         align-items:center;
-//         justify-content:center;
-//         border-bottom:1px solid #e5e7eb;
-//       ">
-//         <img
-//           src="${header.src}"
-//           style="max-width:100%; max-height:100%; object-fit:contain;"
-//         />
-//       </div>
-//       `
-//         : ""
-//     }
-
-//     ${elementsHtml}
-
-//   </div>
-// </body>
-// </html>`;
-// }
-
 function templateToPrintableHTML({ wMm, hMm, elementsHtml, header }) {
   const showHeader = Boolean(
     header?.enabled && header?.src && header?.heightMm,
@@ -1364,6 +1673,7 @@ export default function BlCreatorPage() {
         enabled: false,
         heightMm: 25,
       },
+      canGrowColumns: [],
 
       // ✅ NEW: pages (Main + Attachments)
       pages: [
@@ -1386,6 +1696,37 @@ export default function BlCreatorPage() {
   useEffect(() => {
     templateRef.current = template;
   }, [template]);
+
+  const canGrowColumns = useMemo(
+    () => normalizeCanGrowColumns(template?.canGrowColumns),
+    [template?.canGrowColumns],
+  );
+
+  const canGrowColumnOptions = useMemo(
+    () =>
+      columns.map((c) => ({
+        key: String(c.key || "").trim(),
+        label: c.label || c.key || "",
+      })),
+    [columns],
+  );
+
+  const canGrowColumnLabelMap = useMemo(() => {
+    const map = new Map();
+    canGrowColumnOptions.forEach((opt) => {
+      map.set(opt.key, opt.label);
+    });
+    return map;
+  }, [canGrowColumnOptions]);
+
+  function updateCanGrowColumns(nextValues) {
+    const normalized = normalizeCanGrowColumns(nextValues);
+    const next = {
+      ...templateRef.current,
+      canGrowColumns: normalized,
+    };
+    commit(next);
+  }
 
   // keep templateRef synced immediately when needed (pointermove)
   // const setTemplateLive = (next) => {
@@ -1504,29 +1845,45 @@ export default function BlCreatorPage() {
     // Then: re-hydrate runtime aliases from the active page so old code keeps working
     const hydrated = attachActiveElementsAlias(persisted, pid);
 
-    setTemplateLive(hydrated);
-    pushHistory(hydrated);
+    // ✅ Ensure every element has neighbors metadata (non-destructive)
+    const hydratedWithNeighbors = ensureNeighborsInTemplate(hydrated);
+
+    setTemplateLive(hydratedWithNeighbors);
+    pushHistory(hydratedWithNeighbors);
+
+    // ✅ Auto-fix older saved templates (adds missing neighbors metadata)
+    // This runs ONLY when the loaded DB template had no neighbors field.
+    try {
+      if (templateHasMissingNeighbors(persisted)) {
+        const payloadFix = {
+          TableName: "tblBlPrintTemplate",
+          Record: {
+            blPrintTemplateJson: JSON.stringify(hydratedWithNeighbors),
+          },
+          WhereCondition: `id = ${pid} and clientId = ${clientId}`,
+        };
+
+        // non-blocking; never break template load
+        Promise.resolve(insertReportData(payloadFix))
+          .then(() => {
+            // keep local list in sync if present
+            setStoredTemplate((prev) => {
+              const arr = Array.isArray(prev) ? prev.slice() : [];
+              const idx = arr.findIndex((t) => String(t.id) === String(pid));
+              if (idx >= 0) {
+                arr[idx] = {
+                  ...arr[idx],
+                  blPrintTemplateJson: payloadFix.Record.blPrintTemplateJson,
+                };
+                return arr;
+              }
+              return prev;
+            });
+          })
+          .catch(() => {});
+      }
+    } catch {}
   }
-
-  //   function switchToPage(nextPageId) {
-  //   if (!nextPageId) return;
-
-  //   // 1) persist current alias (template.elements/groups) into the CURRENT active page
-  //   const cur = ensurePages(templateRef.current);
-  //   const curPid = activePageId || cur.pages?.[0]?.id || null;
-
-  //   const persisted = syncActiveAliasesToPages(cur, curPid);
-
-  //   // 2) now hydrate alias from the NEXT page into template.elements/groups
-  //   const hydrated = attachActiveElementsAlias(persisted, nextPageId);
-
-  //   // ✅ update template without pushing history (page switch should not be undo step)
-  //   setTemplateLive(hydrated);
-
-  //   // ✅ update state
-  //   setActivePageId(nextPageId);
-  //   setSelectedIds(new Set());
-  // }
 
   function switchToPage(nextPageId) {
     if (!nextPageId) return;
@@ -1655,6 +2012,7 @@ export default function BlCreatorPage() {
     let next = {
       ...raw,
       header: raw?.header ?? { enabled: false, heightMm: 0 },
+      canGrowColumns: normalizeCanGrowColumns(raw?.canGrowColumns),
       pages: Array.isArray(raw?.pages) ? raw.pages : null,
       elements: Array.isArray(raw?.elements) ? raw.elements : [],
       groups: raw?.groups || {},
@@ -1723,6 +2081,7 @@ export default function BlCreatorPage() {
     paper: { id: "A4", name: "A4", w: 210, h: 297, orientation: "P" },
     margin: { t: 10, r: 10, b: 10, l: 10 },
     header: { enabled: false, heightMm: 20 },
+    canGrowColumns: [],
     elements: [],
     groups: {},
   });
@@ -3962,10 +4321,11 @@ export default function BlCreatorPage() {
                   if (!templateIdFromUrl) return;
                   if (!editTemplateName.trim()) return;
 
-                  const toSave = syncActiveAliasesToPages(
+                  const toSave0 = syncActiveAliasesToPages(
                     templateRef.current,
                     activePageId,
                   );
+                  const toSave = ensureNeighborsInTemplate(toSave0);
 
                   const payload = {
                     TableName: "tblBlPrintTemplate",
@@ -4047,10 +4407,11 @@ export default function BlCreatorPage() {
                 onClick={async () => {
                   if (!newTemplateName.trim()) return;
 
-                  const toSave = syncActiveAliasesToPages(
+                  const toSave0 = syncActiveAliasesToPages(
                     templateRef.current,
                     activePageId,
                   );
+                  const toSave = ensureNeighborsInTemplate(toSave0);
 
                   const payload = {
                     TableName: "tblBlPrintTemplate",
@@ -4747,6 +5108,79 @@ export default function BlCreatorPage() {
           {rightTab === "inspect" ? (
             <div style={styles.panelBody}>
               <div style={styles.inspector}>
+                <div style={stylesKV.block}>
+                  <div style={stylesKV.title}>Can Grow Columns</div>
+                  <TextField
+                    select
+                    fullWidth
+                    size="small"
+                    label="Can Grow Columns"
+                    value={canGrowColumns}
+                    onChange={(e) => updateCanGrowColumns(e.target.value)}
+                    InputLabelProps={{
+                      shrink: true,
+                      sx: { fontSize: 11 },
+                    }}
+                    SelectProps={{
+                      multiple: true,
+                      displayEmpty: true,
+                      renderValue: (selected) => {
+                        const arr = normalizeCanGrowColumns(selected);
+                        if (!arr.length) return "Select fields";
+                        return arr
+                          .map((key) => canGrowColumnLabelMap.get(key) || key)
+                          .join(", ");
+                      },
+                      MenuProps: {
+                        disablePortal: false,
+                        keepMounted: true,
+                        sx: { zIndex: 200000 },
+                        PaperProps: {
+                          sx: {
+                            maxHeight: 320,
+                            width: 320,
+                            zIndex: 200000,
+                          },
+                        },
+                      },
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "10px",
+                        background: "rgba(255,255,255,.92)",
+                        color: "#0f172a",
+                        minHeight: 36,
+                        fontSize: 12,
+                      },
+                      "& .MuiSelect-select": {
+                        padding: "8px 10px",
+                        display: "flex",
+                        alignItems: "center",
+                      },
+                    }}
+                  >
+                    {canGrowColumnOptions.map((opt) => (
+                      <MenuItem key={opt.key} value={opt.key}>
+                        <Checkbox
+                          size="small"
+                          checked={canGrowColumns.includes(opt.key)}
+                        />
+                        <ListItemText primary={opt.label} secondary={opt.key} />
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      opacity: 0.72,
+                      lineHeight: 1.45,
+                      marginTop: 8,
+                    }}
+                  >
+                    These selected field keys will be saved in template JSON as
+                    <b> canGrowColumns</b> at the parent level.
+                  </div>
+                </div>
                 {!primarySelected ? (
                   <div style={{ fontSize: 12, opacity: 0.7 }}>
                     Select an element to edit its properties.

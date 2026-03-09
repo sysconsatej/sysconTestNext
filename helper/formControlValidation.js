@@ -52,65 +52,6 @@ const calculateData = (obj) => {
   // console.log("mainJson", mainJson);
   return mainJson;
 };
-// const grossAndNetWeight = (obj) => {
-//   const {
-//     args,
-//     values,
-//     fieldName,
-//     newState,
-//     formControlData,
-//     setStateVariable,
-//   } = obj;
-//   let argNames; // destructure the argsStr and values
-//   // console.log("values", values, "args", typeof args)
-
-//   if (args === undefined || args === null || args === "") {
-//     argNames = args;
-//   } else {
-//     argNames = args.split(",").map((arg) => arg.trim());
-//   }
-
-//   // function logic
-//   const grossWt =
-//     values[argNames[0]] !== undefined ? Number(values[argNames[0]]) : 0;
-//   const netWt =
-//     values[argNames[1]] !== undefined ? Number(values[argNames[1]]) : 0;
-//   // console.log("grossWt", grossWt, "netWt", netWt);
-
-//   if (
-//     netWt > grossWt &&
-//     grossWt !== 0 &&
-//     (values[fieldName] != null || values[fieldName] != "")
-//   ) {
-//     values[fieldName] = null;
-
-//     setStateVariable((prev) => ({
-//       ...prev,
-//       [fieldName]: null,
-//     }));
-
-//     return {
-//       isCheck: false,
-//       type: "error",
-//       message: `${argNames[1]} should be less than ${argNames[0]}`,
-//       alertShow: true,
-//       fieldName: fieldName,
-//       values: values,
-//       newState: newState,
-//       formControlData: formControlData,
-//     };
-//   }
-//   return {
-//     isCheck: false,
-//     type: "error",
-//     message: `${argNames[1]} should be less than ${argNames[0]}`,
-//     alertShow: false,
-//     fieldName: fieldName,
-//     values: values,
-//     newState: newState,
-//     formControlData: formControlData,
-//   };
-// };
 const demoFunctionOnChange = (obj) => {
   const { args, values, fieldName, newState } = obj;
   console.log("values - - - ", values);
@@ -1860,6 +1801,7 @@ const setTaxDetails = async (obj) => {
     billingPartyBranchId,
     billingPartyStateId,
     totalInvoiceAmountFc,
+    voucherTypeId
   } = newState;
   const { chargeId, chargeGlId, SelectedParentInvId } = values;
   const requestData = {
@@ -1886,6 +1828,7 @@ const setTaxDetails = async (obj) => {
     totalAmtInvoiceCurr: totalInvoiceAmountFc,
     billingPartyBranch: billingPartyBranchId,
     billingPartyState: billingPartyStateId,
+    voucherTypeId: voucherTypeId
   };
   console.log("RequestData", requestData);
 
@@ -1969,224 +1912,6 @@ const setTDSDetails = async (obj) => {
   };
   return endResult;
 };
-// const getJobCharges = async (obj) => {
-//   let {
-//     args,
-//     newState,
-//     formControlData,
-//     setFormControlData,
-//     values,
-//     fieldName,
-//     tableName,
-//     setStateVariable,
-//   } = obj;
-//   console.log("newState", obj);
-
-//   let argNames;
-//   let splitArgs = [];
-//   if (
-//     args === undefined ||
-//     args === null ||
-//     args === "" ||
-//     (typeof args === "object" && Object.keys(args).length === 0)
-//   ) {
-//     argNames = args;
-//   } else {
-//     argNames = args.split(",").map((arg) => arg.trim());
-//     for (const iterator of argNames) {
-//       splitArgs.push(iterator.split("."));
-//     }
-//   }
-
-//   const {
-//     invoiceDate,
-//     businessSegmentId,
-//     placeOfSupplyStateId,
-//     sez,
-//     billingPartyId,
-//     ownStateId,
-//     jobId,
-//   } = values;
-
-//   const {
-//     taxType,
-//     billingPartyBranchId,
-//     billingPartyStateId,
-//     totalInvoiceAmountFc,
-//   } = newState;
-
-//   const { companyId, clientId, branchId, financialYear, userId } =
-//     getUserDetails();
-
-//   console.log("values", values);
-
-//   const requestData = {
-//     clientId: clientId,
-//     voucherType: newState?.voucherTypeId,//"E_F_BL",
-//     DepartmentId: newState?.businessSegmentId || businessSegmentId || 0,
-//     jobIds: newState?.jobId || jobId || 0,
-//     billingPartyId: newState?.billingPartyId || billingPartyId || 0,
-//     companyId: companyId,
-//     companyBranchId: branchId,
-//   };
-
-//   const fetchTaxDetails = await getJobChargeDetails(requestData);
-
-//   if (fetchTaxDetails) {
-//     console.log(fetchTaxDetails);
-//     const { Chargers } = fetchTaxDetails;
-
-//     for (let index = 0; index < (Chargers?.length || 0); index++) {
-//       Chargers[index].idx = index;
-//       Chargers[index].index = index;
-//       Chargers[index].indexValue = index;
-
-//       const chargeValues = Chargers[index];
-
-//       // ✅ Fix: Default all numeric fields to 0 to avoid NaN
-//       const safeTotalAmount = Number(chargeValues.totalAmount) || 0;
-//       const safeTotalAmountFc = Number(chargeValues.totalAmountFc) || 0;
-//       const safeChargeGlId = chargeValues.chargeGlId || 0;
-//       const safeSacId = chargeValues.sacId || 0;
-
-//       const requestData = {
-//         chargeId: chargeValues.chargeId || 0,
-//         invoiceDate: invoiceDate
-//           ? moment(invoiceDate).format("YYYY-MM-DD")
-//           : null,
-//         departmentId: businessSegmentId || 0,
-//         glId: safeChargeGlId,
-//         placeOfSupply_state: placeOfSupplyStateId || 0,
-//         SelectedParentInvId: null,
-//         sez: sez || false,
-//         customerId: billingPartyId || 0,
-//         ownStateId: ownStateId || 0,
-//         formControlId: newState?.menuID || 0,
-//         totalAmount: safeTotalAmount,
-//         totalAmountFc: safeTotalAmountFc,
-//         sacCodeId: safeSacId,
-//         totalAmountHc: safeTotalAmount,
-//         taxType: taxType || "G",
-//         companyId: companyId,
-//         branchId: branchId,
-//         finYearId: financialYear,
-//         userId: userId,
-//         clientId: clientId,
-//         totalAmtInvoiceCurr: Number(totalInvoiceAmountFc) || 0,
-//         billingPartyBranch: billingPartyBranchId || 0,
-//         billingPartyState: billingPartyStateId || 0,
-//       };
-
-//       let fetchGST = await getTaxDetails(requestData);
-
-//       if (fetchGST) {
-//         const { tblTax } = fetchGST;
-//         Chargers[index].tblInvoiceChargeTax =
-//           tblTax || chargeValues.tblInvoiceChargeTax || [];
-//       }
-//     }
-//     // ✅ Fix: Always set array safely
-//     values.tblInvoiceCharge = Array.isArray(Chargers) ? Chargers : [];
-
-//     setStateVariable((prev) => {
-//       return { ...prev, ...values };
-//     });
-//   }
-// };
-
-// const getBlCharges = async (obj) => {
-//   let {
-//     args,
-//     newState,
-//     formControlData,
-//     setFormControlData,
-//     values,
-//     fieldName,
-//     tableName,
-//     setStateVariable,
-//   } = obj;
-//   console.log("newState", obj);
-//   let argNames;
-//   let splitArgs = [];
-//   if (
-//     args === undefined ||
-//     args === null ||
-//     args === "" ||
-//     (typeof args === "object" && Object.keys(args).length === 0)
-//   ) {
-//     argNames = args;
-//   } else {
-//     argNames = args.split(",").map((arg) => arg.trim());
-//     for (const iterator of argNames) {
-//       splitArgs.push(iterator.split("."));
-//     }
-//   }
-//   const {
-//     invoiceDate,
-//     businessSegmentId,
-//     placeOfSupplyStateId,
-//     sez,
-//     billingPartyId,
-//     ownStateId,
-//     blId,
-//   } = values;
-//   // const { chargeId, chargeGlId, SelectedParentInvId } = values;
-//   const { companyId, clientId, branchId } = getUserDetails();
-
-//   console.log("values", values);
-
-//   // const requestData = {
-//   //   clientId: clientId,
-//   //   voucherType: "E_F_BL",
-//   //   DepartmentId: 1,
-//   //   jobIds: 137,
-//   //   billingPartyId: 10,
-//   //   companyId: 1,
-//   //   companyBranchId: 1,
-//   // };
-
-//   const requestData = {
-//     clientId: clientId,
-//     voucherType: newState?.voucherTypeId,
-//     DepartmentId: newState?.businessSegmentId,
-//     jobIds: newState?.jobId,
-//     blIds: newState?.blId || values?.blId,
-//     billingPartyId: newState?.billingPartyId,
-//     companyId: companyId,
-//     companyBranchId: branchId,
-//   };
-
-//   const fetchTaxDetails = await getBlChargeDetails(requestData);
-//   if (fetchTaxDetails) {
-//     console.log(fetchTaxDetails);
-//     const { Chargers } = fetchTaxDetails;
-//     for (let index = 0; index < Chargers?.length; index++) {
-//       Chargers[index].idx = index;
-//       Chargers[index].index = index;
-//       Chargers[index].indexValue = index;
-//     }
-//     console.log(Chargers);
-//     // if (Chargers.length == 0) {
-//     //   return
-//     // }
-//     values.tblInvoiceCharge = Array.isArray(Chargers) ? Chargers : [];
-//     // newState.tblInvoiceCharge = Chargers
-//     // values.tblInvoiceChargeTds = data;
-//     setStateVariable((prev) => {
-//       return { ...prev, ...values };
-//     });
-//   }
-//   // newState = values;
-//   // let endResult = {
-//   //   type: "success",
-//   //   result: true,
-//   //   newState: newState,
-//   //   values: values,
-//   //   formControlData: formControlData,
-//   //   message: "OnLoad function triggered",
-//   // };
-//   // return endResult;
-// };
 
 const getJobCharges = async (obj) => {
   let {
@@ -2232,6 +1957,7 @@ const getJobCharges = async (obj) => {
     billingPartyBranchId,
     billingPartyStateId,
     totalInvoiceAmountFc,
+    voucherTypeId
   } = newState;
 
   const { companyId, clientId, branchId, financialYear, userId } =
@@ -2294,6 +2020,7 @@ const getJobCharges = async (obj) => {
         totalAmtInvoiceCurr: Number(totalInvoiceAmountFc) || 0,
         billingPartyBranch: billingPartyBranchId || 0,
         billingPartyState: billingPartyStateId || 0,
+        voucherTypeId: voucherTypeId || 0
       };
 
       let fetchGST = await getTaxDetails(taxReq);
@@ -3065,69 +2792,7 @@ const setUniqueCopyTableName = async (obj) => {
   };
   return;
 };
-const poNoFlow = async (obj) => {
-  const {
-    args,
-    fieldName,
-    values,
-    formControlData,
-    newState,
-    setFormControlData,
-  } = obj;
-  const argNames = args.split(",").map((arg) => arg.trim());
-  let [originCol, tableName, destinationCol] = argNames;
-  let parentReferenceNoId = values[originCol];
 
-  if (parentReferenceNoId !== null && parentReferenceNoId !== undefined) {
-    // Assuming parentReferenceNoIdmultiselect is an array with objects containing label and value
-    console.log("newState", newState);
-    const selectedItems = newState.parentReferenceNoIdmultiselect.map(
-      (item) => ({
-        _id: item._id,
-        value: item.value,
-        label: item.label,
-      })
-    );
-
-    console.log(
-      "formControlData - ",
-      formControlData.child[0].fields[0].dropdownFilter
-    );
-    formControlData.child[0].fields[0].dropdownFilter =
-      "{_id:" + parentReferenceNoId + "," + " transactionType:PO}";
-    console.log(
-      "dropdown - ",
-      "{_id:" + parentReferenceNoId + " , " + " transactionType:PO}"
-    );
-    console.log(
-      "formControlData 2 - ",
-      formControlData.child[0].fields[0].dropdownFilter
-    );
-    // Set the entire array of selected items
-    newState.tblWhTransactionDetails[0].parentReferenceNoIddropdown =
-      selectedItems;
-    newState.tblWhTransactionDetails[0].parentReferenceNoIddropdown =
-      selectedItems;
-
-    return {
-      obj: { ...obj },
-      values: { ...values },
-      isCheck: false,
-      type: "success",
-      message: "PO No. Flow successfully.",
-      alertShow: false,
-    };
-  } else {
-    return {
-      obj: { ...obj },
-      values: { ...values },
-      isCheck: false,
-      type: "error",
-      message: "PO No. Flow failed.",
-      alertShow: true,
-    };
-  }
-};
 const calculateMultipleValues = (obj) => {
   // const { args, values: originalValues, fieldName, newState: originalNewState, formControlData, setStateVariable } = obj;
   const {
@@ -3306,198 +2971,6 @@ const calculateMultipleValues = (obj) => {
     newState: newState,
   };
 };
-// const setVesselSec = async (obj) => {
-//     const { args, fieldName, values, formControlData, newState, setFormControlData } = obj;
-//     const argNames = args.split(",").map(arg => arg.trim());
-//     const storedUserData = localStorage.getItem("userData");
-//     let userData;
-//     if (storedUserData) {
-//         const decryptedData = decrypt(storedUserData);
-//         try {
-//             userData = JSON.parse(decryptedData);
-//         } catch (e) {
-//             console.error("Error parsing decrypted data:", e);
-//             return;
-//         }
-//     } else {
-//         console.error("No user data found in local storage");
-//         return;
-//     }
-//     const userClientCode = userData[0].clientCode; // Assuming the first user's clientCode is relevant
-//     const tableName = newState.tableName;
-//     const currentName = newState[argNames[0]];
-//     const mappingName = argNames[0];
-//     const clientCode = argNames[1];
-
-//     // Prepare request data to fetch existing mapping names for the given client code
-//     const requestData = {
-//         tableName: "tblVesselSchedule",
-//         whereCondition: {
-//             status: 1,
-//         },
-//         projection: {},
-//     };
-
-//     // Fetch existing mapping names for the given client code
-//     const fetchMappingNameField = await fetchDataAPI(requestData);
-//     let data = fetchMappingNameField.data;
-
-//     // Check if data contains the expected structure
-//     if (data && data.length > 0) {
-//         // Access the first item in the array and then the tblVesselScheduleDetails
-//         const vesselSchedule = data[0];
-//         const vesselScheduleDetails = vesselSchedule.tblVesselScheduleDetails[0];
-
-//         if (vesselScheduleDetails) {
-//             // Now, let's set the values for the fields in the formControlData or newState
-//             const updatedFields = formControlData.child[2].fields.map(fields => {
-//                 switch (fields.fieldname) {
-//                     case 'etd':
-//                         return { ...fields, value: vesselScheduleDetails.ETD || '' };
-//                     case 'eta':
-//                         return { ...fields, value: vesselScheduleDetails.ETA || '' };
-//                     case 'transitTime':
-//                         return { ...fields, value: vesselScheduleDetails.transitTime || '' };
-//                     case 'originFreeDays':
-//                         return { ...fields, value: vesselScheduleDetails.freeDaysOrigin || '' };
-//                     case 'destinationFreeDays':
-//                         return { ...fields, value: vesselScheduleDetails.freeDaysDestination || '' };
-//                     default:
-//                         return fields;
-//                 }
-//             });
-
-//             // Update the formControlData with the new field values
-//             setFormControlData(prevState => ({
-//                 ...prevState,
-//                 child: prevState.child.map((child, index) =>
-//                     index === 2 ? { ...child, fields: updatedFields } : child
-//                 ),
-//             }));
-
-//             let endResult = {
-//                 type: "success",
-//                 result: true,
-//                 newState: { ...newState, fields: updatedFields }, // Assuming you want to update newState as well
-//                 message: "OnLoad function triggered",
-//             };
-
-//             return endResult;
-//         } else {
-//             console.error("No vessel schedule details found.");
-//         }
-//     } else {
-//         console.error("No vessel schedule data found.");
-//     }
-
-//     // Return a default result in case of errors
-//     return {
-//         type: "error",
-//         result: false,
-//         newState,
-//         message: "No valid data found to update fields.",
-//     };
-// };
-// const setVesselSec = async (obj) => {
-//     const { args, fieldName, values, formControlData, newState, setFormControlData } = obj;
-//     const argNames = args.split(",").map(arg => arg.trim());
-//     const storedUserData = localStorage.getItem("userData");
-//     let userData;
-//     if (storedUserData) {
-//         const decryptedData = decrypt(storedUserData);
-//         try {
-//             userData = JSON.parse(decryptedData);
-//         } catch (e) {
-//             console.error("Error parsing decrypted data:", e);
-//             return;
-//         }
-//     } else {
-//         console.error("No user data found in local storage");
-//         return;
-//     }
-//     const userClientCode = userData[0].clientCode; // Assuming the first user's clientCode is relevant
-//     const tableName = newState.tableName;
-//     const polId = newState[argNames[0]];
-//     const pod = newState[argNames[1]];
-//     const vendor = values[argNames[2]];
-//     // const vendorName=
-//     // Prepare request data to fetch existing mapping names for the given client code
-
-//     const requestData = {
-//         tableName: "tblVesselSchedule",
-//         whereCondition: {
-//             status: 1,
-//         },
-//         projection: {},
-//     };
-
-//     // Fetch existing mapping names for the given client code
-//     const fetchMappingNameField = await fetchDataAPI(requestData);
-//     let data = fetchMappingNameField.data;
-
-//     // Check if data contains the expected structure
-//     if (data && data.length > 0) {
-//         const vesselSchedule = data[0];
-//         const vesselScheduleDetails = vesselSchedule.tblVesselScheduleDetails[0];
-//         console.log("vesselScheduleDetails",vesselScheduleDetails)
-//         if (vesselScheduleDetails) {
-//             // Update tblRateRequestPlan with vesselScheduleDetails
-//             const updatedTblRateRequestPlan = newState.tblRateRequestPlan.map(plan => ({
-//                 ...plan,
-//                 etd: vesselScheduleDetails.ETD || plan.etd,
-//                 eta: vesselScheduleDetails.ETA || plan.eta,
-//                 transitTime: vesselScheduleDetails.transitTime || plan.transitTime,
-//                 originFreeDays: vesselScheduleDetails.freeDaysOrigin || plan.originFreeDays,
-//                 destinationFreeDays: vesselScheduleDetails.freeDaysDestination || plan.destinationFreeDays,
-//                 vesselScheduleId: vesselSchedule._id || plan.vesselScheduleId,
-//                 vesselScheduleIddropdown: [
-//                     {
-//                         label: vesselSchedule.vesselScheduleName,
-//                         value: vesselSchedule._id
-//                     }
-//                 ],
-//                 fromPort: vesselScheduleDetails.fromPort || plan.fromPort,
-//                 toPort: vesselScheduleDetails.toPort || plan.toPort,
-//                 isChecked: vesselScheduleDetails.isChecked !== undefined ? vesselScheduleDetails.isChecked : plan.isChecked,
-//             }));
-
-//             // Update the state with the new tblRateRequestPlan data
-//             setFormControlData(prevState => ({
-//                 ...prevState,
-//                 tblRateRequestPlan: updatedTblRateRequestPlan,
-//             }));
-
-//             let endResult = {
-//                 type: "success",
-//                 result: true,
-//                 newState: { ...newState, tblRateRequestPlan: updatedTblRateRequestPlan },
-//                 formControlData: formControlData,
-//                 message: "Vessel schedule details have been set in tblRateRequestPlan.",
-//             }
-//             return endResult
-
-//             // return {
-//             //     type: "success",
-//             //     result: true,
-//             //     newState: { ...newState, tblRateRequestPlan: updatedTblRateRequestPlan },
-//             //     message: "Vessel schedule details have been set in tblRateRequestPlan.",
-//             // };
-//         } else {
-//             console.error("No vessel schedule details found.");
-//         }
-//     } else {
-//         console.error("No vessel schedule data found.");
-//     }
-
-//     // Return a default result in case of errors
-//     return {
-//         type: "error",
-//         result: false,
-//         newState,
-//         message: "No valid data found to update tblRateRequestPlan.",
-//     };
-// };
-
 const setNewBranch = (obj) => {
   let { args, newState, setStateVariable, values } = obj;
   let companyName = newState.name;
@@ -4863,67 +4336,6 @@ const invoiceChargeGrid = async (obj) => {
   }
 };
 
-// const wtCompareGrossWtVolWt = async (obj) => {
-//   const {
-//     args,
-//     values,
-//     fieldName,
-//     newState,
-//     formControlData,
-//     setStateVariable,
-//   } = obj;
-
-//   // Extract the field names for GrossWt and volumeWt from args
-//   const argNames = args.split(",").map((arg) => arg.trim());
-//   const GrossWt = argNames[0];    // First argument is GrossWt
-//   const volumeWt = argNames[1];   // Second argument is volumeWt
-
-//   // Get the current values of gross weight and volume weight
-//   let grossWtValue = values[GrossWt];
-//   let volumeWtValue = values[volumeWt];
-
-//   // Initialize chargeable weight
-//   let chargeableWt = 0;
-
-//   // Logic to set chargeableWt based on data presence
-//   if (grossWtValue !== "" && volumeWtValue === "") {
-//     // If only Gross Weight has data, set chargeableWt to grossWtValue
-//     chargeableWt = parseFloat(grossWtValue).toFixed(2);
-//   } else if (volumeWtValue !== "" && grossWtValue === "") {
-//     // If only Volume Weight has data, set chargeableWt to volumeWtValue
-//     chargeableWt = parseFloat(volumeWtValue).toFixed(2);
-//   } else if (grossWtValue !== "" && volumeWtValue !== "") {
-//     // If both fields have data, compare and set the higher value as chargeableWt
-//     if (parseFloat(grossWtValue) >= parseFloat(volumeWtValue)) {
-//       chargeableWt = parseFloat(grossWtValue).toFixed(2);
-//     } else {
-//       chargeableWt = parseFloat(volumeWtValue).toFixed(2);
-//     }
-//   }
-
-//   // Update the state with the calculated chargeable weight
-//   setStateVariable((prev) => ({
-//     ...prev,
-//     chargeableWt: chargeableWt,      // Update Chargeable Weight in state
-//   }));
-
-//   // Update the values object with the calculated chargeable weight
-//   const updatedValues = {
-//     ...values,
-//     chargeableWt: chargeableWt,      // Set Chargeable Weight in values
-//   };
-
-//   return {
-//     isCheck: true,
-//     type: "success",
-//     message: "Chargeable weight set successfully.",
-//     values: updatedValues,
-//     alertShow: false,
-//     fieldName: fieldName,
-//     newState: newState,
-//   };
-// };
-
 const wtCompareGrossWtVolWt = async (obj) => {
   const {
     args,
@@ -5098,235 +4510,6 @@ const currency1 = async (obj) => {
       fieldName: fieldName,
     };
   }
-};
-
-// const dueToFunc = async (obj) => {
-//   const {
-//     args,
-//     values,
-//     fieldName,
-//     newState,
-//     formControlData,
-//     setStateVariable,
-//   } = obj;
-
-//   const argNames = args.split(",").map((arg) => arg.trim());
-//   const dueTo = argNames[0];
-//   const charge = values[fieldName];
-//   const { clientCode } = getUserDetails();
-//   const requestBody = {
-//     tableName: "tblCharge",
-//     whereCondition: {
-//       _id: charge,
-//       clientCode: clientCode,
-//     },
-//     projection: {
-//       dueTo: 1,
-//     },
-//   };
-
-//   try {
-//     const response = await fetchDataAPI(requestBody);
-//     const data = response.data;
-//     const dueToValue = data[0].dueTo;
-//     if (dueToValue != undefined || dueToValue != null) {
-//       const dueToRequestBody = {
-//         tableName: "tblMasterData",
-//         whereCondition: {
-//           _id: dueToValue,
-//           clientCode: clientCode,
-//         },
-//         projection: {
-//           name: 1,
-//         },
-//       };
-//       try {
-//         const dueToResponse = await fetchDataAPI(dueToRequestBody);
-//         const dueToData = dueToResponse.data;
-//         const dueToName = dueToData[0].name;
-
-//         const updatedValues = {
-//           ...values,
-//           dueTo: dueToValue,
-//           dueToIddropdown: dueToName,
-//         };
-//         setStateVariable((prev) => ({
-//           ...prev,
-//           dueTo: dueToValue,
-//           dueToIddropdown: dueToName,
-//         }));
-
-//         return {
-//           type: "success",
-//           result: true,
-//           newState: {
-//             ...newState,
-//           },
-//           values: updatedValues,
-//           message: "Data found !",
-//         };
-//       } catch (error) {
-//         return {
-//           isCheck: false,
-//           type: "error",
-//           message: "Error fetching company parameters",
-//           alertShow: false,
-//           fieldName: fieldName,
-//           values: values,
-//           newState: newState,
-//           formControlData: formControlData,
-//         };
-//       }
-//     }
-
-//     const updatedValues = {
-//       ...values,
-//       dueTo: null,
-//       dueToIddropdown: null,
-//     };
-//     setStateVariable((prev) => ({
-//       ...prev,
-//       dueTo: null,
-//       dueToIddropdown: null,
-//     }));
-
-//     return {
-//       type: "success",
-//       result: true,
-//       newState: {
-//         ...newState,
-//       },
-//       values: updatedValues,
-//       message: "Data found !",
-//     };
-//   } catch (error) {
-//     return {
-//       isCheck: false,
-//       type: "error",
-//       message: "Error fetching company parameters",
-//       alertShow: false,
-//       fieldName: fieldName,
-//       values: values,
-//       newState: newState,
-//       formControlData: formControlData,
-//     };
-//   }
-// };
-const dueToFunc = (obj) => {
-  const {
-    args,
-    values,
-    fieldName,
-    newState,
-    formControlData,
-    setStateVariable,
-  } = obj;
-
-  const argNames = args.split(",").map((arg) => arg.trim());
-  const dueTo = argNames[0];
-  const charge = values[fieldName];
-  const { clientCode } = getUserDetails();
-  const requestBody = {
-    tableName: "tblCharge",
-    whereCondition: {
-      _id: charge,
-      clientCode: clientCode,
-    },
-    projection: {
-      dueTo: 1,
-    },
-  };
-
-  return fetchDataAPI(requestBody)
-    .then((response) => {
-      const data = response.data;
-      const dueToValue = data[0].dueTo;
-
-      if (dueToValue !== undefined && dueToValue !== null) {
-        const dueToRequestBody = {
-          tableName: "tblMasterData",
-          whereCondition: {
-            _id: dueToValue,
-            clientCode: clientCode,
-          },
-          projection: {
-            name: 1,
-          },
-        };
-
-        return fetchDataAPI(dueToRequestBody)
-          .then((dueToResponse) => {
-            const dueToData = dueToResponse.data;
-            const dueToName = dueToData[0].name;
-
-            const updatedValues = {
-              ...values,
-              dueTo: dueToValue,
-              dueToIddropdown: dueToName,
-            };
-            setStateVariable((prev) => ({
-              ...prev,
-              dueTo: dueToValue,
-              dueToIddropdown: dueToName,
-            }));
-
-            return {
-              type: "success",
-              result: true,
-              newState: {
-                ...newState,
-              },
-              values: updatedValues,
-              message: "Data found !",
-            };
-          })
-          .catch((error) => {
-            return {
-              isCheck: false,
-              type: "error",
-              message: "Error fetching company parameters",
-              alertShow: false,
-              fieldName: fieldName,
-              values: values,
-              newState: newState,
-              formControlData: formControlData,
-            };
-          });
-      } else {
-        const updatedValues = {
-          ...values,
-          dueTo: null,
-          dueToIddropdown: null,
-        };
-        setStateVariable((prev) => ({
-          ...prev,
-          dueTo: null,
-          dueToIddropdown: null,
-        }));
-
-        return {
-          type: "success",
-          result: true,
-          newState: {
-            ...newState,
-          },
-          values: updatedValues,
-          message: "Data found !",
-        };
-      }
-    })
-    .catch((error) => {
-      return {
-        isCheck: false,
-        type: "error",
-        message: "Error fetching company parameters",
-        alertShow: false,
-        fieldName: fieldName,
-        values: values,
-        newState: newState,
-        formControlData: formControlData,
-      };
-    });
 };
 
 const setExchangeRateNew = async (obj) => {
@@ -6660,106 +5843,6 @@ const setSameSizeValues = (obj) => {
   };
 };
 
-// const setSameTypeValues = (obj) => {
-//   let { args, formControlData, values = {}, fieldName = "", newState } = obj;
-
-//   let argsArray = args.split(",");
-//   let parentField = newState[argsArray[0]] || [];
-//   let currentId = values.sizeId || null;
-//   let dynamicDropdown = argsArray[2] + "Dropdown";
-//   let dynamicdropdown = argsArray[2] + "dropdown";
-//   let parentFilter =
-//     obj.formControlData.child
-//       .find((item) => item.tableName === argsArray[0])
-//       ?.fields.find((item) => item.fieldname === argsArray[2])
-//       ?.dropdownFilter || "";
-
-//   let typeNames = parentField
-//     .filter((item) => item.sizeId === currentId)
-//     .map((item) => item[dynamicDropdown]);
-//   let typeName = parentField
-//     .filter((item) => item.sizeId === currentId)
-//     .map((item) => item[dynamicdropdown])
-//     .filter((item) => Array.isArray(item))
-//     .flat()
-//     .map((item) => item.label);
-//   let labels = [];
-//   parentField
-//     .filter((item) => item.sizeId === currentId)
-//     .forEach((item) => {
-//       // Check if typeIddropdown is present and has at least one element
-//       if (item.typeIddropdown && item.typeIddropdown.length > 0) {
-//         // Take the label from the first element of typeIddropdown
-//         labels.push(item.typeIddropdown[0].label);
-//       } else {
-//         // Take the label from typeIdDropdown
-//         labels.push(item.typeIdDropdown);
-//       }
-//     });
-//   // console.log(labels);
-//   const isOnLoad =
-//     values?.sizeId &&
-//     values?.sizeId.trim() !== "" &&
-//     values?.typeId &&
-//     values?.typeId.trim() !== "";
-
-//   const combinedArray = [labels];
-//   const uniqueValues = [
-//     ...new Set(
-//       combinedArray.filter((value) => value !== null && value !== undefined)
-//     ),
-//   ];
-//   const uniqueIds = Array.from(new Set(typeNames));
-//   let childField =
-//     formControlData.child.find(
-//       (item) => item.tableName.toLowerCase() === argsArray[1].toLowerCase()
-//     )?.fields || [];
-//   let childObj =
-//     childField.find((item) => item.fieldname === argsArray[2]) || {};
-//   childObj.dropdownFilter = "";
-//   const cleanedStr = parentFilter.replace(/["{}]/g, "");
-//   let flattenedArray = uniqueValues.flatMap((item) =>
-//     Array.isArray(item) ? item : [item]
-//   );
-//   let uniqueNumbers = [...new Set(flattenedArray.map((item) => item))];
-//   // const nameObject = {
-//   //   $in: uniqueNumbers,
-//   // };
-//   const nameObject = `and name in (${uniqueNumbers
-//     .map((item) => `'${item}'`)
-//     .join(",")})`;
-//   const editedString = `${cleanedStr} ${nameObject}`;
-//   console.log("same type editedString:", editedString);
-//   // if (currentId && uniqueIds.length > 0 && values.sizeId !== "") {
-
-//   //       }
-//   if (editedString.trim() && uniqueNumbers.length > 0) {
-//     childObj.dropdownFilter = editedString;
-//     console.log("setSame:", childObj.dropdownFilter);
-
-//     return {
-//       isCheck: false,
-//       type: "success",
-//       message: "Error",
-//       alertShow: false,
-//       fieldName: fieldName,
-//       values: values,
-//       newState: newState,
-//       formControlData: formControlData,
-//     };
-//   }
-//   return {
-//     isCheck: false,
-//     type: "success",
-//     message: "Error",
-//     alertShow: false,
-//     fieldName: fieldName,
-//     values: values,
-//     newState: newState,
-//     formControlData: formControlData,
-//   };
-// };
-
 const setSameTypeValues = (obj) => {
   const { args, formControlData, values = {}, fieldName = "", newState } = obj;
   const [parentTable, childTable, filterField] = args.split(",");
@@ -6938,35 +6021,6 @@ const setVesselSec = async (obj) => {
   };
   return endResult;
 };
-
-// const setContainerStatus =(obj) =>{
-//   const {
-//     args,
-//     values,
-//     fieldName,
-//     newState,
-//     formControlData,
-//     setFormControlData,
-//     setStateVariable,
-//   } = obj;
-//   const argNames = args.split(",").map((arg) => arg.trim());
-//   const containerStatus = newState[argNames[0]];
-//   const statusGrid = newState[argNames[1]];
-//   setStateVariable((prev) => ({
-//     ...prev,
-//     // [argNames[0]]: formatDate(currentDate),
-//   }));
-//   return {
-//     isCheck: false,
-//     type: "success",
-//     message: "Error fetching company parameters",
-//     alertShow: false,
-//     fieldName: fieldName,
-//     values: values,
-//     newState: newState,
-//     formControlData: formControlData,
-//   };
-// }
 
 const copyConsigneeToNotifyParty = (obj) => {
   const {
@@ -9207,72 +8261,12 @@ const setBranchForContainerMovement = async (obj) => {
     };
   }
 };
-// const setBankByDefault = async (obj) => {
-//   const {
-//     args,
-//     values,
-//     fieldName,
-//     newState,
-//     formControlData,
-//     setFormControlData,
-//     setStateVariable,
-//   } = obj;
-
-//   try {
-//     const argNames = args.split(",").map((arg) => arg.trim());
-//     const currency = newState[argNames[0]];
-//     const { companyId, branchId } = getUserDetails();
-
-//     const request = {
-//       columns: "id,bankName,accountNo",
-//       tableName: "tblCompanyBranchBank",
-//       whereCondition: `companyId = ${companyId} AND companyBranchId = ${branchId} and currencyId = ${currency} and defaultBank='Y' `,
-//       clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
-//     };
-
-//     const response = await fetchReportData(request);
-
-//     if (!response || !response.data || response.data.length === 0) {
-//       return {
-//         type: "warning",
-//         result: false,
-//         message: "No default Bank found for the selected Currency.",
-//       };
-//     }
-
-//     const bankId = response.data[0]?.id || "";
-
-//     // update state
-//     setStateVariable((prev) => ({
-//       ...prev,
-//       bankId: bankId,
-//     }));
-
-//     return {
-//       type: "success",
-//       result: true,
-//       newState: { ...newState, bankId: bankId },
-//       values: { ...values, bankId: bankId },
-//       message: "Data found!",
-//     };
-//   } catch (error) {
-//     console.error("Error fetching default bank:", error);
-//     return {
-//       type: "error",
-//       result: false,
-//       message: "Error fetching default bank. Please try again.",
-//     };
-//   }
-// };
 
 const setBankByDefault = async (obj) => {
   const { args, values, newState, setStateVariable } = obj;
-
   try {
     const argNames = (args || "").split(",").map((a) => a.trim()).filter(Boolean);
     const currencyField = argNames[0] || "currencyId";
-
-    // ✅ read latest currency from values first (because previous function returns updated values)
     const currency =
       values?.[currencyField] ??
       newState?.[currencyField] ??
@@ -9909,91 +8903,6 @@ const getThridDatePurchase = async (obj) => {
     });
   }
 };
-
-// const setNumberDays = async (obj = {}) => {
-//   let {
-//     args,
-//     newState,
-//     formControlData,
-//     setFormControlData,
-//     values,
-//     fieldName,
-//     tableName,
-//     setStateVariable,
-//     onChangeHandler,
-//   } = obj;
-
-//   const { fromDate, toDate } = values || {};
-//   if (fromDate == null || toDate == null) {
-//     console.log("[setNumberDays] Skipped: missing date(s)", {
-//       fromDate,
-//       toDate,
-//     });
-//     return null;
-//   }
-
-//   // If only day numbers are provided (e.g., 10 and 15), do simple subtraction
-//   const isPlainDay = (v) =>
-//     (typeof v === "number" && Number.isFinite(v)) ||
-//     (typeof v === "string" && /^\d{1,2}$/.test(v.trim()));
-
-//   if (isPlainDay(fromDate) && isPlainDay(toDate)) {
-//     const d1 = Number(fromDate);
-//     const d2 = Number(toDate);
-//     const diff = Math.max(d2 - d1, 0); // exclusive
-//     console.log("[setNumberDays] Days:", diff);
-//     return diff;
-//   }
-
-//   // Otherwise, treat as actual dates
-//   const toMidnight = (d) =>
-//     new Date(d.getFullYear(), d.getMonth(), d.getDate());
-//   const tryParseDate = (val) => {
-//     if (!val) return null;
-//     if (val instanceof Date && !isNaN(val)) return toMidnight(val);
-
-//     if (
-//       typeof val === "number" ||
-//       (/^\d+$/.test(String(val)) && String(val).length >= 10)
-//     ) {
-//       const dt = new Date(Number(val));
-//       return isNaN(dt) ? null : toMidnight(dt);
-//     }
-
-//     if (typeof val === "string") {
-//       const d1 = new Date(val);
-//       if (!isNaN(d1)) return toMidnight(d1);
-
-//       const m = val.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-//       if (m) {
-//         const [, dd, MM, yyyy] = m;
-//         const dt = new Date(Number(yyyy), Number(MM) - 1, Number(dd));
-//         return isNaN(dt) ? null : toMidnight(dt);
-//       }
-//     }
-//     return null;
-//   };
-
-//   const start = tryParseDate(fromDate);
-//   const end = tryParseDate(toDate);
-//   if (!start || !end) {
-//     console.warn("[setNumberDays] Invalid date format(s).", {
-//       fromDate,
-//       toDate,
-//     });
-//     return null;
-//   }
-
-//   const MS_PER_DAY = 24 * 60 * 60 * 1000;
-//   const noDays = Math.max(Math.round((end - start) / MS_PER_DAY), 0); // exclusive
-//   console.log("[setNumberDays] Days:", noDays);
-//   setStateVariable((prev) => ({
-//     ...prev,
-//     noOfDays: noDays,
-//   }));
-//   calculateDetentionRate(obj, noDays);
-//   return noDays;
-// };
 
 const setNumberDays = async (obj = {}) => {
   let {
@@ -11021,6 +9930,7 @@ const getBlCharges = async (obj) => {
       totalAmtInvoiceCurr: Number(newState.totalInvoiceAmountFc) || 0,
       billingPartyBranch: newState.billingPartyBranchId || 0,
       billingPartyState: newState.billingPartyStateId || 0,
+      voucherTypeId: newState?.voucherTypeId || 0
     };
 
     const fetchGST = await getTaxDetails(taxRequestData);
@@ -11053,7 +9963,6 @@ const getBlCharges = async (obj) => {
     fpdIddropdown: vesselResponse?.values?.fpdIddropdown || [],
   }));
 };
-
 const setExchangeRateForKenya = async (obj) => {
   const { args, values, fieldName, newState, setStateVariable } = obj;
 
@@ -11883,25 +10792,6 @@ const sameDebitAmount = async (obj) => {
     console.error("Error in setSameCurrency:", error);
   }
 };
-// const setBankVoucher = async (obj) => {
-//   const { args,values, newState, setStateVariable } = obj;
-//   try {
-//     const argNames = args.split(",").map((arg) => arg.trim());
-//     const bankName = newState?.[argNames[0]];
-//     setStateVariable((prev) => ({
-//       ...prev,
-//       [argNames[1]]: bankName,
-//     }));
-
-//     return {
-//       type: "success",
-//       result: true,
-//       message: "Amount & TDS calculated successfully",
-//     };
-//   } catch (error) {
-//     console.error("Error in setSameCurrency:", error);
-//   }
-// };
 
 const setTdsAmt = async (obj) => {
   const { args, values, setStateVariable } = obj;
@@ -12004,6 +10894,62 @@ const setDateOnFinalInvoice = async (obj) => {
     };
   }
 }
+// const getBlChargesForTariff = async (obj) => {
+//   const { args, values, newState, setStateVariable } = obj;
+
+//   try {
+//     const argNames = Array.isArray(args)
+//       ? args.map((a) => String(a).trim())
+//       : String(args ?? "")
+//         .split(",")
+//         .map((a) => a.trim())
+//         .filter(Boolean);
+
+//     const rateKey = argNames[0];
+//     const currencyIdKey = argNames[1];
+//     const exchangeRateKey = argNames[2];
+//     const totalAmountHcKey = argNames[3];
+//     const totalAmountFcKey = argNames[4];
+
+//     const ud = getUserDetails();
+
+//     const requestData = {
+//       clientId: ud.clientId,
+//       chargeId: values?.chargeId,
+//       voucherType: newState?.voucherTypeId,
+//       companyId: ud.companyId,
+//       companyBranchId: ud.branchId,
+//       blIds: newState?.blId || values?.blId || 0,
+//     };
+//     const res = await getTariffChargeDetails(requestData);
+//     const chargers = Array.isArray(res) ? res : res?.Chargers;
+//     const row = Array.isArray(chargers) ? chargers[0] : null;
+
+//     if (!row) {
+//       return { type: "error", result: false, message: "No tariff data found" };
+//     }
+//     const patch = {};
+//     if (rateKey) patch[rateKey] = row.rate ?? "";
+//     if (currencyIdKey) patch[currencyIdKey] = row.currencyId ?? "";
+//     if (exchangeRateKey) patch[exchangeRateKey] = row.exchangeRate ?? 1;
+//     if (totalAmountHcKey) patch[totalAmountHcKey] = row.totalAmount ?? "";
+//     if (totalAmountFcKey) patch[totalAmountFcKey] = row.totalAmountFc ?? "";
+//     setStateVariable((prev) => ({
+//       ...prev,
+//       ...patch,
+//     }));
+
+//     return {
+//       type: "success",
+//       result: true,
+//       message: "Tariff values applied successfully",
+//     };
+//   } catch (error) {
+//     console.error("Error in getBlChargesForTariff:", error);
+//     return { type: "error", result: false, message: error?.message || "Error" };
+//   }
+// };
+
 const getBlChargesForTariff = async (obj) => {
   const { args, values, newState, setStateVariable } = obj;
 
@@ -12011,9 +10957,9 @@ const getBlChargesForTariff = async (obj) => {
     const argNames = Array.isArray(args)
       ? args.map((a) => String(a).trim())
       : String(args ?? "")
-        .split(",")
-        .map((a) => a.trim())
-        .filter(Boolean);
+          .split(",")
+          .map((a) => a.trim())
+          .filter(Boolean);
 
     const rateKey = argNames[0];
     const currencyIdKey = argNames[1];
@@ -12031,19 +10977,49 @@ const getBlChargesForTariff = async (obj) => {
       companyBranchId: ud.branchId,
       blIds: newState?.blId || values?.blId || 0,
     };
-    const res = await getTariffChargeDetails(requestData);
-    const chargers = Array.isArray(res) ? res : res?.Chargers;
-    const row = Array.isArray(chargers) ? chargers[0] : null;
 
-    if (!row) {
-      return { type: "error", result: false, message: "No tariff data found" };
+    const res = await getTariffChargeDetails(requestData);
+
+    // normalize response
+    const chargers = Array.isArray(res)
+      ? res
+      : Array.isArray(res?.Chargers)
+      ? res.Chargers
+      : [];
+
+    console.log("Tariff API response:", res);
+    console.log("Normalized chargers:", chargers);
+
+    if (!chargers.length) {
+      return {
+        type: "error",
+        result: false,
+        message: "No tariff data found",
+      };
     }
+
+    // IMPORTANT:
+    // replace this selection logic with your real business condition
+    // currently selecting first NON-ZERO row as a safer fallback
+    let row =
+      chargers.find(
+        (x) =>
+          Number(x?.rate || 0) > 0 ||
+          Number(x?.totalAmount || 0) > 0 ||
+          Number(x?.totalAmountFc || 0) > 0
+      ) || chargers[0];
+
+    console.log("Selected tariff row:", row);
+
     const patch = {};
-    if (rateKey) patch[rateKey] = row.rate ?? "";
-    if (currencyIdKey) patch[currencyIdKey] = row.currencyId ?? "";
-    if (exchangeRateKey) patch[exchangeRateKey] = row.exchangeRate ?? 1;
-    if (totalAmountHcKey) patch[totalAmountHcKey] = row.totalAmount ?? "";
-    if (totalAmountFcKey) patch[totalAmountFcKey] = row.totalAmountFc ?? "";
+    if (rateKey) patch[rateKey] = row?.rate ?? "";
+    if (currencyIdKey) patch[currencyIdKey] = row?.currencyId ?? "";
+    if (exchangeRateKey) patch[exchangeRateKey] = row?.exchangeRate ?? 1;
+    if (totalAmountHcKey) patch[totalAmountHcKey] = row?.totalAmount ?? "";
+    if (totalAmountFcKey) patch[totalAmountFcKey] = row?.totalAmountFc ?? "";
+
+    console.log("Patch to apply:", patch);
+
     setStateVariable((prev) => ({
       ...prev,
       ...patch,
@@ -12056,7 +11032,11 @@ const getBlChargesForTariff = async (obj) => {
     };
   } catch (error) {
     console.error("Error in getBlChargesForTariff:", error);
-    return { type: "error", result: false, message: error?.message || "Error" };
+    return {
+      type: "error",
+      result: false,
+      message: error?.message || "Error",
+    };
   }
 };
 
@@ -12463,7 +11443,7 @@ const clampToStartOfDay = (d) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
 
 const compareDatewithFin = async (obj) => {
-  const { args, newState, setStateVariable } = obj;
+  const { args, newState, values, setStateVariable } = obj;
 
   try {
     const argNames = String(args || "")
@@ -12471,50 +11451,133 @@ const compareDatewithFin = async (obj) => {
       .map((a) => a.trim())
       .filter(Boolean);
 
-    const dateFieldName = argNames[0];
-    if (!dateFieldName) return;
-    const fieldDateRaw = newState?.[dateFieldName];
+    const dateFieldKey = argNames[0]; // actual state field name
+    if (!dateFieldKey) return;
+
+    const fieldDateRaw = values?.[dateFieldKey];
+    if (!fieldDateRaw) return;
+
     const { financialYear, clientId } = getUserDetails();
+
     const requestData = {
       columns: "startDate,endDate",
       tableName: "tblFinancialYear",
       whereCondition: `id = ${financialYear} and status = 1`,
       clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
     };
+
     const res = await fetchReportData(requestData);
+
     const startDateRaw = res?.data?.[0]?.startDate;
     const endDateRaw = res?.data?.[0]?.endDate;
+
     const start = toDateObj(startDateRaw);
     const end = toDateObj(endDateRaw);
 
     if (!start || !end) {
-      console.warn("Financial year start/end not found", { startDateRaw, endDateRaw });
+      console.warn("Financial year start/end not found", {
+        startDateRaw,
+        endDateRaw,
+      });
       return;
     }
+
     const startD = clampToStartOfDay(start);
     const endD = clampToStartOfDay(end);
 
     const fieldDt = toDateObj(fieldDateRaw);
     const fieldD = fieldDt ? clampToStartOfDay(fieldDt) : null;
+
     const isValid =
       fieldD &&
       fieldD.getTime() >= startD.getTime() &&
       fieldD.getTime() <= endD.getTime();
 
     if (isValid) return;
+
+    toast.error("Please take the correct Financial Year");
+
     setStateVariable((prev) => ({
       ...prev,
-      [dateFieldName]: null, 
+      [dateFieldKey]: null, // or "" if your date input expects empty string
     }));
 
-    toast.error("Please Take the correct FinancialYear");
+    return {
+      type: "error",
+      result: false,
+      message: "Please take the correct Financial Year",
+    };
   } catch (error) {
     console.error("Error in compareDatewithFin:", error);
     toast.error("Error validating Financial Year date.");
+
     return {
       type: "error",
       result: false,
       message: "Error validating Financial Year date.",
+    };
+  }
+};
+
+const setexFromVoyageDailyExrate = async (obj) => {
+  const { args, newState, values, setStateVariable } = obj;
+
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+
+    const { businessSegmentId, blId } = newState;
+
+    const Date = values[argNames[0]];
+    const childblId = values[argNames[1]];
+    const currencyId = values[argNames[2]];
+
+    const request = {
+      columns:
+        "vr.exportExchangeRate as exportExchangeRate, vr.importExchangeRate as importExchangeRate",
+      tableName:
+        "tblInvoice i left join tblBl bl on bl.id = try_cast(i.blId as int) left join tblVoyageRoute vr on vr.vesselId = try_cast(bl.podVesselId as int)",
+      whereCondition: `i.blId = '${blId}' and i.status = 1`,
+      clientIdCondition: `i.clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+    };
+
+    const response = await fetchReportData(request);
+    console.log("response", response);
+
+    const rateRow =
+      response?.data?.find(
+        (row) =>
+          row?.exportExchangeRate != null || row?.importExchangeRate != null
+      ) || {};
+
+    const exportExchangeRate = rateRow?.exportExchangeRate || "";
+    const importExchangeRate = rateRow?.importExchangeRate || "";
+
+    let finalExchangeRate = "";
+
+    if (String(businessSegmentId) === "10") {
+      finalExchangeRate = exportExchangeRate;
+    } else if (String(businessSegmentId) === "11") {
+      finalExchangeRate = importExchangeRate;
+    }
+
+    setStateVariable((prev) => ({
+      ...prev,
+      exchangeRate: finalExchangeRate,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "Exchange rate set successfully.",
+    };
+  } catch (error) {
+    console.error("Error in exchange rate:", error);
+    toast.error("Error validating exchange rate.");
+
+    return {
+      type: "error",
+      result: false,
+      message: "Error validating exchange rate.",
     };
   }
 };
@@ -12578,7 +11641,6 @@ export {
   setCalculateVolume,
   setFirstExchangeRate,
   currency1,
-  dueToFunc,
   setExchangeRateNew,
   setTaxCalculation,
   balanceUpdate,
@@ -12663,5 +11725,6 @@ export {
   checkRate,
   setBillingPartyForBl,
   SetVehicleTyeChassiNo,
-  compareDatewithFin
+  compareDatewithFin,
+  setexFromVoyageDailyExrate
 };

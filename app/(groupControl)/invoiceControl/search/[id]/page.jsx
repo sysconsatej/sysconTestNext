@@ -242,6 +242,10 @@ export default function AddEditFormControll() {
   const [isFormSaved, setIsFormSaved] = useState(false);
   const { clientId } = getUserDetails();
   const [invoiceRoundOff, setInvoiceRoundOff] = useState("N");
+  const [parentFieldDataInArray, setParentFieldDataInArray] = useState([]);
+  const [actionFieldNames, setActionFieldNames] = useState([]);
+  const prevVisibleRef = useRef({});
+  const prevHiddenRef = useRef({});
   console.log("uriDecodedMenu.menuName", uriDecodedMenu?.menuName);
 
   useEffect(() => {
@@ -1955,125 +1959,672 @@ export default function AddEditFormControll() {
     }
   };
 
+  const parseIdList = (raw) =>
+    String(raw || "")
+      .split(",")
+      .map((v) => Number(String(v).trim()))
+      .filter((n) => !Number.isNaN(n));
+
+  const isShowValue = (value) => {
+    if (value === true || value === 1 || value === "1") return true;
+    if (value === false || value === 0 || value === "0") return false;
+
+    if (typeof value === "string") {
+      const v = value.trim().toLowerCase();
+      if (v === "" || v === "false" || v === "n" || v === "no" || v === "null")
+        return false;
+      return true;
+    }
+
+    if (Array.isArray(value)) return value.length > 0;
+    if (value && typeof value === "object") return Object.keys(value).length > 0;
+
+    return value !== null && value !== undefined;
+  };
+
+  const isHideValue = (value) => !isShowValue(value);
+
+  const rebuildParentSections = (fields) => {
+    const groupedAll = groupAndSortAllFields(fields || []);
+    const groupedByPosition = groupAndSortFields(fields || []);
+
+    setParentsFields(groupedAll);
+    setTopParentsFields(groupedByPosition.top || {});
+    setBottomParentsFields(groupedByPosition.bottom || {});
+  };
+
+  const buildActionFieldMap = (fields = []) => {
+    const temp = [];
+
+    fields.forEach((control) => {
+      if (control?.isColumnVisible && control?.columnsToHide) {
+        temp.push({
+          parentFieldName: control.fieldname,
+          sectionHeader: control.sectionHeader,
+          columnsToHide: control.columnsToHide,
+        });
+      }
+
+      if (control?.isColumnDisabled && control?.columnsToDisabled) {
+        temp.push({
+          parentFieldName: control.fieldname,
+          sectionHeader: control.sectionHeader,
+          columnsToDisabled: control.columnsToDisabled,
+        });
+      }
+    });
+
+    const seen = new Set();
+    return temp.filter((item) => {
+      const key = [
+        item.parentFieldName || "",
+        item.sectionHeader || "",
+        item.columnsToHide || "",
+        item.columnsToDisabled || "",
+      ].join("|");
+
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  const updateParentFieldMeta = ({ visibleIds = [], hiddenIds = [], enableIds = [], disableIds = [] }) => {
+    const visibleSet = new Set(visibleIds.map(Number));
+    const hiddenSet = new Set(hiddenIds.map(Number));
+    const enableSet = new Set(enableIds.map(Number));
+    const disableSet = new Set(disableIds.map(Number));
+
+    if (
+      visibleSet.size === 0 &&
+      hiddenSet.size === 0 &&
+      enableSet.size === 0 &&
+      disableSet.size === 0
+    ) {
+      return;
+    }
+
+    setParentFieldDataInArray((prev) => {
+      if (!Array.isArray(prev) || prev.length === 0) return prev;
+
+      let changed = false;
+
+      const updated = prev.map((field) => {
+        const id = Number(field.id);
+        let nextField = field;
+
+        if (visibleSet.has(id) && field.columnsToBeVisible !== true) {
+          nextField = { ...nextField, columnsToBeVisible: true };
+        }
+
+        if (hiddenSet.has(id) && field.columnsToBeVisible !== false) {
+          nextField = { ...nextField, columnsToBeVisible: false };
+        }
+
+        if (enableSet.has(id) && field.isEditable !== true) {
+          nextField = { ...nextField, isEditable: true };
+        }
+
+        if (disableSet.has(id) && field.isEditable !== false) {
+          nextField = { ...nextField, isEditable: false };
+        }
+
+        if (nextField !== field) changed = true;
+        return nextField;
+      });
+
+      return changed ? updated : prev;
+    });
+  };
+
+  const clearDependentValues = (fieldNames = []) => {
+    if (!fieldNames.length) return;
+
+    const applyClear = (prev) => {
+      let changed = false;
+      const updates = {};
+
+      fieldNames.forEach((name) => {
+        if (prev[name] !== null && prev[name] !== "" && prev[name] !== 0) {
+          updates[name] = null;
+          changed = true;
+        }
+
+        const ddKey = `${name}dropdown`;
+        if (Object.prototype.hasOwnProperty.call(prev, ddKey) && prev[ddKey] !== null) {
+          updates[ddKey] = null;
+          changed = true;
+        }
+
+        const msKey = `${name}multiselect`;
+        if (
+          Object.prototype.hasOwnProperty.call(prev, msKey) &&
+          Array.isArray(prev[msKey]) &&
+          prev[msKey].length > 0
+        ) {
+          updates[msKey] = [];
+          changed = true;
+        }
+
+        const dtKey = `${name}datetime`;
+        if (
+          Object.prototype.hasOwnProperty.call(prev, dtKey) &&
+          prev[dtKey] !== null &&
+          prev[dtKey] !== "null"
+        ) {
+          updates[dtKey] = null;
+          changed = true;
+        }
+      });
+
+      return changed ? { ...prev, ...updates } : prev;
+    };
+
+    setNewState(applyClear);
+    setSubmitNewState(applyClear);
+  };
+
   async function fetchData() {
     try {
-      // Call api for table grid data
       const tableViewApiResponse = await formControlMenuList(uriDecodedMenu.id);
       let tempnewState = { ...newState };
-      if (tableViewApiResponse.success) {
-        const apiResponseData = tableViewApiResponse.data[0];
-        console.log("apiResponseData", apiResponseData);
-        setFetchedApiResponse(apiResponseData);
-        setFormControlData(apiResponseData);
-        setIsRequiredAttachment(apiResponseData?.isRequiredAttachment);
-        const tableName = apiResponseData.tableName;
-        setTableName(tableName);
-        apiResponseData.fields.forEach((element) => {
+
+      if (!tableViewApiResponse.success) {
+        toast.error(tableViewApiResponse.message);
+        return;
+      }
+
+      const apiResponseData = tableViewApiResponse.data[0];
+      console.log("apiResponseData", apiResponseData);
+
+      setFetchedApiResponse(apiResponseData);
+      setIsRequiredAttachment(apiResponseData?.isRequiredAttachment);
+
+      const tableName = apiResponseData.tableName;
+      setTableName(tableName);
+
+      // -------------------------------------------------------
+      // 1) Prepare initial state values exactly like your old logic
+      // -------------------------------------------------------
+      (apiResponseData.fields || []).forEach((element) => {
+        tempnewState = {
+          ...tempnewState,
+          [element.fieldname]: element.controlDefaultValue,
+        };
+
+        if (String(element.controlname || "").toLowerCase() === "date") {
+          tempnewState = {
+            ...tempnewState,
+            [`${element.fieldname}datetime`]:
+              element.controlDefaultValue == null || element.controlDefaultValue === ""
+                ? null
+                : new Date(element.controlDefaultValue),
+            [element.fieldname]: element.controlDefaultValue,
+          };
+        }
+
+        if (String(element.controlname || "").toLowerCase() === "dropdown") {
+          if (element.controlDefaultValue != null) {
+            tempnewState = {
+              ...tempnewState,
+              [`${element.fieldname}dropdown`]: element.controlDefaultValue,
+              [element.fieldname]: element.controlDefaultValue.value || "",
+            };
+          }
+        }
+
+        if (String(element.controlname || "").toLowerCase() === "multiselect") {
+          if (element.controlDefaultValue != null) {
+            tempnewState = {
+              ...tempnewState,
+              [`${element.fieldname}multiselect`]: element.controlDefaultValue,
+              [element.fieldname]: element.controlDefaultValue.value || "",
+            };
+          }
+        }
+
+        if (String(element.controlname || "").toLowerCase() === "number") {
           tempnewState = {
             ...tempnewState,
             [element.fieldname]: element.controlDefaultValue,
           };
-
-          if (element.controlname.toLowerCase() === "date") {
-            tempnewState = {
-              ...tempnewState,
-              [`${element.fieldname}datetime`]:
-                element.controlDefaultValue == null
-                  ? "null"
-                  : new Date(element.controlDefaultValue),
-              [element.fieldname]: element.controlDefaultValue,
-            };
-          }
-          if (element.controlname.toLowerCase() === "dropdown") {
-            if (element.controlDefaultValue != null) {
-              tempnewState = {
-                ...tempnewState,
-                [`${element.fieldname}dropdown`]: element.controlDefaultValue,
-                [element.fieldname]: element.controlDefaultValue.value || "",
-              };
-            }
-          }
-          if (element.controlname.toLowerCase() === "multiselect") {
-            if (element.controlDefaultValue != null) {
-              tempnewState = {
-                ...tempnewState,
-                [`${element.fieldname}multiselect`]:
-                  element.controlDefaultValue,
-                [element.fieldname]: element.controlDefaultValue.value || "",
-              };
-            }
-          }
-          if (element.controlname.toLowerCase() === "number") {
-            tempnewState = {
-              ...tempnewState,
-              [element.fieldname]: element.controlDefaultValue,
-            };
-          }
-          if (element.controlname.toLowerCase() === "text") {
-            tempnewState = {
-              ...tempnewState,
-              [element.fieldname]: element.controlDefaultValue,
-            };
-          }
-        });
-        const groupAllFieldsData = groupAndSortAllFields(
-          apiResponseData.fields,
-        );
-        setParentsFields(groupAllFieldsData);
-        const resData = groupAndSortFields(apiResponseData.fields);
-        setTopParentsFields(resData.top); // Set parents fields.
-        setBottomParentsFields(resData.bottom); // Set parents fields.
-
-        let Obj = { tableName: tableName };
-
-        for (const iterator of apiResponseData.child ||
-          apiResponseData.children) {
-          Obj[iterator.tableName] = [];
         }
 
-        setNewState((prev) => {
-          return {
-            ...prev,
-            ...Obj,
+        if (String(element.controlname || "").toLowerCase() === "text") {
+          tempnewState = {
             ...tempnewState,
-            attachment: [],
-            menuID: uriDecodedMenu.id,
-            isNoGenerate: apiResponseData.isNoGenerate,
+            [element.fieldname]: element.controlDefaultValue,
           };
-        });
-        setSubmitNewState((prev) => {
-          return {
-            ...prev,
-            ...Obj,
+        }
+
+        if (
+          ["checkbox", "radio", "multicheckbox"].includes(
+            String(element.controlname || "").toLowerCase()
+          )
+        ) {
+          tempnewState = {
             ...tempnewState,
-            attachment: [],
-            menuID: uriDecodedMenu.id,
-            isNoGenerate: apiResponseData.isNoGenerate,
+            [element.fieldname]:
+              element.controlDefaultValue !== undefined
+                ? element.controlDefaultValue
+                : null,
           };
-        });
-        setOriginalData((prev) => {
-          return { ...prev, ...Obj, ...tempnewState };
-        });
-        setInitialState((prev) => {
-          return { ...prev, ...Obj, ...tempnewState };
-        });
-        console.log(" - -apiResponseData", apiResponseData);
-        setChildsFields(apiResponseData.child || apiResponseData.children);
-        setButtonsData(apiResponseData.buttons);
-        setTimeout(() => {
-          setIsDataLoaded(true);
-        }, 500);
-      } else {
-        toast.error(tableViewApiResponse.message);
+        }
+      });
+
+      // -------------------------------------------------------
+      // 2) Collect all ids that should be hidden initially
+      //    a) field itself says isColumnVisible === false
+      //    b) field is target of someone else's columnsToHide
+      // -------------------------------------------------------
+      const idsToHideInitially = new Set();
+
+      (apiResponseData.fields || []).forEach((field) => {
+        if (field?.isColumnVisible === false) {
+          idsToHideInitially.add(Number(field.id));
+        }
+
+        if (
+          field?.columnsToHide &&
+          typeof field.columnsToHide === "string" &&
+          field.columnsToHide.trim() !== ""
+        ) {
+          field.columnsToHide
+            .split(",")
+            .map((v) => Number(String(v).trim()))
+            .filter((n) => !Number.isNaN(n))
+            .forEach((id) => idsToHideInitially.add(id));
+        }
+      });
+
+      // -------------------------------------------------------
+      // 3) Create prepared parent fields with columnsToBeVisible
+      // -------------------------------------------------------
+      const preparedFields = (apiResponseData.fields || []).map((field) => {
+        const fieldId = Number(field.id);
+
+        let visible = true;
+
+        if (idsToHideInitially.has(fieldId)) {
+          visible = false;
+        }
+
+        // special fallback for TDS parent fields on first load
+        // if tdsApplicable is not true in defaults, keep these hidden
+        if (
+          (field.fieldname === "tdsAmt" || field.fieldname === "tdsAmtFC") &&
+          !(
+            tempnewState?.tdsApplicable === true ||
+            tempnewState?.tdsApplicable === "true" ||
+            tempnewState?.tdsApplicable === 1 ||
+            tempnewState?.tdsApplicable === "1"
+          )
+        ) {
+          visible = false;
+        }
+
+        return {
+          ...field,
+          columnsToBeVisible: visible,
+        };
+      });
+
+      // store flat parent fields for future show/hide updates
+      setParentFieldDataInArray(preparedFields);
+
+      // keep formControlData in sync with prepared fields
+      setFormControlData({
+        ...apiResponseData,
+        fields: preparedFields,
+      });
+
+      // -------------------------------------------------------
+      // 4) Group parent sections from prepared fields
+      // -------------------------------------------------------
+      const groupAllFieldsData = groupAndSortAllFields(preparedFields);
+      setParentsFields(groupAllFieldsData);
+
+      const resData = groupAndSortFields(preparedFields);
+      setTopParentsFields(resData.top || {});
+      setBottomParentsFields(resData.bottom || {});
+
+      // -------------------------------------------------------
+      // 5) Build child table empty structure exactly like old logic
+      // -------------------------------------------------------
+      let Obj = { tableName: tableName };
+
+      for (const iterator of apiResponseData.child || apiResponseData.children || []) {
+        Obj[iterator.tableName] = [];
       }
+
+      // -------------------------------------------------------
+      // 6) Final state setup exactly like your old logic
+      // -------------------------------------------------------
+      setNewState((prev) => {
+        return {
+          ...prev,
+          ...Obj,
+          ...tempnewState,
+          attachment: [],
+          menuID: uriDecodedMenu.id,
+          isNoGenerate: apiResponseData.isNoGenerate,
+        };
+      });
+
+      setSubmitNewState((prev) => {
+        return {
+          ...prev,
+          ...Obj,
+          ...tempnewState,
+          attachment: [],
+          menuID: uriDecodedMenu.id,
+          isNoGenerate: apiResponseData.isNoGenerate,
+        };
+      });
+
+      setOriginalData((prev) => {
+        return {
+          ...prev,
+          ...Obj,
+          ...tempnewState,
+        };
+      });
+
+      setInitialState((prev) => {
+        return {
+          ...prev,
+          ...Obj,
+          ...tempnewState,
+        };
+      });
+
+      setFirstState((prev) => {
+        return {
+          ...prev,
+          ...Obj,
+          ...tempnewState,
+          attachment: [],
+          menuID: uriDecodedMenu.id,
+          isNoGenerate: apiResponseData.isNoGenerate,
+        };
+      });
+
+      //setChildsFields(apiResponseData.child || apiResponseData.children || []);
+      const showChildTds =
+        tempnewState?.tdsApplicable === true ||
+        tempnewState?.tdsApplicable === "true" ||
+        tempnewState?.tdsApplicable === 1 ||
+        tempnewState?.tdsApplicable === "1";
+
+      const preparedChilds = (apiResponseData.child || apiResponseData.children || []).map(
+        (child) => {
+          if (child.tableName !== "tblVoucherLedger") return child;
+
+          return {
+            ...child,
+            fields: (child.fields || []).map((field) => {
+              if (field.fieldname === "tdsAmtFC" || field.fieldname === "tdsAmtHC") {
+                return {
+                  ...field,
+                  columnsToBeVisible: showChildTds,
+                };
+              }
+              return field;
+            }),
+          };
+        }
+      );
+
+      setChildsFields(preparedChilds);
+      setButtonsData(apiResponseData.buttons || []);
+
+      setTimeout(() => {
+        setIsDataLoaded(true);
+      }, 500);
     } catch (error) {
       console.error("Fetch Error :- ", error);
+      toast.error(error?.message || "Failed to load form data");
     }
   }
-
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const changedFieldNames = Object.keys(newState || {}).filter((field) => {
+      return (
+        prevVisibleRef.current[field] !== newState[field] &&
+        isShowValue(newState[field])
+      );
+    });
+
+    prevVisibleRef.current = { ...newState };
+
+    if (!changedFieldNames.length || !actionFieldNames.length) return;
+
+    const matchedRecords = actionFieldNames.filter((record) =>
+      changedFieldNames.includes(record.parentFieldName)
+    );
+
+    if (!matchedRecords.length) return;
+
+    const visibleIds = [];
+    const enableIds = [];
+
+    matchedRecords.forEach((record) => {
+      if (record?.columnsToHide) {
+        visibleIds.push(...parseIdList(record.columnsToHide));
+      }
+
+      if (record?.columnsToDisabled) {
+        enableIds.push(...parseIdList(record.columnsToDisabled));
+      }
+    });
+
+    updateParentFieldMeta({
+      visibleIds,
+      enableIds,
+    });
+  }, [newState, actionFieldNames]);
+  useEffect(() => {
+    const changedFieldNames = Object.keys(newState || {}).filter((field) => {
+      return (
+        prevHiddenRef.current[field] !== newState[field] &&
+        isHideValue(newState[field])
+      );
+    });
+
+    prevHiddenRef.current = { ...newState };
+
+    if (!changedFieldNames.length || !actionFieldNames.length) return;
+
+    const matchedRecords = actionFieldNames.filter((record) =>
+      changedFieldNames.includes(record.parentFieldName)
+    );
+
+    if (!matchedRecords.length) return;
+
+    const hiddenIds = [];
+    const disableIds = [];
+
+    matchedRecords.forEach((record) => {
+      if (record?.columnsToHide) {
+        hiddenIds.push(...parseIdList(record.columnsToHide));
+      }
+
+      if (record?.columnsToDisabled) {
+        disableIds.push(...parseIdList(record.columnsToDisabled));
+      }
+    });
+
+    updateParentFieldMeta({
+      hiddenIds,
+      disableIds,
+    });
+
+    const targetFieldNames = parentFieldDataInArray
+      .filter((field) => {
+        const id = Number(field.id);
+        return hiddenIds.includes(id) || disableIds.includes(id);
+      })
+      .map((field) => field.fieldname);
+
+    clearDependentValues(targetFieldNames);
+  }, [newState, actionFieldNames, parentFieldDataInArray]);
+
+  useEffect(() => {
+    const showTds =
+      newState?.tdsApplicable === true ||
+      newState?.tdsApplicable === "true" ||
+      newState?.tdsApplicable === 1 ||
+      newState?.tdsApplicable === "1";
+
+    setParentFieldDataInArray((prev) => {
+      if (!Array.isArray(prev) || prev.length === 0) return prev;
+
+      const updated = prev.map((field) => {
+        if (field.fieldname === "tdsAmt" || field.fieldname === "tdsAmtFC") {
+          return {
+            ...field,
+            columnsToBeVisible: showTds,
+          };
+        }
+        return field;
+      });
+
+      const groupedAll = groupAndSortAllFields(updated);
+      const groupedByPos = groupAndSortFields(updated);
+
+      setParentsFields(groupedAll);
+      setTopParentsFields(groupedByPos.top);
+      setBottomParentsFields(groupedByPos.bottom);
+
+      return updated;
+    });
+
+    if (!showTds) {
+      setNewState((prev) => ({
+        ...prev,
+        tdsAmt: 0,
+        tdsAmtFC: 0,
+      }));
+
+      setSubmitNewState((prev) => ({
+        ...prev,
+        tdsAmt: 0,
+        tdsAmtFC: 0,
+      }));
+    }
+  }, [newState?.tdsApplicable]);
+  useEffect(() => {
+    const showChildTds =
+      newState?.tdsApplicable === true ||
+      newState?.tdsApplicable === "true" ||
+      newState?.tdsApplicable === 1 ||
+      newState?.tdsApplicable === "1";
+
+    setChildsFields((prev) => {
+      if (!Array.isArray(prev) || prev.length === 0) return prev;
+
+      let changed = false;
+
+      const updated = prev.map((child) => {
+        if (child.tableName !== "tblVoucherLedger") return child;
+
+        let childChanged = false;
+
+        const updatedFields = (child.fields || []).map((field) => {
+          if (field.fieldname === "tdsAmtFC" || field.fieldname === "tdsAmtHC") {
+            if (field.columnsToBeVisible !== showChildTds) {
+              childChanged = true;
+              return {
+                ...field,
+                columnsToBeVisible: showChildTds,
+              };
+            }
+          }
+          return field;
+        });
+
+        if (childChanged) {
+          changed = true;
+          return {
+            ...child,
+            fields: updatedFields,
+          };
+        }
+
+        return child;
+      });
+
+      return changed ? updated : prev;
+    });
+
+    // optional safe reset when hidden
+    if (!showChildTds) {
+      setNewState((prev) => {
+        if (!Array.isArray(prev?.tblVoucherLedger)) return prev;
+
+        let changed = false;
+
+        const updatedLedger = prev.tblVoucherLedger.map((row) => {
+          const nextTdsAmtHC =
+            row?.tdsAmtHC === null || row?.tdsAmtHC === undefined ? 0 : row.tdsAmtHC;
+          const nextTdsAmtFC =
+            row?.tdsAmtFC === null || row?.tdsAmtFC === undefined ? 0 : row.tdsAmtFC;
+
+          if (nextTdsAmtHC !== row?.tdsAmtHC || nextTdsAmtFC !== row?.tdsAmtFC) {
+            changed = true;
+            return {
+              ...row,
+              tdsAmtHC: nextTdsAmtHC,
+              tdsAmtFC: nextTdsAmtFC,
+            };
+          }
+
+          return row;
+        });
+
+        return changed
+          ? {
+            ...prev,
+            tblVoucherLedger: updatedLedger,
+          }
+          : prev;
+      });
+
+      setSubmitNewState((prev) => {
+        if (!Array.isArray(prev?.tblVoucherLedger)) return prev;
+
+        let changed = false;
+
+        const updatedLedger = prev.tblVoucherLedger.map((row) => {
+          const nextTdsAmtHC =
+            row?.tdsAmtHC === null || row?.tdsAmtHC === undefined ? 0 : row.tdsAmtHC;
+          const nextTdsAmtFC =
+            row?.tdsAmtFC === null || row?.tdsAmtFC === undefined ? 0 : row.tdsAmtFC;
+
+          if (nextTdsAmtHC !== row?.tdsAmtHC || nextTdsAmtFC !== row?.tdsAmtFC) {
+            changed = true;
+            return {
+              ...row,
+              tdsAmtHC: nextTdsAmtHC,
+              tdsAmtFC: nextTdsAmtFC,
+            };
+          }
+
+          return row;
+        });
+
+        return changed
+          ? {
+            ...prev,
+            tblVoucherLedger: updatedLedger,
+          }
+          : prev;
+      });
+    }
+  }, [newState?.tdsApplicable]);
 
   // async function getRoundOffSetting(totalInvoiceAmount,totalInvoiceAmountFc,totalAmount,safeTaxAmount,safeTaxAmountFc,totalAmountFc) {
   //   const { clientId } = getUserDetails();
@@ -2594,25 +3145,14 @@ export default function AddEditFormControll() {
   // ✅ UPDATED: prevents unnecessary setNewState loops by skipping if nothing changed
 
 
-  const allocPrevRef = useRef({
-    amtHC: "",
-    amtFC: "",
-    checks: [],
-    parentLedger: [],
-  });
+  const allocPrevRef = useRef("");
   const allocInternalUpdateRef = useRef(false); // ✅ prevents max update depth loop
 
   useEffect(() => {
-    // ✅ STOP INFINITE LOOP:
-    // If this render was triggered by our own setNewState, skip once.
     if (allocInternalUpdateRef.current) {
       allocInternalUpdateRef.current = false;
       return;
     }
-
-    const DBG = true;
-    const tag = "[ALLOC_EFFECT]";
-    console.log(`STATE UPDATE TRIGGERED`)
 
     const toNum = (v) => {
       if (v === null || v === undefined || v === "") return 0;
@@ -2629,11 +3169,58 @@ export default function AddEditFormControll() {
 
     const clamp0 = (n) => Math.max(0, round2(n));
 
-    // ✅ IMPORTANT: pay amounts must come from amtRec/amtRecFC (NOT balanceAmt*)
-    // const payHC = toNum(newState?.amtRec ?? 0);
-    // const payFC = toNum(newState?.amtRecFC ?? 0);
-    let payHC = toNum(newState?.amtRec ?? 0);
-    let payFC = toNum(newState?.amtRecFC ?? 0);
+    const normalizeOriginalBalance = ({
+      originalValue,
+      balanceValue,
+      creditValue,
+      debitValue,
+    }) => {
+      if (originalValue !== null && originalValue !== undefined && originalValue !== "") {
+        return round2(toNum(originalValue));
+      }
+      return round2(
+        toNum(balanceValue) + toNum(creditValue) - toNum(debitValue),
+      );
+    };
+
+    const getLedgerKey = (ledger, index) =>
+      ledger?.voucherLedgerId != null
+        ? String(ledger.voucherLedgerId)
+        : String(ledger?.indexValue ?? index);
+
+    const getDetailKey = (row, index) =>
+      row?.voucherOutstandingId != null
+        ? String(row.voucherOutstandingId)
+        : String(row?.indexValue ?? index);
+
+    const makeSnapshot = (ledgerRows, balanceAmtHc, balanceAmtFc) =>
+      JSON.stringify({
+        balanceAmtHc: asStr2(balanceAmtHc),
+        balanceAmtFc: asStr2(balanceAmtFc),
+        ledgers: ledgerRows.map((ledger, ledgerIndex) => ({
+          k: getLedgerKey(ledger, ledgerIndex),
+          d: asStr2(ledger?.debitAmount),
+          df: asStr2(ledger?.debitAmountFc),
+          cr: asStr2(ledger?.creditAmount),
+          crf: asStr2(ledger?.creditAmountFc),
+          rows: (Array.isArray(ledger?.tblVoucherLedgerDetails)
+            ? ledger.tblVoucherLedgerDetails
+            : []
+          ).map((row, rowIndex) => ({
+            k: getDetailKey(row, rowIndex),
+            c: !!row?.isChecked,
+            neg: !!row?.__isNegRow,
+            ob: asStr2(row?.__origBalHC),
+            obf: asStr2(row?.__origBalFC),
+            d: asStr2(row?.debitAmount),
+            df: asStr2(row?.debitAmountFc),
+            cr: asStr2(row?.creditAmount),
+            crf: asStr2(row?.creditAmountFc),
+            b: asStr2(row?.balanceAmount),
+            bf: asStr2(row?.balanceAmountFc),
+          })),
+        })),
+      });
 
     const hasLedgers =
       Array.isArray(newState?.tblVoucherLedger) &&
@@ -2654,206 +3241,70 @@ export default function AddEditFormControll() {
       Array.isArray(l?.tblVoucherLedgerDetails) ? l.tblVoucherLedgerDetails : []
     );
 
-    if (!allDetails.length) {
-      allocPrevRef.current = {
-        amtHC: "",
-        amtFC: "",
-        checks: [],
-        parentLedger: [],
-      };
+    if (!allDetails.length && !hasLedgers) {
+      allocPrevRef.current = "";
       return;
     }
 
-    // ✅ guard keys
-    const prev = allocPrevRef.current || {
-      amtHC: "",
-      amtFC: "",
-      checks: [],
-      parentLedger: [],
-    };
-    const amtHCKey = String(newState?.amtRec ?? "");
-    const amtFCKey = String(newState?.amtRecFC ?? "");
+    const currentSnapshot = makeSnapshot(
+      ledgers,
+      newState?.balanceAmtHc,
+      newState?.balanceAmtFc,
+    );
 
-    const checksNow = ledgers.flatMap((ledger) => {
-      const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
-        ? ledger.tblVoucherLedgerDetails
-        : [];
-
-      return details.map((r) => ({
-        k:
-          r?.voucherOutstandingId != null
-            ? String(r.voucherOutstandingId)
-            : String(r?.indexValue ?? ""),
-        c: !!r?.isChecked,
-        neg: !!r?.__isNegRow,
-
-        d: round2(toNum(r?.debitAmount)),
-        df: round2(toNum(r?.debitAmountFc)),
-        cr: round2(toNum(r?.creditAmount)),
-        crf: round2(toNum(r?.creditAmountFc)),
-        b: round2(toNum(r?.balanceAmount)),
-        bf: round2(toNum(r?.balanceAmountFc)),
-      }));
-    });
-
-    checksNow.sort((a, b) => (a.k > b.k ? 1 : a.k < b.k ? -1 : 0));
-
-    const parentLedgerNow = ledgers
-      .map((ledger, idx) => ({
-        k:
-          ledger?.voucherLedgerId != null
-            ? String(ledger.voucherLedgerId)
-            : String(ledger?.indexValue ?? idx),
-        d: round2(toNum(ledger?.debitAmount)),
-        df: round2(toNum(ledger?.debitAmountFc)),
-        cr: round2(toNum(ledger?.creditAmount)),
-        crf: round2(toNum(ledger?.creditAmountFc)),
-        b: round2(toNum(ledger?.balanceAmount)),
-        bf: round2(toNum(ledger?.balanceAmountFc)),
-      }))
-      .sort((a, b) => (a.k > b.k ? 1 : a.k < b.k ? -1 : 0));
-
-    const prevChecks = Array.isArray(prev.checks) ? [...prev.checks] : [];
-    prevChecks.sort((a, b) => (a.k > b.k ? 1 : a.k < b.k ? -1 : 0));
-    const prevParentLedger = Array.isArray(prev.parentLedger)
-      ? [...prev.parentLedger]
-      : [];
-    prevParentLedger.sort((a, b) => (a.k > b.k ? 1 : a.k < b.k ? -1 : 0));
-
-    const sameChecks =
-      prevChecks.length === checksNow.length &&
-      prevChecks.every((v, i) => {
-        const cur = checksNow[i] || {};
-        return (
-          v?.k === cur?.k &&
-          v?.c === cur?.c &&
-          v?.neg === cur?.neg &&
-          v?.d === cur?.d &&
-          v?.df === cur?.df &&
-          v?.cr === cur?.cr &&
-          v?.crf === cur?.crf &&
-          v?.b === cur?.b &&
-          v?.bf === cur?.bf
-        );
-      });
-
-    const sameParentLedger =
-      prevParentLedger.length === parentLedgerNow.length &&
-      prevParentLedger.every((v, i) => {
-        const cur = parentLedgerNow[i] || {};
-        return (
-          v?.k === cur?.k &&
-          v?.d === cur?.d &&
-          v?.df === cur?.df &&
-          v?.cr === cur?.cr &&
-          v?.crf === cur?.crf &&
-          v?.b === cur?.b &&
-          v?.bf === cur?.bf
-        );
-      });
-
-    const willReturn =
-      prev.amtHC === amtHCKey &&
-      prev.amtFC === amtFCKey &&
-      sameChecks &&
-      sameParentLedger;
-
-    if (DBG) {
-      console.log(`${tag} GUARD`, {
-        prev,
-        amtHCKey,
-        amtFCKey,
-        sameChecks,
-        sameParentLedger,
-        willReturn,
-      });
-    }
-
-    if (willReturn) return;
-    allocPrevRef.current = {
-      amtHC: amtHCKey,
-      amtFC: amtFCKey,
-      checks: checksNow,
-      parentLedger: parentLedgerNow,
-    };
-
-    let negAddHC = 0;
-    let negAddFC = 0;
-
-    const addAbsToParentIfChecked = (isChecked, balHC, balFC) => {
-      if (!isChecked) return;
-      if (balHC < 0) negAddHC = round2(negAddHC + Math.abs(balHC));
-      if (balFC < 0) negAddFC = round2(negAddFC + Math.abs(balFC));
-    };
-
-    // PASS 1
-    let sumCheckedHC = 0;
-    let sumCheckedFC = 0;
+    let remainingHC = round2(
+      toNum(newState?.amtRec ?? 0) +
+      toNum(newState?.bankCharges ?? 0)
+    );
+    let remainingFC = round2(toNum(newState?.amtRecFC ?? 0) + toNum(newState?.bankCharges ?? 0));
 
     const nextLedgers = ledgers.map((ledger) => {
       const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
         ? ledger.tblVoucherLedgerDetails
         : [];
-      if (!details.length) return ledger;
+
+      if (!details.length) {
+        const manualCreditHC = round2(toNum(ledger?.creditAmount));
+        const manualCreditFC = round2(toNum(ledger?.creditAmountFc));
+        const manualDebitHC = round2(toNum(ledger?.debitAmount));
+        const manualDebitFC = round2(toNum(ledger?.debitAmountFc));
+
+        remainingHC = round2(remainingHC - manualCreditHC + manualDebitHC);
+        remainingFC = round2(remainingFC - manualCreditFC + manualDebitFC);
+
+        return {
+          ...ledger,
+          isChildChecked: false,
+        };
+      }
+
+      let isChildChecked = false;
+
       const nextDetails = details.map((row) => {
         const isChecked = !!row?.isChecked;
-        console.log("ROw", row, isChecked);
         if (isChecked) {
-          ledger.isChildChecked = true;
-        }
-        const curBalHC = toNum(row?.balanceAmount);
-        const curBalFC = toNum(row?.balanceAmountFc);
-
-        const origBalHC =
-          row?.__origBalHC != null ? toNum(row.__origBalHC) : curBalHC;
-        const origBalFC =
-          row?.__origBalFC != null ? toNum(row.__origBalFC) : curBalFC;
-
-        // ✅ NEGATIVE FIRST (permanent flag)
-        const isNegNow = curBalHC < 0 || curBalFC < 0;
-        if (isNegNow) {
-          addAbsToParentIfChecked(isChecked, curBalHC, curBalFC);
-
-          const absHC = Math.abs(curBalHC);
-          const absFC = Math.abs(curBalFC);
-
-          if (isChecked) {
-            payHC = payHC + absHC;
-            payFC = payFC + absFC;
-            return {
-              ...row,
-              __isNegRow: true,
-              __origBalHC: origBalHC,
-              __origBalFC: origBalFC,
-              debitAmount: asStr2(absHC),
-              debitAmountFc: asStr2(absFC),
-              creditAmount: "0.00",
-              creditAmountFc: "0.00",
-              balanceAmount: asNum2(0),
-              balanceAmountFc: asNum2(0),
-            };
-          }
-          return {
-            ...row,
-            __isNegRow: true,
-            __origBalHC: origBalHC,
-            __origBalFC: origBalFC,
-            debitAmount: "0.00",
-            debitAmountFc: "0.00",
-            creditAmount: "0.00",
-            creditAmountFc: "0.00",
-            balanceAmount: asNum2(origBalHC),
-            balanceAmountFc: asNum2(origBalFC),
-          };
+          isChildChecked = true;
         }
 
-        const wasNeg = !!row?.__isNegRow;
+        const origBalHC = normalizeOriginalBalance({
+          originalValue: row?.__origBalHC,
+          balanceValue: row?.balanceAmount,
+          creditValue: row?.creditAmount,
+          debitValue: row?.debitAmount,
+        });
+        const origBalFC = normalizeOriginalBalance({
+          originalValue: row?.__origBalFC,
+          balanceValue: row?.balanceAmountFc,
+          creditValue: row?.creditAmountFc,
+          debitValue: row?.debitAmountFc,
+        });
 
-        // non-negative unchecked
+        const isNegativeRow = origBalHC < 0 || origBalFC < 0;
+
         if (!isChecked) {
           return {
             ...row,
-            __isNegRow: wasNeg,
+            __isNegRow: isNegativeRow,
             __origBalHC: origBalHC,
             __origBalFC: origBalFC,
             debitAmount: "0.00",
@@ -2864,115 +3315,59 @@ export default function AddEditFormControll() {
             balanceAmountFc: asNum2(origBalFC),
           };
         }
-        // checked non-negative => allocate based on original balance
-        const baseBalHC = curBalHC;
-        const baseBalFC = curBalFC;
 
-        const existingHC = toNum(row?.creditAmount);
-        const existingFC = toNum(row?.creditAmountFc);
+        let debitHC = 0;
+        let debitFC = 0;
+        let creditHC = 0;
+        let creditFC = 0;
+        let balanceHC = origBalHC;
+        let balanceFC = origBalFC;
 
-        const keepHC =
-          existingHC > 0 ? clamp0(Math.min(existingHC, baseBalHC)) : 0;
-        const keepFC =
-          existingFC > 0 ? clamp0(Math.min(existingFC, baseBalFC)) : 0;
+        if (origBalHC < 0) {
+          debitHC = round2(Math.abs(origBalHC));
+          balanceHC = 0;
+          remainingHC = round2(remainingHC + debitHC);
+        } else if (origBalHC > 0) {
+          creditHC = clamp0(Math.min(remainingHC, origBalHC));
+          balanceHC = round2(origBalHC - creditHC);
+          remainingHC = round2(remainingHC - creditHC);
+        }
 
-        sumCheckedHC = round2(sumCheckedHC + keepHC);
-        sumCheckedFC = round2(sumCheckedFC + keepFC);
-        console.log("row alloc", { keepHC, keepFC, sumCheckedHC, sumCheckedFC });
-
-        const rawBalHC = baseBalHC - keepHC;
-        const rawBalFC = baseBalFC - keepFC;
-
-        payHC = round2(payHC - keepHC);
-        payFC = round2(payFC - keepFC);
+        if (origBalFC < 0) {
+          debitFC = round2(Math.abs(origBalFC));
+          balanceFC = 0;
+          remainingFC = round2(remainingFC + debitFC);
+        } else if (origBalFC > 0) {
+          creditFC = clamp0(Math.min(remainingFC, origBalFC));
+          balanceFC = round2(origBalFC - creditFC);
+          remainingFC = round2(remainingFC - creditFC);
+        }
 
         return {
           ...row,
-          __isNegRow: wasNeg,
+          __isNegRow: isNegativeRow,
           __origBalHC: origBalHC,
           __origBalFC: origBalFC,
-          debitAmount: row?.debitAmount ?? "0.00",
-          debitAmountFc: row?.debitAmountFc ?? "0.00",
-          creditAmount: keepHC > 0 ? asStr2(keepHC) : "", // blank => pass2 fill
-          creditAmountFc: keepFC > 0 ? asStr2(keepFC) : "",
-          balanceAmount: asNum2(rawBalHC),
-          balanceAmountFc: asNum2(rawBalFC),
+          debitAmount: asStr2(debitHC),
+          debitAmountFc: asStr2(debitFC),
+          creditAmount: asStr2(creditHC),
+          creditAmountFc: asStr2(creditFC),
+          balanceAmount: asNum2(balanceHC),
+          balanceAmountFc: asNum2(balanceFC),
         };
       });
-
-      return { ...ledger, tblVoucherLedgerDetails: nextDetails };
-    });
-
-    // let remHC = clamp0(newState?.balanceAmtHc - sumCheckedHC);
-    // let remFC = clamp0(newState?.balanceAmtFc - sumCheckedFC);
-
-    let remHC = clamp0(payHC - sumCheckedHC);
-    let remFC = clamp0(payFC - sumCheckedFC);
-
-    const filledLedgers = nextLedgers.map((ledger) => {
-      const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
-        ? ledger.tblVoucherLedgerDetails
-        : [];
-      if (!details.length) return ledger;
-
-      const nextDetails = details.map((row) => {
-        debugger;
-        if (!row?.isChecked) return row;
-
-        if (row?.__isNegRow) return row;
-
-        const curBalHC = toNum(row?.balanceAmount);
-        const curBalFC = toNum(row?.balanceAmountFc);
-        if (curBalHC < 0 || curBalFC < 0) return row;
-
-        const origBalHC =
-          row?.__origBalHC != null ? toNum(row.__origBalHC) : curBalHC;
-        const origBalFC =
-          row?.__origBalFC != null ? toNum(row.__origBalFC) : curBalFC;
-
-        const existingHC = toNum(row?.creditAmount);
-        const existingFC = toNum(row?.creditAmountFc);
-        if (existingHC > 0 || existingFC > 0) return row;
-        console.log("ALLOCATING ROW", remHC, remFC, origBalHC, origBalFC, newState?.balanceAmtHc, newState?.balanceAmtFc);
-        const allocHC = clamp0(Math.min(remHC, origBalHC));
-        const allocFC = clamp0(Math.min(remFC, origBalFC));
-
-        remHC = clamp0(remHC - allocHC);
-        remFC = clamp0(remFC - allocFC);
-
-        const rawBalHC = origBalHC - allocHC;
-        const rawBalFC = origBalFC - allocFC;
-
-        return {
-          ...row,
-          creditAmount: allocHC > 0 ? asStr2(allocHC) : "0.00",
-          creditAmountFc: allocFC > 0 ? asStr2(allocFC) : "0.00",
-          balanceAmount: asNum2(rawBalHC),
-          balanceAmountFc: asNum2(rawBalFC),
-        };
-      });
-
-      return { ...ledger, tblVoucherLedgerDetails: nextDetails };
-    });
-
-    // parent totals
-    const withParentTotals = filledLedgers.map((ledger) => {
-      const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
-        ? ledger.tblVoucherLedgerDetails
-        : [];
 
       const parentCreditHC = round2(
-        details.reduce((sum, r) => sum + toNum(r?.creditAmount), 0)
+        nextDetails.reduce((sum, r) => sum + toNum(r?.creditAmount), 0),
       );
       const parentCreditFC = round2(
-        details.reduce((sum, r) => sum + toNum(r?.creditAmountFc), 0)
+        nextDetails.reduce((sum, r) => sum + toNum(r?.creditAmountFc), 0),
       );
-
       const parentDebitHC = round2(
-        details.reduce((sum, r) => sum + toNum(r?.debitAmount), 0)
+        nextDetails.reduce((sum, r) => sum + toNum(r?.debitAmount), 0),
       );
       const parentDebitFC = round2(
-        details.reduce((sum, r) => sum + toNum(r?.debitAmountFc), 0)
+        nextDetails.reduce((sum, r) => sum + toNum(r?.debitAmountFc), 0),
       );
 
       const prevCreditHC = round2(toNum(ledger?.creditAmount));
@@ -2981,24 +3376,31 @@ export default function AddEditFormControll() {
       const prevDebitFC = round2(toNum(ledger?.debitAmountFc));
 
       const nextCreditHC =
-        !ledger.isChildChecked
+        !isChildChecked
           ? ledger?.creditAmount ?? asStr2(prevCreditHC)
           : asStr2(parentCreditHC);
       const nextCreditFC =
-       !ledger.isChildChecked
+        !isChildChecked
           ? ledger?.creditAmountFc ?? asStr2(prevCreditFC)
           : asStr2(parentCreditFC);
       const nextDebitHC =
-        !ledger.isChildChecked
+        !isChildChecked
           ? ledger?.debitAmount ?? asStr2(prevDebitHC)
           : asStr2(parentDebitHC);
       const nextDebitFC =
-        !ledger.isChildChecked
+        !isChildChecked
           ? ledger?.debitAmountFc ?? asStr2(prevDebitFC)
           : asStr2(parentDebitFC);
 
+      if (!isChildChecked) {
+        remainingHC = round2(remainingHC - toNum(nextCreditHC) + toNum(nextDebitHC));
+        remainingFC = round2(remainingFC - toNum(nextCreditFC) + toNum(nextDebitFC));
+      }
+
       return {
         ...ledger,
+        isChildChecked,
+        tblVoucherLedgerDetails: nextDetails,
         creditAmount: nextCreditHC,
         creditAmountFc: nextCreditFC,
         debitAmount: nextDebitHC,
@@ -3006,71 +3408,45 @@ export default function AddEditFormControll() {
       };
     });
 
-    const totalCredite = withParentTotals.reduce(
-      (sum, ledger) =>
-        sum + toNum(ledger?.creditAmount),
-      0
-    );
-    const totalCreditFC = withParentTotals.reduce(
-      (sum, ledger) =>
-        sum + toNum(ledger?.creditAmountFc),
-      0
+    const nextBalanceAmtHc = asStr2(remainingHC);
+    const nextBalanceAmtFc = asStr2(remainingFC);
+    const nextSnapshot = makeSnapshot(
+      nextLedgers,
+      nextBalanceAmtHc,
+      nextBalanceAmtFc,
     );
 
-    const totalDebitHC = withParentTotals.reduce(
-      (sum, ledger) => sum + toNum(ledger?.debitAmount),
-      0
-    );
-    const totalDebitFC = withParentTotals.reduce(
-      (sum, ledger) => sum + toNum(ledger?.debitAmountFc),
-      0
-    )
-
-
-    const parentBalHC = round2(newState?.amtRec ?? 0) + (totalDebitHC - totalCredite)
-    const parentBalFC = round2(newState?.amtRecFC ?? 0) + (totalDebitFC - totalCreditFC);
-
-    if (DBG) {
-      console.log(`${tag} FINAL`, {
-        payHC,
-        payFC,
-        sumCheckedHC,
-        sumCheckedFC,
-        remHC,
-        remFC,
-        negAddHC,
-        negAddFC,
-        parentBalHC,
-        parentBalFC,
-      });
+    if (nextSnapshot === currentSnapshot || allocPrevRef.current === nextSnapshot) {
+      allocPrevRef.current = nextSnapshot;
+      return;
     }
 
-    // ✅ mark that the next render is from our own setNewState
+    allocPrevRef.current = nextSnapshot;
     allocInternalUpdateRef.current = true;
 
     setNewState((prevState) => {
       const out = Array.isArray(prevState?.tblVoucherLedger)
         ? {
           ...prevState,
-          tblVoucherLedger: withParentTotals.filter((l) => !l?.__virtual),
-          balanceAmtHc: asStr2(parentBalHC),
-          balanceAmtFc: asStr2(parentBalFC),
+          tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
+          balanceAmtHc: nextBalanceAmtHc,
+          balanceAmtFc: nextBalanceAmtFc,
         }
         : {
           ...prevState,
           tblVoucherLedgerDetails:
-            filledLedgers[0]?.tblVoucherLedgerDetails || [],
-          balanceAmtHc: asStr2(parentBalHC),
-          balanceAmtFc: asStr2(parentBalFC),
+            nextLedgers[0]?.tblVoucherLedgerDetails || [],
+          balanceAmtHc: nextBalanceAmtHc,
+          balanceAmtFc: nextBalanceAmtFc,
         };
 
       return out;
     });
-
-    if (DBG) console.log("====================================================================");
   }, [
     newState?.amtRec,
     newState?.amtRecFC,
+    newState?.bankCharges,
+    newState?.tdsAmt,
     JSON.stringify(newState?.tblVoucherLedger),
     JSON.stringify(newState?.tblVoucherLedgerDetails),
   ]);
@@ -3787,6 +4163,24 @@ function ChildAccordianComponent({
   useEffect(() => {
     setIschildAccordionOpen(expandAll);
   }, [expandAll]);
+
+  useEffect(() => {
+    if (section?.tableName !== "tblVoucherLedger") return;
+
+    const showChildTds =
+      newState?.tdsApplicable === true ||
+      newState?.tdsApplicable === "true" ||
+      newState?.tdsApplicable === 1 ||
+      newState?.tdsApplicable === "1";
+
+    if (!showChildTds) {
+      setChildObject((prev) => ({
+        ...prev,
+        tdsAmtHC: 0,
+        tdsAmtFC: 0,
+      }));
+    }
+  }, [newState?.tdsApplicable, section?.tableName]);
   const handleScroll = () => {
     const container = tableRef.current;
     if (container) {

@@ -9,7 +9,14 @@ import React, {
   useCallback,
 } from "react";
 import { useSearchParams } from "next/navigation";
-import { Box, Button, CircularProgress, Paper } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Paper,
+  Stack,
+} from "@mui/material";
 import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 
@@ -27,9 +34,105 @@ import { layoutTemplateForData } from "@/helper/blReport_hybrid_helpers";
 
 const MM_TO_PX = 96 / 25.4;
 
-// ✅ FORCE A4 ALWAYS (match Creator)
+// ✅ default fallback A4
 const A4_W_MM = 210;
 const A4_H_MM = 297;
+
+// ✅ safety guards for preview / pdf memory usage
+const MAX_SAFE_RENDER_PAGES = 100;
+const MAX_SAFE_HTML_CHARS = 8_000_000;
+const MAX_SAFE_PDF_PAGES = 50;
+
+/* =========================================================
+   DEBUG TOGGLES
+   - enable by: ?debug=1 in URL OR localStorage.DEBUG_BL_REPORT=1
+========================================================= */
+
+function getDebugFlag(searchParams) {
+  try {
+    const qp = searchParams?.get("debug");
+    if (qp === "1" || qp === "true") return true;
+  } catch {}
+  try {
+    const ls =
+      typeof window !== "undefined"
+        ? window.localStorage?.getItem("DEBUG_BL_REPORT")
+        : null;
+    if (ls === "1" || ls === "true") return true;
+  } catch {}
+  return false;
+}
+
+function dbgLog(enabled, ...args) {
+  if (!enabled) return;
+  // eslint-disable-next-line no-console
+  console.log(...args);
+}
+function dbgGroup(enabled, title) {
+  if (!enabled) return;
+  // eslint-disable-next-line no-console
+  console.group(title);
+}
+function dbgGroupEnd(enabled) {
+  if (!enabled) return;
+  // eslint-disable-next-line no-console
+  console.groupEnd();
+}
+
+/* =========================================================
+   TEMPLATE CONFIG HELPERS (paper/margin/attachment bands)
+========================================================= */
+
+function getPaperMmFromTpl(tpl) {
+  const w =
+    Number(tpl?.paper?.w ?? tpl?.paper?.width ?? tpl?.w ?? A4_W_MM) || A4_W_MM;
+  const h =
+    Number(tpl?.paper?.h ?? tpl?.paper?.height ?? tpl?.h ?? A4_H_MM) || A4_H_MM;
+  return { w, h };
+}
+
+function getMarginMmFromTpl(tpl) {
+  const m = tpl?.margin || tpl?.margins || {};
+  return {
+    top: Number(m.top ?? m.t ?? 0) || 0,
+    right: Number(m.right ?? m.r ?? 0) || 0,
+    bottom: Number(m.bottom ?? m.b ?? 0) || 0,
+    left: Number(m.left ?? m.l ?? 0) || 0,
+  };
+}
+
+function inferAttachBandsMm(elements, paperMm) {
+  const els = Array.isArray(elements) ? elements : [];
+
+  const headerEls = els.filter(
+    (e) => String(e?.attachBand || "").toLowerCase() === "header",
+  );
+  const footerEls = els.filter(
+    (e) => String(e?.attachBand || "").toLowerCase() === "footer",
+  );
+
+  let attachHeaderMm = 0;
+  if (headerEls.length) {
+    attachHeaderMm = headerEls.reduce((mx, e) => {
+      const bottom = Number(e?.y || 0) + Number(e?.h || 0);
+      return Math.max(mx, bottom);
+    }, 0);
+  }
+
+  let attachFooterMm = 0;
+  if (footerEls.length) {
+    const minY = footerEls.reduce(
+      (mn, e) => Math.min(mn, Number(e?.y || 0)),
+      Number(paperMm?.h || A4_H_MM),
+    );
+    attachFooterMm = Math.max(
+      0,
+      Number(paperMm?.h || A4_H_MM) - Number(minY || 0),
+    );
+  }
+
+  return { attachHeaderMm, attachFooterMm };
+}
 
 /* =========================================================
    TOKEN HELPERS (robust, case-insensitive)
@@ -85,7 +188,6 @@ function getByPath(obj, path) {
     obj?.row,
     obj?.record,
   ];
-
   for (const c of candidates) {
     if (!c) continue;
     const v = tryFrom(c);
@@ -129,10 +231,45 @@ function escapeHtml(s) {
 }
 
 /* =========================================================
+   LAYOUT MESSAGE HELPERS
+========================================================= */
+
+function toStringArray(v) {
+  return Array.isArray(v)
+    ? v.map((x) => String(x || "").trim()).filter(Boolean)
+    : [];
+}
+
+function collectLayoutMessages(tpl) {
+  const warnings = [];
+  const errors = [];
+
+  if (!tpl || typeof tpl !== "object") return { warnings, errors };
+
+  warnings.push(...toStringArray(tpl.__layoutWarnings));
+  errors.push(...toStringArray(tpl.__layoutErrors));
+
+  const pages = Array.isArray(tpl.pages) ? tpl.pages : [];
+  pages.forEach((p, idx) => {
+    const pageLabel = p?.name || p?.id || `Page ${idx + 1}`;
+
+    toStringArray(p?.__layoutWarnings).forEach((msg) => {
+      warnings.push(`${pageLabel}: ${msg}`);
+    });
+
+    toStringArray(p?.__layoutErrors).forEach((msg) => {
+      errors.push(`${pageLabel}: ${msg}`);
+    });
+  });
+
+  return {
+    warnings: Array.from(new Set(warnings)),
+    errors: Array.from(new Set(errors)),
+  };
+}
+
+/* =========================================================
    FIXED TABLE AUTO-GROW (Crystal-like)
-   - For non-repeat tables (normal grid tables)
-   - Auto measures bound cell text and expands row heights
-   - Pushes down following elements; moves overflow to next pages
 ========================================================= */
 
 function isRepeatTableEl(el) {
@@ -141,64 +278,11 @@ function isRepeatTableEl(el) {
   return !!repeat?.enabled && !!repeat?.arrayPath;
 }
 
-function normalizePagesOverflow(pages, paperMm, marginMm) {
-  const top = Number(marginMm?.top || 0);
-  const bottom = Number(marginMm?.bottom || 0);
-  const maxY = Number(paperMm?.h || A4_H_MM) - bottom;
-
-  const out = pages.map((p) => ({ ...p, elements: [...(p.elements || [])] }));
-
-  for (let pi = 0; pi < out.length; pi++) {
-    const page = out[pi];
-    const els = [...(page.elements || [])].sort(
-      (a, b) => Number(a.y) - Number(b.y) || (a.z || 0) - (b.z || 0),
-    );
-
-    const keep = [];
-    const move = [];
-
-    for (const el of els) {
-      const y = Number(el?.y || 0);
-      const h = Number(el?.h || 0);
-      if (y + h > maxY + 0.01 && y > top + 0.01) move.push(el);
-      else keep.push(el);
-    }
-
-    page.elements = keep;
-
-    if (move.length) {
-      // ensure next page
-      if (!out[pi + 1]) {
-        out.push({
-          ...page,
-          id: `${page?.id || "page"}_auto_${pi + 1}`,
-          name: `${page?.name || "Page"} (${pi + 2})`,
-          elements: [],
-        });
-      }
-      const next = out[pi + 1];
-      // stack moved elements from top in same relative order
-      let cursorY = top;
-      const moved = move.map((e) => {
-        const ne = { ...e, y: cursorY };
-        cursorY += Number(e?.h || 0) + 0.1;
-        return ne;
-      });
-      next.elements = [...(next.elements || []), ...moved];
-    }
-  }
-
-  return out;
-}
-
 function applyAutoGrowFixedTablesToTemplate(template, data, opts) {
-  const paperMm = opts?.paperMm || { w: A4_W_MM, h: A4_H_MM };
-  const marginMm = opts?.marginMm || { top: 0, bottom: 0 };
   const measureTextMm = opts?.measureTextMm;
   if (!template || !Array.isArray(template?.pages) || !measureTextMm)
     return template;
 
-  // ✅ local cell-key resolver (Creator may store keys as "r_c", "r,c", "r, c", "r-c", etc.)
   const _normCellKey = (k) => String(k || "").replace(/\s+/g, "");
   const _cellKeyVariants = (r, c) => [
     `${r}_${c}`,
@@ -237,7 +321,7 @@ function applyAutoGrowFixedTablesToTemplate(template, data, opts) {
     for (let i = 0; i < els.length; i++) {
       const el = els[i];
       if (el?.type !== "table") continue;
-      if (isRepeatTableEl(el)) continue; // handled elsewhere
+      if (isRepeatTableEl(el)) continue;
 
       const tmeta = el.table || el.tbl || el.meta || {};
       const rows = Number(tmeta.rows || el.rows || 0);
@@ -246,17 +330,15 @@ function applyAutoGrowFixedTablesToTemplate(template, data, opts) {
 
       const bindings = tmeta.bindings || tmeta.binding || {};
 
-      // Heuristic: auto-grow only if a bound cell has tokens or table explicitly marked.
       let looksVariable = !!tmeta.autoGrow;
-      if (!looksVariable) {
-        for (const k of Object.keys(bindings || {})) {
-          const v = String(bindings?.[k] ?? "");
-          if (v.includes("{{") && v.includes("}}")) {
-            looksVariable = true;
-            break;
-          }
-        }
-      }
+      if (
+        !looksVariable &&
+        bindings &&
+        typeof bindings === "object" &&
+        Object.keys(bindings).length > 0
+      )
+        looksVariable = true;
+
       if (!looksVariable) continue;
 
       const colW =
@@ -281,7 +363,6 @@ function applyAutoGrowFixedTablesToTemplate(template, data, opts) {
       const colMm = isColWAlreadyMm
         ? colW.map((w) => Number(w) || 0)
         : colW.map((w) => ((Number(w) || 0) / totalW) * widthMm);
-
       const rowMmBase = isRowHAlreadyMm
         ? rowH.map((h) => Number(h) || 0)
         : rowH.map((h) => ((Number(h) || 0) / totalH) * heightMm);
@@ -291,13 +372,13 @@ function applyAutoGrowFixedTablesToTemplate(template, data, opts) {
 
       for (let r = 0; r < rows; r++) {
         let maxH = newRowMm[r] || 0;
+
         for (let c = 0; c < cols; c++) {
           const bindSpec = _pickFromMap(bindings, r, c);
-          // bindSpec can be a token string like "{{x}}" or an object like { path, key/columnKey/token, label }
+
           let tokenText = "";
-          if (typeof bindSpec === "string") {
-            tokenText = bindSpec;
-          } else if (bindSpec && typeof bindSpec === "object") {
+          if (typeof bindSpec === "string") tokenText = bindSpec;
+          else if (bindSpec && typeof bindSpec === "object") {
             if (bindSpec.path) {
               const v = getByPath(data, String(bindSpec.path));
               tokenText = v == null ? "" : String(v);
@@ -325,7 +406,9 @@ function applyAutoGrowFixedTablesToTemplate(template, data, opts) {
               "";
             if (direct) tokenText = String(direct);
           }
+
           if (!tokenText) continue;
+
           const resolved = applyTokens(tokenText, data, {
             keepMissingTokens: false,
           });
@@ -353,16 +436,17 @@ function applyAutoGrowFixedTablesToTemplate(template, data, opts) {
             data,
           });
 
-          // include vertical padding (top+bottom)
           const padMm = (cellPad * 2) / MM_TO_PX;
           const need = Math.max(0, measured + padMm);
           if (need > maxH) maxH = need;
         }
+
         newRowMm[r] = maxH;
       }
 
       const newH = newRowMm.reduce((a, b) => a + (Number(b) || 0), 0) || el.h;
       const delta = newH - Number(el.h || 0);
+
       if (delta > 0.01) {
         el.h = newH;
         el.table = {
@@ -381,10 +465,12 @@ function applyAutoGrowFixedTablesToTemplate(template, data, opts) {
     page.elements = els;
   }
 
-  // NOTE: Do NOT paginate/stack here. We only grow fixed tables and push-down.
-  // Full pagination is handled later (repeat-table flow + final overflow pass) to preserve sequence.
   return { ...template, pages };
 }
+
+/* =========================================================
+   ALIGN / STYLE NORMALIZERS
+========================================================= */
 
 function vAlignToAlignItems(vAlign) {
   const v = String(vAlign || "").toLowerCase();
@@ -398,7 +484,6 @@ function hAlignToJustify(textAlign) {
   if (a === "right" || a === "end") return "flex-end";
   return "flex-start";
 }
-
 function normalizeTextAlign(v) {
   const raw = (v ?? "").toString().trim().toLowerCase();
   if (!raw) return "left";
@@ -407,12 +492,10 @@ function normalizeTextAlign(v) {
   if (raw === "centre") return "center";
   if (raw === "middle") return "center";
   if (["left", "right", "center", "justify"].includes(raw)) return raw;
-  // sometimes stored as flex-like values
   if (raw === "flex-start") return "left";
   if (raw === "flex-end") return "right";
   return "left";
 }
-
 function normalizeHAlign(align) {
   const a = String(align ?? "left")
     .trim()
@@ -425,7 +508,6 @@ function normalizeHAlign(align) {
   if (a === "center" || a === "right" || a === "left") return a;
   return "left";
 }
-
 function normalizeVAlign(v) {
   const raw = (v ?? "").toString().trim().toLowerCase();
   if (!raw) return "top";
@@ -434,7 +516,6 @@ function normalizeVAlign(v) {
   if (["top", "middle", "bottom"].includes(raw)) return raw;
   return "top";
 }
-
 function cssFromStyle(s = {}) {
   const fontSize = Number(s.fontSize ?? 10);
   const fontFamily = s.fontFamily || "Arial, Helvetica, sans-serif";
@@ -452,7 +533,6 @@ function cssFromStyle(s = {}) {
 
   const letterSpacing =
     s.letterSpacing != null ? `${Number(s.letterSpacing)}px` : "normal";
-
   const italic = s.italic ? "italic" : "normal";
   const underline = s.underline ? "underline" : "none";
 
@@ -479,134 +559,585 @@ function cssFromStyle(s = {}) {
 
 /* =========================================================
    MULTI-PAGE NORMALIZER
-
-/* =========================================================
-   TABLE CELL RENDER HELPERS (BL Creator compatible)
-   - Outer wrapper handles vertical alignment
-   - Inner wrapper handles horizontal text-align (reliable in HTML tables)
-   - Supports cell value being a nested text-element object: { type:"text", text, style }
 ========================================================= */
 
-function isElementLike(v) {
-  return (
-    v &&
-    typeof v === "object" &&
-    typeof v.type === "string" &&
-    ["text", "image", "box", "lineh", "linev", "line", "table"].includes(
-      String(v.type).toLowerCase(),
-    )
-  );
-}
-
-function renderCellInnerHtml({
-  text = "",
-  sMerged = {},
-  align = "left",
-  vAlign = "top",
-}) {
-  const pad = sMerged.padding ?? 0;
-
-  // outer: vertical alignment only
-  const outerCss = `
-    width:100%;
-    height:100%;
-    box-sizing:border-box;
-    display:flex;
-    align-items:${vAlignToAlignItems(vAlign)};
-    overflow:hidden;
-  `;
-
-  // inner: horizontal alignment via text-align (reliable)
-  const innerCss = `
-    width:100%;
-    max-height:100%;
-    overflow:hidden;
-    box-sizing:border-box;
-    white-space:pre-wrap;
-    word-break:break-word;
-    text-align:${align};
-    ${cssFromStyle({
-      ...sMerged,
-      textAlign: align,
-      align,
-      vAlign,
-      verticalAlign: vAlign,
-      padding: pad,
-      bg: "transparent",
-      borderWidth: 0,
-    })}
-  `;
-
-  return `<div style="${outerCss}"><div style="${innerCss}">${escapeHtml(text)}</div></div>`;
-}
-
-function renderCellContentHtml({ cell, resolvedText, baseStyle, data }) {
-  // If creator stored a nested element object inside the cell, honor its style (especially align)
-  if (isElementLike(cell) && String(cell.type).toLowerCase() === "text") {
-    const cellStyle = {
-      ...(baseStyle || {}),
-      ...(cell.style || {}),
-      ...(cell.css || {}),
-    };
-    const align = normalizeTextAlign(pickTextAlign(cellStyle) ?? "left");
-    const vAlign = normalizeVAlign(pickVAlign(cellStyle) ?? "top");
-
-    const rawText = cell.text ?? cell.value ?? cell.label ?? resolvedText ?? "";
-
-    const resolved = applyTokens(String(rawText), data || {}, {
-      keepMissingTokens: false,
-    });
-    const safe = isUnresolvedTokenString(resolved) ? "" : resolved;
-
-    return renderCellInnerHtml({
-      text: safe,
-      sMerged: cellStyle,
-      align,
-      vAlign,
-    });
-  }
-
-  // Default: render resolved text using the computed style
-  const align = normalizeTextAlign(pickTextAlign(baseStyle) ?? "left");
-  const vAlign = normalizeVAlign(pickVAlign(baseStyle) ?? "top");
-  return renderCellInnerHtml({
-    text: resolvedText ?? "",
-    sMerged: baseStyle || {},
-    align,
-    vAlign,
-  });
-}
-
 function normalizePages(tpl) {
+  const paperMm = getPaperMmFromTpl(tpl);
+
   if (Array.isArray(tpl?.pages) && tpl.pages.length > 0) {
-    return tpl.pages.map((p, idx) => ({
-      key: p?.id || `p_${idx}`,
-      name: p?.name || `Page ${idx + 1}`,
-      wMm: A4_W_MM,
-      hMm: A4_H_MM,
-      // ✅ keep attachment bands if present (produced by hybrid layout helper)
-      attachHeaderMm: Number(p?.attachHeaderMm || 0),
-      attachFooterMm: Number(p?.attachFooterMm || 0),
-      elements: Array.isArray(p?.elements) ? p.elements : [],
-    }));
+    return tpl.pages.map((p, idx) => {
+      const elements = Array.isArray(p?.elements) ? p.elements : [];
+      const inferred = inferAttachBandsMm(elements, paperMm);
+
+      return {
+        key: p?.id || `p_${idx}`,
+        id: p?.id || `p_${idx}`,
+        name: p?.name || `Page ${idx + 1}`,
+        wMm: paperMm.w,
+        hMm: paperMm.h,
+        attachHeaderMm: Number(
+          p?.attachHeaderMm ?? inferred.attachHeaderMm ?? 0,
+        ),
+        attachFooterMm: Number(
+          p?.attachFooterMm ?? inferred.attachFooterMm ?? 0,
+        ),
+        elements,
+      };
+    });
   }
+
+  const rootEls = Array.isArray(tpl?.elements) ? tpl.elements : [];
+  const inferred = inferAttachBandsMm(rootEls, paperMm);
 
   return [
     {
       key: "main",
+      id: "main",
       name: "Main",
-      wMm: A4_W_MM,
-      hMm: A4_H_MM,
-      attachHeaderMm: Number(tpl?.attachHeaderMm || 0),
-      attachFooterMm: Number(tpl?.attachFooterMm || 0),
-      elements: Array.isArray(tpl?.elements) ? tpl.elements : [],
+      wMm: paperMm.w,
+      hMm: paperMm.h,
+      attachHeaderMm: Number(
+        tpl?.attachHeaderMm ?? inferred.attachHeaderMm ?? 0,
+      ),
+      attachFooterMm: Number(
+        tpl?.attachFooterMm ?? inferred.attachFooterMm ?? 0,
+      ),
+      elements: rootEls,
     },
   ];
 }
 
 /* =========================================================
-   TABLE RESOLUTION (binding aware)
+   DEBUG HELPERS
 ========================================================= */
+
+function debugDumpPages(debug, tpl, label) {
+  if (!debug || !tpl) return;
+  const pages = normalizePages(tpl);
+  dbgGroup(debug, `🧾 [BLReport DEBUG] ${label} | pages=${pages.length}`);
+  pages.forEach((p, i) => {
+    const els = (p.elements || [])
+      .slice()
+      .sort((a, b) => Number(a.y || 0) - Number(b.y || 0));
+    const tables = els.filter((e) => e?.type === "table");
+    const lines = els.filter((e) =>
+      String(e?.type || "")
+        .toLowerCase()
+        .includes("line"),
+    );
+    dbgLog(
+      debug,
+      `Page#${i + 1} id=${p.id} name=${p.name} attachHeaderMm=${p.attachHeaderMm} attachFooterMm=${p.attachFooterMm} els=${els.length} tables=${tables.length} lines=${lines.length}`,
+    );
+    tables.slice(0, 20).forEach((t) => {
+      dbgLog(debug, "  table:", {
+        id: t.id,
+        x: t.x,
+        y: t.y,
+        w: t.w,
+        h: t.h,
+        neighbors: t.neighbors,
+      });
+    });
+  });
+  dbgGroupEnd(debug);
+}
+
+function debugAnalyzeTableSnapping(
+  debug,
+  tpl,
+  gapTolMm = 3,
+  overlapRatio = 0.6,
+) {
+  if (!debug || !tpl) return;
+
+  const pages = normalizePages(tpl);
+  dbgGroup(debug, `🧷 [BLReport DEBUG] Snap analysis (gapTol=${gapTolMm}mm)`);
+  pages.forEach((p, pi) => {
+    const els = (p.elements || [])
+      .slice()
+      .sort((a, b) => Number(a.y || 0) - Number(b.y || 0));
+    const tables = els.filter((e) => e?.type === "table");
+    if (tables.length < 2) return;
+
+    for (let i = 0; i < tables.length; i++) {
+      const a = tables[i];
+      const aBottom = Number(a.y || 0) + Number(a.h || 0);
+
+      let best = null;
+      for (let j = 0; j < tables.length; j++) {
+        if (j === i) continue;
+        const b = tables[j];
+        const gap = Number(b.y || 0) - aBottom;
+        if (gap < -0.001) continue;
+        if (best == null || gap < best.gap) best = { b, gap };
+      }
+      if (!best) continue;
+
+      const b = best.b;
+      const gap = best.gap;
+
+      const aX = Number(a.x || 0),
+        aW = Number(a.w || 0);
+      const bX = Number(b.x || 0),
+        bW = Number(b.w || 0);
+
+      const overlap = Math.min(aX + aW, bX + bW) - Math.max(aX, bX);
+      const minW = Math.min(aW, bW) || 1;
+      const okOverlap = overlap >= minW * overlapRatio;
+
+      if (gap <= gapTolMm && okOverlap) {
+        dbgLog(debug, `Page#${pi + 1} SNAP-CANDIDATE a=${a.id} -> b=${b.id}`, {
+          aBottom,
+          bY: b.y,
+          gap,
+          overlap,
+          aRect: { x: aX, w: aW, y: a.y, h: a.h },
+          bRect: { x: bX, w: bW, y: b.y, h: b.h },
+        });
+      }
+    }
+  });
+  dbgGroupEnd(debug);
+}
+
+function debugNeighborGraph(debug, tpl) {
+  if (!debug || !tpl) return;
+  const pages = normalizePages(tpl);
+
+  dbgGroup(debug, "🔗 [BLReport DEBUG] Neighbors audit");
+  pages.forEach((p, pi) => {
+    const byId = new Map();
+    (p.elements || []).forEach((e) => e?.id && byId.set(e.id, e));
+
+    (p.elements || [])
+      .filter((e) => e?.neighbors)
+      .slice(0, 200)
+      .forEach((e) => {
+        const n = e.neighbors || {};
+        const refs = ["topId", "bottomId", "leftId", "rightId"]
+          .filter((k) => n[k])
+          .map((k) => ({ k, id: n[k], exists: byId.has(n[k]) }));
+
+        if (refs.some((r) => r.exists === false)) {
+          dbgLog(
+            debug,
+            `Page#${pi + 1} element=${e.id} has broken neighbor refs`,
+            refs,
+          );
+        }
+      });
+  });
+  dbgGroupEnd(debug);
+}
+
+/* =========================================================
+   OPTIONAL SNAP PASS
+========================================================= */
+
+const APPLY_SNAP_TOUCHING_TABLES = false;
+
+function snapTouchingTables(tpl, gapToleranceMm = 2) {
+  const out = JSON.parse(JSON.stringify(tpl));
+  const pages = normalizePages(out);
+
+  pages.forEach((p) => {
+    const els = Array.isArray(p.elements) ? p.elements : [];
+    const tables = els.filter((e) => e?.type === "table");
+    if (tables.length < 2) return;
+
+    const updated = els.slice();
+
+    for (let i = 0; i < tables.length; i++) {
+      for (let j = 0; j < tables.length; j++) {
+        if (i === j) continue;
+
+        const a = tables[i];
+        const b = tables[j];
+
+        const aX = Number(a.x || 0),
+          aY = Number(a.y || 0);
+        const aW = Number(a.w || 0),
+          aH = Number(a.h || 0);
+        const bX = Number(b.x || 0),
+          bY = Number(b.y || 0);
+        const bW = Number(b.w || 0);
+
+        const aBottom = aY + aH;
+
+        const gap = bY - aBottom;
+        if (gap < 0 || gap > gapToleranceMm) continue;
+
+        const overlap = Math.min(aX + aW, bX + bW) - Math.max(aX, bX);
+        if (overlap < Math.min(aW, bW) * 0.6) continue;
+
+        const snappedY = aBottom;
+        if (Math.abs(snappedY - bY) > 0.001) {
+          const idx = updated.findIndex((x) => x?.id === b.id);
+          if (idx >= 0) updated[idx] = { ...b, y: snappedY };
+        }
+      }
+    }
+
+    if (Array.isArray(out.pages)) {
+      const realPage = out.pages.find((pp) => (pp?.id || "") === p.id);
+      if (realPage) realPage.elements = updated;
+    } else {
+      out.elements = updated;
+    }
+  });
+
+  return out;
+}
+
+/* =========================================================
+   REPEAT TABLE FLOW (array tables across pages)
+========================================================= */
+
+function isRepeatTableElement(el) {
+  const tmeta = el?.table || el?.tbl || el?.meta || {};
+  const repeat = tmeta?.repeat || {};
+  return (
+    el?.type === "table" &&
+    repeat?.enabled === true &&
+    !!repeat?.arrayPath &&
+    Array.isArray(repeat?.columns) &&
+    repeat.columns.length > 0
+  );
+}
+
+function resolveRepeatTableColumns(repeat, firstRowObj) {
+  const colsRaw = Array.isArray(repeat?.columns) ? repeat.columns : [];
+  if (colsRaw.length) {
+    return colsRaw
+      .map((c) => ({
+        key: String(c?.key ?? "").trim(),
+        label: c?.label ?? c?.key ?? "",
+        align: c?.align ?? "left",
+        widthMm: c?.widthMm ?? null,
+      }))
+      .filter((c) => c.key);
+  }
+  if (firstRowObj && typeof firstRowObj === "object") {
+    return Object.keys(firstRowObj)
+      .slice(0, 8)
+      .map((k) => ({ key: k, label: k, align: "left", widthMm: null }));
+  }
+  return [];
+}
+
+function buildRepeatPrintChunk({
+  el,
+  repeat,
+  colsDef,
+  chunkRows,
+  chunkIndex = 0,
+}) {
+  const header = colsDef.map((c) => String(c.label ?? c.key ?? ""));
+  const body = chunkRows.map((rowObj, idx) =>
+    colsDef.map((c) => {
+      if (c.key === "__index__") return String(idx + 1);
+      const v = getByPath(rowObj || {}, String(c.key || ""));
+      if (v == null) return "";
+      if (typeof v === "object") {
+        try {
+          return JSON.stringify(v);
+        } catch {
+          return String(v);
+        }
+      }
+      return String(v);
+    }),
+  );
+
+  const headerH = Number(repeat.headerHeightMm ?? 7) || 7;
+  const bodyH = Number(repeat.rowHeightMm ?? 6) || 6;
+  const h = headerH + body.length * bodyH;
+
+  const tmeta = el.table || el.tbl || el.meta || {};
+  const nextTable = {
+    ...tmeta,
+    __repeatBaseId: el.id,
+    repeatPrint: { header, body, columns: colsDef },
+    repeat: { ...repeat, enabled: false },
+  };
+
+  const baseId = el.id || "repeatTable";
+  const chunkId = `${baseId}__chunk_${chunkIndex}`;
+
+  return { ...el, id: chunkId, __repeatBaseId: baseId, h, table: nextTable };
+}
+
+function ensurePageObject(pages, idx, basePage) {
+  while (pages.length <= idx) {
+    pages.push({
+      ...basePage,
+      id: `${basePage?.id || "page"}_auto_${idx}`,
+      name: `${basePage?.name || "Page"} ${idx + 1}`,
+      elements: [],
+    });
+  }
+}
+
+function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
+  const debug = !!opts.debug;
+  if (!tpl) return tpl;
+
+  const paperMm = opts.paperMm || { w: A4_W_MM, h: A4_H_MM };
+  const marginMm = opts.marginMm || { top: 0, bottom: 0 };
+
+  const getBodyBand = (page) => {
+    const attachHeaderMm = Number(page?.attachHeaderMm || 0);
+    const attachFooterMm = Number(page?.attachFooterMm || 0);
+    const bodyTop = Number(marginMm.top || 0) + attachHeaderMm;
+    const bodyBottom =
+      Number(paperMm.h || A4_H_MM) -
+      Number(marginMm.bottom || 0) -
+      attachFooterMm;
+    const bodyHeight = Math.max(0, bodyBottom - bodyTop);
+    return { attachHeaderMm, attachFooterMm, bodyTop, bodyBottom, bodyHeight };
+  };
+
+  const paginateOverflowElementsOnPageBody = (page) => {
+    const { bodyTop, bodyBottom } = getBodyBand(page);
+
+    const els = Array.isArray(page.elements) ? page.elements : [];
+    const stay = [];
+    const overflow = [];
+
+    for (const el of els) {
+      if (!el) continue;
+
+      const band = String(el.attachBand || "").toLowerCase();
+      if (band === "header" || band === "footer") {
+        stay.push(el);
+        continue;
+      }
+
+      const y = Number(el.y || 0);
+      const h = Number(el.h || 0);
+      const bottom = y + h;
+
+      if (bottom > bodyBottom + 0.001) overflow.push(el);
+      else stay.push(el);
+    }
+
+    page.elements = stay;
+
+    let cursorY = bodyTop;
+    const gap = 0.2;
+    const moved = overflow.map((el) => {
+      const ne = { ...el, y: cursorY };
+      cursorY += Number(ne.h || 0) + gap;
+      return ne;
+    });
+
+    if (debug && overflow.length) {
+      dbgLog(debug, "[FLOW][OVERFLOW->NEXT]", {
+        pageId: page.id,
+        bodyTop,
+        bodyBottom,
+        moved: moved.map((m) => ({ id: m.id, y: m.y, h: m.h })),
+      });
+    }
+
+    return moved;
+  };
+
+  const pages = normalizePages(tpl).map((p) => ({
+    ...p,
+    elements: (Array.isArray(p.elements) ? p.elements : []).map((e) => ({
+      ...e,
+    })),
+  }));
+
+  for (let pIndex = 0; pIndex < pages.length; pIndex++) {
+    const page = pages[pIndex];
+
+    let els = Array.isArray(page.elements) ? page.elements : [];
+    els = [...els].sort(
+      (a, b) =>
+        Number(a.y || 0) - Number(b.y || 0) ||
+        Number(a.z || 0) - Number(b.z || 0),
+    );
+
+    const rebuilt = [];
+    for (let i = 0; i < els.length; i++) {
+      const el = els[i];
+
+      if (!isRepeatTableElement(el)) {
+        rebuilt.push(el);
+        continue;
+      }
+
+      const tmeta = el.table || el.tbl || el.meta || {};
+      const repeat = tmeta.repeat || {};
+      const arrVal = getByPath(data, String(repeat.arrayPath || ""));
+      const arr = Array.isArray(arrVal) ? arrVal : [];
+
+      const colsDef = resolveRepeatTableColumns(repeat, arr[0]);
+      if (!colsDef.length) {
+        rebuilt.push(el);
+        continue;
+      }
+
+      const headerH = Number(repeat.headerHeightMm ?? 7) || 7;
+      const bodyH = Number(repeat.rowHeightMm ?? 6) || 6;
+
+      const { bodyTop, bodyBottom, bodyHeight } = getBodyBand(page);
+
+      const availableMm = bodyBottom - Number(el.y || 0);
+      const maxBodyRowsHere = Math.max(
+        0,
+        Math.floor((availableMm - headerH) / bodyH),
+      );
+
+      if (debug) {
+        dbgLog(debug, "[FLOW][REPEAT]", {
+          pageId: page.id,
+          elId: el.id,
+          y: el.y,
+          h: el.h,
+          bodyTop,
+          bodyBottom,
+          availableMm,
+          headerH,
+          bodyH,
+          maxBodyRowsHere,
+          totalRows: arr.length,
+        });
+      }
+
+      if (maxBodyRowsHere <= 0) {
+        ensurePageObject(pages, pIndex + 1, page);
+        const nb = getBodyBand(pages[pIndex + 1]);
+        pages[pIndex + 1].elements.push({ ...el, y: nb.bodyTop });
+
+        if (debug) {
+          dbgLog(debug, "[FLOW][MOVE-WHOLE-TABLE]", {
+            fromPage: page.id,
+            toPage: pages[pIndex + 1].id,
+            elId: el.id,
+            newY: nb.bodyTop,
+          });
+        }
+        continue;
+      }
+
+      const chunks = [];
+      let start = 0;
+      while (start < arr.length) {
+        const cap =
+          chunks.length === 0
+            ? maxBodyRowsHere
+            : Math.max(
+                1,
+                Math.floor((Math.max(0, bodyHeight) - headerH) / bodyH),
+              );
+        chunks.push(arr.slice(start, start + cap));
+        start += cap;
+      }
+      if (!chunks.length) chunks.push([]);
+
+      const originalRepeatId = el?.id;
+
+      const firstChunkEl = buildRepeatPrintChunk({
+        el,
+        repeat,
+        colsDef,
+        chunkRows: chunks[0],
+        chunkIndex: 0,
+      });
+
+      rebuilt.push(firstChunkEl);
+
+      if (originalRepeatId) {
+        const newId = firstChunkEl.id;
+        for (let j = i + 1; j < els.length; j++) {
+          const n = els[j]?.neighbors;
+          if (!n) continue;
+
+          const nn = { ...n };
+          if (nn.topId === originalRepeatId) nn.topId = newId;
+          if (nn.bottomId === originalRepeatId) nn.bottomId = newId;
+          if (nn.leftId === originalRepeatId) nn.leftId = newId;
+          if (nn.rightId === originalRepeatId) nn.rightId = newId;
+
+          els[j] = { ...els[j], neighbors: nn };
+        }
+      }
+
+      const delta = Number(firstChunkEl.h || 0) - Number(el.h || 0);
+      if (delta > 0) {
+        for (let j = i + 1; j < els.length; j++) {
+          els[j] = { ...els[j], y: Number(els[j].y || 0) + delta };
+        }
+      }
+
+      for (let c = 1; c < chunks.length; c++) {
+        const targetIdx = pIndex + c;
+        ensurePageObject(pages, targetIdx, page);
+        const nb = getBodyBand(pages[targetIdx]);
+
+        const chunkEl = buildRepeatPrintChunk({
+          el: { ...el, y: nb.bodyTop },
+          repeat,
+          colsDef,
+          chunkRows: chunks[c],
+          chunkIndex: c,
+        });
+
+        pages[targetIdx].elements.push(chunkEl);
+
+        if (debug) {
+          dbgLog(debug, "[FLOW][CHUNK->PAGE]", {
+            baseId: el.id,
+            chunkId: chunkEl.id,
+            targetPage: pages[targetIdx].id,
+            y: chunkEl.y,
+            h: chunkEl.h,
+            rowsInChunk: chunks[c].length,
+          });
+        }
+      }
+    }
+
+    page.elements = rebuilt;
+
+    let overflow = paginateOverflowElementsOnPageBody(page);
+    let nextPageIdx = pIndex + 1;
+
+    while (overflow.length) {
+      ensurePageObject(pages, nextPageIdx, page);
+      pages[nextPageIdx].elements = [
+        ...(pages[nextPageIdx].elements || []),
+        ...overflow,
+      ];
+      overflow = paginateOverflowElementsOnPageBody(pages[nextPageIdx]);
+      nextPageIdx += 1;
+    }
+  }
+
+  return { ...tpl, pages };
+}
+
+/* =========================================================
+   ELEMENT RENDERER (REPORT MODE)
+========================================================= */
+
+function computeColMmScaledToFill(widthMm, colsDef) {
+  const n = Math.max(1, colsDef?.length || 0);
+  const explicitSum = (colsDef || []).reduce(
+    (s, c) => s + (Number(c?.widthMm) || 0),
+    0,
+  );
+
+  if (explicitSum > 0) {
+    const scale = widthMm / explicitSum;
+    return (colsDef || []).map((c) => (Number(c?.widthMm) || 0) * scale);
+  }
+  return Array(n).fill(widthMm / n);
+}
 
 function normalizeCellKey(k) {
   return String(k || "").replace(/\s+/g, "");
@@ -635,7 +1166,6 @@ function pickFromMap(map, r, c) {
   }
   return undefined;
 }
-
 function findMergeAt(merges, r, c) {
   const ms = Array.isArray(merges) ? merges : [];
   for (const m of ms) {
@@ -653,7 +1183,29 @@ function isCoveredByMerge(merges, r, c) {
   if (!m) return false;
   return !(m.r0 === r && m.c0 === c);
 }
-
+function pickTextAlign(obj) {
+  if (!obj) return undefined;
+  return (
+    obj.textAlign ??
+    obj.align ??
+    obj.hAlign ??
+    obj.text_alignment ??
+    obj.textalign ??
+    obj.textAlignValue ??
+    obj.horizontalAlign ??
+    obj.horizontalAlignment
+  );
+}
+function pickVAlign(obj) {
+  if (!obj) return undefined;
+  return (
+    obj.vAlign ??
+    obj.verticalAlign ??
+    obj.valign ??
+    obj.vertical_alignment ??
+    obj.verticalAlignment
+  );
+}
 function resolveCellTextForRender({ tmeta, r, c, data }) {
   const merges = Array.isArray(tmeta?.merges) ? tmeta.merges : [];
   if (isCoveredByMerge(merges, r, c)) return "";
@@ -672,7 +1224,6 @@ function resolveCellTextForRender({ tmeta, r, c, data }) {
     csx.value ??
     csx.label ??
     "";
-
   if (direct) {
     const resolved = applyTokens(String(direct), data, {
       keepMissingTokens: false,
@@ -706,39 +1257,90 @@ function resolveCellTextForRender({ tmeta, r, c, data }) {
   return "";
 }
 
-/* =========================================================
-   TABLE STYLE HELPERS
-   - Creator may store align keys with different names (align/textAlign/text_alignment...)
-========================================================= */
-
-function pickTextAlign(obj) {
-  if (!obj) return undefined;
+function isElementLike(v) {
   return (
-    obj.textAlign ??
-    obj.align ??
-    obj.hAlign ??
-    obj.text_alignment ??
-    obj.textalign ??
-    obj.textAlignValue ??
-    obj.horizontalAlign ??
-    obj.horizontalAlignment
+    v &&
+    typeof v === "object" &&
+    typeof v.type === "string" &&
+    ["text", "image", "box", "lineh", "linev", "line", "table"].includes(
+      String(v.type).toLowerCase(),
+    )
   );
 }
 
-function pickVAlign(obj) {
-  if (!obj) return undefined;
-  return (
-    obj.vAlign ??
-    obj.verticalAlign ??
-    obj.valign ??
-    obj.vertical_alignment ??
-    obj.verticalAlignment
-  );
+function renderCellInnerHtml({
+  text = "",
+  sMerged = {},
+  align = "left",
+  vAlign = "top",
+}) {
+  const pad = sMerged.padding ?? 0;
+
+  const outerCss = `
+    width:100%;
+    height:100%;
+    box-sizing:border-box;
+    display:flex;
+    align-items:${vAlignToAlignItems(vAlign)};
+    overflow:hidden;
+  `;
+
+  const innerCss = `
+    width:100%;
+    max-height:100%;
+    overflow:hidden;
+    box-sizing:border-box;
+    white-space:pre-wrap;
+    word-break:break-word;
+    text-align:${align};
+    ${cssFromStyle({
+      ...sMerged,
+      textAlign: align,
+      align,
+      vAlign,
+      verticalAlign: vAlign,
+      padding: pad,
+      bg: "transparent",
+      borderWidth: 0,
+    })}
+  `;
+
+  return `<div style="${outerCss}"><div style="${innerCss}">${escapeHtml(text)}</div></div>`;
 }
 
-/* =========================================================
-   ELEMENT RENDERER (REPORT MODE)
-========================================================= */
+function renderCellContentHtml({ cell, resolvedText, baseStyle, data }) {
+  if (isElementLike(cell) && String(cell.type).toLowerCase() === "text") {
+    const cellStyle = {
+      ...(baseStyle || {}),
+      ...(cell.style || {}),
+      ...(cell.css || {}),
+    };
+    const align = normalizeTextAlign(pickTextAlign(cellStyle) ?? "left");
+    const vAlign = normalizeVAlign(pickVAlign(cellStyle) ?? "top");
+
+    const rawText = cell.text ?? cell.value ?? cell.label ?? resolvedText ?? "";
+    const resolved = applyTokens(String(rawText), data || {}, {
+      keepMissingTokens: false,
+    });
+    const safe = isUnresolvedTokenString(resolved) ? "" : resolved;
+
+    return renderCellInnerHtml({
+      text: safe,
+      sMerged: cellStyle,
+      align,
+      vAlign,
+    });
+  }
+
+  const align = normalizeTextAlign(pickTextAlign(baseStyle) ?? "left");
+  const vAlign = normalizeVAlign(pickVAlign(baseStyle) ?? "top");
+  return renderCellInnerHtml({
+    text: resolvedText ?? "",
+    sMerged: baseStyle || {},
+    align,
+    vAlign,
+  });
+}
 
 function renderElement(el, data) {
   if (!el || el.hidden) return "";
@@ -769,7 +1371,6 @@ function renderElement(el, data) {
       bw > 0
         ? `${bw}px ${s.borderStyle || "solid"} ${s.borderColor || "#111827"}`
         : "none";
-
     return `
       <img
         src="${el.src || ""}"
@@ -808,7 +1409,7 @@ function renderElement(el, data) {
       max-height:100%;
       overflow:hidden;
       white-space:pre-wrap;
-          text-align:${align};
+      text-align:${align};
       word-break:break-word;
       ${cssFromStyle({ ...s, align, bg: "transparent", borderWidth: 0 })}
     `;
@@ -816,9 +1417,7 @@ function renderElement(el, data) {
     const txt = applyTokens(el.text || "", data, { keepMissingTokens: false });
     const safeTxt = isUnresolvedTokenString(txt) ? "" : txt;
 
-    return `<div style="${wrapCss}"><div style="${innerCss}">${escapeHtml(
-      safeTxt,
-    )}</div></div>`;
+    return `<div style="${wrapCss}"><div style="${innerCss}">${escapeHtml(safeTxt)}</div></div>`;
   }
 
   if (el.type === "box") {
@@ -827,7 +1426,6 @@ function renderElement(el, data) {
       bw > 0
         ? `${bw}px ${s.borderStyle || "solid"} ${s.borderColor || "#000"}`
         : "none";
-
     const boxCss =
       commonBox +
       `
@@ -863,7 +1461,6 @@ function renderElement(el, data) {
     const thickness =
       Number(s.thickness ?? s.strokeWidth ?? s.borderWidth ?? 1) || 1;
     const color = s.color || s.stroke || s.borderColor || "#111827";
-
     const lineCss =
       commonBox +
       `
@@ -880,11 +1477,8 @@ function renderElement(el, data) {
     const tmeta = el.table || el.tbl || el.meta || {};
     const repeat = tmeta.repeat || {};
     const repeatEnabled = !!repeat.enabled && !!repeat.arrayPath;
-
     const repeatPrint = tmeta.repeatPrint;
 
-    // ✅ Chunked repeat-table printing (flow across pages)
-    // When applyRepeatTablesFlowToTemplate() runs, it injects repeatPrint with header/body.
     if (
       repeatPrint &&
       Array.isArray(repeatPrint.header) &&
@@ -900,19 +1494,10 @@ function renderElement(el, data) {
               widthMm: null,
             }));
 
-      const colsCount = Math.max(1, colsDef.length);
-
       const widthMm = Number(el.w || 10);
       const heightMm = Number(el.h || 10);
 
-      const explicitSum = colsDef.reduce(
-        (s, c) => s + (Number(c.widthMm) || 0),
-        0,
-      );
-      const autoW = explicitSum > 0 ? 0 : widthMm / colsCount;
-      const colMm = colsDef.map((c) =>
-        (Number(c.widthMm) || 0) > 0 ? Number(c.widthMm) : autoW,
-      );
+      const colMm = computeColMmScaledToFill(widthMm, colsDef);
 
       const headerH = Number(repeat?.headerHeightMm ?? 7) || 7;
       const bodyH = Number(repeat?.rowHeightMm ?? 6) || 6;
@@ -933,37 +1518,35 @@ function renderElement(el, data) {
         .map((c) => {
           const align = normalizeTextAlign(c.align || "left");
           const tdCss = `
-        border:${gridBW}px solid ${gridBC};
-        background:${tmeta.headerBg || "#e5e7eb"};
-        padding:0;
-        overflow:hidden;
-      `;
+            border:${gridBW}px solid ${gridBC};
+            background:${tmeta.headerBg || "#e5e7eb"};
+            padding:0;
+            overflow:hidden;
+          `;
           const innerCss = `
-        width:100%;
-        height:100%;
-        box-sizing:border-box;
-        display:flex;
-        align-items:center;
-        justify-content:${hAlignToJustify(align)};
-        white-space:pre-wrap;
-        text-align:${align};
-        font-weight:${tmeta.headerFontWeight ?? 700};
-        ${cssFromStyle({
-          fontFamily:
-            (tmeta.style && tmeta.style.fontFamily) ||
-            (el.style && el.style.fontFamily),
-          fontSize: tmeta.headerFontSize ?? tmeta.fontSize ?? 11,
-          fontWeight: tmeta.headerFontWeight ?? 700,
-          color: tmeta.headerColor || "#0f172a",
-          textAlign: align,
-          padding: tmeta.cellPadding ?? 6,
-          bg: "transparent",
-          borderWidth: 0,
-        })}
-      `;
-          return `<td style="${tdCss}"><div style="${innerCss}">${escapeHtml(
-            String(c.label ?? c.key ?? ""),
-          )}</div></td>`;
+            width:100%;
+            height:100%;
+            box-sizing:border-box;
+            display:flex;
+            align-items:center;
+            justify-content:${hAlignToJustify(align)};
+            white-space:pre-wrap;
+            text-align:${align};
+            font-weight:${tmeta.headerFontWeight ?? 700};
+            ${cssFromStyle({
+              fontFamily:
+                (tmeta.style && tmeta.style.fontFamily) ||
+                (el.style && el.style.fontFamily),
+              fontSize: tmeta.headerFontSize ?? tmeta.fontSize ?? 11,
+              fontWeight: tmeta.headerFontWeight ?? 700,
+              color: tmeta.headerColor || "#0f172a",
+              textAlign: align,
+              padding: tmeta.cellPadding ?? 6,
+              bg: "transparent",
+              borderWidth: 0,
+            })}
+          `;
+          return `<td style="${tdCss}"><div style="${innerCss}">${escapeHtml(String(c.label ?? c.key ?? ""))}</div></td>`;
         })
         .join("");
 
@@ -977,39 +1560,36 @@ function renderElement(el, data) {
             const txt = rowArr[ci] == null ? "" : String(rowArr[ci]);
 
             const tdCss = `
-          border:${gridBW}px solid ${gridBC};
-          background:${tmeta.bodyBg || "transparent"};
-          padding:0;
-          vertical-align:${vAlign};
-          overflow:hidden;
-          box-sizing:border-box;
-        `;
+              border:${gridBW}px solid ${gridBC};
+              background:${tmeta.bodyBg || "transparent"};
+              padding:0;
+              vertical-align:${vAlign};
+              overflow:hidden;
+              box-sizing:border-box;
+            `;
             const innerCss = `
-          width:100%;
-          height:100%;
-          box-sizing:border-box;
-          display:flex;
-          align-items:${vAlignToAlignItems(vAlign)};
-          justify-content:${hAlignToJustify(align)};
-          white-space:pre-wrap;
-          text-align:${align};
-          ${cssFromStyle({
-            fontFamily:
-              (tmeta.style && tmeta.style.fontFamily) ||
-              (el.style && el.style.fontFamily),
-            fontSize: tmeta.bodyFontSize ?? tmeta.fontSize ?? 11,
-            fontWeight: tmeta.bodyFontWeight ?? 400,
-            color: tmeta.bodyColor || "#0f172a",
-            textAlign: align,
-            padding: tmeta.cellPadding ?? 6,
-            bg: "transparent",
-            borderWidth: 0,
-          })}
-        `;
-
-            return `<td style="${tdCss}"><div style="${innerCss}">${escapeHtml(
-              txt,
-            )}</div></td>`;
+              width:100%;
+              height:100%;
+              box-sizing:border-box;
+              display:flex;
+              align-items:${vAlignToAlignItems(vAlign)};
+              justify-content:${hAlignToJustify(align)};
+              white-space:pre-wrap;
+              text-align:${align};
+              ${cssFromStyle({
+                fontFamily:
+                  (tmeta.style && tmeta.style.fontFamily) ||
+                  (el.style && el.style.fontFamily),
+                fontSize: tmeta.bodyFontSize ?? tmeta.fontSize ?? 11,
+                fontWeight: tmeta.bodyFontWeight ?? 400,
+                color: tmeta.bodyColor || "#0f172a",
+                textAlign: align,
+                padding: tmeta.cellPadding ?? 6,
+                bg: "transparent",
+                borderWidth: 0,
+              })}
+            `;
+            return `<td style="${tdCss}"><div style="${innerCss}">${escapeHtml(txt)}</div></td>`;
           })
           .join("");
 
@@ -1017,65 +1597,44 @@ function renderElement(el, data) {
       }
 
       return `
-    <div style="
-      ${commonBox}
-      background:${tmeta.bg || "#fff"};
-      overflow:visible;
-    ">
-      <table style="
-        width:100%;
-        height:${heightMm}mm;
-        border-collapse:collapse;
-        table-layout:fixed;
-        box-sizing:border-box;
-        border:${tableBorder};
-      ">
-        <colgroup>${colgroupHtml}</colgroup>
-        <tbody>
-          <tr style="height:${headerH}mm">${headerRow}</tr>
-          ${bodyRowsHtml}
-        </tbody>
-      </table>
-    </div>
-  `;
+        <div style="
+          ${commonBox}
+          background:${tmeta.bg || "#fff"};
+          overflow:visible;
+        ">
+          <table style="
+            width:100%;
+            height:${heightMm}mm;
+            border-collapse:collapse;
+            table-layout:fixed;
+            box-sizing:border-box;
+            border:${tableBorder};
+          ">
+            <colgroup>${colgroupHtml}</colgroup>
+            <tbody>
+              <tr style="height:${headerH}mm">${headerRow}</tr>
+              ${bodyRowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `;
     }
 
-    // ✅ Repeating table (array) rendering for report/print preview
-    // Renders header + as many rows as can fit in the table height.
-    // If more rows exist than fit, last row shows "…".
     if (repeatEnabled) {
       const array = getByPath(data, String(repeat.arrayPath)) || [];
       const arr = Array.isArray(array) ? array : [];
 
-      // columns preference: repeat.columns -> keys from first row
       const repeatColsRaw = Array.isArray(repeat.columns) ? repeat.columns : [];
       const colsDef = repeatColsRaw.length
         ? repeatColsRaw
         : (arr[0] && typeof arr[0] === "object" ? Object.keys(arr[0]) : [])
             .slice(0, 8)
-            .map((k) => ({
-              key: k,
-              label: k,
-              align: "left",
-              widthMm: null,
-            }));
-
-      const colsCount = Math.max(1, colsDef.length);
+            .map((k) => ({ key: k, label: k, align: "left", widthMm: null }));
 
       const widthMm = Number(el.w || 10);
       const heightMm = Number(el.h || 10);
+      const colMm = computeColMmScaledToFill(widthMm, colsDef);
 
-      // Column widths in mm
-      const explicitSum = colsDef.reduce(
-        (s, c) => s + (Number(c.widthMm) || 0),
-        0,
-      );
-      const autoW = explicitSum > 0 ? 0 : widthMm / colsCount;
-      const colMm = colsDef.map((c) =>
-        (Number(c.widthMm) || 0) > 0 ? Number(c.widthMm) : autoW,
-      );
-
-      // Row heights
       const headerH = Number(repeat.headerHeightMm ?? 7) || 7;
       const bodyH = Number(repeat.rowHeightMm ?? 6) || 6;
 
@@ -1101,34 +1660,34 @@ function renderElement(el, data) {
         .map((c) => {
           const align = normalizeTextAlign(c.align || "left");
           const tdCss = `
-        border:${gridBW}px solid ${gridBC};
-        background:${tmeta.headerBg || "#e5e7eb"};
-        padding:0;
-        overflow:hidden;
-      `;
+            border:${gridBW}px solid ${gridBC};
+            background:${tmeta.headerBg || "#e5e7eb"};
+            padding:0;
+            overflow:hidden;
+          `;
           const innerCss = `
-        width:100%;
-        height:100%;
-        box-sizing:border-box;
-        display:flex;
-        align-items:center;
-        justify-content:${hAlignToJustify(align)};
-        white-space:pre-wrap;
-        text-align:${align};
-        font-weight:${tmeta.headerFontWeight ?? 700};
-        ${cssFromStyle({
-          fontFamily:
-            (tmeta.style && tmeta.style.fontFamily) ||
-            (el.style && el.style.fontFamily),
-          fontSize: tmeta.headerFontSize ?? tmeta.fontSize ?? 11,
-          fontWeight: tmeta.headerFontWeight ?? 700,
-          color: tmeta.headerColor || "#0f172a",
-          textAlign: align,
-          padding: tmeta.cellPadding ?? 6,
-          bg: "transparent",
-          borderWidth: 0,
-        })}
-      `;
+            width:100%;
+            height:100%;
+            box-sizing:border-box;
+            display:flex;
+            align-items:center;
+            justify-content:${hAlignToJustify(align)};
+            white-space:pre-wrap;
+            text-align:${align};
+            font-weight:${tmeta.headerFontWeight ?? 700};
+            ${cssFromStyle({
+              fontFamily:
+                (tmeta.style && tmeta.style.fontFamily) ||
+                (el.style && el.style.fontFamily),
+              fontSize: tmeta.headerFontSize ?? tmeta.fontSize ?? 11,
+              fontWeight: tmeta.headerFontWeight ?? 700,
+              color: tmeta.headerColor || "#0f172a",
+              textAlign: align,
+              padding: tmeta.cellPadding ?? 6,
+              bg: "transparent",
+              borderWidth: 0,
+            })}
+          `;
           return `<td style="${tdCss}"><div style="${innerCss}">${escapeHtml(String(c.label ?? c.key ?? ""))}</div></td>`;
         })
         .join("");
@@ -1140,48 +1699,54 @@ function renderElement(el, data) {
           .map((c) => {
             const align = normalizeTextAlign(c.align || "left");
             const vAlign = "top";
-            const val = getByPath(rowObj, String(c.key || "")); // supports nested keys
+            const val = getByPath(rowObj, String(c.key || ""));
             const txt =
               val == null
                 ? ""
                 : typeof val === "object"
-                  ? JSON.stringify(val)
+                  ? (() => {
+                      try {
+                        return JSON.stringify(val);
+                      } catch {
+                        return String(val);
+                      }
+                    })()
                   : String(val);
 
             const tdCss = `
-          border:${gridBW}px solid ${gridBC};
-          background:${tmeta.bodyBg || "transparent"};
-          padding:0;
-          vertical-align:${vAlign};
-          overflow:hidden;
-          box-sizing:border-box;
-        `;
+              border:${gridBW}px solid ${gridBC};
+              background:${tmeta.bodyBg || "transparent"};
+              padding:0;
+              vertical-align:${vAlign};
+              overflow:hidden;
+              box-sizing:border-box;
+            `;
             const innerCss = `
-          width:100%;
-          height:100%;
-          box-sizing:border-box;
-          display:flex;
-          align-items:${vAlignToAlignItems(vAlign)};
-          justify-content:${hAlignToJustify(align)};
-          white-space:pre-wrap;
-          text-align:${align};
-          word-break:break-word;
-          ${cssFromStyle({
-            fontFamily:
-              (tmeta.style && tmeta.style.fontFamily) ||
-              (el.style && el.style.fontFamily),
-            fontSize: tmeta.fontSize ?? 11,
-            fontWeight: tmeta.fontWeight ?? 600,
-            color:
-              (tmeta.style && tmeta.style.color) ||
-              (el.style && el.style.color) ||
-              "#0f172a",
-            textAlign: align,
-            padding: tmeta.cellPadding ?? 6,
-            bg: "transparent",
-            borderWidth: 0,
-          })}
-        `;
+              width:100%;
+              height:100%;
+              box-sizing:border-box;
+              display:flex;
+              align-items:${vAlignToAlignItems(vAlign)};
+              justify-content:${hAlignToJustify(align)};
+              white-space:pre-wrap;
+              text-align:${align};
+              word-break:break-word;
+              ${cssFromStyle({
+                fontFamily:
+                  (tmeta.style && tmeta.style.fontFamily) ||
+                  (el.style && el.style.fontFamily),
+                fontSize: tmeta.fontSize ?? 11,
+                fontWeight: tmeta.fontWeight ?? 600,
+                color:
+                  (tmeta.style && tmeta.style.color) ||
+                  (el.style && el.style.color) ||
+                  "#0f172a",
+                textAlign: align,
+                padding: tmeta.cellPadding ?? 6,
+                bg: "transparent",
+                borderWidth: 0,
+              })}
+            `;
             return `<td style="${tdCss}"><div style="${innerCss}">${escapeHtml(txt)}</div></td>`;
           })
           .join("");
@@ -1191,47 +1756,47 @@ function renderElement(el, data) {
 
       if (willEllipsis && maxBodyRows > 0) {
         const tdCss = `
-      border:${gridBW}px solid ${gridBC};
-      background:${tmeta.bodyBg || "transparent"};
-      padding:0;
-      overflow:hidden;
-    `;
+          border:${gridBW}px solid ${gridBC};
+          background:${tmeta.bodyBg || "transparent"};
+          padding:0;
+          overflow:hidden;
+        `;
         const innerCss = `
-      width:100%;
-      height:100%;
-      box-sizing:border-box;
-      display:flex;
-      align-items:center;
-      justify-content:flex-end;
-      white-space:nowrap;
-      font-weight:700;
-      padding:${Number(tmeta.cellPadding ?? 6)}px;
-    `;
-        bodyRowsHtml += `<tr style="height:${bodyH}mm"><td colspan="${colsCount}" style="${tdCss}"><div style="${innerCss}">…</div></td></tr>`;
+          width:100%;
+          height:100%;
+          box-sizing:border-box;
+          display:flex;
+          align-items:center;
+          justify-content:flex-end;
+          white-space:nowrap;
+          font-weight:700;
+          padding:${Number(tmeta.cellPadding ?? 6)}px;
+        `;
+        bodyRowsHtml += `<tr style="height:${bodyH}mm"><td colspan="${colsDef.length}" style="${tdCss}"><div style="${innerCss}">…</div></td></tr>`;
       }
 
       return `
-    <div style="
-      ${commonBox}
-      background:${tmeta.bg || "#fff"};
-      overflow:visible;
-    ">
-      <table style="
-        width:100%;
-        height:100%;
-        border-collapse:collapse;
-        table-layout:fixed;
-        box-sizing:border-box;
-        border:${tableBorder};
-      ">
-        <colgroup>${colgroupHtml}</colgroup>
-        <tbody>
-          <tr style="height:${headerH}mm">${headerRow}</tr>
-          ${bodyRowsHtml}
-        </tbody>
-      </table>
-    </div>
-  `;
+        <div style="
+          ${commonBox}
+          background:${tmeta.bg || "#fff"};
+          overflow:visible;
+        ">
+          <table style="
+            width:100%;
+            height:100%;
+            border-collapse:collapse;
+            table-layout:fixed;
+            box-sizing:border-box;
+            border:${tableBorder};
+          ">
+            <colgroup>${colgroupHtml}</colgroup>
+            <tbody>
+              <tr style="height:${headerH}mm">${headerRow}</tr>
+              ${bodyRowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `;
     }
 
     const rows = Number(tmeta.rows || el.rows || 0);
@@ -1246,7 +1811,6 @@ function renderElement(el, data) {
       Array.isArray(tmeta.colW) && tmeta.colW.length
         ? tmeta.colW
         : Array(cols).fill(100);
-
     const rowH =
       Array.isArray(tmeta.rowH) && tmeta.rowH.length
         ? tmeta.rowH
@@ -1264,12 +1828,10 @@ function renderElement(el, data) {
     const colMm = isColWAlreadyMm
       ? colW.map((w) => Number(w) || 0)
       : colW.map((w) => ((Number(w) || 0) / totalW) * widthMm);
-
     const rowMm = isRowHAlreadyMm
       ? rowH.map((h) => Number(h) || 0)
       : rowH.map((h) => ((Number(h) || 0) / totalH) * heightMm);
 
-    // ✅ IMPORTANT: outer border on TABLE (not wrapper div) to avoid clipping / missing border lines
     const outerBW = Number(tmeta.borderWidth ?? 1) || 1;
     const outerBC = tmeta.borderColor || "#111827";
     const tableBorder = outerBW > 0 ? `${outerBW}px solid ${outerBC}` : "none";
@@ -1294,7 +1856,6 @@ function renderElement(el, data) {
           null;
         const cellInlineStyle = (cell && (cell.style || cell.css)) || {};
 
-        // Prefer cell-specific style -> cellStyle map -> table style -> element style
         const sMerged = {
           ...(el.style || {}),
           ...(tmeta.style || {}),
@@ -1315,7 +1876,6 @@ function renderElement(el, data) {
         const align = normalizeTextAlign(pickTextAlign(sMerged) ?? "left");
         const vAlign = normalizeVAlign(pickVAlign(sMerged) ?? "top");
 
-        // ✅ grid defaults (fallback to OUTER border color/width if grid not provided)
         const bc = sMerged.borderColor ?? tmeta.gridColor ?? outerBC;
         const bw =
           Number(sMerged.borderWidth ?? tmeta.gridWidth ?? outerBW) || 1;
@@ -1362,7 +1922,7 @@ function renderElement(el, data) {
       <div style="
         ${commonBox}
         background:${tmeta.bg || "#fff"};
-        overflow:visible; /* ✅ don't clip borders */
+        overflow:visible;
       ">
         <table style="
           width:100%;
@@ -1370,7 +1930,7 @@ function renderElement(el, data) {
           border-collapse:collapse;
           table-layout:fixed;
           box-sizing:border-box;
-          border:${tableBorder}; /* ✅ outer border here */
+          border:${tableBorder};
         ">
           <colgroup>${colgroupHtml}</colgroup>
           <tbody>${tbodyHtml}</tbody>
@@ -1384,321 +1944,10 @@ function renderElement(el, data) {
 
 /* =========================================================
    TEMPLATE -> FULL HTML DOCUMENT (MULTI PAGE)
-   ✅ FORCE A4 SIZE (210mm x 297mm)
 ========================================================= */
-
-/* =========================================================
-   REPEAT TABLE FLOW (array tables across pages)
-   - Expands table rows based on data length (not creator rows)
-   - Splits across pages and pushes following elements
-   - Produces chunk elements with table.repeatPrint { header, body, columns }
-========================================================= */
-
-function isRepeatTableElement(el) {
-  const tmeta = el?.table || el?.tbl || el?.meta || {};
-  const repeat = tmeta?.repeat || {};
-  return (
-    el?.type === "table" &&
-    repeat?.enabled === true &&
-    !!repeat?.arrayPath &&
-    Array.isArray(repeat?.columns) &&
-    repeat.columns.length > 0
-  );
-}
-
-function resolveRepeatTableColumns(repeat, firstRowObj) {
-  const colsRaw = Array.isArray(repeat?.columns) ? repeat.columns : [];
-  if (colsRaw.length) {
-    return colsRaw
-      .map((c) => ({
-        key: String(c?.key ?? "").trim(),
-        label: c?.label ?? c?.key ?? "",
-        align: c?.align ?? "left",
-        widthMm: c?.widthMm ?? null,
-      }))
-      .filter((c) => c.key);
-  }
-  if (firstRowObj && typeof firstRowObj === "object") {
-    return Object.keys(firstRowObj)
-      .slice(0, 8)
-      .map((k) => ({
-        key: k,
-        label: k,
-        align: "left",
-        widthMm: null,
-      }));
-  }
-  return [];
-}
-
-function buildRepeatPrintChunk({ el, repeat, colsDef, chunkRows }) {
-  const header = colsDef.map((c) => String(c.label ?? c.key ?? ""));
-  const body = chunkRows.map((rowObj, idx) =>
-    colsDef.map((c) => {
-      if (c.key === "__index__") return String(idx + 1);
-      const v = getByPath(rowObj || {}, String(c.key || ""));
-      if (v == null) return "";
-      if (typeof v === "object") {
-        try {
-          return JSON.stringify(v);
-        } catch {
-          return String(v);
-        }
-      }
-      return String(v);
-    }),
-  );
-
-  const headerH = Number(repeat.headerHeightMm ?? 7) || 7;
-  const bodyH = Number(repeat.rowHeightMm ?? 6) || 6;
-  const h = headerH + body.length * bodyH;
-
-  const tmeta = el.table || el.tbl || el.meta || {};
-  const nextTable = {
-    ...tmeta,
-    // mark as chunk table so renderer uses this instead of fixed grid/ellipsis
-    repeatPrint: { header, body, columns: colsDef },
-    // disable repeat on chunks to avoid recursion
-    repeat: { ...repeat, enabled: false },
-  };
-
-  return {
-    ...el,
-    h,
-    table: nextTable,
-  };
-}
-
-function ensurePageObject(pages, idx, basePage) {
-  while (pages.length <= idx) {
-    pages.push({
-      ...basePage,
-      id: `${basePage?.id || "page"}_auto_${idx}`,
-      name: `${basePage?.name || "Page"} ${idx + 1}`,
-      elements: [],
-    });
-  }
-}
-
-function paginateOverflowElementsOnPage(
-  page,
-  pageHeightMm,
-  marginTopMm = 0,
-  marginBottomMm = 0,
-) {
-  // Move elements whose bottom exceeds the page to the next page,
-  // and STACK them from marginTop in the SAME relative order.
-  // This preserves "table after table" sequencing (Crystal-like).
-  const maxY = pageHeightMm - marginBottomMm;
-  const els = Array.isArray(page?.elements) ? page.elements : [];
-  const stay = [];
-  const overflow = [];
-
-  // keep stable order (the caller already sorts when needed)
-  for (const el of els) {
-    const bottom = Number(el?.y || 0) + Number(el?.h || 0);
-    if (bottom > maxY + 0.001) overflow.push(el);
-    else stay.push(el);
-  }
-
-  page.elements = stay;
-
-  // stack overflow items from top margin
-  let cursorY = Number(marginTopMm || 0);
-  const gap = 0.1; // mm
-  const moved = overflow.map((el) => {
-    const ne = { ...el, y: cursorY };
-    cursorY += Number(el?.h || 0) + gap;
-    return ne;
-  });
-
-  return moved;
-}
-
-function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
-  if (!tpl) return tpl;
-  const paperMm = opts.paperMm || { w: A4_W_MM, h: A4_H_MM };
-  const marginMm = opts.marginMm || { top: 0, bottom: 0 };
-
-  // ✅ BODY band helpers (important for Attachment pages)
-  // Attachment pages may reserve footer/header bands (attachHeaderMm/attachFooterMm)
-  // and only the BODY band should be used for repeat-table pagination + push-down.
-  const getBodyBand = (page) => {
-    const attachHeaderMm = Number(page?.attachHeaderMm || 0);
-    const attachFooterMm = Number(page?.attachFooterMm || 0);
-    const bodyTop = Number(marginMm.top || 0) + attachHeaderMm;
-    const bodyBottom =
-      Number(paperMm.h || A4_H_MM) -
-      Number(marginMm.bottom || 0) -
-      attachFooterMm;
-    const bodyHeight = Math.max(0, bodyBottom - bodyTop);
-    return { attachHeaderMm, attachFooterMm, bodyTop, bodyBottom, bodyHeight };
-  };
-
-  const paginateOverflowElementsOnPageBody = (page) => {
-    const { bodyTop, bodyBottom, bodyHeight } = getBodyBand(page);
-    if (bodyHeight <= 0) return [];
-
-    const els = Array.isArray(page.elements) ? page.elements : [];
-    const stay = [];
-    const overflow = [];
-
-    // Keep stable order
-    for (const el of els) {
-      if (!el) continue;
-
-      const band = String(el.attachBand || "").toLowerCase();
-      if (band === "header" || band === "footer") {
-        stay.push(el);
-        continue;
-      }
-
-      const y = Number(el.y || 0);
-      const h = Number(el.h || 0);
-      const bottom = y + h;
-
-      // Only paginate elements that start inside BODY and overflow past bodyBottom.
-      if (y >= bodyTop - 0.001 && bottom > bodyBottom + 0.001)
-        overflow.push(el);
-      else stay.push(el);
-    }
-
-    page.elements = stay;
-
-    // Shift overflow up by exactly one BODY height (not full page height)
-    return overflow.map((el) => ({
-      ...el,
-      y: Math.max(bodyTop, Number(el.y || 0) - bodyHeight),
-    }));
-  };
-
-  const pages = normalizePages(tpl).map((p) => ({
-    ...p,
-    elements: (Array.isArray(p.elements) ? p.elements : []).map((e) => ({
-      ...e,
-    })),
-  }));
-
-  for (let pIndex = 0; pIndex < pages.length; pIndex++) {
-    const page = pages[pIndex];
-    let els = Array.isArray(page.elements) ? page.elements : [];
-    // process in top->bottom order then z
-    els = [...els].sort(
-      (a, b) =>
-        Number(a.y || 0) - Number(b.y || 0) ||
-        Number(a.z || 0) - Number(b.z || 0),
-    );
-
-    const rebuilt = [];
-    for (let i = 0; i < els.length; i++) {
-      const el = els[i];
-
-      if (!isRepeatTableElement(el)) {
-        rebuilt.push(el);
-        continue;
-      }
-
-      const tmeta = el.table || el.tbl || el.meta || {};
-      const repeat = tmeta.repeat || {};
-      const arrVal = getByPath(data, String(repeat.arrayPath || ""));
-      const arr = Array.isArray(arrVal) ? arrVal : [];
-
-      const colsDef = resolveRepeatTableColumns(repeat, arr[0]);
-      if (!colsDef.length) {
-        // fallback to old renderer behavior if no columns
-        rebuilt.push(el);
-        continue;
-      }
-
-      const headerH = Number(repeat.headerHeightMm ?? 7) || 7;
-      const bodyH = Number(repeat.rowHeightMm ?? 6) || 6;
-
-      const { bodyTop, bodyBottom, bodyHeight } = getBodyBand(page);
-
-      // available body rows on this page starting from el.y
-      const availableMm = bodyBottom - Number(el.y || 0);
-      const maxBodyRowsHere = Math.max(
-        0,
-        Math.floor((availableMm - headerH) / bodyH),
-      );
-
-      if (maxBodyRowsHere <= 0) {
-        // move the table to next page (place at BODY top to preserve sequence)
-        ensurePageObject(pages, pIndex + 1, page);
-        const nb = getBodyBand(pages[pIndex + 1]);
-        pages[pIndex + 1].elements.push({ ...el, y: nb.bodyTop });
-        continue;
-      }
-
-      const chunks = [];
-      let start = 0;
-      while (start < arr.length) {
-        const cap =
-          chunks.length === 0
-            ? maxBodyRowsHere
-            : Math.max(
-                1,
-                Math.floor((Math.max(0, bodyHeight) - headerH) / bodyH),
-              );
-        chunks.push(arr.slice(start, start + cap));
-        start += cap;
-      }
-      if (!chunks.length) chunks.push([]);
-
-      // first chunk in current page
-      const firstChunkEl = buildRepeatPrintChunk({
-        el,
-        repeat,
-        colsDef,
-        chunkRows: chunks[0],
-      });
-      rebuilt.push(firstChunkEl);
-
-      // push down subsequent elements on this page by delta height
-      const delta = Number(firstChunkEl.h || 0) - Number(el.h || 0);
-      if (delta > 0) {
-        for (let j = i + 1; j < els.length; j++) {
-          els[j] = { ...els[j], y: Number(els[j].y || 0) + delta };
-        }
-      }
-
-      // remaining chunks to next pages
-      for (let c = 1; c < chunks.length; c++) {
-        const targetIdx = pIndex + c;
-        ensurePageObject(pages, targetIdx, page);
-        const nb = getBodyBand(pages[targetIdx]);
-        const chunkEl = buildRepeatPrintChunk({
-          el: { ...el, y: nb.bodyTop },
-          repeat,
-          colsDef,
-          chunkRows: chunks[c],
-        });
-        pages[targetIdx].elements.push(chunkEl);
-      }
-    }
-
-    page.elements = rebuilt;
-
-    // After expanding, move any overflow elements to next pages (repeat until stable)
-    // ✅ paginate within BODY band (respects attachment footer/header)
-    let overflow = paginateOverflowElementsOnPageBody(page);
-    let nextPageIdx = pIndex + 1;
-    while (overflow.length) {
-      ensurePageObject(pages, nextPageIdx, page);
-      pages[nextPageIdx].elements = [
-        ...(pages[nextPageIdx].elements || []),
-        ...overflow,
-      ];
-      // check overflow again on that next page
-      overflow = paginateOverflowElementsOnPageBody(pages[nextPageIdx]);
-      nextPageIdx += 1;
-    }
-  }
-
-  return { ...tpl, pages };
-}
 
 export function renderTemplateHtml(tpl, data) {
+  const paperMm = getPaperMmFromTpl(tpl);
   const pages = normalizePages(tpl);
 
   const pagesHtml = pages
@@ -1712,8 +1961,8 @@ export function renderTemplateHtml(tpl, data) {
 
       return `
         <div class="page" data-pageindex="${pageIndex}" id="__report_page__${pageIndex}" style="
-          width:${A4_W_MM}mm;
-          height:${A4_H_MM}mm;
+          width:${paperMm.w}mm;
+          height:${paperMm.h}mm;
         ">
           ${body}
         </div>
@@ -1847,7 +2096,8 @@ async function downloadPdfViaCanvas(
   );
   if (!pageEls.length) throw new Error("No pages found to export");
 
-  const scale = Math.max(3, Math.min(4, window.devicePixelRatio || 3));
+  const pageCount = pageEls.length;
+  const scale = pageCount > 20 ? 1.5 : 2;
 
   const pdf = new jsPDF("p", "pt", "a4", true);
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -1882,6 +2132,9 @@ async function downloadPdfViaCanvas(
 
     if (i > 0) pdf.addPage("a4", "p");
     pdf.addImage(imgData, "PNG", x, y, drawW, drawH, undefined, "FAST");
+
+    canvas.width = 1;
+    canvas.height = 1;
   }
 
   pdf.save(filename);
@@ -1895,6 +2148,8 @@ export default function BlReportPage() {
   const searchParams = useSearchParams();
   const templateId = searchParams.get("templateId");
   const blId = searchParams.get("blId");
+
+  const DEBUG = useMemo(() => getDebugFlag(searchParams), [searchParams]);
 
   const [tpl, setTpl] = useState(null);
   const [data, setData] = useState(null);
@@ -1926,6 +2181,7 @@ export default function BlReportPage() {
             ? JSON.parse(row.blPrintTemplateJson)
             : row.blPrintTemplateJson;
 
+        dbgLog(DEBUG, "[DEBUG] Template fetched:", parsed);
         setTpl(parsed);
       } catch (e) {
         setError(e?.message || "Failed to load template");
@@ -1933,7 +2189,7 @@ export default function BlReportPage() {
     };
 
     fetchTemplate();
-  }, [templateId]);
+  }, [templateId, DEBUG]);
 
   useEffect(() => {
     const fetchBlData = async () => {
@@ -1952,12 +2208,12 @@ export default function BlReportPage() {
         const blRow = blRes?.data?.[0];
         if (!blRow) throw new Error("BL not found");
 
-        setData({
-          ...blRow,
-          bl: blRow,
-          bldata: blRow,
-          tblBl: blRow,
-        });
+        setData({ ...blRow, bl: blRow, bldata: blRow, tblBl: blRow });
+        dbgLog(
+          DEBUG,
+          "[DEBUG] BL data fetched keys:",
+          Object.keys(blRow || {}),
+        );
       } catch (e) {
         setError(e?.message || "Failed to load BL data");
       } finally {
@@ -1966,9 +2222,78 @@ export default function BlReportPage() {
     };
 
     fetchBlData();
-  }, [templateId, blId]);
+  }, [templateId, blId, DEBUG]);
 
-  // ✅ DOM measurer: same behavior as renderer (missing tokens => "")
+  function buildBlPagesDetails(tpl) {
+    const pages = normalizePages(tpl);
+
+    return pages.map((pg, pageIndex) => {
+      const pageKey =
+        pageIndex === 0
+          ? `MainPage${pageIndex + 1}`
+          : `AttachmentPage${pageIndex}`;
+
+      const elements = (Array.isArray(pg?.elements) ? pg.elements : [])
+        .filter((el) => !el?.hidden)
+        .slice()
+        .sort(
+          (a, b) =>
+            Number(a?.y || 0) - Number(b?.y || 0) ||
+            Number(a?.z || 0) - Number(b?.z || 0),
+        )
+        .map((el, elementIndex) => {
+          const y = Number(el?.y || 0);
+          const h = Number(el?.h || 0);
+          const x = Number(el?.x || 0);
+          const w = Number(el?.w || 0);
+
+          return {
+            elementIndex: elementIndex + 1,
+            id: el?.id || null,
+            type: el?.type || null,
+            sectionId: el?.sectionId || null,
+            attachBand: el?.attachBand || null,
+            xMm: x,
+            yMm: y,
+            wMm: w,
+            hMm: h,
+            rightMm: x + w,
+            bottomMm: y + h,
+            z: Number(el?.z || 0),
+            rotate: Number(el?.rotate || 0),
+            neighbors: el?.neighbors || el?.neighbours || null,
+          };
+        });
+
+      const usedTopMm = elements.length
+        ? Math.min(...elements.map((e) => Number(e.yMm || 0)))
+        : 0;
+
+      const usedBottomMm = elements.length
+        ? Math.max(...elements.map((e) => Number(e.bottomMm || 0)))
+        : 0;
+
+      const usedHeightMm = Math.max(0, usedBottomMm - usedTopMm);
+
+      return {
+        [pageKey]: {
+          pageIndex: pageIndex + 1,
+          pageId: pg?.id || null,
+          pageName: pg?.name || null,
+          pageWidthMm: Number(pg?.wMm || A4_W_MM),
+          pageHeightMm: Number(pg?.hMm || A4_H_MM),
+          elementCount: elements.length,
+          usedTopMm,
+          usedBottomMm,
+          usedHeightMm,
+          layoutWarnings: toStringArray(pg?.__layoutWarnings),
+          layoutErrors: toStringArray(pg?.__layoutErrors),
+          elements,
+        },
+      };
+    });
+  }
+
   const measureTextMm = useCallback(({ text, widthMm, style, data: mData }) => {
     const el = measureRef.current;
     if (!el) return 0;
@@ -2006,9 +2331,19 @@ export default function BlReportPage() {
   const laidTpl = useMemo(() => {
     if (!tpl || !data) return null;
 
-    const paperMm = { w: A4_W_MM, h: A4_H_MM };
+    const paperMm = getPaperMmFromTpl(tpl);
 
     try {
+      dbgGroup(DEBUG, "🧱 [BLReport DEBUG] Pipeline");
+
+      dbgLog(
+        DEBUG,
+        "paperMm:",
+        paperMm,
+        "marginMm(from tpl):",
+        getMarginMmFromTpl(tpl),
+      );
+
       const laid = layoutTemplateForData(tpl, data, {
         paperMm,
         marginMm: { top: 0, left: 0, right: 0, bottom: 0 },
@@ -2016,34 +2351,119 @@ export default function BlReportPage() {
         headerHeightMm: Number(tpl?.header?.heightMm || 0),
         safetyBottomMm: 2,
         measureTextMm,
-        debug: false,
+        debug: DEBUG,
       });
-      // ✅ Crystal-like: auto-grow fixed tables (cell tokens) and push-down following elements
+
+      debugDumpPages(DEBUG, laid, "After layoutTemplateForData");
+
+      const pageCount1 = Array.isArray(laid?.pages) ? laid.pages.length : 0;
+      if (pageCount1 > MAX_SAFE_RENDER_PAGES) {
+        throw new Error(
+          `Layout generated ${pageCount1} pages, which exceeds the safe limit of ${MAX_SAFE_RENDER_PAGES}. Please check canGrowColumns / repeat table flow data.`,
+        );
+      }
+
       const grown = applyAutoGrowFixedTablesToTemplate(laid, data, {
         paperMm,
         marginMm: { top: 0, bottom: 0 },
         measureTextMm,
       });
 
-      // ✅ Expand repeat tables based on data length and split across pages
-      return applyRepeatTablesFlowToTemplate(grown, data, {
+      debugDumpPages(DEBUG, grown, "After applyAutoGrowFixedTablesToTemplate");
+
+      const pageCount2 = Array.isArray(grown?.pages) ? grown.pages.length : 0;
+      if (pageCount2 > MAX_SAFE_RENDER_PAGES) {
+        throw new Error(
+          `Auto-grow stage generated ${pageCount2} pages, which exceeds the safe limit of ${MAX_SAFE_RENDER_PAGES}.`,
+        );
+      }
+
+      const flowed = applyRepeatTablesFlowToTemplate(grown, data, {
         paperMm,
         marginMm: { top: 0, bottom: 0 },
+        debug: DEBUG,
       });
+
+      debugDumpPages(DEBUG, flowed, "After applyRepeatTablesFlowToTemplate");
+      debugNeighborGraph(DEBUG, flowed);
+      debugAnalyzeTableSnapping(DEBUG, flowed, 3);
+
+      let finalTpl = flowed;
+
+      const finalPageCount = Array.isArray(finalTpl?.pages)
+        ? finalTpl.pages.length
+        : 0;
+      if (finalPageCount > MAX_SAFE_RENDER_PAGES) {
+        throw new Error(
+          `Final layout generated ${finalPageCount} pages, which exceeds the safe limit of ${MAX_SAFE_RENDER_PAGES}.`,
+        );
+      }
+
+      if (APPLY_SNAP_TOUCHING_TABLES) {
+        finalTpl = snapTouchingTables(finalTpl, 2);
+        debugDumpPages(DEBUG, finalTpl, "After snapTouchingTables(APPLIED)");
+        debugAnalyzeTableSnapping(DEBUG, finalTpl, 3);
+      } else {
+        dbgLog(
+          DEBUG,
+          "snapTouchingTables is NOT applied (only analysis logs are shown).",
+        );
+      }
+
+      dbgGroupEnd(DEBUG);
+      return finalTpl;
     } catch (e) {
-      console.error("layoutTemplateForData failed:", e);
-      return tpl;
+      dbgGroupEnd(DEBUG);
+      console.error("layout pipeline failed:", e);
+
+      return {
+        ...(tpl || {}),
+        __layoutErrors: [
+          ...toStringArray(tpl?.__layoutErrors),
+          e?.message || "Layout pipeline failed",
+        ],
+      };
     }
-  }, [tpl, data, measureTextMm]);
+  }, [tpl, data, measureTextMm, DEBUG]);
+
+  const layoutMessages = useMemo(
+    () => collectLayoutMessages(laidTpl),
+    [laidTpl],
+  );
 
   const html = useMemo(() => {
     if (!laidTpl || !data) return "";
-    return renderTemplateHtml(laidTpl, data);
+
+    const pagesCount = Array.isArray(laidTpl?.pages) ? laidTpl.pages.length : 0;
+    if (pagesCount > MAX_SAFE_RENDER_PAGES) return "";
+
+    const built = renderTemplateHtml(laidTpl, data);
+    if (built.length > MAX_SAFE_HTML_CHARS) {
+      console.error("BL Report HTML too large:", built.length);
+      return "";
+    }
+
+    return built;
   }, [laidTpl, data]);
+
+  const renderBlockReason = useMemo(() => {
+    if (!laidTpl) return "";
+
+    const pagesCount = Array.isArray(laidTpl?.pages) ? laidTpl.pages.length : 0;
+    if (pagesCount > MAX_SAFE_RENDER_PAGES) {
+      return `Preview blocked because ${pagesCount} pages were generated, which exceeds the safe limit of ${MAX_SAFE_RENDER_PAGES}.`;
+    }
+
+    if (!html && !loading && !error) {
+      return "Preview blocked because rendered HTML size exceeded the safe memory limit.";
+    }
+
+    return "";
+  }, [laidTpl, html, loading, error]);
 
   const onPrint = async () => {
     try {
-      if (!html || !hiddenFrameRef.current) return;
+      if (!html || !hiddenFrameRef.current || renderBlockReason) return;
       await printViaHiddenIframe(html, hiddenFrameRef.current);
     } catch (e) {
       console.error(e);
@@ -2051,9 +2471,33 @@ export default function BlReportPage() {
     }
   };
 
+  useEffect(() => {
+    if (!laidTpl) return;
+
+    const blPagesDetails = buildBlPagesDetails(laidTpl);
+
+    if (typeof window !== "undefined") {
+      window.blPagesDetails = blPagesDetails;
+      window.blLayoutWarnings = layoutMessages.warnings;
+      window.blLayoutErrors = layoutMessages.errors;
+    }
+
+    console.log("Akash blPagesDetails", blPagesDetails);
+  }, [laidTpl, layoutMessages]);
+
   const onDownloadPdf = async () => {
     try {
-      if (!html || !hiddenFrameRef.current) return;
+      const pageCount = Array.isArray(laidTpl?.pages)
+        ? laidTpl.pages.length
+        : 0;
+      if (pageCount > MAX_SAFE_PDF_PAGES) {
+        setError(
+          `PDF export blocked because ${pageCount} pages were generated. Please reduce content or fix flow configuration.`,
+        );
+        return;
+      }
+
+      if (!html || !hiddenFrameRef.current || renderBlockReason) return;
       await downloadPdfViaCanvas(html, hiddenFrameRef.current, "BL_Report.pdf");
     } catch (e) {
       console.error(e);
@@ -2097,7 +2541,7 @@ export default function BlReportPage() {
           variant="contained"
           startIcon={<PrintRoundedIcon />}
           onClick={onPrint}
-          disabled={!html || loading}
+          disabled={!html || loading || !!renderBlockReason}
           sx={{ height: 32, fontSize: 12, borderRadius: 1 }}
         >
           PRINT
@@ -2107,12 +2551,44 @@ export default function BlReportPage() {
           variant="outlined"
           startIcon={<DownloadRoundedIcon />}
           onClick={onDownloadPdf}
-          disabled={!html || loading}
+          disabled={!html || loading || !!renderBlockReason}
           sx={{ height: 32, fontSize: 12, borderRadius: 1 }}
         >
           DOWNLOAD PDF
         </Button>
       </Box>
+
+      {!!renderBlockReason && !loading && (
+        <Alert severity="error" sx={{ mb: 1 }}>
+          {renderBlockReason}
+        </Alert>
+      )}
+
+      {!!layoutMessages.errors.length && !loading && (
+        <Stack spacing={1} sx={{ mb: 1 }}>
+          {layoutMessages.errors.map((msg, idx) => (
+            <Alert
+              key={`layout-error-${idx}`}
+              severity="error"
+              variant="filled"
+            >
+              {msg}
+            </Alert>
+          ))}
+        </Stack>
+      )}
+
+      {!!layoutMessages.warnings.length &&
+        !layoutMessages.errors.length &&
+        !loading && (
+          <Stack spacing={1} sx={{ mb: 1 }}>
+            {layoutMessages.warnings.map((msg, idx) => (
+              <Alert key={`layout-warn-${idx}`} severity="warning">
+                {msg}
+              </Alert>
+            ))}
+          </Stack>
+        )}
 
       <Paper
         elevation={0}

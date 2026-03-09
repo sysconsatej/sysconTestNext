@@ -1818,7 +1818,6 @@ export default function AddEditFormControll() {
     });
   }, [newState, actionFieldNames]);
 
-  // SECOND useEffect: Runs only when changedFieldNames contain `null` values
   useEffect(() => {
     let changedFieldNames = [];
     let sectionsArray = [];
@@ -1962,63 +1961,6 @@ export default function AddEditFormControll() {
       return hasChanges ? updatedState : prevState;
     });
   }, [newState, actionFieldNames]);
-
-  // useEffect(() => {
-  //   console.log("omk", newState);
-
-  //   const isHazardous = newState?.cargoTypeIddropdown
-  //     ? newState?.cargoTypeIddropdown?.[0]?.label === "HAZARDOUS"
-  //     : newState?.cargoTypeId === 164;
-
-  //   const routeLabel = newState?.routeIddropdown?.[0]?.label || "";
-  //   const isTranshipment = routeLabel === "Transhipment";
-
-  //   // ✅ Check if switchBl value is "1"
-  //   const isSwitchBl = newState?.switchBl === "1";
-
-  //   const fieldsToShowForHazardous = ["imoId"];
-  //   const fieldsToShowForTranshipment = [
-  //     "transhipPort1Id",
-  //     "transhipPort1AgentId",
-  //     "transhipPort1AgentBranchId",
-  //     "transhipPort2Id",
-  //     "transhipPort2AgentId",
-  //     "transhipPort2AgentBranchId",
-  //     "transhipPort3Id",
-  //     "transhipPort3AgentId",
-  //     "transhipPort3AgentBranchId",
-  //     "tranship1LoadVesselId",
-  //     "tranship1LoadVoyageId",
-  //     "tranship2LoadVesselId",
-  //     "tranship2LoadVoyageId"
-  //   ];
-  //   const fieldsToShowForSwitchBl = ["switchAgentId", "switchAgentBranchId"];
-
-  //   const updatedArray = parentFieldDataInArray.map((item) => {
-  //     if (fieldsToShowForHazardous.includes(item.fieldname)) {
-  //       return { ...item, columnsToBeVisible: isHazardous };
-  //     }
-
-  //     if (fieldsToShowForTranshipment.includes(item.fieldname)) {
-  //       return { ...item, columnsToBeVisible: isTranshipment };
-  //     }
-
-  //     if (fieldsToShowForSwitchBl.includes(item.fieldname)) {
-  //       return { ...item, columnsToBeVisible: isSwitchBl };
-  //     }
-
-  //     return item;
-  //   });
-
-  //   const resData = groupAndSortFields(updatedArray);
-  //   setParentsFields({ ...resData });
-  // }, [
-  //   newState.cargoTypeId,
-  //   newState.routeId,
-  //   newState.routeIddropdown,
-  //   newState.switchBl, // ✅ Dependency for switchBl
-  //   // newState
-  // ]);
 
   useEffect(() => {
     const isHazardous = newState?.cargoTypeIddropdown

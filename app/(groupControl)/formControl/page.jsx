@@ -191,7 +191,7 @@ export default function StickyHeadTable() {
   const prevMenuIdRef = React.useRef(null); // stores previous menuId
   const previousMenuId = prevMenuIdRef.current; // read previous value
   const inputRef = useRef(null);
-  const { clientId } = getUserDetails();
+  const { clientId, defaultCompanyId } = getUserDetails();
   const [menuSearch, setMenuSearch] = useState("");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(17);
@@ -582,10 +582,20 @@ export default function StickyHeadTable() {
         whereCondition: `mrm.menuId = ${menuId} and tm.status = 1 and mrm.clientId in (${clientId} ,(select id from tblClient where clientCode = 'SYSCON'))`,
         clientIdCondition: `mrm.status = 1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
       };
+      const blEditerRequestBody = {
+        columns: "tbp.id,tbp.name",
+        tableName: "tblBlPrintTemplate tbp",
+        whereCondition: `tbp.clientId=${clientId} and tbp.blOfId=${defaultCompanyId}`,
+        clientIdCondition: `tbp.status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+      };
       try {
         const response = await fetchReportData(requestBody);
         const data = response.data || response;
-        if (data.length > 0) {
+
+        const blEditerResponse = await fetchReportData(blEditerRequestBody);
+        const blEditerData = blEditerResponse.data || blEditerResponse;
+
+        if (data.length > 0 || blEditerData.length > 0) {
           setisReportPresent(true);
         } else {
           setisReportPresent(false);

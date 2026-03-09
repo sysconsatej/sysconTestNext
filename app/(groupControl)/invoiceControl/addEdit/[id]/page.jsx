@@ -221,6 +221,13 @@ export default function AddEditFormControll() {
     isClear: false,
     fieldName: "",
   });
+  //hide and unhide 
+  const [parentFieldDataInArray, setParentFieldDataInArray] = useState([]);
+  const [actionFieldNames, setActionFieldNames] = useState([]);
+  const [originalChildsFields, setOriginalChildsFields] = useState([]);
+
+  const prevVisibleRef = useRef({});
+  const prevHiddenRef = useRef({});
 
   // getLabel Name
   const [labelName, setLabelName] = useState("");
@@ -345,117 +352,497 @@ export default function AddEditFormControll() {
     return value;
   }
 
+  const parseIdList = (raw) =>
+    String(raw || "")
+      .split(",")
+      .map((v) => Number(String(v).trim()))
+      .filter((n) => !Number.isNaN(n));
+
+  const isShowValue = (value) => {
+    if (value === true || value === 1 || value === "1") return true;
+    if (value === false || value === 0 || value === "0") return false;
+
+    if (typeof value === "string") {
+      const v = value.trim().toLowerCase();
+      if (
+        v === "" ||
+        v === "false" ||
+        v === "n" ||
+        v === "no" ||
+        v === "null" ||
+        v === "undefined"
+      ) {
+        return false;
+      }
+      return true;
+    }
+
+    if (Array.isArray(value)) return value.length > 0;
+    if (value && typeof value === "object") return Object.keys(value).length > 0;
+
+    return value !== null && value !== undefined;
+  };
+
+  const isHideValue = (value) => !isShowValue(value);
+
+  const buildActionFieldMap = (fields = []) => {
+    const temp = [];
+
+    fields.forEach((control) => {
+      if (control?.isColumnVisible && control?.columnsToHide) {
+        temp.push({
+          parentFieldName: control.fieldname,
+          sectionHeader: control.sectionHeader,
+          columnsToHide: control.columnsToHide,
+        });
+      }
+
+      if (control?.isColumnDisabled && control?.columnsToDisabled) {
+        temp.push({
+          parentFieldName: control.fieldname,
+          sectionHeader: control.sectionHeader,
+          columnsToDisabled: control.columnsToDisabled,
+        });
+      }
+    });
+
+    const seen = new Set();
+    return temp.filter((item) => {
+      const key = [
+        item.parentFieldName || "",
+        item.sectionHeader || "",
+        item.columnsToHide || "",
+        item.columnsToDisabled || "",
+      ].join("|");
+
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  const rebuildParentSections = (fields) => {
+    const groupedAll = groupAndSortAllFields(fields || []);
+    const groupedByPosition = groupAndSortFields(fields || []);
+
+    setParentsFields(groupedAll);
+    setTopParentsFields(groupedByPosition.top || {});
+    setBottomParentsFields(groupedByPosition.bottom || {});
+  };
+
+  const prepareParentFields = (rawFields = [], stateSnapshot = {}) => {
+    const hiddenByDefault = new Set();
+
+    rawFields.forEach((field) => {
+      if (field?.isColumnVisible === false) {
+        hiddenByDefault.add(Number(field.id));
+      }
+
+      if (
+        typeof field?.columnsToHide === "string" &&
+        field.columnsToHide.trim() !== ""
+      ) {
+        parseIdList(field.columnsToHide).forEach((id) => hiddenByDefault.add(id));
+      }
+    });
+
+    const showIds = new Set();
+
+    rawFields.forEach((field) => {
+      if (
+        field?.isColumnVisible &&
+        typeof field?.columnsToHide === "string" &&
+        field.columnsToHide.trim() !== ""
+      ) {
+        const targetIds = parseIdList(field.columnsToHide);
+        const currentVal = stateSnapshot?.[field.fieldname];
+
+        if (isShowValue(currentVal)) {
+          targetIds.forEach((id) => showIds.add(id));
+        }
+      }
+    });
+
+    return rawFields.map((field) => {
+      const id = Number(field.id);
+
+      let visible = !hiddenByDefault.has(id);
+
+      if (showIds.has(id)) {
+        visible = true;
+      }
+
+      // hard fallback for TDS parent fields
+      if (field.fieldname === "tdsAmt" || field.fieldname === "tdsAmtFC") {
+        visible =
+          stateSnapshot?.tdsApplicable === true ||
+          stateSnapshot?.tdsApplicable === "true" ||
+          stateSnapshot?.tdsApplicable === 1 ||
+          stateSnapshot?.tdsApplicable === "1";
+      }
+
+      return {
+        ...field,
+        columnsToBeVisible: visible,
+      };
+    });
+  };
+
+  const updateParentFieldMeta = ({
+    visibleIds = [],
+    hiddenIds = [],
+    enableIds = [],
+    disableIds = [],
+  }) => {
+    const visibleSet = new Set(visibleIds.map(Number));
+    const hiddenSet = new Set(hiddenIds.map(Number));
+    const enableSet = new Set(enableIds.map(Number));
+    const disableSet = new Set(disableIds.map(Number));
+
+    setParentFieldDataInArray((prev) => {
+      if (!Array.isArray(prev) || prev.length === 0) return prev;
+
+      let changed = false;
+
+      const updated = prev.map((field) => {
+        const id = Number(field.id);
+        let nextField = field;
+
+        if (visibleSet.has(id) && field.columnsToBeVisible !== true) {
+          nextField = { ...nextField, columnsToBeVisible: true };
+        }
+
+        if (hiddenSet.has(id) && field.columnsToBeVisible !== false) {
+          nextField = { ...nextField, columnsToBeVisible: false };
+        }
+
+        if (enableSet.has(id) && field.isEditable !== true) {
+          nextField = { ...nextField, isEditable: true };
+        }
+
+        if (disableSet.has(id) && field.isEditable !== false) {
+          nextField = { ...nextField, isEditable: false };
+        }
+
+        if (nextField !== field) changed = true;
+        return nextField;
+      });
+
+      return changed ? updated : prev;
+    });
+  };
+
+  const clearDependentValues = (fieldNames = []) => {
+    if (!fieldNames.length) return;
+
+    const applyClear = (prev) => {
+      let changed = false;
+      const updates = {};
+
+      fieldNames.forEach((name) => {
+        if (prev[name] !== null && prev[name] !== "") {
+          updates[name] = null;
+          changed = true;
+        }
+
+        const ddKey = `${name}dropdown`;
+        if (Object.prototype.hasOwnProperty.call(prev, ddKey) && prev[ddKey] !== null) {
+          updates[ddKey] = null;
+          changed = true;
+        }
+
+        const msKey = `${name}multiselect`;
+        if (
+          Object.prototype.hasOwnProperty.call(prev, msKey) &&
+          Array.isArray(prev[msKey]) &&
+          prev[msKey].length > 0
+        ) {
+          updates[msKey] = [];
+          changed = true;
+        }
+
+        const dtKey = `${name}datetime`;
+        if (
+          Object.prototype.hasOwnProperty.call(prev, dtKey) &&
+          prev[dtKey] !== null &&
+          prev[dtKey] !== "null"
+        ) {
+          updates[dtKey] = null;
+          changed = true;
+        }
+      });
+
+      return changed ? { ...prev, ...updates } : prev;
+    };
+
+    setNewState(applyClear);
+    setSubmitNewState(applyClear);
+  };
   async function fetchData() {
     const { clientId } = getUserDetails();
-    if (search?.menuName != "1560") {
-      try {
-        // Call api for table grid data
-        const tableViewApiResponse = await formControlMenuList(search.menuName);
-        if (tableViewApiResponse.success) {
-          setFetchedApiResponse(tableViewApiResponse.data[0]);
-          setFormControlData(tableViewApiResponse.data[0]);
-          setTableName(tableViewApiResponse.data[0].tableName);
-          setIsRequiredAttachment(
-            tableViewApiResponse.data[0]?.isRequiredAttachment,
-          );
-          const groupAllFieldsData = groupAndSortAllFields(
-            tableViewApiResponse.data[0].fields,
-          );
-          setParentsFields(groupAllFieldsData);
-          const resData = groupAndSortFields(
-            tableViewApiResponse.data[0].fields,
-          );
-          setTopParentsFields(resData.top); // Set parents fields.
-          setBottomParentsFields(resData.bottom); // Set parents fields.
 
-          setChildsFields(
-            tableViewApiResponse.data[0].child ||
-            tableViewApiResponse.data[0].children,
-          );
-          setButtonsData(tableViewApiResponse.data[0].buttons);
-        }
+    if (String(search?.menuName) !== "1560") {
+      try {
+        const tableViewApiResponse = await formControlMenuList(search.menuName);
+        if (!tableViewApiResponse?.success) return;
+
+        const menuConfig = tableViewApiResponse.data[0] || {};
+        const rawFields = Array.isArray(menuConfig.fields) ? menuConfig.fields : [];
 
         const apiResponse = await masterTableInfo({
           clientID: parseInt(clientId),
           recordID: parseInt(search.id),
           menuID: parseInt(search.menuName),
         });
-        if (apiResponse) {
-          let data = apiResponse[0];
-          console.log(data);
 
-          let finalData = {};
-          search.isCopy ? (data.id = "") : null;
-          if (search.isCopy) {
-            tableViewApiResponse.data[0].fields.forEach((iterator) => {
-              if (iterator.isCopy) {
-                finalData[iterator.fieldname] = data[iterator.fieldname];
-              }
-            });
+        if (!apiResponse || !apiResponse[0]) return;
 
-            tableViewApiResponse.data[0].child.forEach((child) => {
-              if (child.isChildCopy) {
-                finalData[child.tableName] = data[child.tableName];
-              }
-            });
-          } else {
-            finalData = data;
-          }
+        let data = apiResponse[0];
+        let finalData = {};
 
-          for (let item of tableViewApiResponse.data[0].child) {
-            for (
-              let index = 0;
-              index < (finalData[item.tableName] || []).length;
-              index++
-            ) {
-              finalData[item.tableName][index].indexValue = index;
-              for (const subchildItem of item.subChild) {
-                for (
-                  let idx = 0;
-                  idx <
-                  (
-                    finalData[item.tableName][index][subchildItem.tableName] ||
-                    []
-                  ).length;
-                  idx++
-                ) {
-                  finalData[item.tableName][index][subchildItem.tableName][
-                    idx
-                  ].indexValue = idx;
-                }
+        if (search.isCopy) {
+          data.id = "";
+
+          rawFields.forEach((iterator) => {
+            if (iterator.isCopy) {
+              finalData[iterator.fieldname] = data[iterator.fieldname];
+            }
+          });
+
+          (menuConfig.child || []).forEach((child) => {
+            if (child.isChildCopy) {
+              finalData[child.tableName] = data[child.tableName];
+            }
+          });
+        } else {
+          finalData = data;
+        }
+
+        // -----------------------------
+        // child/subchild index normalize
+        // -----------------------------
+        for (let item of menuConfig.child || []) {
+          for (let index = 0; index < (finalData[item.tableName] || []).length; index++) {
+            finalData[item.tableName][index].indexValue = index;
+
+            for (const subchildItem of item.subChild || []) {
+              for (
+                let idx = 0;
+                idx < (finalData[item.tableName][index][subchildItem.tableName] || []).length;
+                idx++
+              ) {
+                finalData[item.tableName][index][subchildItem.tableName][idx].indexValue = idx;
               }
             }
           }
-
-          setNewState((prev) => {
-            return {
-              ...prev,
-              ...finalData,
-              tableName: tableViewApiResponse.data[0].tableName,
-              attachment: data.attachment,
-              menuID: search.menuName,
-            };
-          });
-          setSubmitNewState((prev) => {
-            return {
-              ...prev,
-              ...finalData,
-              tableName: tableViewApiResponse.data[0].tableName,
-              attachment: data.attachment,
-              menuID: search.menuName,
-            };
-          });
-          setInitialState((prev) => {
-            return {
-              ...prev,
-              ...finalData,
-              tableName: tableViewApiResponse.data[0].tableName,
-            };
-          });
-          setTimeout(() => {
-            setIsDataLoaded(true);
-          }, 500);
         }
+
+        // -----------------------------
+        // helpers
+        // -----------------------------
+        const parseIdList = (raw) =>
+          String(raw || "")
+            .split(",")
+            .map((v) => Number(String(v).trim()))
+            .filter((n) => !Number.isNaN(n));
+
+        const isShowValue = (value) => {
+          if (value === true || value === 1 || value === "1") return true;
+          if (value === false || value === 0 || value === "0") return false;
+
+          if (typeof value === "string") {
+            const v = value.trim().toLowerCase();
+            if (
+              v === "" ||
+              v === "false" ||
+              v === "n" ||
+              v === "no" ||
+              v === "null" ||
+              v === "undefined"
+            ) {
+              return false;
+            }
+            return true;
+          }
+
+          if (Array.isArray(value)) return value.length > 0;
+          if (value && typeof value === "object") return Object.keys(value).length > 0;
+
+          return value !== null && value !== undefined;
+        };
+
+        const showTds =
+          finalData?.tdsApplicable === true ||
+          finalData?.tdsApplicable === "true" ||
+          finalData?.tdsApplicable === 1 ||
+          finalData?.tdsApplicable === "1";
+
+        // -----------------------------
+        // parent visibility preparation
+        // -----------------------------
+        const hiddenByDefault = new Set();
+
+        rawFields.forEach((field) => {
+          if (field?.isColumnVisible === false) {
+            hiddenByDefault.add(Number(field.id));
+          }
+
+          if (
+            typeof field?.columnsToHide === "string" &&
+            field.columnsToHide.trim() !== ""
+          ) {
+            parseIdList(field.columnsToHide).forEach((id) => hiddenByDefault.add(id));
+          }
+        });
+
+        const showIds = new Set();
+
+        rawFields.forEach((field) => {
+          if (
+            field?.isColumnVisible &&
+            typeof field?.columnsToHide === "string" &&
+            field.columnsToHide.trim() !== ""
+          ) {
+            const currentVal = finalData?.[field.fieldname];
+            if (isShowValue(currentVal)) {
+              parseIdList(field.columnsToHide).forEach((id) => showIds.add(id));
+            }
+          }
+        });
+
+        const preparedFields = rawFields.map((field) => {
+          const id = Number(field.id);
+          let visible = !hiddenByDefault.has(id);
+
+          if (showIds.has(id)) {
+            visible = true;
+          }
+
+          // hard fallback for parent TDS fields
+          if (field.fieldname === "tdsAmt" || field.fieldname === "tdsAmtFC") {
+            visible = showTds;
+          }
+
+          return {
+            ...field,
+            columnsToBeVisible: visible,
+          };
+        });
+
+        // -----------------------------
+        // action map
+        // -----------------------------
+        const tempActionFields = [];
+
+        preparedFields.forEach((control) => {
+          if (control?.isColumnVisible && control?.columnsToHide) {
+            tempActionFields.push({
+              parentFieldName: control.fieldname,
+              sectionHeader: control.sectionHeader,
+              columnsToHide: control.columnsToHide,
+            });
+          }
+
+          if (control?.isColumnDisabled && control?.columnsToDisabled) {
+            tempActionFields.push({
+              parentFieldName: control.fieldname,
+              sectionHeader: control.sectionHeader,
+              columnsToDisabled: control.columnsToDisabled,
+            });
+          }
+        });
+
+        const seen = new Set();
+        const mergedActionFields = tempActionFields.filter((item) => {
+          const key = [
+            item.parentFieldName || "",
+            item.sectionHeader || "",
+            item.columnsToHide || "",
+            item.columnsToDisabled || "",
+          ].join("|");
+
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        // -----------------------------
+        // child visibility preparation
+        // tblVoucherLedger -> tdsAmtFC / tdsAmtHC
+        // -----------------------------
+        const rawChildConfig = menuConfig.child || menuConfig.children || [];
+
+        const preparedChildConfig = rawChildConfig.map((child) => {
+          if (child.tableName !== "tblVoucherLedger") return child;
+
+          return {
+            ...child,
+            fields: (child.fields || []).map((field) => {
+              if (field.fieldname === "tdsAmtFC" || field.fieldname === "tdsAmtHC") {
+                return {
+                  ...field,
+                  columnsToBeVisible: showTds,
+                };
+              }
+              return field;
+            }),
+          };
+        });
+
+        // -----------------------------
+        // group parent sections
+        // -----------------------------
+        const groupAllFieldsData = groupAndSortAllFields(preparedFields);
+        const resData = groupAndSortFields(preparedFields);
+
+        // -----------------------------
+        // set states
+        // -----------------------------
+        setFetchedApiResponse(menuConfig);
+        setTableName(menuConfig.tableName);
+        setIsRequiredAttachment(menuConfig?.isRequiredAttachment);
+
+        setParentFieldDataInArray(preparedFields);
+        setActionFieldNames(mergedActionFields);
+
+        setFormControlData({
+          ...menuConfig,
+          fields: preparedFields,
+        });
+
+        setParentsFields(groupAllFieldsData);
+        setTopParentsFields(resData.top || {});
+        setBottomParentsFields(resData.bottom || {});
+
+        setOriginalChildsFields(rawChildConfig);
+        setChildsFields(preparedChildConfig);
+        setButtonsData(menuConfig.buttons || []);
+
+        setNewState((prev) => ({
+          ...prev,
+          ...finalData,
+          tableName: menuConfig.tableName,
+          attachment: data.attachment,
+          menuID: search.menuName,
+        }));
+
+        setSubmitNewState((prev) => ({
+          ...prev,
+          ...finalData,
+          tableName: menuConfig.tableName,
+          attachment: data.attachment,
+          menuID: search.menuName,
+        }));
+
+        setInitialState((prev) => ({
+          ...prev,
+          ...finalData,
+          tableName: menuConfig.tableName,
+        }));
+
+        setTimeout(() => {
+          setIsDataLoaded(true);
+        }, 500);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -1677,10 +2064,10 @@ export default function AddEditFormControll() {
             __isNegRow: wasNeg,
             __origBalHC: origBalHC,
             __origBalFC: origBalFC,
-            debitAmount: "0.00",
-            debitAmountFc: "0.00",
-            creditAmount: "0.00",
-            creditAmountFc: "0.00",
+            // debitAmount: "0.00",
+            // debitAmountFc: "0.00",
+            //  creditAmount: "0.00",
+            //  creditAmountFc: "0.00",
             balanceAmount: asNum2(origBalHC),
             balanceAmountFc: asNum2(origBalFC),
           };
@@ -1906,30 +2293,13 @@ export default function AddEditFormControll() {
   async function fetchDataDymaic() {
     const { clientId, companyId, branchId, financialYear, userId } =
       getUserDetails();
-    try {
-      // Call api for table grid data
-      const tableViewApiResponse = await formControlMenuList(search.menuName);
-      if (tableViewApiResponse.success) {
-        setFetchedApiResponse(tableViewApiResponse.data[0]);
-        setFormControlData(tableViewApiResponse.data[0]);
-        setTableName(tableViewApiResponse.data[0].tableName);
-        setIsRequiredAttachment(
-          tableViewApiResponse.data[0]?.isRequiredAttachment,
-        );
-        const groupAllFieldsData = groupAndSortAllFields(
-          tableViewApiResponse.data[0].fields,
-        );
-        setParentsFields(groupAllFieldsData);
-        const resData = groupAndSortFields(tableViewApiResponse.data[0].fields);
-        setTopParentsFields(resData.top);
-        setBottomParentsFields(resData.bottom);
 
-        setChildsFields(
-          tableViewApiResponse.data[0].child ||
-          tableViewApiResponse.data[0].children,
-        );
-        setButtonsData(tableViewApiResponse.data[0].buttons);
-      }
+    try {
+      const tableViewApiResponse = await formControlMenuList(search.menuName);
+      if (!tableViewApiResponse?.success) return;
+
+      const menuConfig = tableViewApiResponse.data[0] || {};
+      const rawFields = Array.isArray(menuConfig.fields) ? menuConfig.fields : [];
 
       const apiResponse = await fetchVoucherDataDynamic({
         clientID: parseInt(clientId),
@@ -1940,80 +2310,255 @@ export default function AddEditFormControll() {
         financialYearId: financialYear,
         userId: userId,
       });
-      if (apiResponse) {
-        let data = apiResponse?.data[0];
-        console.log(data);
 
-        let finalData = {};
-        search.isCopy ? (data.id = "") : null;
-        if (search.isCopy) {
-          tableViewApiResponse.data[0].fields.forEach((iterator) => {
-            if (iterator.isCopy) {
-              finalData[iterator.fieldname] = data[iterator.fieldname];
-            }
-          });
+      if (!apiResponse?.data?.[0]) return;
 
-          tableViewApiResponse.data[0].child.forEach((child) => {
-            if (child.isChildCopy) {
-              finalData[child.tableName] = data[child.tableName];
-            }
-          });
-        } else {
-          finalData = data;
-        }
+      let data = apiResponse.data[0];
+      let finalData = {};
 
-        for (let item of tableViewApiResponse.data[0].child) {
-          for (
-            let index = 0;
-            index < (finalData[item.tableName] || []).length;
-            index++
-          ) {
-            finalData[item.tableName][index].indexValue = index;
-            for (const subchildItem of item.subChild) {
-              for (
-                let idx = 0;
-                idx <
-                (finalData[item.tableName][index][subchildItem.tableName] || [])
-                  .length;
-                idx++
-              ) {
-                finalData[item.tableName][index][subchildItem.tableName][
-                  idx
-                ].indexValue = idx;
-              }
+      if (search.isCopy) {
+        data.id = "";
+
+        rawFields.forEach((iterator) => {
+          if (iterator.isCopy) {
+            finalData[iterator.fieldname] = data[iterator.fieldname];
+          }
+        });
+
+        (menuConfig.child || []).forEach((child) => {
+          if (child.isChildCopy) {
+            finalData[child.tableName] = data[child.tableName];
+          }
+        });
+      } else {
+        finalData = data;
+      }
+
+      // -----------------------------
+      // child/subchild index normalize
+      // -----------------------------
+      for (let item of menuConfig.child || []) {
+        for (let index = 0; index < (finalData[item.tableName] || []).length; index++) {
+          finalData[item.tableName][index].indexValue = index;
+
+          for (const subchildItem of item.subChild || []) {
+            for (
+              let idx = 0;
+              idx < (finalData[item.tableName][index][subchildItem.tableName] || []).length;
+              idx++
+            ) {
+              finalData[item.tableName][index][subchildItem.tableName][idx].indexValue = idx;
             }
           }
         }
-
-        setNewState((prev) => {
-          return {
-            ...prev,
-            ...finalData,
-            tableName: tableViewApiResponse.data[0].tableName,
-            attachment: data.attachment,
-            menuID: search.menuName,
-          };
-        });
-        setSubmitNewState((prev) => {
-          return {
-            ...prev,
-            ...finalData,
-            tableName: tableViewApiResponse.data[0].tableName,
-            attachment: data.attachment,
-            menuID: search.menuName,
-          };
-        });
-        setInitialState((prev) => {
-          return {
-            ...prev,
-            ...finalData,
-            tableName: tableViewApiResponse.data[0].tableName,
-          };
-        });
-        setTimeout(() => {
-          setIsDataLoaded(true);
-        }, 500);
       }
+
+      // -----------------------------
+      // helpers
+      // -----------------------------
+      const parseIdList = (raw) =>
+        String(raw || "")
+          .split(",")
+          .map((v) => Number(String(v).trim()))
+          .filter((n) => !Number.isNaN(n));
+
+      const isShowValue = (value) => {
+        if (value === true || value === 1 || value === "1") return true;
+        if (value === false || value === 0 || value === "0") return false;
+
+        if (typeof value === "string") {
+          const v = value.trim().toLowerCase();
+          if (
+            v === "" ||
+            v === "false" ||
+            v === "n" ||
+            v === "no" ||
+            v === "null" ||
+            v === "undefined"
+          ) {
+            return false;
+          }
+          return true;
+        }
+
+        if (Array.isArray(value)) return value.length > 0;
+        if (value && typeof value === "object") return Object.keys(value).length > 0;
+
+        return value !== null && value !== undefined;
+      };
+
+      const showTds =
+        finalData?.tdsApplicable === true ||
+        finalData?.tdsApplicable === "true" ||
+        finalData?.tdsApplicable === 1 ||
+        finalData?.tdsApplicable === "1";
+
+      // -----------------------------
+      // parent visibility preparation
+      // -----------------------------
+      const hiddenByDefault = new Set();
+
+      rawFields.forEach((field) => {
+        if (field?.isColumnVisible === false) {
+          hiddenByDefault.add(Number(field.id));
+        }
+
+        if (
+          typeof field?.columnsToHide === "string" &&
+          field.columnsToHide.trim() !== ""
+        ) {
+          parseIdList(field.columnsToHide).forEach((id) => hiddenByDefault.add(id));
+        }
+      });
+
+      const showIds = new Set();
+
+      rawFields.forEach((field) => {
+        if (
+          field?.isColumnVisible &&
+          typeof field?.columnsToHide === "string" &&
+          field.columnsToHide.trim() !== ""
+        ) {
+          const currentVal = finalData?.[field.fieldname];
+          if (isShowValue(currentVal)) {
+            parseIdList(field.columnsToHide).forEach((id) => showIds.add(id));
+          }
+        }
+      });
+
+      const preparedFields = rawFields.map((field) => {
+        const id = Number(field.id);
+        let visible = !hiddenByDefault.has(id);
+
+        if (showIds.has(id)) {
+          visible = true;
+        }
+
+        // hard fallback for parent TDS fields
+        if (field.fieldname === "tdsAmt" || field.fieldname === "tdsAmtFC") {
+          visible = showTds;
+        }
+
+        return {
+          ...field,
+          columnsToBeVisible: visible,
+        };
+      });
+
+      // -----------------------------
+      // action map
+      // -----------------------------
+      const tempActionFields = [];
+
+      preparedFields.forEach((control) => {
+        if (control?.isColumnVisible && control?.columnsToHide) {
+          tempActionFields.push({
+            parentFieldName: control.fieldname,
+            sectionHeader: control.sectionHeader,
+            columnsToHide: control.columnsToHide,
+          });
+        }
+
+        if (control?.isColumnDisabled && control?.columnsToDisabled) {
+          tempActionFields.push({
+            parentFieldName: control.fieldname,
+            sectionHeader: control.sectionHeader,
+            columnsToDisabled: control.columnsToDisabled,
+          });
+        }
+      });
+
+      const seen = new Set();
+      const mergedActionFields = tempActionFields.filter((item) => {
+        const key = [
+          item.parentFieldName || "",
+          item.sectionHeader || "",
+          item.columnsToHide || "",
+          item.columnsToDisabled || "",
+        ].join("|");
+
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      // -----------------------------
+      // child visibility preparation
+      // tblVoucherLedger -> tdsAmtFC / tdsAmtHC
+      // -----------------------------
+      const rawChildConfig = menuConfig.child || menuConfig.children || [];
+
+      const preparedChildConfig = rawChildConfig.map((child) => {
+        if (child.tableName !== "tblVoucherLedger") return child;
+
+        return {
+          ...child,
+          fields: (child.fields || []).map((field) => {
+            if (field.fieldname === "tdsAmtFC" || field.fieldname === "tdsAmtHC") {
+              return {
+                ...field,
+                columnsToBeVisible: showTds,
+              };
+            }
+            return field;
+          }),
+        };
+      });
+
+      // -----------------------------
+      // group parent sections
+      // -----------------------------
+      const groupAllFieldsData = groupAndSortAllFields(preparedFields);
+      const resData = groupAndSortFields(preparedFields);
+
+      // -----------------------------
+      // set states
+      // -----------------------------
+      setFetchedApiResponse(menuConfig);
+      setTableName(menuConfig.tableName);
+      setIsRequiredAttachment(menuConfig?.isRequiredAttachment);
+
+      setParentFieldDataInArray(preparedFields);
+      setActionFieldNames(mergedActionFields);
+
+      setFormControlData({
+        ...menuConfig,
+        fields: preparedFields,
+      });
+
+      setParentsFields(groupAllFieldsData);
+      setTopParentsFields(resData.top || {});
+      setBottomParentsFields(resData.bottom || {});
+
+      setOriginalChildsFields(rawChildConfig);
+      setChildsFields(preparedChildConfig);
+      setButtonsData(menuConfig.buttons || []);
+
+      setNewState((prev) => ({
+        ...prev,
+        ...finalData,
+        tableName: menuConfig.tableName,
+        attachment: data.attachment,
+        menuID: search.menuName,
+      }));
+
+      setSubmitNewState((prev) => ({
+        ...prev,
+        ...finalData,
+        tableName: menuConfig.tableName,
+        attachment: data.attachment,
+        menuID: search.menuName,
+      }));
+
+      setInitialState((prev) => ({
+        ...prev,
+        ...finalData,
+        tableName: menuConfig.tableName,
+      }));
+
+      setTimeout(() => {
+        setIsDataLoaded(true);
+      }, 500);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -2021,6 +2566,189 @@ export default function AddEditFormControll() {
   useEffect(() => {
     fetchDataDymaic();
   }, []);
+  useEffect(() => {
+    if (!Array.isArray(parentFieldDataInArray) || parentFieldDataInArray.length === 0) return;
+    rebuildParentSections(parentFieldDataInArray);
+  }, [parentFieldDataInArray]);
+
+  useEffect(() => {
+    const changedFieldNames = Object.keys(newState || {}).filter((field) => {
+      return (
+        prevVisibleRef.current[field] !== newState[field] &&
+        isShowValue(newState[field])
+      );
+    });
+
+    prevVisibleRef.current = { ...newState };
+
+    if (!changedFieldNames.length || !actionFieldNames.length) return;
+
+    const matchedRecords = actionFieldNames.filter((record) =>
+      changedFieldNames.includes(record.parentFieldName)
+    );
+
+    if (!matchedRecords.length) return;
+
+    const visibleIds = [];
+    const enableIds = [];
+
+    matchedRecords.forEach((record) => {
+      if (record?.columnsToHide) {
+        visibleIds.push(...parseIdList(record.columnsToHide));
+      }
+
+      if (record?.columnsToDisabled) {
+        enableIds.push(...parseIdList(record.columnsToDisabled));
+      }
+    });
+
+    updateParentFieldMeta({
+      visibleIds,
+      enableIds,
+    });
+  }, [newState, actionFieldNames]);
+
+  useEffect(() => {
+    const changedFieldNames = Object.keys(newState || {}).filter((field) => {
+      return (
+        prevHiddenRef.current[field] !== newState[field] &&
+        isHideValue(newState[field])
+      );
+    });
+
+    prevHiddenRef.current = { ...newState };
+
+    if (!changedFieldNames.length || !actionFieldNames.length) return;
+
+    const matchedRecords = actionFieldNames.filter((record) =>
+      changedFieldNames.includes(record.parentFieldName)
+    );
+
+    if (!matchedRecords.length) return;
+
+    const hiddenIds = [];
+    const disableIds = [];
+
+    matchedRecords.forEach((record) => {
+      if (record?.columnsToHide) {
+        hiddenIds.push(...parseIdList(record.columnsToHide));
+      }
+
+      if (record?.columnsToDisabled) {
+        disableIds.push(...parseIdList(record.columnsToDisabled));
+      }
+    });
+
+    updateParentFieldMeta({
+      hiddenIds,
+      disableIds,
+    });
+
+    const targetFieldNames = parentFieldDataInArray
+      .filter((field) => {
+        const id = Number(field.id);
+        return hiddenIds.includes(id) || disableIds.includes(id);
+      })
+      .map((field) => field.fieldname);
+
+    clearDependentValues(targetFieldNames);
+  }, [newState, actionFieldNames, parentFieldDataInArray]);
+
+  useEffect(() => {
+    const showTds =
+      newState?.tdsApplicable === true ||
+      newState?.tdsApplicable === "true" ||
+      newState?.tdsApplicable === 1 ||
+      newState?.tdsApplicable === "1";
+
+    setParentFieldDataInArray((prev) => {
+      if (!Array.isArray(prev) || prev.length === 0) return prev;
+
+      let changed = false;
+
+      const updated = prev.map((field) => {
+        if (field.fieldname === "tdsAmt" || field.fieldname === "tdsAmtFC") {
+          if (field.columnsToBeVisible !== showTds) {
+            changed = true;
+            return {
+              ...field,
+              columnsToBeVisible: showTds,
+            };
+          }
+        }
+        return field;
+      });
+
+      return changed ? updated : prev;
+    });
+
+    if (!showTds) {
+      setNewState((prev) => ({
+        ...prev,
+        tdsAmt: 0,
+        tdsAmtFC: 0,
+      }));
+
+      setSubmitNewState((prev) => ({
+        ...prev,
+        tdsAmt: 0,
+        tdsAmtFC: 0,
+      }));
+    }
+  }, [newState?.tdsApplicable]);
+
+  useEffect(() => {
+    if (!Array.isArray(originalChildsFields) || originalChildsFields.length === 0) return;
+
+    const showTds =
+      newState?.tdsApplicable === true ||
+      newState?.tdsApplicable === "true" ||
+      newState?.tdsApplicable === 1 ||
+      newState?.tdsApplicable === "1";
+
+    const updatedChilds = originalChildsFields.map((child) => {
+      if (child.tableName !== "tblVoucherLedger") return child;
+
+      return {
+        ...child,
+        fields: (child.fields || []).map((field) => {
+          if (field.fieldname === "tdsAmtFC" || field.fieldname === "tdsAmtHC") {
+            return {
+              ...field,
+              columnsToBeVisible: showTds,
+            };
+          }
+          return field;
+        }),
+      };
+    });
+
+    setChildsFields(updatedChilds);
+
+    if (!showTds) {
+      setNewState((prev) => ({
+        ...prev,
+        tblVoucherLedger: Array.isArray(prev.tblVoucherLedger)
+          ? prev.tblVoucherLedger.map((row) => ({
+            ...row,
+            tdsAmtFC: 0,
+            tdsAmtHC: 0,
+          }))
+          : prev.tblVoucherLedger,
+      }));
+
+      setSubmitNewState((prev) => ({
+        ...prev,
+        tblVoucherLedger: Array.isArray(prev.tblVoucherLedger)
+          ? prev.tblVoucherLedger.map((row) => ({
+            ...row,
+            tdsAmtFC: 0,
+            tdsAmtHC: 0,
+          }))
+          : prev.tblVoucherLedger,
+      }));
+    }
+  }, [newState?.tdsApplicable, originalChildsFields]);
 
   return (
     <div className={`h-screen relative`}>
