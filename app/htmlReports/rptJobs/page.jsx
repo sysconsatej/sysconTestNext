@@ -7671,6 +7671,8 @@ const rptJobs = () => {
     tblJobContainer = [],
   ) => {
     const normDepot = (s) => (s == null ? "Unknown" : String(s).trim());
+    console.log('tblJobQty',tblJobQty)
+     console.log('tblJobContainer',tblJobContainer)
 
     // 1) Aggregate qty (and first non-null meta) by depot
     const byDepot = new Map();
@@ -7678,10 +7680,12 @@ const rptJobs = () => {
       if (!r) continue;
       const depot = normDepot(r.depot);
       const qty = Number(r.qty) || 0;
+      const depotAddress = normDepot(r.depotAddress);
 
       if (!byDepot.has(depot)) {
         byDepot.set(depot, {
           depot,
+          depotAddress,
           qty: 0,
           size: r.size ?? null,
           type: r.type ?? null,
@@ -7717,6 +7721,7 @@ const rptJobs = () => {
     // 3) Finalize + fallbacks
     return Array.from(byDepot.values()).map((x) => ({
       depot: x.depot,
+      depotAddress:x.depotAddress,
       qty: x.qty,
       size: x.size ?? "—",
       type: x.type ?? "—",
@@ -7736,6 +7741,7 @@ const rptJobs = () => {
   const ContainerReleaseOrder = (rows) => {
     console.log("rows", rows);
     const depot = rows?.rows?.depot || null;
+    const depotAddress = rows?.rows?.depotAddress || null;
     return (
       <div
         className="p-6 text-black"
@@ -7838,6 +7844,7 @@ const rptJobs = () => {
           <p className="text-[10px]">To,</p>
           <p className="text-[11px] font-bold">THE MANAGER</p>
           <p className="text-[11px] font-bold">{depot ?? ""}</p>
+          <p className="text-[11px] font-bold">{depotAddress ?? ""}</p>
           <p className="mt-1 text-[9px]">
             Kindly release container(s) as per below details to{" "}
             {jobData && jobData.length > 0 ? jobData[0].shipperName : ""} or to

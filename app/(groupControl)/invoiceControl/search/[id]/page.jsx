@@ -997,6 +997,7 @@ export default function AddEditFormControll() {
           user.loginfinYear ??
           cleanData.financialYearId ??
           0;
+        cleanData.companyBranchId = loginBranchId
 
         // ✅ payload as Node expects
         const payload = {
@@ -2981,9 +2982,15 @@ export default function AddEditFormControll() {
     }
   }, [isDataLoaded, formControlData]);
 
-  // const allocPrevRef = useRef({ amtHC: "", amtFC: "", checks: [] });
-
+  //pervious working code 
+  // const allocPrevRef = useRef("");
+  // const allocInternalUpdateRef = useRef(false); // ✅ prevents max update depth loop
   // useEffect(() => {
+  //   if (allocInternalUpdateRef.current) {
+  //     allocInternalUpdateRef.current = false;
+  //     return;
+  //   }
+
   //   const toNum = (v) => {
   //     if (v === null || v === undefined || v === "") return 0;
   //     const n = Number(String(v).replace(/,/g, ""));
@@ -2992,167 +2999,313 @@ export default function AddEditFormControll() {
 
   //   const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
-  //   // string with 2 decimals for UI fields (debit/credit)
   //   const asStr2 = (n) =>
   //     n === null || n === undefined || n === "" ? "" : round2(n).toFixed(2);
 
-  //   // numeric-ish for balance fields (you can keep as number, or also toFixed if you want)
   //   const asNum2 = (n) => round2(n);
 
-  //   // ✅ pick details from either flat or nested place
-  //   const details = Array.isArray(newState?.tblVoucherLedgerDetails)
-  //     ? newState.tblVoucherLedgerDetails
-  //     : Array.isArray(newState?.tblVoucherLedger?.[0]?.tblVoucherLedgerDetails)
-  //     ? newState.tblVoucherLedger[0].tblVoucherLedgerDetails
-  //     : [];
+  //   const clamp0 = (n) => Math.max(0, round2(n));
 
-  //   if (!details.length) {
-  //     allocPrevRef.current = { amtHC: "", amtFC: "", checks: [] };
+  //   const normalizeOriginalBalance = ({
+  //     originalValue,
+  //     balanceValue,
+  //     creditValue,
+  //     debitValue,
+  //   }) => {
+  //     if (originalValue !== null && originalValue !== undefined && originalValue !== "") {
+  //       return round2(toNum(originalValue));
+  //     }
+  //     return round2(
+  //       toNum(balanceValue) + toNum(creditValue) - toNum(debitValue),
+  //     );
+  //   };
+
+  //   const getLedgerKey = (ledger, index) =>
+  //     ledger?.voucherLedgerId != null
+  //       ? String(ledger.voucherLedgerId)
+  //       : String(ledger?.indexValue ?? index);
+
+  //   const getDetailKey = (row, index) =>
+  //     row?.voucherOutstandingId != null
+  //       ? String(row.voucherOutstandingId)
+  //       : String(row?.indexValue ?? index);
+
+  //   const makeSnapshot = (ledgerRows, balanceAmtHc, balanceAmtFc) =>
+  //     JSON.stringify({
+  //       balanceAmtHc: asStr2(balanceAmtHc),
+  //       balanceAmtFc: asStr2(balanceAmtFc),
+  //       ledgers: ledgerRows.map((ledger, ledgerIndex) => ({
+  //         k: getLedgerKey(ledger, ledgerIndex),
+  //         d: asStr2(ledger?.debitAmount),
+  //         df: asStr2(ledger?.debitAmountFc),
+  //         cr: asStr2(ledger?.creditAmount),
+  //         crf: asStr2(ledger?.creditAmountFc),
+  //         rows: (Array.isArray(ledger?.tblVoucherLedgerDetails)
+  //           ? ledger.tblVoucherLedgerDetails
+  //           : []
+  //         ).map((row, rowIndex) => ({
+  //           k: getDetailKey(row, rowIndex),
+  //           c: !!row?.isChecked,
+  //           neg: !!row?.__isNegRow,
+  //           ob: asStr2(row?.__origBalHC),
+  //           obf: asStr2(row?.__origBalFC),
+  //           d: asStr2(row?.debitAmount),
+  //           df: asStr2(row?.debitAmountFc),
+  //           cr: asStr2(row?.creditAmount),
+  //           crf: asStr2(row?.creditAmountFc),
+  //           b: asStr2(row?.balanceAmount),
+  //           bf: asStr2(row?.balanceAmountFc),
+  //         })),
+  //       })),
+  //     });
+
+  //   const hasLedgers =
+  //     Array.isArray(newState?.tblVoucherLedger) &&
+  //     newState.tblVoucherLedger.length > 0;
+
+  //   const ledgers = hasLedgers
+  //     ? newState.tblVoucherLedger
+  //     : [
+  //       {
+  //         __virtual: true,
+  //         tblVoucherLedgerDetails: Array.isArray(newState?.tblVoucherLedgerDetails)
+  //           ? newState.tblVoucherLedgerDetails
+  //           : [],
+  //       },
+  //     ];
+
+  //   const allDetails = ledgers.flatMap((l) =>
+  //     Array.isArray(l?.tblVoucherLedgerDetails) ? l.tblVoucherLedgerDetails : []
+  //   );
+
+  //   if (!allDetails.length && !hasLedgers) {
+  //     allocPrevRef.current = "";
   //     return;
   //   }
 
-  //   // ✅ Total payable (your "pay amount")
-  //   const totalHC = toNum(newState?.amtRec ?? newState?.balanceAmtHc ?? 0);
-  //   const totalFC = toNum(newState?.amtRecFC ?? newState?.balanceAmtFc ?? 0);
+  //   const currentSnapshot = makeSnapshot(
+  //     ledgers,
+  //     newState?.balanceAmtHc,
+  //     newState?.balanceAmtFc,
+  //   );
 
-  //   // ✅ snapshot keys (avoid rerender loops)
-  //   const checksNow = details.map((r) => !!r?.isChecked);
-  //   const prev = allocPrevRef.current || { amtHC: "", amtFC: "", checks: [] };
+  //   let remainingHC = round2(
+  //     toNum(newState?.amtRec ?? 0) +
+  //     toNum(newState?.bankCharges ?? 0)
+  //   );
+  //   let remainingFC = round2(toNum(newState?.amtRecFC ?? 0) + toNum(newState?.bankCharges ?? 0));
 
-  //   const amtHCKey = String(newState?.amtRec ?? newState?.balanceAmtHc ?? "");
-  //   const amtFCKey = String(newState?.amtRecFC ?? newState?.balanceAmtFc ?? "");
+  //   const nextLedgers = ledgers.map((ledger) => {
+  //     const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+  //       ? ledger.tblVoucherLedgerDetails
+  //       : [];
 
-  //   const sameChecks =
-  //     prev.checks.length === checksNow.length &&
-  //     prev.checks.every((v, i) => v === checksNow[i]);
+  //     if (!details.length) {
+  //       const manualCreditHC = round2(toNum(ledger?.creditAmount));
+  //       const manualCreditFC = round2(toNum(ledger?.creditAmountFc));
+  //       const manualDebitHC = round2(toNum(ledger?.debitAmount));
+  //       const manualDebitFC = round2(toNum(ledger?.debitAmountFc));
 
-  //   if (prev.amtHC === amtHCKey && prev.amtFC === amtFCKey && sameChecks) return;
+  //       remainingHC = round2(remainingHC - manualCreditHC + manualDebitHC);
+  //       remainingFC = round2(remainingFC - manualCreditFC + manualDebitFC);
 
-  //   allocPrevRef.current = { amtHC: amtHCKey, amtFC: amtFCKey, checks: checksNow };
-
-  //   // ✅ allocate sequentially
-  //   let remHC = totalHC;
-  //   let remFC = totalFC;
-
-  //   const SECOND_ROW_INDEX = 1;
-  //   const stopAfterSecondIfChecked = !!details?.[SECOND_ROW_INDEX]?.isChecked;
-
-  //   const working = details.map((row, idx) => {
-  //     const isChecked = !!row?.isChecked;
-
-  //     // ✅ keep original balances stable (important!)
-  //     const origBalHC =
-  //       row?.__origBalHC != null ? toNum(row.__origBalHC) : toNum(row?.balanceAmount);
-  //     const origBalFC =
-  //       row?.__origBalFC != null ? toNum(row.__origBalFC) : toNum(row?.balanceAmountFc);
-
-  //     // unchecked → clear allocations, keep balances = original
-  //     if (!isChecked) {
   //       return {
-  //         ...row,
-  //         __origBalHC: origBalHC,
-  //         __origBalFC: origBalFC,
-  //         debitAmount: "",
-  //         debitAmountFc: "",
-  //         creditAmount: row?.creditAmount ?? "",
-  //         creditAmountFc: row?.creditAmountFc ?? "",
-  //         balanceAmount: asNum2(origBalHC),
-  //         balanceAmountFc: asNum2(origBalFC),
+  //         ...ledger,
+  //         isChildChecked: false,
   //       };
   //     }
 
-  //     // if stopping after 2nd row AND we're past it → force 0 allocation, keep balances = original
-  //     if (stopAfterSecondIfChecked && idx > SECOND_ROW_INDEX) {
+  //     let isChildChecked = false;
+
+  //     const nextDetails = details.map((row) => {
+  //       const isChecked = !!row?.isChecked;
+  //       if (isChecked) {
+  //         isChildChecked = true;
+  //       }
+
+  //       const origBalHC = normalizeOriginalBalance({
+  //         originalValue: row?.__origBalHC,
+  //         balanceValue: row?.balanceAmount,
+  //         creditValue: row?.creditAmount,
+  //         debitValue: row?.debitAmount,
+  //       });
+  //       const origBalFC = normalizeOriginalBalance({
+  //         originalValue: row?.__origBalFC,
+  //         balanceValue: row?.balanceAmountFc,
+  //         creditValue: row?.creditAmountFc,
+  //         debitValue: row?.debitAmountFc,
+  //       });
+
+  //       const isNegativeRow = origBalHC < 0 || origBalFC < 0;
+
+  //       if (!isChecked) {
+  //         return {
+  //           ...row,
+  //           __isNegRow: isNegativeRow,
+  //           __origBalHC: origBalHC,
+  //           __origBalFC: origBalFC,
+  //           debitAmount: "0.00",
+  //           debitAmountFc: "0.00",
+  //           creditAmount: "0.00",
+  //           creditAmountFc: "0.00",
+  //           balanceAmount: asNum2(origBalHC),
+  //           balanceAmountFc: asNum2(origBalFC),
+  //         };
+  //       }
+
+  //       let debitHC = 0;
+  //       let debitFC = 0;
+  //       let creditHC = 0;
+  //       let creditFC = 0;
+  //       let balanceHC = origBalHC;
+  //       let balanceFC = origBalFC;
+
+  //       if (origBalHC < 0) {
+  //         debitHC = round2(Math.abs(origBalHC));
+  //         balanceHC = 0;
+  //         remainingHC = round2(remainingHC + debitHC);
+  //       } else if (origBalHC > 0) {
+  //         creditHC = clamp0(Math.min(remainingHC, origBalHC));
+  //         balanceHC = round2(origBalHC - creditHC);
+  //         remainingHC = round2(remainingHC - creditHC);
+  //       }
+
+  //       if (origBalFC < 0) {
+  //         debitFC = round2(Math.abs(origBalFC));
+  //         balanceFC = 0;
+  //         remainingFC = round2(remainingFC + debitFC);
+  //       } else if (origBalFC > 0) {
+  //         creditFC = clamp0(Math.min(remainingFC, origBalFC));
+  //         balanceFC = round2(origBalFC - creditFC);
+  //         remainingFC = round2(remainingFC - creditFC);
+  //       }
+
   //       return {
   //         ...row,
+  //         __isNegRow: isNegativeRow,
   //         __origBalHC: origBalHC,
   //         __origBalFC: origBalFC,
-  //         debitAmount: "",
-  //         debitAmountFc: "",
-  //         creditAmount: row?.creditAmount ?? "",
-  //         creditAmountFc: row?.creditAmountFc ?? "",
-  //         balanceAmount: asNum2(origBalHC),
-  //         balanceAmountFc: asNum2(origBalFC),
+  //         debitAmount: asStr2(debitHC),
+  //         debitAmountFc: asStr2(debitFC),
+  //         creditAmount: asStr2(creditHC),
+  //         creditAmountFc: asStr2(creditFC),
+  //         balanceAmount: asNum2(balanceHC),
+  //         balanceAmountFc: asNum2(balanceFC),
   //       };
+  //     });
+
+  //     const parentCreditHC = round2(
+  //       nextDetails.reduce((sum, r) => sum + toNum(r?.creditAmount), 0),
+  //     );
+  //     const parentCreditFC = round2(
+  //       nextDetails.reduce((sum, r) => sum + toNum(r?.creditAmountFc), 0),
+  //     );
+  //     const parentDebitHC = round2(
+  //       nextDetails.reduce((sum, r) => sum + toNum(r?.debitAmount), 0),
+  //     );
+  //     const parentDebitFC = round2(
+  //       nextDetails.reduce((sum, r) => sum + toNum(r?.debitAmountFc), 0),
+  //     );
+
+  //     const prevCreditHC = round2(toNum(ledger?.creditAmount));
+  //     const prevCreditFC = round2(toNum(ledger?.creditAmountFc));
+  //     const prevDebitHC = round2(toNum(ledger?.debitAmount));
+  //     const prevDebitFC = round2(toNum(ledger?.debitAmountFc));
+
+  //     const nextCreditHC =
+  //       !isChildChecked
+  //         ? ledger?.creditAmount ?? asStr2(prevCreditHC)
+  //         : asStr2(parentCreditHC);
+  //     const nextCreditFC =
+  //       !isChildChecked
+  //         ? ledger?.creditAmountFc ?? asStr2(prevCreditFC)
+  //         : asStr2(parentCreditFC);
+  //     const nextDebitHC =
+  //       !isChildChecked
+  //         ? ledger?.debitAmount ?? asStr2(prevDebitHC)
+  //         : asStr2(parentDebitHC);
+  //     const nextDebitFC =
+  //       !isChildChecked
+  //         ? ledger?.debitAmountFc ?? asStr2(prevDebitFC)
+  //         : asStr2(parentDebitFC);
+
+  //     if (!isChildChecked) {
+  //       remainingHC = round2(remainingHC - toNum(nextCreditHC) + toNum(nextDebitHC));
+  //       remainingFC = round2(remainingFC - toNum(nextCreditFC) + toNum(nextDebitFC));
   //     }
-
-  //     // ✅ allocate from remaining (limit by original balance)
-  //     const allocHC = Math.min(remHC, origBalHC);
-  //     const allocFC = Math.min(remFC, origBalFC);
-
-  //     remHC = round2(remHC - allocHC);
-  //     remFC = round2(remFC - allocFC);
-
-  //     // 🔥 SPECIAL: after allocating 2nd row, dump ALL remaining to 0
-  //     if (stopAfterSecondIfChecked && idx === SECOND_ROW_INDEX) {
-  //       remHC = 0;
-  //       remFC = 0;
-  //     }
-
-  //     // ✅ NEW: updated balances after allocation
-  //     const newBalHC = round2(origBalHC - allocHC);
-  //     const newBalFC = round2(origBalFC - allocFC);
 
   //     return {
-  //       ...row,
-  //       __origBalHC: origBalHC,
-  //       __origBalFC: origBalFC,
-  //       debitAmount: allocHC ? asStr2(allocHC) : "",
-  //       debitAmountFc: allocFC ? asStr2(allocFC) : "",
-  //       creditAmount: row?.creditAmount ?? "",
-  //       creditAmountFc: row?.creditAmountFc ?? "",
-  //       balanceAmount: asNum2(newBalHC),
-  //       balanceAmountFc: asNum2(newBalFC),
+  //       ...ledger,
+  //       isChildChecked,
+  //       tblVoucherLedgerDetails: nextDetails,
+  //       creditAmount: nextCreditHC,
+  //       creditAmountFc: nextCreditFC,
+  //       debitAmount: nextDebitHC,
+  //       debitAmountFc: nextDebitFC,
   //     };
   //   });
 
-  //   // ✅ commit without mutating
+  //   const nextBalanceAmtHc = asStr2(remainingHC);
+  //   const nextBalanceAmtFc = asStr2(remainingFC);
+  //   const nextSnapshot = makeSnapshot(
+  //     nextLedgers,
+  //     nextBalanceAmtHc,
+  //     nextBalanceAmtFc,
+  //   );
+
+  //   if (nextSnapshot === currentSnapshot || allocPrevRef.current === nextSnapshot) {
+  //     allocPrevRef.current = nextSnapshot;
+  //     return;
+  //   }
+
+  //   allocPrevRef.current = nextSnapshot;
+  //   allocInternalUpdateRef.current = true;
+
   //   setNewState((prevState) => {
-  //     // nested under tblVoucherLedger[0]
-  //     if (Array.isArray(prevState?.tblVoucherLedger?.[0]?.tblVoucherLedgerDetails)) {
-  //       const ledgers = (prevState.tblVoucherLedger || []).map((l, i) =>
-  //         i === 0 ? { ...l, tblVoucherLedgerDetails: working } : l
-  //       );
-
-  //       return {
+  //     const out = Array.isArray(prevState?.tblVoucherLedger)
+  //       ? {
   //         ...prevState,
-  //         tblVoucherLedger: ledgers,
-  //         // remaining in state
-  //         balanceAmtHc: asStr2(remHC),
-  //         balanceAmtFc: asStr2(remFC),
+  //         tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
+  //         balanceAmtHc: nextBalanceAmtHc,
+  //         balanceAmtFc: nextBalanceAmtFc,
+  //       }
+  //       : {
+  //         ...prevState,
+  //         tblVoucherLedgerDetails:
+  //           nextLedgers[0]?.tblVoucherLedgerDetails || [],
+  //         balanceAmtHc: nextBalanceAmtHc,
+  //         balanceAmtFc: nextBalanceAmtFc,
   //       };
-  //     }
 
-  //     // flat case
-  //     return {
-  //       ...prevState,
-  //       tblVoucherLedgerDetails: working,
-  //       balanceAmtHc: asStr2(remHC),
-  //       balanceAmtFc: asStr2(remFC),
-  //     };
+  //     return out;
   //   });
   // }, [
   //   newState?.amtRec,
   //   newState?.amtRecFC,
-  //   newState?.balanceAmtHc,
-  //   newState?.balanceAmtFc,
-  //   newState?.tblVoucherLedgerDetails,
-  //   newState?.tblVoucherLedger,
+  //   newState?.bankCharges,
+  //   newState?.tdsAmt,
+  //   JSON.stringify(newState?.tblVoucherLedger),
+  //   JSON.stringify(newState?.tblVoucherLedgerDetails),
   // ]);
-
-  // put this near your other refs
-  // ✅ UPDATED: guard also tracks debit values (so uncheck + "0.00" forces recalculation)
-  // ✅ UPDATED: prevents unnecessary setNewState loops by skipping if nothing changed
-
+  //this code is for both bankPayment and bank Recepit
+  // const allocPrevRef = useRef("");
+  // const allocInternalUpdateRef = useRef(false);
 
   const allocPrevRef = useRef("");
-  const allocInternalUpdateRef = useRef(false); // ✅ prevents max update depth loop
+  const allocInternalUpdateRef = useRef(false);
 
   useEffect(() => {
     if (allocInternalUpdateRef.current) {
       allocInternalUpdateRef.current = false;
       return;
     }
+
+    const voucherTypeId = String(newState?.voucherTypeId ?? "");
+    if (voucherTypeId !== "9" && voucherTypeId !== "12") {
+      return;
+    }
+
+    const shouldSwapDrCr = voucherTypeId === "12";
 
     const toNum = (v) => {
       if (v === null || v === undefined || v === "") return 0;
@@ -3169,18 +3322,64 @@ export default function AddEditFormControll() {
 
     const clamp0 = (n) => Math.max(0, round2(n));
 
+    const stateToLogic = (debitValue, creditValue) => {
+      if (shouldSwapDrCr) {
+        return {
+          debit: round2(toNum(creditValue)),
+          credit: round2(toNum(debitValue)),
+        };
+      }
+
+      return {
+        debit: round2(toNum(debitValue)),
+        credit: round2(toNum(creditValue)),
+      };
+    };
+
+    const logicToStateHC = (debitValue, creditValue) => {
+      if (shouldSwapDrCr) {
+        return {
+          debitAmount: asStr2(creditValue),
+          creditAmount: asStr2(debitValue),
+        };
+      }
+
+      return {
+        debitAmount: asStr2(debitValue),
+        creditAmount: asStr2(creditValue),
+      };
+    };
+
+    const logicToStateFC = (debitValue, creditValue) => {
+      if (shouldSwapDrCr) {
+        return {
+          debitAmountFc: asStr2(creditValue),
+          creditAmountFc: asStr2(debitValue),
+        };
+      }
+
+      return {
+        debitAmountFc: asStr2(debitValue),
+        creditAmountFc: asStr2(creditValue),
+      };
+    };
+
     const normalizeOriginalBalance = ({
       originalValue,
       balanceValue,
       creditValue,
       debitValue,
     }) => {
-      if (originalValue !== null && originalValue !== undefined && originalValue !== "") {
+      if (
+        originalValue !== null &&
+        originalValue !== undefined &&
+        originalValue !== ""
+      ) {
         return round2(toNum(originalValue));
       }
-      return round2(
-        toNum(balanceValue) + toNum(creditValue) - toNum(debitValue),
-      );
+
+      const logical = stateToLogic(debitValue, creditValue);
+      return round2(toNum(balanceValue) + logical.credit - logical.debit);
     };
 
     const getLedgerKey = (ledger, index) =>
@@ -3237,8 +3436,10 @@ export default function AddEditFormControll() {
         },
       ];
 
-    const allDetails = ledgers.flatMap((l) =>
-      Array.isArray(l?.tblVoucherLedgerDetails) ? l.tblVoucherLedgerDetails : []
+    const allDetails = ledgers.flatMap((ledger) =>
+      Array.isArray(ledger?.tblVoucherLedgerDetails)
+        ? ledger.tblVoucherLedgerDetails
+        : []
     );
 
     if (!allDetails.length && !hasLedgers) {
@@ -3249,28 +3450,32 @@ export default function AddEditFormControll() {
     const currentSnapshot = makeSnapshot(
       ledgers,
       newState?.balanceAmtHc,
-      newState?.balanceAmtFc,
+      newState?.balanceAmtFc
     );
 
     let remainingHC = round2(
-      toNum(newState?.amtRec ?? 0) +
-      toNum(newState?.bankCharges ?? 0)
+      toNum(newState?.amtRec ?? 0) + toNum(newState?.bankCharges ?? 0)
     );
-    let remainingFC = round2(toNum(newState?.amtRecFC ?? 0) + toNum(newState?.bankCharges ?? 0));
+
+    let remainingFC = round2(
+      toNum(newState?.amtRecFC ?? 0) + toNum(newState?.bankCharges ?? 0)
+    );
 
     const nextLedgers = ledgers.map((ledger) => {
       const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
         ? ledger.tblVoucherLedgerDetails
         : [];
 
+      // Parent ledger with no child rows
       if (!details.length) {
-        const manualCreditHC = round2(toNum(ledger?.creditAmount));
-        const manualCreditFC = round2(toNum(ledger?.creditAmountFc));
-        const manualDebitHC = round2(toNum(ledger?.debitAmount));
-        const manualDebitFC = round2(toNum(ledger?.debitAmountFc));
+        const manualHC = stateToLogic(ledger?.debitAmount, ledger?.creditAmount);
+        const manualFC = stateToLogic(
+          ledger?.debitAmountFc,
+          ledger?.creditAmountFc
+        );
 
-        remainingHC = round2(remainingHC - manualCreditHC + manualDebitHC);
-        remainingFC = round2(remainingFC - manualCreditFC + manualDebitFC);
+        remainingHC = round2(remainingHC - manualHC.credit + manualHC.debit);
+        remainingFC = round2(remainingFC - manualFC.credit + manualFC.debit);
 
         return {
           ...ledger,
@@ -3280,11 +3485,10 @@ export default function AddEditFormControll() {
 
       let isChildChecked = false;
 
+      // Step 1: prepare all rows first
       const nextDetails = details.map((row) => {
         const isChecked = !!row?.isChecked;
-        if (isChecked) {
-          isChildChecked = true;
-        }
+        if (isChecked) isChildChecked = true;
 
         const origBalHC = normalizeOriginalBalance({
           originalValue: row?.__origBalHC,
@@ -3292,6 +3496,7 @@ export default function AddEditFormControll() {
           creditValue: row?.creditAmount,
           debitValue: row?.debitAmount,
         });
+
         const origBalFC = normalizeOriginalBalance({
           originalValue: row?.__origBalFC,
           balanceValue: row?.balanceAmountFc,
@@ -3316,107 +3521,203 @@ export default function AddEditFormControll() {
           };
         }
 
-        let debitHC = 0;
-        let debitFC = 0;
-        let creditHC = 0;
-        let creditFC = 0;
-        let balanceHC = origBalHC;
-        let balanceFC = origBalFC;
-
-        if (origBalHC < 0) {
-          debitHC = round2(Math.abs(origBalHC));
-          balanceHC = 0;
-          remainingHC = round2(remainingHC + debitHC);
-        } else if (origBalHC > 0) {
-          creditHC = clamp0(Math.min(remainingHC, origBalHC));
-          balanceHC = round2(origBalHC - creditHC);
-          remainingHC = round2(remainingHC - creditHC);
-        }
-
-        if (origBalFC < 0) {
-          debitFC = round2(Math.abs(origBalFC));
-          balanceFC = 0;
-          remainingFC = round2(remainingFC + debitFC);
-        } else if (origBalFC > 0) {
-          creditFC = clamp0(Math.min(remainingFC, origBalFC));
-          balanceFC = round2(origBalFC - creditFC);
-          remainingFC = round2(remainingFC - creditFC);
-        }
-
         return {
           ...row,
           __isNegRow: isNegativeRow,
           __origBalHC: origBalHC,
           __origBalFC: origBalFC,
-          debitAmount: asStr2(debitHC),
-          debitAmountFc: asStr2(debitFC),
-          creditAmount: asStr2(creditHC),
-          creditAmountFc: asStr2(creditFC),
-          balanceAmount: asNum2(balanceHC),
-          balanceAmountFc: asNum2(balanceFC),
+          debitAmount: "0.00",
+          debitAmountFc: "0.00",
+          creditAmount: "0.00",
+          creditAmountFc: "0.00",
+          balanceAmount: asNum2(origBalHC),
+          balanceAmountFc: asNum2(origBalFC),
         };
       });
 
-      const parentCreditHC = round2(
-        nextDetails.reduce((sum, r) => sum + toNum(r?.creditAmount), 0),
-      );
-      const parentCreditFC = round2(
-        nextDetails.reduce((sum, r) => sum + toNum(r?.creditAmountFc), 0),
-      );
-      const parentDebitHC = round2(
-        nextDetails.reduce((sum, r) => sum + toNum(r?.debitAmount), 0),
-      );
-      const parentDebitFC = round2(
-        nextDetails.reduce((sum, r) => sum + toNum(r?.debitAmountFc), 0),
+      // Step 2: process NEGATIVE checked rows first within same ledger
+      nextDetails.forEach((row) => {
+        if (!row?.isChecked) return;
+
+        const origBalHC = round2(toNum(row?.__origBalHC));
+        const origBalFC = round2(toNum(row?.__origBalFC));
+
+        let logicalDebitHC = 0;
+        let logicalCreditHC = 0;
+        let logicalDebitFC = 0;
+        let logicalCreditFC = 0;
+
+        let balanceHC = origBalHC;
+        let balanceFC = origBalFC;
+
+        if (origBalHC < 0) {
+          logicalDebitHC = round2(Math.abs(origBalHC));
+          balanceHC = 0;
+          remainingHC = round2(remainingHC + logicalDebitHC);
+        }
+
+        if (origBalFC < 0) {
+          logicalDebitFC = round2(Math.abs(origBalFC));
+          balanceFC = 0;
+          remainingFC = round2(remainingFC + logicalDebitFC);
+        }
+
+        const hcState = logicToStateHC(logicalDebitHC, logicalCreditHC);
+        const fcState = logicToStateFC(logicalDebitFC, logicalCreditFC);
+
+        row.debitAmount = hcState.debitAmount;
+        row.creditAmount = hcState.creditAmount;
+        row.debitAmountFc = fcState.debitAmountFc;
+        row.creditAmountFc = fcState.creditAmountFc;
+        row.balanceAmount = asNum2(balanceHC);
+        row.balanceAmountFc = asNum2(balanceFC);
+      });
+
+      // Step 3: process POSITIVE checked rows after negatives
+      nextDetails.forEach((row) => {
+        if (!row?.isChecked) return;
+
+        const origBalHC = round2(toNum(row?.__origBalHC));
+        const origBalFC = round2(toNum(row?.__origBalFC));
+
+        const existingHC = stateToLogic(row?.debitAmount, row?.creditAmount);
+        const existingFC = stateToLogic(
+          row?.debitAmountFc,
+          row?.creditAmountFc
+        );
+
+        let logicalDebitHC = existingHC.debit;
+        let logicalCreditHC = existingHC.credit;
+        let logicalDebitFC = existingFC.debit;
+        let logicalCreditFC = existingFC.credit;
+
+        let balanceHC = origBalHC < 0 ? 0 : origBalHC;
+        let balanceFC = origBalFC < 0 ? 0 : origBalFC;
+
+        if (origBalHC > 0) {
+          logicalCreditHC = clamp0(Math.min(remainingHC, origBalHC));
+          balanceHC = round2(origBalHC - logicalCreditHC);
+          remainingHC = round2(remainingHC - logicalCreditHC);
+        } else if (origBalHC === 0) {
+          balanceHC = 0;
+        }
+
+        if (origBalFC > 0) {
+          logicalCreditFC = clamp0(Math.min(remainingFC, origBalFC));
+          balanceFC = round2(origBalFC - logicalCreditFC);
+          remainingFC = round2(remainingFC - logicalCreditFC);
+        } else if (origBalFC === 0) {
+          balanceFC = 0;
+        }
+
+        const hcState = logicToStateHC(logicalDebitHC, logicalCreditHC);
+        const fcState = logicToStateFC(logicalDebitFC, logicalCreditFC);
+
+        row.debitAmount = hcState.debitAmount;
+        row.creditAmount = hcState.creditAmount;
+        row.debitAmountFc = fcState.debitAmountFc;
+        row.creditAmountFc = fcState.creditAmountFc;
+        row.balanceAmount = asNum2(balanceHC);
+        row.balanceAmountFc = asNum2(balanceFC);
+      });
+
+      const parentLogicHC = nextDetails.reduce(
+        (acc, row) => {
+          const x = stateToLogic(row?.debitAmount, row?.creditAmount);
+          acc.debit += x.debit;
+          acc.credit += x.credit;
+          return acc;
+        },
+        { debit: 0, credit: 0 }
       );
 
-      const prevCreditHC = round2(toNum(ledger?.creditAmount));
-      const prevCreditFC = round2(toNum(ledger?.creditAmountFc));
-      const prevDebitHC = round2(toNum(ledger?.debitAmount));
-      const prevDebitFC = round2(toNum(ledger?.debitAmountFc));
+      const parentLogicFC = nextDetails.reduce(
+        (acc, row) => {
+          const x = stateToLogic(row?.debitAmountFc, row?.creditAmountFc);
+          acc.debit += x.debit;
+          acc.credit += x.credit;
+          return acc;
+        },
+        { debit: 0, credit: 0 }
+      );
 
-      const nextCreditHC =
-        !isChildChecked
-          ? ledger?.creditAmount ?? asStr2(prevCreditHC)
-          : asStr2(parentCreditHC);
-      const nextCreditFC =
-        !isChildChecked
-          ? ledger?.creditAmountFc ?? asStr2(prevCreditFC)
-          : asStr2(parentCreditFC);
-      const nextDebitHC =
-        !isChildChecked
-          ? ledger?.debitAmount ?? asStr2(prevDebitHC)
-          : asStr2(parentDebitHC);
-      const nextDebitFC =
-        !isChildChecked
-          ? ledger?.debitAmountFc ?? asStr2(prevDebitFC)
-          : asStr2(parentDebitFC);
+      const prevStateHC = {
+        debitAmount:
+          ledger?.debitAmount ?? asStr2(toNum(ledger?.debitAmount)),
+        creditAmount:
+          ledger?.creditAmount ?? asStr2(toNum(ledger?.creditAmount)),
+      };
 
+      const prevStateFC = {
+        debitAmountFc:
+          ledger?.debitAmountFc ?? asStr2(toNum(ledger?.debitAmountFc)),
+        creditAmountFc:
+          ledger?.creditAmountFc ?? asStr2(toNum(ledger?.creditAmountFc)),
+      };
+
+      const parentStateHC = logicToStateHC(
+        round2(parentLogicHC.debit),
+        round2(parentLogicHC.credit)
+      );
+
+      const parentStateFC = logicToStateFC(
+        round2(parentLogicFC.debit),
+        round2(parentLogicFC.credit)
+      );
+
+      const nextDebitHC = !isChildChecked
+        ? prevStateHC.debitAmount
+        : parentStateHC.debitAmount;
+
+      const nextCreditHC = !isChildChecked
+        ? prevStateHC.creditAmount
+        : parentStateHC.creditAmount;
+
+      const nextDebitFC = !isChildChecked
+        ? prevStateFC.debitAmountFc
+        : parentStateFC.debitAmountFc;
+
+      const nextCreditFC = !isChildChecked
+        ? prevStateFC.creditAmountFc
+        : parentStateFC.creditAmountFc;
+
+      // If no child checked, keep manual parent values exactly like previous logic
       if (!isChildChecked) {
-        remainingHC = round2(remainingHC - toNum(nextCreditHC) + toNum(nextDebitHC));
-        remainingFC = round2(remainingFC - toNum(nextCreditFC) + toNum(nextDebitFC));
+        const nextLogicHC = stateToLogic(nextDebitHC, nextCreditHC);
+        const nextLogicFC = stateToLogic(nextDebitFC, nextCreditFC);
+
+        remainingHC = round2(
+          remainingHC - nextLogicHC.credit + nextLogicHC.debit
+        );
+        remainingFC = round2(
+          remainingFC - nextLogicFC.credit + nextLogicFC.debit
+        );
       }
 
       return {
         ...ledger,
         isChildChecked,
         tblVoucherLedgerDetails: nextDetails,
-        creditAmount: nextCreditHC,
-        creditAmountFc: nextCreditFC,
         debitAmount: nextDebitHC,
+        creditAmount: nextCreditHC,
         debitAmountFc: nextDebitFC,
+        creditAmountFc: nextCreditFC,
       };
     });
 
     const nextBalanceAmtHc = asStr2(remainingHC);
     const nextBalanceAmtFc = asStr2(remainingFC);
+
     const nextSnapshot = makeSnapshot(
       nextLedgers,
       nextBalanceAmtHc,
-      nextBalanceAmtFc,
+      nextBalanceAmtFc
     );
 
-    if (nextSnapshot === currentSnapshot || allocPrevRef.current === nextSnapshot) {
+    if (
+      nextSnapshot === currentSnapshot ||
+      allocPrevRef.current === nextSnapshot
+    ) {
       allocPrevRef.current = nextSnapshot;
       return;
     }
@@ -3425,24 +3726,25 @@ export default function AddEditFormControll() {
     allocInternalUpdateRef.current = true;
 
     setNewState((prevState) => {
-      const out = Array.isArray(prevState?.tblVoucherLedger)
-        ? {
+      if (hasLedgers) {
+        return {
           ...prevState,
           tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
           balanceAmtHc: nextBalanceAmtHc,
           balanceAmtFc: nextBalanceAmtFc,
-        }
-        : {
-          ...prevState,
-          tblVoucherLedgerDetails:
-            nextLedgers[0]?.tblVoucherLedgerDetails || [],
-          balanceAmtHc: nextBalanceAmtHc,
-          balanceAmtFc: nextBalanceAmtFc,
         };
+      }
 
-      return out;
+      return {
+        ...prevState,
+        tblVoucherLedgerDetails:
+          nextLedgers[0]?.tblVoucherLedgerDetails || [],
+        balanceAmtHc: nextBalanceAmtHc,
+        balanceAmtFc: nextBalanceAmtFc,
+      };
     });
   }, [
+    newState?.voucherTypeId,
     newState?.amtRec,
     newState?.amtRecFC,
     newState?.bankCharges,

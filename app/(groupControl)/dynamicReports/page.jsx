@@ -2,12 +2,16 @@
 /* eslint-disable */
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 const BackEndUrl = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import DocumentReadingLoader from "@/components/DocumentReadingLoader/ReadingLoader";
 import React, { useState, useEffect, useRef, use } from "react";
 import styles from "@/app/app.module.css";
 import CustomeModal from "@/components/Modal/customModal";
 import {
+  GetPurchaseInvoiceReadingStatus,
   ledgerData,
   saveEditedReport,
+  UploadPurchaseInvoice,
 } from "@/services/auth/FormControl.services.js";
 import { uploadInvoicePurchase } from "@/helper/uploadInvoicePurchase.js";
 import {
@@ -102,6 +106,134 @@ import {
   displayTableRowStylesNoHover,
 } from "@/app/globalCss";
 import { image } from "d3";
+
+const response = {
+  success: true,
+  message: "PDF data extracted successfully",
+  data: {
+    documentTypeOrDocumentHeading: "INVOICE",
+    invoiceType: "TERMINAL SERVICES",
+    CustomerCode: "C-050246, SMD",
+    CustomerName: "Samudera Shipping Line (India) Pvt Ltd.",
+    CustomerAddress:
+      "4024Th FlrRustomjee AspireeEver-Aed Ngr RdOff East'N ExpresSionMumbai, Maharashtra, IN, 400022",
+    gstinNo: "27AAGCS7372A1ZD",
+    irnNo: "b2196471eb61781ad6fe900b7da84f801d32469cc0fb722ad11d6ae7c10bba35",
+    stateName: "27",
+    creditLimit: "0",
+    poNo: null,
+    icpCodeBuyer: null,
+    icpCodeSeller: null,
+    invoiceNo: "GTICD1302313",
+    invoiceDate: "2025-12-02",
+    gtiGstin: "27AACCG1899E1ZH",
+    panNo: "AACCG1899E",
+    tanNo: "PNEG15315G",
+    VesselCallNo: "R2214",
+    vesselName: "MOL CREATION",
+    voyageName: null,
+    timeOfArrival: "2025-11-30 07:00:00.0",
+    timeOfDeparture: "2025-12-01 22:30:00.0",
+    trainNo: "254845",
+    trainArrivalTime: "2025-12-01 22:20:00.0",
+    trainDepartureTime: "2025-12-02 14:50:00.0",
+    ackNo: "122529879397086",
+    ackDate: "3/12/25 12:50 AM",
+    activityCode: null,
+    icfHfm: null,
+    tblCharges: [
+      {
+        sNo: "1",
+        serviceDescription: "CRO CHARGES ON RAIL OUT CTR 20",
+        sacCode: "996751",
+        sacPercent: "18",
+        unitQtyPerDay: "2.00",
+        tariffRate: "808.32",
+        tariffCurrency: "INR",
+        exchRate: "1.0",
+        amountInTariffCurrency: "1,616.64",
+        sgst: "145.50",
+        cgst: "145.50",
+        igst: "0.00",
+        amountInINR: "1,907.64",
+      },
+    ],
+    chargesTotal: {
+      actual: "1,616.64",
+      total: "1,907.64",
+      advance: "0",
+      balanceInvoice: "1,907.64",
+    },
+    tblContainer: [
+      {
+        chargeGroup: "CRORAILOUT20 - CRO CHARGES ON RAIL OUT CTR 20",
+        no: "1",
+        containerNo: "BMOU1321352",
+        fe: "F",
+        size: "20",
+        iso: "2210",
+        weight: "24760.0",
+        entryDate: "30-11-2025 15:14",
+        performedDate: "01-12-2025 23:31",
+        exitDate: "02-12-2025 14:50",
+        entryMode: "VESSEL",
+        exitMode: "TRAIN",
+        pol: "CNSHA",
+        pod: "INNSA",
+        oog: "N",
+        haz: "N",
+        rfr: "N",
+        eventName: "UNIT_RAMP",
+      },
+      {
+        chargeGroup: "CRORAILOUT20 - CRO CHARGES ON RAIL OUT CTR 20",
+        no: "2",
+        containerNo: "BMOU1359300",
+        fe: "F",
+        size: "20",
+        iso: "2210",
+        weight: "24760.0",
+        entryDate: "30-11-2025 15:28",
+        performedDate: "01-12-2025 23:16",
+        exitDate: "02-12-2025 14:50",
+        entryMode: "VESSEL",
+        exitMode: "TRAIN",
+        pol: "CNSHA",
+        pod: "INNSA",
+        oog: "N",
+        haz: "N",
+        rfr: "N",
+        eventName: "UNIT_RAMP",
+      },
+    ],
+    warnings: ["stateName value '27' might be a code, not a name."],
+    missingFields: [
+      "poNo",
+      "icpCodeBuyer",
+      "icpCodeSeller",
+      "voyageName",
+      "activityCode",
+      "icfHfm",
+    ],
+    reviewRequired: true,
+    usageMetadata: {
+      promptTokenCount: 1264,
+      candidatesTokenCount: 1409,
+      totalTokenCount: 5629,
+      promptTokensDetails: [
+        {
+          modality: "TEXT",
+          tokenCount: 490,
+        },
+        {
+          modality: "DOCUMENT",
+          tokenCount: 774,
+        },
+      ],
+      thoughtsTokenCount: 2956,
+    },
+  },
+};
 
 export default function AddEditFormControll({ reportData }) {
   const router = useRouter();
@@ -217,9 +349,16 @@ export default function AddEditFormControll({ reportData }) {
   const [ledgerVoucherGroupingRadio, setVoucherGroupingRadio] = useState(null);
   const [ledgerReportTypeRadio, setReportTypeRadio] = useState(null);
   const [fileNameUploaded, setFileNameUploaded] = useState(null);
+  const [uploadedFileData, setUploadedFileData] = useState(null);
+  const [uploadedWarnings, setUploadedWarnings] = useState(null);
+  const [uploadedMessages, setUploadedMessages] = useState(null);
+  const [fileUploadProgress, setFileUploadProgress] = useState(0);
+  const [fileUploadStage, setFileUploadStage] = useState("");
+  const [fileUploadMessage, setFileUploadMessage] = useState("");
+  const [fileUploadingLoader, setFileUploadingLoader] = useState(false);
   const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
   const header = BackEndUrl + headerLogoPath;
-
+  console.log("fileNameUploaded", fileNameUploaded);
   useEffect(() => {
     // Set first non-empty array as default active table
     const firstKey = Object.entries(analysisData || {}).find(
@@ -591,7 +730,10 @@ export default function AddEditFormControll({ reportData }) {
 
   const handleFieldValuesChange = (updatedValues) => {
     const entries = Object.entries(updatedValues);
-
+    console.log("updatedValues", updatedValues);
+    if (updatedValues) {
+      setUploadedFileData(updatedValues);
+    }
     const hasFile = entries.some(([, value]) => {
       if (value instanceof File) return true;
       if (Array.isArray(value)) return value.some((v) => v instanceof File);
@@ -614,7 +756,7 @@ export default function AddEditFormControll({ reportData }) {
                 }),
             ),
           ).then((allJson) => {
-            // store array of extracted jsons
+            // store array of extracted json for multiple files under the same key
             setNewState((prevState) => ({ ...prevState, [key]: allJson }));
             setFilterCondition((prevState) => ({
               ...prevState,
@@ -4906,32 +5048,162 @@ export default function AddEditFormControll({ reportData }) {
     },
     handleUploadPurchaseInvoice: async () => {
       try {
-        const filterCondition = {
+        setFileUploadingLoader(true);
+        setFileUploadProgress(0);
+        setFileUploadStage("starting");
+        setFileUploadMessage("Starting PDF extraction");
+        setUploadedMessages([]);
+
+        const requestBodyForMenuReportDetails = {
+          columns:
+            "spName,reportCriteriaId,isDefaultDataShow,outputFileType,isSp",
+          tableName: "tblMenuReportMapping",
+          whereCondition: `menuId = ${search}`,
+          clientIdCondition: `status = 1 FOR JSON PATH,INCLUDE_NULL_VALUES`,
+        };
+
+        const reportData = await fetchReportData(
+          requestBodyForMenuReportDetails,
+        );
+        const spName = reportData?.data?.[0]?.spName;
+
+        const files = uploadedFileData?.invoiceUploads || [];
+
+        if (!Array.isArray(files) || files.length === 0) {
+          toast.error("Please select a PDF file");
+          setFileUploadingLoader(false);
+          return null;
+        }
+
+        const file = files[0];
+
+        if (!(file instanceof File)) {
+          toast.error("Invalid file selected");
+          setFileUploadingLoader(false);
+          return null;
+        }
+
+        const startResponse = await UploadPurchaseInvoice(uploadedFileData);
+
+        if (
+          startResponse?.statusCode === 409 &&
+          startResponse?.readingStatus?.status === "running"
+        ) {
+          setFileUploadProgress(
+            Number(startResponse?.readingStatus?.progress || 0),
+          );
+          setFileUploadStage(startResponse?.readingStatus?.stage || "running");
+          setFileUploadMessage(
+            startResponse?.readingStatus?.message ||
+              "Another extraction is already running",
+          );
+        } else if (!startResponse?.success) {
+          toast.error(
+            startResponse?.error ||
+              startResponse?.message ||
+              "Failed to start PDF extraction",
+          );
+          setFileUploadingLoader(false);
+          return null;
+        }
+
+        const finalStatus = await pollPdfReadingStatus({
+          setFileUploadingLoader,
+          setFileUploadProgress,
+          setFileUploadStage,
+          setFileUploadMessage,
+        });
+
+        const extractedData = finalStatus?.data ?? {};
+
+        console.log("finalStatus =>", finalStatus);
+        console.log("extractedData =>", extractedData);
+        console.log("finalStatus.data =>", finalStatus?.data);
+
+        if (!extractedData || Object.keys(extractedData).length === 0) {
+          toast.error("No extracted data found from PDF");
+          setFileUploadingLoader(false);
+          return null;
+        }
+
+        const json = {
+          data: finalStatus?.data || {},
           companyId,
           branchId,
           financialYear,
           userId,
           clientId,
-          data: newState?.invoiceUploads || [],
         };
-        console.log("handleUploadPurchaseInvoice =>>", filterCondition);
-        let response = await saveEditedReport({
-          json: filterCondition,
-          spName: saveSpName,
-        });
-        if (response?.success) {
-          console.log("response", response);
-          return toast.success(response?.message);
-        } else {
-          return toast.error(response?.message);
-        }
+
+        const formatJson = removeSingleQuotes(json)
+        const spResponse = await fetchExcelDataInsert(spName, formatJson);
+        console.log("handleUploadPurchaseInvoice spResponse =>", spResponse)
+        
+        // toast.success("PDF data extracted successfully");
+        setFileUploadProgress(100);
+        setFileUploadStage("completed");
+        setFileUploadMessage("PDF data extracted successfully");
+        setFileUploadingLoader(false);
+        return extractedData;
       } catch (error) {
         console.error("handleUploadPurchaseInvoice error =>", error);
-        toast.error("upload failed");
-        throw error;
+        toast.error(error?.message || "upload failed");
+        setFileUploadingLoader(false);
+        setFileUploadProgress(0);
+        setFileUploadStage("failed");
+        setFileUploadMessage(error?.message || "Upload failed");
+        return null;
       }
     },
   };
+
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  async function pollPdfReadingStatus({
+    setFileUploadingLoader,
+    setFileUploadProgress,
+    setFileUploadStage,
+    setFileUploadMessage,
+    timeoutMs = 180000,
+    intervalMs = 1500,
+  }) {
+    const startTime = Date.now();
+
+    while (true) {
+      const statusResponse = await GetPurchaseInvoiceReadingStatus();
+
+      if (!statusResponse?.success) {
+        throw new Error(
+          statusResponse?.error ||
+            statusResponse?.message ||
+            "Failed to get reading status",
+        );
+      }
+
+      const currentStatus = statusResponse?.readingStatus || {};
+
+      setFileUploadingLoader?.(true);
+      setFileUploadProgress?.(Number(currentStatus?.progress || 0));
+      setFileUploadStage?.(currentStatus?.stage || "");
+      setFileUploadMessage?.(currentStatus?.message || "");
+
+      if (currentStatus?.status === "completed") {
+        return currentStatus; // important: return readingStatus directly
+      }
+
+      if (currentStatus?.status === "failed") {
+        throw new Error(
+          currentStatus?.error || currentStatus?.message || "Upload failed",
+        );
+      }
+
+      if (Date.now() - startTime > timeoutMs) {
+        throw new Error("PDF extraction timed out");
+      }
+
+      await sleep(intervalMs);
+    }
+  }
 
   const getBase64FromUrl = async (url) => {
     const res = await fetch(url);
@@ -5260,7 +5532,7 @@ export default function AddEditFormControll({ reportData }) {
     );
     setPivotGrid(currentItemsPagination);
     setLastPagePagination(lastPagePagination);
-  }, [itemsPerPaginatedPage, currentPageNumber, paginatedData,itemsPerPage]);
+  }, [itemsPerPaginatedPage, currentPageNumber, paginatedData, itemsPerPage]);
 
   const onConfirm = async (conformData) => {
     if (conformData.isError) {
@@ -6690,6 +6962,117 @@ export default function AddEditFormControll({ reportData }) {
                         </TableContainer>
                       </Paper>
                     )}
+
+                  {uploadedMessages &&
+                    uploadedMessages?.length > 0 &&
+                    menuType === "J" && (
+                      <Paper
+                        sx={{ ...displayReportTablePaperStyles }}
+                        className={`${styles.pageBackground} `}
+                      >
+                        <TableContainer
+                          id={"paper"}
+                          className={` ${styles.thinScrollBar} ${styles.pageBackground} `}
+                          sx={{
+                            ...displayReportTableContainerStyles,
+                            position: "relative !important",
+                          }}
+                        >
+                          <Table
+                            stickyHeader
+                            aria-label="sticky table"
+                            style={{
+                              tableLayout: "auto",
+                              width: "100%",
+                              border: "1px solid grey",
+                              borderCollapse: "collapse",
+                              borderSpacing: 0,
+                            }}
+                            className={`min-w-full text-xs overflow-auto ${styles.hideScrollbar} ${styles.thinScrollBar}`}
+                          >
+                            <TableHead
+                              className="text-white"
+                              sx={{ ...displaytableHeadStyles }}
+                            >
+                              <TableRow className={`${styles.tblHead}`}>
+                                <TableCell
+                                  style={{
+                                    position: "sticky",
+                                    whiteSpace: "nowrap",
+                                    cursor: isSortingEnabled
+                                      ? "pointer"
+                                      : "default",
+                                  }}
+                                  className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
+                                >
+                                  Sr No
+                                </TableCell>
+
+                                <TableCell
+                                  style={{
+                                    position: "sticky",
+                                    whiteSpace: "nowrap",
+                                    cursor: isSortingEnabled
+                                      ? "pointer"
+                                      : "default",
+                                  }}
+                                  className={`${styles.cellHeading} cursor-pointer ${styles.tableCell} ${styles.tableCellHover} whitespace-nowrap text-xs`}
+                                >
+                                  Message
+                                </TableCell>
+                              </TableRow>
+                            </TableHead>
+
+                            <TableBody>
+                              {uploadedMessages.map((row, index) => (
+                                <TableRow
+                                  key={index}
+                                  style={{
+                                    border: "1px solid grey",
+                                    backgroundColor: row?.rowColor || undefined,
+                                  }}
+                                  className={`${styles.tableCellHoverEffect} ${styles.hh} rounded-lg p-0 opacity-1 z-0`}
+                                  sx={{
+                                    ...(toggledThemeValue
+                                      ? displayTableRowStylesNoHover
+                                      : displaytableRowStyles),
+                                  }}
+                                >
+                                  <TableCell
+                                    className={`pt-1 pb-1 ps-4 text-xs`}
+                                    style={{ whiteSpace: "nowrap" }}
+                                    align="left"
+                                  >
+                                    {index + 1}
+                                  </TableCell>
+
+                                  <TableCell
+                                    className={`pt-1 pb-1 ps-4 text-xs`}
+                                    style={{ whiteSpace: "nowrap" }}
+                                    align="left"
+                                  >
+                                    {row?.message ?? ""}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Paper>
+                    )}
+
+                  {menuType === "J" && fileUploadingLoader && (
+                    <DocumentReadingLoader
+                      open={fileUploadingLoader}
+                      progress={fileUploadProgress}
+                      // title={fileUploadStage || "Processing purchase invoice"}
+                      // subtitle={fileUploadMessage || "Reading document"}
+                      title={"Processing purchase invoice"}
+                      subtitle={"Reading document"}
+                      allowPageInteraction={true}
+                      showOverlay={true}
+                    />
+                  )}
 
                   {menuType === "P" && (
                     <>

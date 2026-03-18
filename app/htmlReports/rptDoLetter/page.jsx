@@ -67,7 +67,7 @@ export default function rptDoLetter() {
       {
         clientId === 15 && localStorage.setItem("token", JSON.stringify(token));
       }
-    } catch {}
+    } catch { }
   }, []);
 
   // Hide print if hb=cfm (kept your original rule)
@@ -135,7 +135,7 @@ export default function rptDoLetter() {
           try {
             const tk = localStorage.getItem("token");
             if (tk) headers["x-access-token"] = JSON.parse(tk);
-          } catch {}
+          } catch { }
         }
 
         const body = { id: resolvedRecordId }; // minimal for public route
@@ -496,7 +496,7 @@ export default function rptDoLetter() {
         <div className="mx-auto text-black">
           <h1 className="text-black font-bold text-sm text-center underline">
             {data[0]?.destuffName
-              ? `Delivery Order / ${data[0].destuffName}`
+              ? `Delivery Order / ${data[0].destuffName} De Stuffing`
               : "Delivery Order"}
           </h1>
           <div className="flex items-end justify-end">
@@ -1180,7 +1180,7 @@ export default function rptDoLetter() {
         {/* Short Description */}
         <p className="text-black mt-2" style={{ fontSize: "10px" }}>
           Kindly arrange to survey the below container(s) prior to taking
-          delivery of laden container(s) from {data[0]?.surveyor || ""} to check
+          delivery of laden container(s) from {data[0]?.nominatedArea || ""} to check
           for the external condition of the container(s).
         </p>
         {/* Container Details Grid */}
@@ -1399,7 +1399,7 @@ export default function rptDoLetter() {
         </div>
       </div>
       {/* main Grid */}
-      <table className="w-full table-fixed border border-black border-collapse mt-4">
+      {/* <table className="w-full table-fixed border border-black border-collapse mt-4">
         <tbody>
           <tr>
             <td className="w-1/6 border-t border-b border-l border-black p-1">
@@ -1564,7 +1564,7 @@ export default function rptDoLetter() {
             </td>
           </tr>
         </tbody>
-      </table>
+      </table> */}
       {/* main Grid */}
       <div className="flex mt-1" style={{ width: "100%" }}>
         <div style={{ width: "12%" }}>
@@ -1685,7 +1685,7 @@ export default function rptDoLetter() {
         </div>
         <div style={{ width: "85%" }}>
           <p className="text-black" style={{ fontSize: "10px" }}>
-            {data[0]?.description || ""}
+            {data[0]?.goodsDesc || ""}
           </p>
         </div>
       </div>
@@ -4334,12 +4334,12 @@ export default function rptDoLetter() {
                           item?.destinationFreeDays
                         )} */}
                         {item?.doValidityDate != null &&
-                        String(item.doValidityDate).trim() !== ""
+                          String(item.doValidityDate).trim() !== ""
                           ? formatDateToYMDMonths(item?.doValidityDate)
                           : getValidTillDateNew(
-                              item?.dischargeDate,
-                              item?.destinationFreeDays,
-                            )}
+                            item?.dischargeDate,
+                            item?.destinationFreeDays,
+                          )}
                       </p>
                     </th>
                   </tr>
@@ -4687,9 +4687,8 @@ export default function rptDoLetter() {
 
     const vesselVoy =
       row.vesselVoy ||
-      `${row.vesselName || ""}${
-        row.voyageNo ? ` / ${row.voyageNo}` : ""
-      }`.trim();
+      `${row.vesselName || ""}${row.voyageNo ? ` / ${row.voyageNo}` : ""
+        }`.trim();
 
     // shared classes
     const tblBase = "w-full table-auto text-[11px] text-black border-collapse";
@@ -4901,9 +4900,8 @@ export default function rptDoLetter() {
                           key={reportId}
                           ref={(el) => enquiryModuleRefs.current.push(el)}
                           id="Delivery Order"
-                          className={`relative bg-white shadow-lg black-text ${
-                            i < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                          className={`relative bg-white shadow-lg black-text ${i < reportIds.length - 1 ? "report-spacing" : ""
+                            }`}
                           style={{
                             width: "210mm",
                             minHeight: "297mm",
@@ -4963,9 +4961,8 @@ export default function rptDoLetter() {
                           key={reportId}
                           ref={(el) => enquiryModuleRefs.current.push(el)}
                           id="Survey Letter"
-                          className={`relative bg-white shadow-lg black-text ${
-                            i < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                          className={`relative bg-white shadow-lg black-text ${i < reportIds.length - 1 ? "report-spacing" : ""
+                            }`}
                           style={{
                             width: "210mm",
                             minHeight: "297mm",
@@ -5030,9 +5027,8 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="EMPTY OFF LOADING LETTER"
-                        className={`relative bg-white shadow-lg black-text ${
-                          index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5085,9 +5081,8 @@ export default function rptDoLetter() {
                     key={reportId}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id="Destuffing letter"
-                    className={`relative bg-white shadow-lg black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    }`}
+                    className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       minHeight: "297mm",
@@ -5138,9 +5133,8 @@ export default function rptDoLetter() {
                           key={reportId}
                           ref={(el) => enquiryModuleRefs.current.push(el)}
                           id="CMC Letter"
-                          className={`relative bg-white shadow-lg black-text ${
-                            index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                          className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                            }`}
                           style={{
                             width: "210mm",
                             minHeight: "297mm",
@@ -5194,9 +5188,8 @@ export default function rptDoLetter() {
                     key={reportId}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id="Customs Examination Order"
-                    className={`relative bg-white shadow-lg black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    }`}
+                    className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       minHeight: "297mm",
@@ -5249,9 +5242,8 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => (enquiryModuleRefs.current[index] = el)}
                         id="Bond Letter"
-                        className={`relative bg-white shadow-lg black-text ${
-                          index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5314,9 +5306,8 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="SEAL CUTTING LETTER"
-                        className={`relative bg-white shadow-lg black-text ${
-                          index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5368,9 +5359,8 @@ export default function rptDoLetter() {
                     key={reportId}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id="NOC For Console Party"
-                    className={`relative bg-white shadow-lg black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    }`}
+                    className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       minHeight: "297mm",
@@ -5413,7 +5403,7 @@ export default function rptDoLetter() {
               return (
                 <>
                   {(Array.isArray(deliveryOrderKenyaChunks) &&
-                  deliveryOrderKenyaChunks.length
+                    deliveryOrderKenyaChunks.length
                     ? deliveryOrderKenyaChunks
                     : [undefined]
                   ).map((container, index) => (
@@ -5422,9 +5412,8 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="Delivery Order"
-                        className={`relative bg-white shadow-lg black-text ${
-                          index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                         style={{
                           width: "210mm",
                           minHeight: "295mm",
@@ -5522,9 +5511,8 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="EMPTY CONTAINER OFF LOADING LETTER"
-                        className={`relative bg-white shadow-lg black-text ${
-                          index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5604,9 +5592,8 @@ export default function rptDoLetter() {
                         key={reportId}
                         ref={(el) => enquiryModuleRefs.current.push(el)}
                         id="Empty Container Return Notification"
-                        className={`relative bg-white shadow-lg black-text ${
-                          index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -5725,9 +5712,8 @@ export default function rptDoLetter() {
                       key={reportId}
                       ref={(el) => enquiryModuleRefs.current.push(el)}
                       id="SAUDI DELIVERY ORDER"
-                      className={`relative bg-white shadow-lg black-text ${
-                        index < reportIds.length - 1 ? "report-spacing" : ""
-                      }`}
+                      className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                       style={{
                         width: "210mm",
                         minHeight: "297mm",

@@ -192,6 +192,7 @@ export default function AddEditFormControll({ reportData }) {
   const [qrItems, setQrItems] = useState([]);
   const [qrLoading, setQrLoading] = useState(false);
   const [codeType, setCodeType] = useState("Q"); // "Q" = QR, "B" = Barcode
+  console.log("selectedRowFullData", selectedRowFullData);
 
   useEffect(() => {
     if (menuType == "C") {
@@ -477,9 +478,9 @@ export default function AddEditFormControll({ reportData }) {
     }
   };
 
-  const handleChangeData = () => { };
+  const handleChangeData = () => {};
   console.log("finalPaginatedData", finalPaginatedData);
-  useEffect(() => { }, [newState, filterCondition]);
+  useEffect(() => {}, [newState, filterCondition]);
 
   function sortJsonData(data, columnId, sortDirection = "asc") {
     if (!columnId) return data;
@@ -2234,7 +2235,7 @@ export default function AddEditFormControll({ reportData }) {
             if (typeof raw === "string") {
               try {
                 raw = JSON.parse(raw);
-              } catch { }
+              } catch {}
             }
             const rows = Array.isArray(raw) ? raw : [];
             if (rows.length === 0) {
@@ -2452,7 +2453,11 @@ export default function AddEditFormControll({ reportData }) {
               return item;
             });
           }
-          const cleanedJson = removeRecordWrapper(fullRowJson);
+          //const cleanedJson = removeRecordWrapper(fullRowJson);
+          console.log("finalData", finalPaginatedData);
+          const matchingRows = finalPaginatedData.filter((row) =>
+            selectedIds.some((item) => item.id === row.rowIndex),
+          );
           const filterConditionWithoutDropdowns =
             removeDropdownFields(filterCondition);
           const updatedCondition = {
@@ -2465,7 +2470,7 @@ export default function AddEditFormControll({ reportData }) {
           };
           let cleanSelectedRows = {
             ...updatedCondition,
-            data: cleanedJson,
+            data: matchingRows,
           };
 
           let response = await saveEditedReport({
@@ -2540,7 +2545,6 @@ export default function AddEditFormControll({ reportData }) {
       }
     },
     handleGenerateReport: async () => {
-      console.log("handleGenerateReport", selectedIds);
       let selectedReportIds = null;
       if (selectedIds.length > 0) {
         selectedReportIds = selectedIds.map((row) => row?.id).join(",");
@@ -2556,8 +2560,9 @@ export default function AddEditFormControll({ reportData }) {
         "selectedReportIds",
         JSON.stringify("Import General Manifest"),
       );
+      localStorage.setItem("selectedIgmRecordId", selectedReportIds || "");
 
-      const url = `/htmlReports/rptIGM?recordId=${selectedReportIds}&reportId=1396`;
+      const url = `/htmlReports/rptIGM?&reportId=1396`;
       if (url) {
         window.open(url, "_blank");
       } else {
@@ -2917,17 +2922,16 @@ export default function AddEditFormControll({ reportData }) {
             return [
               sectionKey,
               fields.map((f) =>
-                f?.isControlShow === false ? { ...f, isControlShow: true } : f
+                f?.isControlShow === false ? { ...f, isControlShow: true } : f,
               ),
             ];
-          })
+          }),
         );
       });
     },
-
   };
 
-  console.log('omkar=>', parentsFields)
+  console.log("omkar=>", parentsFields);
   const generatedHtmlReport = (item) => {
     function formatDateToYMD(dateStr) {
       if (!dateStr) return "";
@@ -3125,15 +3129,17 @@ export default function AddEditFormControll({ reportData }) {
         </tr>
       </thead>
       <tbody>
-        ${Array.isArray(item?.tblBlContainer) && item.tblBlContainer.length
-        ? item.tblBlContainer
-          .map(
-            (c) => `
+        ${
+          Array.isArray(item?.tblBlContainer) && item.tblBlContainer.length
+            ? item.tblBlContainer
+                .map(
+                  (c) => `
           <tr>
             <td style="border:1px solid #000; padding:5px; text-align:left;">${c?.containerNo ?? ""}</td>
             <td style="border:1px solid #000; padding:5px; text-align:left;">${c?.size ?? ""}</td>
-            <td style="border:1px solid #000; padding:5px; text-align:left;">${c?.agentSealNo ?? c?.customSealNo ?? ""
-              }</td>
+            <td style="border:1px solid #000; padding:5px; text-align:left;">${
+              c?.agentSealNo ?? c?.customSealNo ?? ""
+            }</td>
             <td style="border:1px solid #000; padding:5px; text-align:right;">${c?.noOfPackages ?? ""}</td>
             <td style="border:1px solid #000; padding:5px; text-align:left;">${c?.package ?? ""}</td>
             <td style="border:1px solid #000; padding:5px; text-align:left;">${c?.type ?? ""}</td>
@@ -3141,16 +3147,16 @@ export default function AddEditFormControll({ reportData }) {
             <td style="border:1px solid #000; padding:5px; text-align:right;">${c?.grossWt ?? ""}</td>
           </tr>
         `,
-          )
-          .join("")
-        : `
+                )
+                .join("")
+            : `
           <tr>
             <td colspan="8" style="border:1px solid #000; padding:8px; text-align:center;">
               No container data
             </td>
           </tr>
         `
-      }
+        }
       </tbody>
     </table>
   </div>
@@ -3345,10 +3351,11 @@ export default function AddEditFormControll({ reportData }) {
           </tr>
         </thead>
         <tbody>
-          ${Array.isArray(item?.tblBlContainer) && item.tblBlContainer.length
-        ? item.tblBlContainer
-          .map(
-            (c) => `
+          ${
+            Array.isArray(item?.tblBlContainer) && item.tblBlContainer.length
+              ? item.tblBlContainer
+                  .map(
+                    (c) => `
             <tr>
               <td style="border:1px solid #000; padding:5px; text-align:left;">${escapeHtml(c?.containerNo ?? "")}</td>
               <td style="border:1px solid #000; padding:5px; text-align:left;">${escapeHtml(c?.size ?? "")}</td>
@@ -3360,16 +3367,16 @@ export default function AddEditFormControll({ reportData }) {
               <td style="border:1px solid #000; padding:5px; text-align:right;">${escapeHtml(c?.grossWt ?? "")}</td>
             </tr>
           `,
-          )
-          .join("")
-        : `
+                  )
+                  .join("")
+              : `
             <tr>
               <td colspan="8" style="border:1px solid #000; padding:8px; text-align:center;">
                 No container data
               </td>
             </tr>
           `
-      }
+          }
         </tbody>
       </table>
     </div>
@@ -4206,7 +4213,8 @@ export default function AddEditFormControll({ reportData }) {
 
               if (overlap) {
                 toast.error(
-                  `Range [${currentFrom} - ${currentTo}] overlaps with row ${i + 1
+                  `Range [${currentFrom} - ${currentTo}] overlaps with row ${
+                    i + 1
                   } range [${otherFrom} - ${otherTo}]`,
                 );
                 currentRow[fieldKey] = null;
@@ -4273,34 +4281,34 @@ export default function AddEditFormControll({ reportData }) {
             const enrichedRow = {
               ...latestRow,
               ...(latestRow["Nominated Area"] == null ||
-                latestRow["Nominated Area"] === ""
+              latestRow["Nominated Area"] === ""
                 ? {
-                  "Nominated Area":
-                    nominatedAreaItem?.value?.toString() || "",
-                  "Nominated Areadropdown": nominatedAreaItem
-                    ? [nominatedAreaItem]
-                    : [],
-                }
+                    "Nominated Area":
+                      nominatedAreaItem?.value?.toString() || "",
+                    "Nominated Areadropdown": nominatedAreaItem
+                      ? [nominatedAreaItem]
+                      : [],
+                  }
                 : {}),
               ...(latestRow["DPD Desciption"] == null ||
-                latestRow["DPD Desciption"] === ""
+              latestRow["DPD Desciption"] === ""
                 ? {
-                  "DPD Desciption":
-                    dpdDescriptionItem?.value?.toString() || "",
-                  "DPD Desciptiondropdown": dpdDescriptionItem
-                    ? [dpdDescriptionItem]
-                    : [],
-                }
+                    "DPD Desciption":
+                      dpdDescriptionItem?.value?.toString() || "",
+                    "DPD Desciptiondropdown": dpdDescriptionItem
+                      ? [dpdDescriptionItem]
+                      : [],
+                  }
                 : {}),
               ...(latestRow["Third CFS Desciption"] == null ||
-                latestRow["Third CFS Desciption"] === ""
+              latestRow["Third CFS Desciption"] === ""
                 ? {
-                  "Third CFS Desciption":
-                    thirdCfsDescriptionItem?.value?.toString() || "",
-                  "Third CFS Desciptiondropdown": thirdCfsDescriptionItem
-                    ? [thirdCfsDescriptionItem]
-                    : [],
-                }
+                    "Third CFS Desciption":
+                      thirdCfsDescriptionItem?.value?.toString() || "",
+                    "Third CFS Desciptiondropdown": thirdCfsDescriptionItem
+                      ? [thirdCfsDescriptionItem]
+                      : [],
+                  }
                 : {}),
             };
 
@@ -4407,8 +4415,10 @@ export default function AddEditFormControll({ reportData }) {
         const prevTo = parseInt(data[i]?.To, 10);
         if (!isNaN(prevTo) && from <= prevTo) {
           toast.error(
-            `Row ${rowIndex + 1
-            }: 'From' must be greater than all previous rows' 'To' (conflict with Row ${i + 1
+            `Row ${
+              rowIndex + 1
+            }: 'From' must be greater than all previous rows' 'To' (conflict with Row ${
+              i + 1
             })`,
           );
           return false;
@@ -4463,7 +4473,7 @@ export default function AddEditFormControll({ reportData }) {
                     getSelectedRows(rowIndex);
                   }}
 
-                // You can add checked/unchecked logic here as needed
+                  // You can add checked/unchecked logic here as needed
                 />
               </TableCell>
               <TableCell
@@ -4819,7 +4829,7 @@ export default function AddEditFormControll({ reportData }) {
       console.error("Report not found for the given reportId.");
     }
   };
-  console.log('parentsFields =>', parentsFields)
+  console.log("parentsFields =>", parentsFields);
   return (
     <React.Fragment>
       <div className={`h-auto relative`}>
@@ -5027,7 +5037,7 @@ export default function AddEditFormControll({ reportData }) {
                                           <span>
                                             {isInputVisible &&
                                               activeColumn ===
-                                              item.fieldname && ( //added for function call
+                                                item.fieldname && ( //added for function call
                                                 <CustomizedInputBase
                                                   columnData={item}
                                                   setPrevSearchInput={
@@ -5367,7 +5377,7 @@ export default function AddEditFormControll({ reportData }) {
                                           <span>
                                             {isInputVisible &&
                                               activeColumn ===
-                                              item.fieldname && ( //added for function call
+                                                item.fieldname && ( //added for function call
                                                 <CustomizedInputBase
                                                   columnData={item}
                                                   setPrevSearchInput={

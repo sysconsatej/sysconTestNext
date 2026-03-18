@@ -50,6 +50,84 @@ function rptInvoice() {
   const [htmlContents, setHtmlContents] = useState({});
   const [printName, setPrintName] = useState([]);
 
+  function numberToWords(num) {
+    if (num === 0) return "zero";
+
+    const ones = [
+      "",
+      "one",
+      "two",
+      "three",
+      "four",
+      "five",
+      "six",
+      "seven",
+      "eight",
+      "nine",
+      "ten",
+      "eleven",
+      "twelve",
+      "thirteen",
+      "fourteen",
+      "fifteen",
+      "sixteen",
+      "seventeen",
+      "eighteen",
+      "nineteen",
+    ];
+
+    const tens = [
+      "",
+      "",
+      "twenty",
+      "thirty",
+      "forty",
+      "fifty",
+      "sixty",
+      "seventy",
+      "eighty",
+      "ninety",
+    ];
+
+    function convertBelowThousand(n) {
+      let result = "";
+
+      if (n >= 100) {
+        result += ones[Math.floor(n / 100)] + " hundred";
+        n %= 100;
+        if (n > 0) result += " ";
+      }
+
+      if (n >= 20) {
+        result += tens[Math.floor(n / 10)];
+        n %= 10;
+        if (n > 0) result += " " + ones[n];
+      } else if (n > 0) {
+        result += ones[n];
+      }
+
+      return result;
+    }
+
+    let result = "";
+
+    if (num >= 1000000) {
+      result += convertBelowThousand(Math.floor(num / 1000000)) + " million ";
+      num %= 1000000;
+    }
+
+    if (num >= 1000) {
+      result += convertBelowThousand(Math.floor(num / 1000)) + " thousand ";
+      num %= 1000;
+    }
+
+    if (num > 0) {
+      result += convertBelowThousand(num);
+    }
+
+    return result.trim();
+  }
+
   // 1) Safely grab the charges array
   const charges = Array.isArray(data?.[0]?.tblInvoiceCharge)
     ? data[0].tblInvoiceCharge
@@ -603,17 +681,21 @@ function rptInvoice() {
                 if (Array.isArray(charge.tblInvoiceChargeTax)) {
                   charge.tblInvoiceChargeTax.forEach((tax) => {
                     const amount = Number(tax.taxAmountHc) || 0;
-                    taxPercentage += Number(tax.taxPercentage) || 0;
+                    // taxPercentage = Number(tax.taxPercentage) || 0;  // changes applied as per discussion with shahnaz
+                    //taxPercentage += Number(tax.taxPercentage) || 0; // earlier we were summing tax percentages which doesn't make sense, it should be same for all taxes of same SAC, so just take from one of them
 
                     switch (tax.taxCode) {
                       case "CGST":
                         CGST += amount;
+                        taxPercentage = (Number(tax.taxPercentage) || 0) * 2;
                         break;
                       case "SGST":
                         SGST += amount;
+                        taxPercentage = (Number(tax.taxPercentage) || 0) * 2;
                         break;
                       case "IGST":
                         IGST += amount;
+                        taxPercentage = Number(tax.taxPercentage) || 0;
                         break;
                     }
                   });
@@ -1110,7 +1192,6 @@ function rptInvoice() {
       </div>
     );
   };
-
 
   const InvoicePrintBillingDetails = ({ data }) => {
     return (
@@ -1780,7 +1861,6 @@ function rptInvoice() {
     );
   };
 
-
   const InvoicePrintJobDetails = ({ data }) => {
     return (
       <div className="border-r border-l border-b border-black">
@@ -2117,7 +2197,6 @@ function rptInvoice() {
     );
   };
 
-
   const InvoicePrintDeteChargeDetails = ({
     data,
     charge,
@@ -2227,14 +2306,15 @@ function rptInvoice() {
           <div
             className="border-black border-r border-l"
             style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-          // style={{ height: chargeGridHeight, overflow: "hidden" }}
+            // style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {!chargeAtt?.length &&
               charge[index]?.map((chargeData, idx, array) => (
                 <div
                   key={idx}
-                  className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                    }`}
+                  className={`flex w-full ${
+                    idx === array.length - 1 ? "border-b border-black" : ""
+                  }`}
                   style={{ fontSize: "9px", width: "100%" }}
                 >
                   <p
@@ -2281,8 +2361,9 @@ function rptInvoice() {
               charge[index]?.map((chargeData, idx, array) => (
                 <div
                   key={idx}
-                  className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                    }`}
+                  className={`flex w-full ${
+                    idx === array.length - 1 ? "border-b border-black" : ""
+                  }`}
                   style={{ fontSize: "9px", width: "100%" }}
                 >
                   <p
@@ -2421,8 +2502,9 @@ function rptInvoice() {
                   {chargeAtt[index]?.map((chargeAttData, idx, array) => (
                     <div
                       key={idx}
-                      className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
-                        }`}
+                      className={`flex w-full ${
+                        idx === array.length - 1 ? "border-b" : ""
+                      }`}
                       style={{ fontSize: "9px", width: "100%" }}
                     >
                       <p
@@ -2535,10 +2617,10 @@ function rptInvoice() {
     const gridTotal = raw; // 5498 (number)
     const gridTotalDisplay = gridTotal.toFixed(2); // "5498.00" (string)
 
-    const totalAmountInWords = numberToWords(
-      parseFloat(gridTotalDisplay),
-      "INR",
-    );
+    // const totalAmountInWords = numberToWords(
+    //   parseFloat(gridTotalDisplay),
+    //   "INR",
+    // );
 
     // Calculate the number of charges on the current page
     const currentPageLength = charge[index]?.length || 0;
@@ -2595,13 +2677,14 @@ function rptInvoice() {
           <div
             className="border-black border-r border-l"
             style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-          // style={{ height: chargeGridHeight, overflow: "hidden" }}
+            // style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {charge[index]?.map((chargeData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                  }`}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b border-black" : ""
+                }`}
                 style={{ fontSize: "9px", width: "100%" }}
               >
                 <p
@@ -2689,7 +2772,7 @@ function rptInvoice() {
                 style={{ width: "85%", paddingRight: "15px" }}
               >
                 <span className="font-bold">Amount in Words </span>
-                {data[0]?.currency || ""} {totalAmountInWords || ""} Only
+                {data[0]?.currency || ""} {numberToWords(gridTotalDisplay) || ""} Only
               </p>
             </div>
           </div>
@@ -2778,13 +2861,14 @@ function rptInvoice() {
           <div
             className="border-black border-r border-l"
             style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-          // style={{ height: chargeGridHeight, overflow: "hidden" }}
+            // style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {charge[index]?.map((chargeData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                  }`}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b border-black" : ""
+                }`}
                 style={{ fontSize: "9px", width: "100%" }}
               >
                 <p
@@ -4354,10 +4438,10 @@ function rptInvoice() {
     // compute once (before render or above your return)
     const lastAvailableIndex = Array.isArray(chargeAtt)
       ? chargeAtt.reduce(
-        (last, inner, idx) =>
-          Array.isArray(inner) && inner.length > 0 ? idx : last,
-        -1, // → -1 if none are non-empty
-      )
+          (last, inner, idx) =>
+            Array.isArray(inner) && inner.length > 0 ? idx : last,
+          -1, // → -1 if none are non-empty
+        )
       : -1;
 
     console.log("lastAvailableIndex", lastAvailableIndex);
@@ -4547,8 +4631,9 @@ function rptInvoice() {
             {currentChargeAtt.map((chargeAttData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
-                  }`}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b" : ""
+                }`}
                 style={{ fontSize: "9px", width: "100%", color: "black" }}
               >
                 <p
@@ -5500,8 +5585,9 @@ function rptInvoice() {
       const wholeWords = chunkToWords(whole);
       const decimalWords = decimals ? twoDigits(decimals) : "";
 
-      return `${wholeWords} ${currencyLabel}${decimals ? ` and ${decimalWords} Cents` : ""
-        } Only`;
+      return `${wholeWords} ${currencyLabel}${
+        decimals ? ` and ${decimalWords} Cents` : ""
+      } Only`;
     };
 
     // ✅ Totals for the summary box (Excl VAT + VAT + Total) for AED (HC) and USD (FC)
@@ -7232,7 +7318,7 @@ function rptInvoice() {
     );
   };
 
-  const HeadingGrid = ({ }) => {
+  const HeadingGrid = ({}) => {
     const containerDetails = data[0]?.tblInvoiceCharge;
 
     // One function: build "count X size+type" label(s) using `type` (not typeCode)
@@ -7654,7 +7740,7 @@ function rptInvoice() {
     );
   };
 
-  const HeadingGridYms = ({ }) => {
+  const HeadingGridYms = ({}) => {
     const containerDetails = data[0]?.tblInvoiceCharge;
 
     // One function: build "count X size+type" label(s) using `type` (not typeCode)
@@ -8076,7 +8162,7 @@ function rptInvoice() {
     );
   };
 
-  const SalesHeadingGridYms = ({ }) => {
+  const SalesHeadingGridYms = ({}) => {
     const containerDetails = data[0]?.tblInvoiceCharge;
 
     // One function: build "count X size+type" label(s) using `type` (not typeCode)
@@ -8542,7 +8628,8 @@ function rptInvoice() {
             </td>
             <td
               className="pl-1 pr-1 pb-0"
-              style={{ width: "70%", verticalAlign: "top" }} s
+              style={{ width: "70%", verticalAlign: "top" }}
+              s
             >
               <p
                 className="text-left text-black pt-0.5 pb-0.5"
@@ -8598,7 +8685,8 @@ function rptInvoice() {
                 className="text-left text-black pt-0.5 pb-0.5"
                 style={{ fontSize: "9px", color: "black" }}
               >
-                {/* change this */}: {data?.[0]?.volumeNo || ""}{" "}{data?.[0]?.jobVolumneUnit || ""}
+                {/* change this */}: {data?.[0]?.volumeNo || ""}{" "}
+                {data?.[0]?.jobVolumneUnit || ""}
               </p>
             </td>
           </tr>
@@ -8683,7 +8771,7 @@ function rptInvoice() {
     );
   };
 
-  const BankDetailsGrid = ({ }) => {
+  const BankDetailsGrid = ({}) => {
     const banks = data[0]?.tblInvoiceBank ?? []; // or just use your array directly
 
     const hasValue = (v) =>
@@ -8750,8 +8838,9 @@ function rptInvoice() {
               <div
                 key={idx}
                 style={{ width: `${100 / banks?.length}%`, minWidth: 0 }}
-                className={`print:break-inside-avoid border-black ${isLast ? "" : "border-r"
-                  }`}
+                className={`print:break-inside-avoid border-black ${
+                  isLast ? "" : "border-r"
+                }`}
               >
                 <table
                   className="w-full text-[10px] text-black border-collapse"
@@ -8771,8 +8860,9 @@ function rptInvoice() {
                         )}
                         <td
                           // className=${p-1 break-words text-center}`
-                          className={`p-1 break-words ${isLast ? "text-center" : ""
-                            }`}
+                          className={`p-1 break-words ${
+                            isLast ? "text-center" : ""
+                          }`}
                           style={{ fontSize: "9px" }}
                           colSpan={isLast ? 2 : 1}
                         >
@@ -8790,7 +8880,7 @@ function rptInvoice() {
     );
   };
 
-  const SalesBankDetailsGrid = ({ }) => {
+  const SalesBankDetailsGrid = ({}) => {
     const banks = data[0]?.tblInvoiceBank ?? [];
 
     const hasValue = (v) =>
@@ -10525,8 +10615,8 @@ function rptInvoice() {
                 >
                   {item?.discountAmount
                     ? `${data[0]?.currency} ${parseFloat(
-                      item.discountAmount,
-                    ).toFixed(2)}`
+                        item.discountAmount,
+                      ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
                 <div
@@ -10541,8 +10631,8 @@ function rptInvoice() {
                 >
                   {item?.tblInvoiceChargeTax?.[0]?.taxAmountHc
                     ? `${data[0]?.currency} ${parseFloat(
-                      item.tblInvoiceChargeTax[0].taxAmountHc,
-                    ).toFixed(2)}`
+                        item.tblInvoiceChargeTax[0].taxAmountHc,
+                      ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
                 <div
@@ -10556,8 +10646,8 @@ function rptInvoice() {
                 >
                   {item?.totalAmount
                     ? `${data[0]?.currency} ${parseFloat(
-                      item.totalAmount,
-                    ).toFixed(2)}`
+                        item.totalAmount,
+                      ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
               </div>
@@ -10679,8 +10769,8 @@ function rptInvoice() {
             >
               {discountAmount
                 ? `${data[0]?.currency} ${parseFloat(discountAmount).toFixed(
-                  2,
-                )}`
+                    2,
+                  )}`
                 : `${data[0]?.currency}  0.00`}
             </td>
           </tr>
@@ -10709,8 +10799,8 @@ function rptInvoice() {
             >
               {grossTotalAmount
                 ? `${data[0]?.currency} ${parseFloat(grossTotalAmount).toFixed(
-                  2,
-                )}`
+                    2,
+                  )}`
                 : `${data[0]?.currency}  0.00`}
             </td>
           </tr>
@@ -11085,9 +11175,9 @@ function rptInvoice() {
           const amount =
             typeof amountRaw === "number"
               ? amountRaw.toLocaleString("en-IN", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })
               : safe(amountRaw);
 
           return (
@@ -11374,7 +11464,6 @@ function rptInvoice() {
       </div>
     );
   };
-
 
   const TaxInvoiceChargeDetailsSLS = ({ data, charge, index, hsnSac }) => {
     // ✅ helper: continuation rows (created by your splitter) should NOT show numbers/extra cols

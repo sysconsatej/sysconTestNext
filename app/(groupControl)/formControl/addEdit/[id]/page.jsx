@@ -225,7 +225,7 @@ export default function AddEditFormControll() {
   const childTableRow = useSelector((state) => state?.counter?.childRecord);
   const { clientId } = getUserDetails();
   const [clientName, setClientName] = useState(null);
-
+console.log('newState',newState)
 
 
   useEffect(() => {

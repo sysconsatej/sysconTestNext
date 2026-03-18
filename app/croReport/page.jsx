@@ -22,11 +22,11 @@ import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 
 import {
   fetchReportData,
-  fetchBlPrintReportData,
+  fetchCroPrintReportData,
 } from "@/services/auth/FormControl.services";
 
 // ✅ Hybrid layout helper (auto-size / can-grow / pagination)
-import { layoutTemplateForData } from "@/helper/blReport_hybrid_helpers";
+import { layoutTemplateForData } from "@/helper/croReport_hybrid_helpers";
 
 /* =========================================================
    CONSTANTS
@@ -566,6 +566,12 @@ function hAlignToJustify(textAlign) {
   if (a === "right" || a === "end") return "flex-end";
   return "flex-start";
 }
+// 1) Add near your style normalizers (above cssFromStyle is a good place)
+function normalizeOpacity(v, fallback = 1) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(1, n));
+}
 function normalizeTextAlign(v) {
   const raw = (v ?? "").toString().trim().toLowerCase();
   if (!raw) return "left";
@@ -577,11 +583,6 @@ function normalizeTextAlign(v) {
   if (raw === "flex-start") return "left";
   if (raw === "flex-end") return "right";
   return "left";
-}
-function normalizeOpacity(v, fallback = 1) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(0, Math.min(1, n));
 }
 function normalizeHAlign(align) {
   const a = String(align ?? "left")
@@ -1355,7 +1356,6 @@ function isElementLike(v) {
   );
 }
 
-// 2) Update renderCellInnerHtml(...)
 function renderCellInnerHtml({
   text = "",
   sMerged = {},
@@ -1475,7 +1475,6 @@ function renderElement(el, data) {
     `;
   }
 
-  // 3) Update renderElement(el, data) -> text branch only
   if (el.type === "text") {
     const align = normalizeHAlign(s.align ?? s.textAlign ?? s.hAlign);
     const textOpacity = normalizeOpacity(s.opacity, 1);
@@ -2243,7 +2242,7 @@ async function downloadPdfViaCanvas(
 export default function BlReportPage() {
   const searchParams = useSearchParams();
   const templateId = searchParams.get("templateId");
-  const blId = searchParams.get("blId");
+  const jobId = searchParams.get("jobId");
 
   const DEBUG = useMemo(() => getDebugFlag(searchParams), [searchParams]);
 
@@ -2293,13 +2292,13 @@ export default function BlReportPage() {
         setLoading(true);
         setError("");
 
-        if (!templateId || !blId) {
-          setError("Missing templateId or blId in URL");
+        if (!templateId || !jobId) {
+          setError("Missing templateId or jobId in URL");
           return;
         }
 
-        const req = { recordId: blId };
-        const blRes = await fetchBlPrintReportData(req);
+        const req = { recordId: jobId };
+        const blRes = await fetchCroPrintReportData(req);
 
         const blRow = blRes?.data?.[0];
         if (!blRow) throw new Error("BL not found");
@@ -2318,7 +2317,7 @@ export default function BlReportPage() {
     };
 
     fetchBlData();
-  }, [templateId, blId, DEBUG]);
+  }, [templateId, jobId, DEBUG]);
 
   function buildBlPagesDetails(tpl) {
     const pages = normalizePages(tpl);

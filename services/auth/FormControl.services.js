@@ -2326,6 +2326,23 @@ export async function fetchBlPrintReportData(data) {
   }
 }
 
+export async function fetchCroPrintReportData(data) {
+  try {
+    const response = await fetch(`${baseUrl}/Sql/api/Reports/croprint`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    }).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+
 export async function getTariffChargeDetails(data) {
   try {
     const token = localStorage.getItem("token");
@@ -2347,7 +2364,6 @@ export async function getTariffChargeDetails(data) {
     return false;
   }
 }
-
 
 export async function commanPostService({ url, data }) {
   try {
@@ -2468,5 +2484,117 @@ export async function getBillingPartyOnBlData(data) {
     console.log(error);
     console.error(error);
     return false;
+  }
+}
+
+// export async function UploadPurchaseInvoice(data) {
+//   try {
+//     const token = localStorage.getItem("token");
+//     const files = data?.invoiceUploads || [];
+
+//     if (!Array.isArray(files) || files.length === 0) {
+//       return {
+//         success: false,
+//         message: "No file found to upload",
+//         data: null,
+//       };
+//     }
+
+//     const file = files[0];
+
+//     const formData = new FormData();
+//     formData.append("file", file);
+
+//     const res = await fetch(`${baseUrlSQl}/api/extract/pdfData`, {
+//       method: "POST",
+//       headers: {
+//         "x-access-token": JSON.parse(token),
+//       },
+//       body: formData,
+//     });
+
+//     const response = await res.json();
+//     return response;
+//   } catch (error) {
+//     console.log(error);
+//     console.error(error);
+//     return {
+//       success: false,
+//       message: "File upload failed",
+//       data: null,
+//     };
+//   }
+// }
+
+export async function UploadPurchaseInvoice(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const files = data?.invoiceUploads || [];
+
+    if (!Array.isArray(files) || files.length === 0) {
+      return {
+        success: false,
+        statusCode: 400,
+        message: "No file found to upload",
+        data: null,
+      };
+    }
+
+    const file = files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`${baseUrlSQl}/api/extract/pdfData`, {
+      method: "POST",
+      headers: {
+        "x-access-token": JSON.parse(token),
+      },
+      body: formData,
+    });
+
+    const response = await res.json();
+    console.log("response Ak", response);
+    return {
+      ...response,
+      statusCode: res.status,
+    };
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return {
+      success: false,
+      statusCode: 500,
+      message: "File upload failed",
+      data: null,
+    };
+  }
+}
+
+export async function GetPurchaseInvoiceReadingStatus() {
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${baseUrlSQl}/api/extract/pdfData/readingStatus`, {
+      method: "GET",
+      headers: {
+        "x-access-token": JSON.parse(token),
+      },
+    });
+
+    const response = await res.json();
+
+    return {
+      ...response,
+      statusCode: res.status,
+    };
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return {
+      success: false,
+      statusCode: 500,
+      message: "Failed to fetch reading status",
+      readingStatus: null,
+    };
   }
 }

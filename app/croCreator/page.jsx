@@ -48,6 +48,7 @@ function deepClone(obj) {
   return obj ? JSON.parse(JSON.stringify(obj)) : obj;
 }
 
+// 2) add near deepClone()/helpers (module scope)
 function clonePageWithFreshElementIds(page) {
   const src = deepClone(page || {});
   const idMap = {};
@@ -665,7 +666,6 @@ function makeElement(type, x, y) {
     };
   }
 
-  // 1) makeElement() -> text default
   if (type === "text") {
     return {
       ...base,
@@ -678,7 +678,6 @@ function makeElement(type, x, y) {
         ...base.style,
         bg: "transparent",
         borderWidth: 0,
-        opacity: 1, // ✅ NEW
       },
     };
   }
@@ -1681,7 +1680,7 @@ export default function BlCreatorPage() {
         columns: "af.fieldname as [key],af.label",
         tableName:
           "tblApiDefinition ad Left join tblApiFields af on af.apiDefinitionId = ad.id",
-        whereCondition: `ad.apiName = 'blCreator'`,
+        whereCondition: `ad.apiName = 'CRO Creator'`,
         clientIdCondition: `af.status = 1 order by af.label FOR JSON PATH`,
       };
       try {
@@ -1709,7 +1708,7 @@ export default function BlCreatorPage() {
       const requestBodyMenu = {
         columns: "id,name,blPrintTemplateJson",
         tableName: "tblBlPrintTemplate",
-        whereCondition: `blOfId = \'${companyId}\' and clientId = ${clientId} and id = ${templateIdFromUrl}`,
+        whereCondition: `clientId = ${clientId} and id = ${templateIdFromUrl}`,
         clientIdCondition: `status = 1 FOR JSON PATH`,
       };
 
@@ -4687,7 +4686,7 @@ export default function BlCreatorPage() {
         <div style={styles.brand}>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 12, fontWeight: 900, lineHeight: 1 }}>
-              BL Creator
+              CRO Creator
             </div>
           </div>
           <div style={styles.sep} />
@@ -5158,7 +5157,7 @@ export default function BlCreatorPage() {
                         }}
                         title={`Copy ${p.name}`}
                       >
-                        <Icon name="copy" size={36} />
+                        <Icon name="copy" size={16} />
                       </button>
 
                       <button
@@ -5181,7 +5180,7 @@ export default function BlCreatorPage() {
                         }}
                         title={`Paste into ${p.name}`}
                       >
-                        <Icon name="paste" size={36} />
+                        <Icon name="paste" size={16} />
                       </button>
                     </div>
                   );
@@ -6526,7 +6525,8 @@ function Inspector({
             const arrayKeys = Object.keys(arraysObj);
 
             // Fallback options if schema not defined yet
-            const fallbackKeys = ["tblBlContainer", "tblBLCharge", "tblBlPkg"];
+            //const fallbackKeys = ["tblJobContainer", "tblBLCharge", "tblBlPkg"];
+            const fallbackKeys = ["tblJobContainer"];
             const options = Array.from(
               new Set([...(arrayKeys || []), ...fallbackKeys]),
             );
@@ -6538,36 +6538,16 @@ function Inspector({
 
             // Fallback columns so user can select even before saving schema
             const FALLBACK_ARRAY_FIELDS = {
-              tblBlContainer: [
+              tblJobContainer: [
+                "srNo",
                 "containerNo",
-                "size",
-                "type",
-                "sizeType",
-                "noOfPackages",
-                "package",
+                "capacity",
+                "tareWt",
+                "tareWtUnit",
+                "tareWtAndUnit",
                 "grossWt",
+                "weightUnit",
                 "grossWtAndUnit",
-                "netWt",
-                "weightUnitCode",
-                "agentSealNo",
-                "customSealNo",
-                "createdDate",
-              ],
-              tblBLCharge: [
-                "code",
-                "description",
-                "qty",
-                "tariff",
-                "exRate",
-                "amount",
-                "currency",
-              ],
-              tblBlPkg: [
-                "packageCode",
-                "noOfPackages",
-                "grossWt",
-                "netWt",
-                "volume",
               ],
             };
 

@@ -10,6 +10,7 @@ import "@/public/style/reportTheme.css";
 import { applyTheme } from "@/utils";
 import { getUserDetails } from "@/helper/userDetails";
 import { decrypt } from "@/helper/security";
+import { useSelector } from "react-redux";
 
 export default function RptIGM() {
   const { clientId } = getUserDetails();
@@ -37,8 +38,7 @@ export default function RptIGM() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const id = searchParams.get("recordId");
-      console.log(id);
+      const id = localStorage.getItem("selectedIgmRecordId");
       if (id != null) {
         try {
           const token = localStorage.getItem("token");
@@ -476,7 +476,7 @@ export default function RptIGM() {
           aFpd: getFPD(a),
           bFpd: getFPD(b),
         },
-        { r1_carrier: r1, r2_plr: r2, r3_fpd: r3, r4_lineNo: r4, total }
+        { r1_carrier: r1, r2_plr: r2, r3_fpd: r3, r4_lineNo: r4, total },
       );
 
       return total;
@@ -489,7 +489,7 @@ export default function RptIGM() {
         plr: getPLR(x),
         fpd: getFPD(x),
         carrier: x.movementCarrier,
-      }))
+      })),
     );
 
     // --- grouping ---
@@ -515,7 +515,7 @@ export default function RptIGM() {
             "📦 Pushing group:",
             currentGroupKey,
             "size:",
-            currentGroup.length
+            currentGroup.length,
           );
           groups.push({
             movementCarrier: currentGroup[0].movementCarrier || "",
@@ -540,7 +540,7 @@ export default function RptIGM() {
         "📦 Pushing last group:",
         currentGroupKey,
         "size:",
-        currentGroup.length
+        currentGroup.length,
       );
       groups.push({
         movementCarrier: currentGroup[0].movementCarrier || "",
@@ -566,7 +566,7 @@ export default function RptIGM() {
     const consigneeLines = Math.ceil(
       ((record.consigneeText?.length || 0) +
         (record.consigneeAddress || "").length) /
-        70
+        70,
     );
 
     const containerHeight =
@@ -582,7 +582,7 @@ export default function RptIGM() {
     records,
     rowRefsByGroup = {},
     groupKey = "",
-    showFooterOnLastChunk = true
+    showFooterOnLastChunk = true,
   ) {
     const chunks = [];
     let currentChunk = [];
@@ -611,7 +611,7 @@ export default function RptIGM() {
 
         // 🛠️ Increase maxContainersPerPage by ensuring full height is utilized
         const maxContainersPerPage = Math.floor(
-          (usableHeight - DEFAULT_ROW_HEIGHT - 30) / CONTAINER_ROW_HEIGHT
+          (usableHeight - DEFAULT_ROW_HEIGHT - 30) / CONTAINER_ROW_HEIGHT,
         );
 
         const totalChunks = Math.ceil(containerCount / maxContainersPerPage);
@@ -619,7 +619,7 @@ export default function RptIGM() {
         for (let i = 0; i < totalChunks; i++) {
           const slicedContainers = record.tblBlContainer.slice(
             i * maxContainersPerPage,
-            (i + 1) * maxContainersPerPage
+            (i + 1) * maxContainersPerPage,
           );
 
           const partialRecord = {
@@ -698,7 +698,7 @@ export default function RptIGM() {
         group.records || [],
         rowRefsByGroup,
         groupKey,
-        true // showFooterOnLastChunk (for height calc only)
+        true, // showFooterOnLastChunk (for height calc only)
       );
 
       recordChunks.forEach((chunk, index) => {
@@ -756,15 +756,15 @@ export default function RptIGM() {
 
               function estimateRecordHeight(record) {
                 const goodsDescLines = Math.ceil(
-                  (record.goodsDesc?.length || 0) / 40
+                  (record.goodsDesc?.length || 0) / 40,
                 );
                 const marksLines = Math.ceil(
-                  (record.marksNos?.length || 0) / 50
+                  (record.marksNos?.length || 0) / 50,
                 );
                 const consigneeLines = Math.ceil(
                   ((record.consigneeText?.length || 0) +
                     (record.consigneeAddress?.length || 0)) /
-                    60
+                    60,
                 );
                 const containerLines =
                   (record.tblBlContainer?.length || 0) * CONTAINER_ROW_HEIGHT;
@@ -788,7 +788,7 @@ export default function RptIGM() {
                 if (!Array.isArray(records)) {
                   console.warn(
                     "Skipping groupItem due to invalid records array:",
-                    groupItem
+                    groupItem,
                   );
                   return;
                 }
@@ -810,17 +810,17 @@ export default function RptIGM() {
                         headerHeight -
                         footerHeight -
                         rowBaseHeight) /
-                        CONTAINER_ROW_HEIGHT
+                        CONTAINER_ROW_HEIGHT,
                     );
                     const totalChunks = Math.ceil(
-                      containerCount / maxContainersPerPage
+                      containerCount / maxContainersPerPage,
                     );
 
                     for (let i = 0; i < totalChunks; i++) {
                       const slicedContainers =
                         record.tblBlContainer?.slice(
                           i * maxContainersPerPage,
-                          (i + 1) * maxContainersPerPage
+                          (i + 1) * maxContainersPerPage,
                         ) || [];
 
                       const partialRecord = {
@@ -893,7 +893,7 @@ export default function RptIGM() {
                 console.log(`📃 Page ${i + 1} [Group: ${key}]`);
                 console.log(`  └─ Records: ${chunk.records.length}`);
                 console.log(
-                  `  └─ isLastChunkOfGroup: ${chunk.isLastChunkOfGroup}`
+                  `  └─ isLastChunkOfGroup: ${chunk.isLastChunkOfGroup}`,
                 );
               });
 

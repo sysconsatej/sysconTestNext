@@ -8324,16 +8324,180 @@ const setBankByDefault = async (obj) => {
   }
 };
 
+// const calculateVoucherAmt = async (obj) => {
+//   const { args, newState, setStateVariable } = obj;
+//   /currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt
+//   try {
+//     const argNames = args.split(",").map((arg) => arg.trim());
+//     const currency = newState?.[argNames[0]];
+//     const exchangeRate = parseFloat(newState?.[argNames[1]]) || 0; // e.g. "exchangeRate"
+//     const amtRec = parseFloat(newState?.[argNames[2]]) || 0;
+//     const amtRecFcValue = parseFloat(newState?.[argNames[3]]) || 0;
+//     const tdsPercent = [argNames[6]] || 0;
+//     const request = {
+//       columns: "*",
+//       tableName: "tblCompanyParameter",
+//       whereCondition: `currencyId = ${currency} and status = 1`,
+//       clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+//     };
+
+//     const response = await fetchReportData(request);
+//     const currencyId = response?.data[0]?.currencyId;
+//     if (currencyId == currency) {
+//       amtRecFC
+//       const amtRecFc = amtRec;
+//       const tdsAmtFc = amtRecFc * tdsPercent;
+//       const tdsAmt = amtRec * tdsPercent;
+
+//       Store in newState
+//       setStateVariable((prev) => ({
+//         ...prev,
+//         [argNames[3]]: amtRecFc,
+//       }));
+//       [argNames[4]]: tdsAmtFc,
+//       [argNames[5]]: tdsAmt,
+
+//       const tdsApplicableData = newState?.tdsApplicable || null;
+//       if (tdsApplicableData == true || tdsApplicableData == "true") {
+//         const amtRecFCValue = parseFloat(newState?.amtRecFC) || 0;
+//         const amtRecValue = parseFloat(newState?.amtRec) || 0;
+//         const tdsPercent = parseFloat([argNames[6]]) || 0;
+//         //tdsAmtFC   // tdsAmt
+//         const calculatedTdsAmtFc = amtRecFCValue * tdsPercent;
+//         const CalculatedCTdsAmt = amtRecValue * tdsPercent;
+//         setStateVariable((prev) => ({
+//           ...prev,
+//           tdsAmtFC: calculatedTdsAmtFc,
+//           tdsAmt: CalculatedCTdsAmt,
+//         }));
+//       } else {
+//         setStateVariable((prev) => ({
+//           ...prev,
+//           tdsAmtFC: null,
+//           tdsAmt: null,
+//         }));
+//       }
+
+//       return {
+//         type: "success",
+//         result: true,
+//         message: "Amount & TDS calculated successfully",
+//         amtRecFc,
+//         tdsAmtFc,
+//         tdsAmt,
+//       };
+//     } else if (currencyId != currency) {
+//       const amtRec = amtRecFcValue * exchangeRate;
+//       const tdsAmtFc = amtRecFcValue * tdsPercent;
+//       const tdsAmt = amtRec * tdsPercent;
+
+//       Store in newState
+//       setStateVariable((prev) => ({
+//         ...prev,
+//         [argNames[2]]: amtRec,
+//       }));
+//       [argNames[4]]: tdsAmtFc,
+//       [argNames[5]]: tdsAmt,
+
+//       const tdsApplicableData = newState?.tdsApplicable || null;
+//       if (tdsApplicableData == true || tdsApplicableData == "true") {
+//         const amtRecFCValue = parseFloat(newState?.amtRecFC) || 0;
+//         const amtRecValue = parseFloat(newState?.amtRec) || 0;
+//         const tdsPercent = parseFloat([argNames[6]]) || 0;
+//         //tdsAmtFC   // tdsAmt
+//         const calculatedTdsAmtFc = amtRecFCValue * tdsPercent;
+//         const CalculatedCTdsAmt = amtRecValue * tdsPercent;
+//         setStateVariable((prev) => ({
+//           ...prev,
+//           tdsAmtFC: calculatedTdsAmtFc,
+//           tdsAmt: CalculatedCTdsAmt,
+//         }));
+//       } else {
+//         setStateVariable((prev) => ({
+//           ...prev,
+//           tdsAmtFC: null,
+//           tdsAmt: null,
+//         }));
+//       }
+
+//       return {
+//         type: "success",
+//         result: true,
+//         message: "Amount & TDS calculated successfully",
+//         tdsAmtFc,
+//         tdsAmt,
+//       };
+//     }
+//   } catch (error) {
+//     console.error("Error in calculateVoucherAmt:", error);
+//     return {
+//       type: "error",
+//       result: false,
+//       message: "Error calculating voucher amount. Please try again.",
+//     };
+//   }
+// };
+
 const calculateVoucherAmt = async (obj) => {
   const { args, newState, setStateVariable } = obj;
-  ///currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt
+
   try {
-    const argNames = args.split(",").map((arg) => arg.trim());
-    const currency = newState?.[argNames[0]];
-    const exchangeRate = parseFloat(newState?.[argNames[1]]) || 0; // e.g. "exchangeRate"
-    const amtRec = parseFloat(newState?.[argNames[2]]) || 0;
-    const amtRecFcValue = parseFloat(newState?.[argNames[3]]) || 0;
-    const tdsPercent = [argNames[6]] || 0;
+    const argNames = String(args || "")
+      .split(",")
+      .map((arg) => arg.trim())
+      .filter(Boolean);
+
+    const currencyKey = argNames[0];
+    const exchangeRateKey = argNames[1];
+    const amtRecKey = argNames[2];
+    const amtRecFCKey = argNames[3];
+    const tdsAmtFCKey = argNames[4];
+    const tdsAmtKey = argNames[5];
+    const tdsPercentKey = argNames[6];
+
+    const toNumOrNull = (value) => {
+      if (value === null || value === undefined || value === "") return null;
+      const n = Number(String(value).replace(/,/g, ""));
+      return Number.isFinite(n) ? n : null;
+    };
+
+    const round2 = (n) => {
+      const v = Math.round((Number(n) || 0) * 100) / 100;
+      return Object.is(v, -0) ? 0 : v;
+    };
+
+    const currency = newState?.[currencyKey];
+    const exchangeRate = toNumOrNull(newState?.[exchangeRateKey]);
+
+    // IMPORTANT:
+    // do not convert missing values to 0 during mount
+    const amtRecValue = toNumOrNull(newState?.[amtRecKey]);
+    const amtRecFCValue = toNumOrNull(newState?.[amtRecFCKey]);
+
+    // tdsPercent can be either a field name or a numeric literal
+    const tdsPercent =
+      toNumOrNull(newState?.[tdsPercentKey]) ??
+      toNumOrNull(tdsPercentKey) ??
+      0;
+
+    // nothing to calculate
+    if (currency === null || currency === undefined || currency === "") {
+      return {
+        type: "success",
+        result: true,
+        message: "Currency not available. Calculation skipped.",
+      };
+    }
+
+    // If both amounts are missing, DO NOT write 0 into state.
+    if (amtRecValue === null && amtRecFCValue === null) {
+      return {
+        type: "success",
+        result: true,
+        message: "Amount not available yet. Calculation skipped.",
+      };
+    }
+
     const request = {
       columns: "*",
       tableName: "tblCompanyParameter",
@@ -8342,92 +8506,105 @@ const calculateVoucherAmt = async (obj) => {
     };
 
     const response = await fetchReportData(request);
-    const currencyId = response?.data[0]?.currencyId;
-    if (currencyId == currency) {
-      //amtRecFC
-      const amtRecFc = amtRec;
-      const tdsAmtFc = amtRecFc * tdsPercent;
-      const tdsAmt = amtRec * tdsPercent;
+    const companyCurrencyId = response?.data?.[0]?.currencyId;
 
-      // Store in newState
-      setStateVariable((prev) => ({
-        ...prev,
-        [argNames[3]]: amtRecFc,
-      }));
-      //[argNames[4]]: tdsAmtFc,
-      // [argNames[5]]: tdsAmt,
-
-      // const tdsApplicableData = newState?.tdsApplicable || null;
-      // if (tdsApplicableData == true || tdsApplicableData == "true") {
-      //   const amtRecFCValue = parseFloat(newState?.amtRecFC) || 0;
-      //   const amtRecValue = parseFloat(newState?.amtRec) || 0;
-      //   const tdsPercent = parseFloat([argNames[6]]) || 0;
-      //   //tdsAmtFC   // tdsAmt
-      //   const calculatedTdsAmtFc = amtRecFCValue * tdsPercent;
-      //   const CalculatedCTdsAmt = amtRecValue * tdsPercent;
-      //   setStateVariable((prev) => ({
-      //     ...prev,
-      //     tdsAmtFC: calculatedTdsAmtFc,
-      //     tdsAmt: CalculatedCTdsAmt,
-      //   }));
-      // } else {
-      //   setStateVariable((prev) => ({
-      //     ...prev,
-      //     tdsAmtFC: null,
-      //     tdsAmt: null,
-      //   }));
-      // }
-
+    if (companyCurrencyId === null || companyCurrencyId === undefined) {
       return {
-        type: "success",
-        result: true,
-        message: "Amount & TDS calculated successfully",
-        amtRecFc,
-        tdsAmtFc,
-        tdsAmt,
-      };
-    } else if (currencyId != currency) {
-      const amtRec = amtRecFcValue * exchangeRate;
-      const tdsAmtFc = amtRecFcValue * tdsPercent;
-      const tdsAmt = amtRec * tdsPercent;
-
-      // Store in newState
-      setStateVariable((prev) => ({
-        ...prev,
-        [argNames[2]]: amtRec,
-      }));
-      //[argNames[4]]: tdsAmtFc,
-      // [argNames[5]]: tdsAmt,
-
-      // const tdsApplicableData = newState?.tdsApplicable || null;
-      // if (tdsApplicableData == true || tdsApplicableData == "true") {
-      //   const amtRecFCValue = parseFloat(newState?.amtRecFC) || 0;
-      //   const amtRecValue = parseFloat(newState?.amtRec) || 0;
-      //   const tdsPercent = parseFloat([argNames[6]]) || 0;
-      //   //tdsAmtFC   // tdsAmt
-      //   const calculatedTdsAmtFc = amtRecFCValue * tdsPercent;
-      //   const CalculatedCTdsAmt = amtRecValue * tdsPercent;
-      //   setStateVariable((prev) => ({
-      //     ...prev,
-      //     tdsAmtFC: calculatedTdsAmtFc,
-      //     tdsAmt: CalculatedCTdsAmt,
-      //   }));
-      // } else {
-      //   setStateVariable((prev) => ({
-      //     ...prev,
-      //     tdsAmtFC: null,
-      //     tdsAmt: null,
-      //   }));
-      // }
-
-      return {
-        type: "success",
-        result: true,
-        message: "Amount & TDS calculated successfully",
-        tdsAmtFc,
-        tdsAmt,
+        type: "error",
+        result: false,
+        message: "Company currency not found.",
       };
     }
+
+    const isHomeCurrency =
+      Number(companyCurrencyId) === Number(currency);
+
+    let nextAmtRec = amtRecValue;
+    let nextAmtRecFC = amtRecFCValue;
+
+    if (isHomeCurrency) {
+      // Home currency: both values should be same
+      if (amtRecValue !== null) {
+        nextAmtRec = round2(amtRecValue);
+        nextAmtRecFC = round2(amtRecValue);
+      } else if (amtRecFCValue !== null) {
+        nextAmtRec = round2(amtRecFCValue);
+        nextAmtRecFC = round2(amtRecFCValue);
+      }
+    } else {
+      // Foreign currency:
+      // Prefer whichever side is available and derive the other one
+      if (amtRecFCValue !== null && exchangeRate !== null && exchangeRate > 0) {
+        nextAmtRecFC = round2(amtRecFCValue);
+        nextAmtRec = round2(amtRecFCValue * exchangeRate);
+      } else if (amtRecValue !== null && exchangeRate !== null && exchangeRate > 0) {
+        nextAmtRec = round2(amtRecValue);
+        nextAmtRecFC = round2(amtRecValue / exchangeRate);
+      } else {
+        return {
+          type: "success",
+          result: true,
+          message: "Exchange rate or amount not available. Calculation skipped.",
+        };
+      }
+    }
+
+    const nextTdsAmtFC =
+      nextAmtRecFC !== null ? round2(nextAmtRecFC * tdsPercent) : null;
+
+    const nextTdsAmt =
+      nextAmtRec !== null ? round2(nextAmtRec * tdsPercent) : null;
+
+    setStateVariable((prev) => {
+      const prevAmtRec = toNumOrNull(prev?.[amtRecKey]);
+      const prevAmtRecFC = toNumOrNull(prev?.[amtRecFCKey]);
+      const prevTdsAmt = toNumOrNull(prev?.[tdsAmtKey]);
+      const prevTdsAmtFC = toNumOrNull(prev?.[tdsAmtFCKey]);
+
+      const updates = {};
+
+      // VERY IMPORTANT:
+      // do not overwrite fetched non-zero values with 0 during mount/hydration
+      if (
+        nextAmtRec !== null &&
+        !(nextAmtRec === 0 && prevAmtRec !== null && prevAmtRec !== 0 && amtRecValue === null)
+      ) {
+        updates[amtRecKey] = nextAmtRec;
+      }
+
+      if (
+        nextAmtRecFC !== null &&
+        !(nextAmtRecFC === 0 && prevAmtRecFC !== null && prevAmtRecFC !== 0 && amtRecFCValue === null)
+      ) {
+        updates[amtRecFCKey] = nextAmtRecFC;
+      }
+
+      if (tdsAmtFCKey) {
+        updates[tdsAmtFCKey] =
+          nextTdsAmtFC !== null ? nextTdsAmtFC : prevTdsAmtFC;
+      }
+
+      if (tdsAmtKey) {
+        updates[tdsAmtKey] =
+          nextTdsAmt !== null ? nextTdsAmt : prevTdsAmt;
+      }
+
+      const hasChanges = Object.keys(updates).some((key) => {
+        return prev?.[key] !== updates[key];
+      });
+
+      return hasChanges ? { ...prev, ...updates } : prev;
+    });
+
+    return {
+      type: "success",
+      result: true,
+      message: "Amount & TDS calculated successfully",
+      amtRec: nextAmtRec,
+      amtRecFc: nextAmtRecFC,
+      tdsAmtFc: nextTdsAmtFC,
+      tdsAmt: nextTdsAmt,
+    };
   } catch (error) {
     console.error("Error in calculateVoucherAmt:", error);
     return {
@@ -8437,7 +8614,6 @@ const calculateVoucherAmt = async (obj) => {
     };
   }
 };
-
 const getContainerRepairChargeDetails = async (obj) => {
   let {
     args,
@@ -9246,10 +9422,10 @@ const getBlChargesForPaty = async (obj) => {
 const getBillingPartyFromJob = async (obj) => {
   let { newState, setStateVariable, values } = obj;
 
-  const { blId } = newState;
+  const { blId,voucherTypeId } = newState;
   const { companyId, clientId } = getUserDetails();
 
-  const requestData = { id: blId };
+  const requestData = { id: blId,clientId:clientId,voucherTypeId:voucherTypeId,companyId:companyId };
   const fetchInvoice = await getGeneralLegerBillingParty(requestData);
 
   // normalize response
@@ -10957,9 +11133,9 @@ const getBlChargesForTariff = async (obj) => {
     const argNames = Array.isArray(args)
       ? args.map((a) => String(a).trim())
       : String(args ?? "")
-          .split(",")
-          .map((a) => a.trim())
-          .filter(Boolean);
+        .split(",")
+        .map((a) => a.trim())
+        .filter(Boolean);
 
     const rateKey = argNames[0];
     const currencyIdKey = argNames[1];
@@ -10984,8 +11160,8 @@ const getBlChargesForTariff = async (obj) => {
     const chargers = Array.isArray(res)
       ? res
       : Array.isArray(res?.Chargers)
-      ? res.Chargers
-      : [];
+        ? res.Chargers
+        : [];
 
     console.log("Tariff API response:", res);
     console.log("Normalized chargers:", chargers);
@@ -11212,8 +11388,6 @@ const checkDisChargeActivityBl = async (obj) => {
     return false;
   }
 };
-
-
 const checkRate = (obj) => {
   try {
     const { args, values, newState, setStateVariable } = obj;
@@ -11324,8 +11498,6 @@ const checkRate = (obj) => {
     console.error("check rate error:", err);
   }
 };
-
-
 const setBillingPartyForBl = async (obj) => {
   const { args, values, fieldName, newState, setStateVariable } = obj;
 
@@ -11413,7 +11585,6 @@ const SetVehicleTyeChassiNo = async (obj) => {
 
   });
 };
-
 
 const pad2 = (n) => String(n).padStart(2, "0");
 
@@ -11519,65 +11690,312 @@ const compareDatewithFin = async (obj) => {
   }
 };
 
+// const setexFromVoyageDailyExrate = async (obj) => {
+//   const { args, newState, values, setStateVariable } = obj;
+
+//   try {
+//     const argNames = args.split(",").map((arg) => arg.trim());
+
+//     const { businessSegmentId, blId } = newState;
+
+//     const Date = values[argNames[0]];
+//     const childblId = values[argNames[1]];
+//     const currencyId = values[argNames[2]];
+
+//     const request = {
+//       columns:
+//         "vr.exportExchangeRate as exportExchangeRate, vr.importExchangeRate as importExchangeRate",
+//       tableName:
+//         "tblInvoice i left join tblBl bl on bl.id = try_cast(i.blId as int) left join tblVoyageRoute vr on vr.vesselId = try_cast(bl.podVesselId as int)",
+//       whereCondition: `i.blId = '${blId}' and i.status = 1`,
+//       clientIdCondition: `i.clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+//     };
+
+//     const response = await fetchReportData(request);
+//     console.log("response", response);
+
+//     const rateRow =
+//       response?.data?.find(
+//         (row) =>
+//           row?.exportExchangeRate != null || row?.importExchangeRate != null
+//       ) || {};
+
+//     const exportExchangeRate = rateRow?.exportExchangeRate || "";
+//     const importExchangeRate = rateRow?.importExchangeRate || "";
+
+//     let finalExchangeRate = "";
+
+//     if (String(businessSegmentId) === "10") {
+//       finalExchangeRate = exportExchangeRate;
+//     } else if (String(businessSegmentId) === "11") {
+//       finalExchangeRate = importExchangeRate;
+//     }
+
+//     setStateVariable((prev) => ({
+//       ...prev,
+//       exchangeRate: finalExchangeRate,
+//     }));
+
+//     return {
+//       type: "success",
+//       result: true,
+//       message: "Exchange rate set successfully.",
+//     };
+//   } catch (error) {
+//     console.error("Error in exchange rate:", error);
+//     toast.error("Error validating exchange rate.");
+
+//     return {
+//       type: "error",
+//       result: false,
+//       message: "Error validating exchange rate.",
+//     };
+//   }
+// };
+
 const setexFromVoyageDailyExrate = async (obj) => {
-  const { args, newState, values, setStateVariable } = obj;
+  const { args, fieldName, values, newState, setStateVariable } = obj;
 
   try {
     const argNames = args.split(",").map((arg) => arg.trim());
 
+    // Expected args example:
+    // "date,blId,currencyId"
+    const dateCol = argNames[0];
+    const blIdCol = argNames[1];
+    const currencyCol = argNames[2];
+
     const { businessSegmentId, blId } = newState;
 
-    const Date = values[argNames[0]];
-    const childblId = values[argNames[1]];
-    const currencyId = values[argNames[2]];
+    const invoiceDate = values?.[dateCol];
+    const childblId = values?.[blIdCol];
+    const currencyId = values?.[currencyCol];
 
-    const request = {
-      columns:
-        "vr.exportExchangeRate as exportExchangeRate, vr.importExchangeRate as importExchangeRate",
-      tableName:
-        "tblInvoice i left join tblBl bl on bl.id = try_cast(i.blId as int) left join tblVoyageRoute vr on vr.vesselId = try_cast(bl.podVesselId as int)",
-      whereCondition: `i.blId = '${blId}' and i.status = 1`,
-      clientIdCondition: `i.clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
-    };
+    const effectiveBlId = blId || childblId;
 
-    const response = await fetchReportData(request);
-    console.log("response", response);
+    const storedUserData = localStorage.getItem("userData");
+    let userData = null;
 
-    const rateRow =
-      response?.data?.find(
-        (row) =>
-          row?.exportExchangeRate != null || row?.importExchangeRate != null
-      ) || {};
+    if (storedUserData) {
+      const decryptedData = decrypt(storedUserData);
+      try {
+        userData = JSON.parse(decryptedData);
+      } catch (e) {
+        console.error("Error parsing decrypted userData:", e);
+      }
+    }
 
-    const exportExchangeRate = rateRow?.exportExchangeRate || "";
-    const importExchangeRate = rateRow?.importExchangeRate || "";
+    const localClientId =
+      newState?.clientId ||
+      values?.clientId ||
+      userData?.clientId ||
+      clientId; // keeping your existing global fallback if available
 
     let finalExchangeRate = "";
 
-    if (String(businessSegmentId) === "10") {
-      finalExchangeRate = exportExchangeRate;
-    } else if (String(businessSegmentId) === "11") {
-      finalExchangeRate = importExchangeRate;
+    // =========================
+    // 1) FIRST TRY: Voyage Route
+    // =========================
+    if (effectiveBlId) {
+      const request = {
+        columns:
+          "vr.exportExchangeRate as exportExchangeRate, vr.importExchangeRate as importExchangeRate",
+        tableName: `
+          tblInvoice i
+          left join tblBl bl on bl.id = try_cast(i.blId as int)
+          left join tblVoyageRoute vr
+            on vr.vesselId = try_cast(bl.podVesselId as int)
+           and vr.voyageId = try_cast(bl.podVoyageId as int)
+        `,
+        whereCondition: `i.blId = '${effectiveBlId}' and i.status = 1`,
+        clientIdCondition: `i.clientId IN (${localClientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+      };
+
+      const response = await fetchReportData(request);
+      console.log("Voyage route response:", response);
+
+      const rateRow =
+        response?.data?.find(
+          (row) =>
+            row?.exportExchangeRate != null || row?.importExchangeRate != null
+        ) || {};
+
+      const exportExchangeRate = rateRow?.exportExchangeRate ?? "";
+      const importExchangeRate = rateRow?.importExchangeRate ?? "";
+
+      if (String(businessSegmentId) === "10") {
+        finalExchangeRate = exportExchangeRate;
+      } else if (String(businessSegmentId) === "11") {
+        finalExchangeRate = importExchangeRate;
+      }
+
+      console.log("Exchange rate from voyage route:", finalExchangeRate);
     }
 
+    // ==========================================
+    // 2) FALLBACK: Daily Exchange Rate
+    // ==========================================
+    const isEmptyRate =
+      finalExchangeRate === "" ||
+      finalExchangeRate === null ||
+      finalExchangeRate === undefined ||
+      Number(finalExchangeRate) === 0;
+
+    if (isEmptyRate && currencyId) {
+      console.log("Voyage route rate not found. Falling back to daily exchange rate...");
+
+      // Get company currency
+      const companyRequestBody = {
+        columns: "*",
+        tableName: "tblCompanyParameter",
+        whereCondition: `currencyId = ${currencyId} and status = 1`,
+        clientIdCondition: `clientId IN (${localClientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+      };
+
+      const companyResponse = await fetchReportData(companyRequestBody);
+      console.log("Company parameter response:", companyResponse);
+
+      // Get daily exchange rate
+      // If you want date-based filtering, add invoiceDate condition here
+      const exchangeRequestBody = {
+        columns: "*",
+        tableName: "tblExchangeRate",
+        whereCondition: `fromCurrencyId = ${currencyId} and status = 1`,
+        clientIdCondition: `clientId IN (${localClientId}) FOR JSON PATH`,
+      };
+
+      const exchangeResponse = await fetchReportData(exchangeRequestBody);
+      console.log("Daily exchange response:", exchangeResponse);
+
+      const fromCurrencyId =
+        exchangeResponse?.data?.length > 0
+          ? exchangeResponse.data[0].fromCurrencyId
+          : null;
+
+      const dailyExportExchangeRate =
+        exchangeResponse?.data?.length > 0
+          ? exchangeResponse.data[0].exportExchangeRate
+          : null;
+
+      const companyCurrencyId =
+        companyResponse?.data?.length > 0
+          ? companyResponse.data[0].currencyId
+          : null;
+
+      if (
+        fromCurrencyId !== "" &&
+        fromCurrencyId !== null &&
+        fromCurrencyId !== undefined
+      ) {
+        if (Number(fromCurrencyId) === Number(companyCurrencyId)) {
+          finalExchangeRate = 1;
+        } else {
+          finalExchangeRate = dailyExportExchangeRate || 1;
+        }
+      } else {
+        finalExchangeRate = 1;
+      }
+
+      console.log("Exchange rate from daily exchange:", finalExchangeRate);
+    }
+
+    // Final set
     setStateVariable((prev) => ({
       ...prev,
-      exchangeRate: finalExchangeRate,
+      exchangeRate: finalExchangeRate || "",
     }));
 
+    const updatedValues = {
+      ...values,
+      exchangeRate: finalExchangeRate || "",
+    };
+
     return {
+      obj: { ...obj },
+      values: updatedValues,
+      isCheck: true,
       type: "success",
       result: true,
       message: "Exchange rate set successfully.",
+      alertShow: true,
+      newState: {
+        ...newState,
+        exchangeRate: finalExchangeRate || "",
+      },
+      fieldName,
     };
   } catch (error) {
     console.error("Error in exchange rate:", error);
     toast.error("Error validating exchange rate.");
 
     return {
+      obj: { ...obj },
+      values: { ...values },
+      isCheck: false,
       type: "error",
       result: false,
       message: "Error validating exchange rate.",
+      alertShow: true,
+      newState,
+      fieldName,
+    };
+  }
+};
+const activityDateCompare = async (obj) => {
+  const { args, values, setStateVariable } = obj;
+
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+
+    const lastActivityDate = values[argNames[0]];
+    const nextActivityDate = values[argNames[1]];
+
+    const parseDate = (dateValue) => {
+      if (!dateValue) return null;
+      const normalized = String(dateValue).replace(" ", "T");
+      const d = new Date(normalized);
+
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const lastDateObj = parseDate(lastActivityDate);
+    const nextDateObj = parseDate(nextActivityDate);
+
+    if (!lastDateObj || !nextDateObj) {
+      toast.error("Invalid activity date.");
+      return {
+        type: "error",
+        result: false,
+        message: "Invalid activity date.",
+      };
+    }
+
+    if (nextDateObj <= lastDateObj) {
+      toast.error("Next activity date should be greater than last activity date.");
+      return {
+        type: "error",
+        result: false,
+        message: "Next activity date should be greater than last activity date.",
+      };
+    }
+
+    setStateVariable((prev) => ({
+      ...prev,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "Activity date validated successfully.",
+    };
+  } catch (error) {
+    console.error("Error in activity date validation:", error);
+    toast.error("Error validating activity date.");
+
+    return {
+      type: "error",
+      result: false,
+      message: "Error validating activity date.",
     };
   }
 };
@@ -11726,5 +12144,6 @@ export {
   setBillingPartyForBl,
   SetVehicleTyeChassiNo,
   compareDatewithFin,
-  setexFromVoyageDailyExrate
+  setexFromVoyageDailyExrate,
+  activityDateCompare
 };

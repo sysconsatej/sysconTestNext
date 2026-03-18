@@ -227,6 +227,40 @@ function rptQuotation() {
     fetchHeader();
   }, [CompanyHeader]);
 
+  useEffect(() => {
+    const fetchTermsAndConditionsData = async () => {
+      const menuReportId = searchParams.get("reportId");
+      if (menuReportId) {
+        const storedUserData = localStorage.getItem("userData");
+        if (storedUserData) {
+          const decryptedData = decrypt(storedUserData);
+          const userData = JSON.parse(decryptedData);
+          const clientId = userData[0].clientId;
+
+          const requestBody = {
+            columns: "termsCondition",
+            tableName: "tblTermsCondition",
+            whereCondition: `reportsId = ${menuReportId} and status = 1`,
+            clientIdCondition: `clientId in (${clientId},(select id from tblClient where clientCode = 'SYSCON')) FOR JSON PATH, INCLUDE_NULL_VALUES `,
+          };
+
+          const data = await fetchReportData(requestBody);
+
+          applyTheme(enquiryModuleRefs.current);
+
+          if (data && data?.data?.length > 0) {
+            setTermsAndConditions(data?.data[0]?.termsCondition || "");
+          } else {
+            //setTermsAndConditions(terms);
+          }
+        }
+      }
+    };
+    if (reportIds.length > 0) {
+      fetchTermsAndConditionsData();
+    }
+  }, [reportIds]);
+
   function numberToWordsOnly(input) {
     const ONES = [
       "zero",
@@ -9471,9 +9505,45 @@ Operator/ Airport Authority or any other third party.
         {clientId === 3 && <ExportParagrafModule data={data} />}
         {/* {clientId != 3 && <TermsAndCondition terms={termsAndConditions} />} */}
         {clientId === 13 && <SarQuotationTermsAndCondition />}
+        {clientId === 9 && (
+          <TermsAndConditionDynamic termsAndConditions={termsAndConditions} />
+        )}
       </div>
     </div>
   );
+
+  const TermsAndConditionDynamic = ({ termsAndConditions }) => {
+    const renderTerms = (tc) => {
+      if (Array.isArray(tc)) {
+        return tc.map((line, i) => (
+          <React.Fragment key={i}>
+            {line}
+            <br />
+          </React.Fragment>
+        ));
+      }
+
+      if (typeof tc === "string") {
+        return tc.split(/\r?\n/).map((line, i) => (
+          <React.Fragment key={i}>
+            {line.trim()}
+            <br />
+          </React.Fragment>
+        ));
+      }
+
+      return null;
+    };
+
+    return (
+      <div className="flex p-1" style={{ fontSize: "9px" }}>
+        <div style={{ width: "60%" }}>
+          <p className="font-bold">Terms And Condition :</p>
+          <p style={{ lineHeight: 1.4 }}>{renderTerms(termsAndConditions)}</p>
+        </div>
+      </div>
+    );
+  };
 
   const ExportQuotationSeaModuleSAR = () => (
     <div>
@@ -10583,6 +10653,660 @@ Operator/ Airport Authority or any other third party.
       </div>
     </div>
   );
+  //Komal
+  const QuotationAirCCSModule = ({ data }) => {
+    console.log("data =>", data);
+    let rateRequestDate;
+    const formatDate = (date) => {
+      if (!date) return ""; // Return empty string if date is null or undefined
+
+      const d = new Date(date);
+      const day = String(d.getDate()).padStart(2, "0"); // Get the day and pad with zero if needed
+
+      // Create an array of month abbreviations
+      const monthAbbreviations = [
+        "JAN",
+        "FEB",
+        "MAR",
+        "APR",
+        "MAY",
+        "JUN",
+        "JUL",
+        "AUG",
+        "SEP",
+        "OCT",
+        "NOV",
+        "DEC",
+      ];
+      const month = monthAbbreviations[d.getMonth()]; // Get the month abbreviation
+
+      const year = d.getFullYear(); // Get the full year
+      return `${day}/${month}/${year}`; // Return the formatted date
+    };
+
+    if (data && data.length > 0 && data[0].rateRequestDate) {
+      rateRequestDate = formatDate(data[0].rateRequestDate);
+    } else {
+      console.log("Date is not available or data is undefined.");
+      rateRequestDate = "";
+    }
+    let cargoWt =
+      data && data.length > 0 && data[0].cargoWt !== "" ? data[0].cargoWt : "";
+    let cargoWtUnitCode =
+      data && data.length > 0 && data[0].cargoWtUnitCode !== ""
+        ? data[0].cargoWtUnitCode
+        : "";
+    return (
+      <div>
+        <div className="flex flex-col md:flex-row flex-wrap border border-black">
+          <div className="w-full md:w-1/2 px-2 border-b md:border-b-0 md:border-r border-black pb-3">
+            <table className="mt-1 text-left text-xs w-full table-auto">
+              <tbody>
+                <tr>
+                  <th className="text-left w-1/5">Quotation No :</th>
+                  <td>
+                    {data && data.length > 0 && data[0].rateRequestNo !== ""
+                      ? data[0].rateRequestNo
+                      : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <th className="text-left w-1/5">Dated :</th>
+                  <td>{rateRequestDate}</td>
+                </tr>
+                <tr>
+                  <th className="text-left w-1/4">Customer:</th>
+                  <td>
+                    {data && data.length > 0 && data[0].customerName !== ""
+                      ? data[0].customerName
+                      : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <th className="text-left w-1/4">Trade Terms:</th>
+                  <td>
+                    {data && data.length > 0 && data[0].tradeTerms !== ""
+                      ? data[0].tradeTerms
+                      : ""}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="w-full md:w-1/3 px-2 pb-3">
+            <table className="mt-1 text-left text-xs w-full table-auto">
+              <tbody>
+                <tr>
+                  <th className="text-left w-1/4">Origin Airport :</th>
+                  <td>
+                    {data && data.length > 0 && data[0].polName !== ""
+                      ? data[0].polName
+                      : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <th className="text-left w-1/3">Dest Airport:</th>
+                  <td>
+                    {data && data.length > 0 && data[0].podName !== ""
+                      ? data[0].podName
+                      : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <th className="text-left w-1/4">Gr.wt (KGS):</th>
+                  <td>
+                    {cargoWt} {cargoWtUnitCode}
+                  </td>
+                </tr>
+                <tr>
+                  <th className="text-left w-1/3">Commodity:</th>
+                  <td>
+                    {data && data.length > 0 && data[0].commodity !== ""
+                      ? data[0].commodity
+                      : ""}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div className="text-xs w-full border-l border-r border-b border-black">
+          <div className="p-2 pb-3">
+            <strong>
+              Remarks:{" "}
+              {data && data.length > 0 && data[0].remarks !== ""
+                ? data[0].remarks
+                : ""}{" "}
+            </strong>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  const ExportAirQuotationRateBasisModuleCCS = ({ data }) => {
+    console.log("RateBasis Data:", data);
+
+    // Filter only Fixed rateBasisName charges
+    const tblRateRequestCharge =
+      data?.[0]?.tblRateRequestCharge?.filter(
+        (charge) => charge?.rateBasisName?.toLowerCase() === "fixed",
+      ) || [];
+
+    if (!tblRateRequestCharge.length) {
+      return null;
+    }
+
+    // Calculate total amount
+    const totalAmount = tblRateRequestCharge.reduce(
+      (acc, item) => acc + (item.sellAmount || 0),
+      0,
+    );
+
+    const thStyle = {
+      textAlign: "center",
+      padding: "10px",
+      verticalAlign: "top",
+      backgroundColor: "#E0E0E0",
+      border: "1px solid #000000",
+    };
+
+    const tdStyle = {
+      textAlign: "left",
+      padding: "10px",
+      verticalAlign: "top",
+      border: "1px solid #000000",
+    };
+
+    const tdStyleCenter = {
+      textAlign: "center",
+      padding: "10px",
+      verticalAlign: "top",
+      border: "1px solid #000000",
+    };
+
+    const tdStyleRight = {
+      textAlign: "right",
+      padding: "10px",
+      verticalAlign: "top",
+      border: "1px solid #000000",
+    };
+
+    return (
+      <>
+        <div className="text-xs w-full border border-black mt-3">
+          <div className="p-2 text-center">
+            <strong>Fixed charges</strong>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap mt-2">
+          <table
+            className="table-auto text-xs"
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              textAlign: "center",
+            }}
+          >
+            <thead className="bg-gray-300">
+              <tr>
+                <th style={thStyle}>Sr. No.</th>
+                <th style={thStyle}>Charge Description</th>
+                <th style={thStyle}>Amount</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {tblRateRequestCharge.map((item, index) => (
+                <tr key={index}>
+                  <td style={tdStyleCenter}>{index + 1}</td>
+                  <td style={tdStyle}>{item.chargeDescription}</td>
+                  <td style={tdStyleRight}>
+                    {(item.sellAmount || 0).toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+
+              <tr>
+                <td
+                  colSpan="2"
+                  style={{ ...tdStyle, fontWeight: "bold" }}
+                  className="ps-6"
+                >
+                  Total
+                </td>
+                <td style={{ ...tdStyleRight, fontWeight: "bold" }}>
+                  {totalAmount.toFixed(2)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </>
+    );
+  };
+  // const AirQuotationGridCCS = ({ data }) => {
+
+  //  // Filter charges where rateBasisName is NOT Fixed, null, or empty
+  // const charges =
+  //   data?.[0]?.tblRateRequestCharge?.filter(
+  //     (charge) =>
+  //       charge?.rateBasisName &&
+  //       charge?.rateBasisName.toLowerCase() !== "fixed" &&
+  //       charge?.rateBasisName.trim() !== ""
+  //   ) || [];
+  //   if (!charges.length) return null;
+
+  //   // Unique charge descriptions (columns)
+  //   const chargeNames = [
+  //     ...new Set(charges.map((c) => c.chargeDescription))
+  //   ];
+
+  //   // Unique vendors (rows)
+  //   const vendors = [
+  //     ...new Set(charges.map((c) => c.vendorName || c.vendorAgentName))
+  //   ];
+
+  //   // Group charges by vendor + charge
+  //   const grouped = {};
+
+  //   charges.forEach((c) => {
+  //     const vendor = c.vendorName || c.vendorAgentName;
+  //     const key = `${vendor}-${c.chargeDescription}`;
+
+  //     if (!grouped[key]) {
+  //       grouped[key] = 0;
+  //     }
+
+  //     grouped[key] += c.buyRate || 0;
+  //   });
+
+  //   const thStyle = {
+  //     textAlign: "center",
+  //     padding: "10px",
+  //     backgroundColor: "#E0E0E0",
+  //     border: "1px solid #000",
+  //   };
+
+  //   const tdStyle = {
+  //     textAlign: "right",
+  //     padding: "10px",
+  //     border: "1px solid #000",
+  //   };
+
+  //   const tdLeft = {
+  //     textAlign: "left",
+  //     padding: "10px",
+  //     border: "1px solid #000",
+  //     fontWeight: "bold",
+  //   };
+
+  //   return (
+  //     <div style={{ overflowX: "auto", marginTop: "10px" }}>
+  //       <table
+  //         style={{
+  //           width: "100%",
+  //           borderCollapse: "collapse",
+  //           border: "1px solid black",
+  //         }}
+  //       >
+  //         <thead>
+  //           <tr>
+  //             <th style={thStyle}></th>
+
+  //             {chargeNames.map((charge) => (
+  //               <th key={charge} style={thStyle}>
+  //                 {charge}
+  //               </th>
+  //             ))}
+  //           </tr>
+  //         </thead>
+
+  //         <tbody>
+  //           {vendors.map((vendor) => (
+  //             <tr key={vendor}>
+  //               <td style={tdLeft}>{vendor}</td>
+
+  //               {chargeNames.map((charge) => {
+  //                 const value =
+  //                   grouped[`${vendor}-${charge}`] || 0;
+
+  //                 return (
+  //                   <td key={charge} style={tdStyle}>
+  //                     {value.toFixed(2)}
+  //                   </td>
+  //                 );
+  //               })}
+  //             </tr>
+  //           ))}
+  //         </tbody>
+  //       </table>
+  //     </div>
+  //   );
+  // };
+
+  const AirQuotationGridCCS = ({ data }) => {
+    // Filter charges where rateBasisName is NOT Fixed, null, or empty
+    const charges =
+      data?.[0]?.tblRateRequestCharge?.filter(
+        (charge) =>
+          charge?.rateBasisName &&
+          charge?.rateBasisName.toLowerCase() !== "fixed" &&
+          charge?.rateBasisName.trim() !== "",
+      ) || [];
+    if (!charges.length) return null;
+
+    // Unique charge descriptions (columns)
+    const chargeNames = [...new Set(charges.map((c) => c.chargeDescription))];
+
+    // Unique vendors (rows), include empty/null vendor names
+    const vendors = [
+      ...new Set(
+        charges.map((c) =>
+          c.vendorName?.trim() ? c.vendorName : c.vendorAgentName || "N/A",
+        ),
+      ),
+    ];
+
+    // Group charges by vendor + charge
+    const grouped = {};
+
+    charges.forEach((c) => {
+      const vendor = c.vendorName?.trim()
+        ? c.vendorName
+        : c.vendorAgentName || "N/A";
+      const key = `${vendor}-${c.chargeDescription}`;
+
+      if (!grouped[key]) grouped[key] = 0;
+
+      grouped[key] += c.buyRate || 0;
+    });
+
+    const thStyle = {
+      textAlign: "center",
+      padding: "10px",
+      backgroundColor: "#E0E0E0",
+      border: "1px solid #000",
+    };
+
+    const tdStyle = {
+      textAlign: "right",
+      padding: "10px",
+      border: "1px solid #000",
+    };
+
+    const tdLeft = {
+      textAlign: "left",
+      padding: "10px",
+      border: "1px solid #000",
+      fontWeight: "bold",
+    };
+
+    return (
+      <div style={{ overflowX: "auto", marginTop: "10px" }}>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            border: "1px solid black",
+          }}
+        >
+          <thead>
+            <tr>
+              <th style={thStyle}></th>
+              {chargeNames.map((charge) => (
+                <th key={charge} style={thStyle}>
+                  {charge}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {vendors.map((vendor) => (
+              <tr key={vendor}>
+                <td style={tdLeft}>{vendor}</td>
+                {chargeNames.map((charge) => {
+                  const value = grouped[`${vendor}-${charge}`] || 0;
+                  return (
+                    <td key={charge} style={tdStyle}>
+                      {value.toFixed(2)}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+  // const TotalVariationFixedChargesTableCCS = ({ data }) => {
+
+  //   if (!data?.length || !data[0]?.tblRateRequestCharge) return null;
+
+  //   const cargoWt = data[0]?.cargoWt || 0;
+  //   const charges = data[0]?.tblRateRequestCharge;
+
+  //   // Weight charges
+  //  const weightCharges = charges.filter((c) =>
+  //   (c?.rateBasisName || c?.rateBasis || "")
+  //     .toLowerCase()
+  //     .includes("weight")
+  // );
+
+  //   if (!weightCharges.length) return null;
+
+  //   // Fixed charges
+  //   const fixedCharges = charges.filter(
+  //     (c) => !c?.rateBasisName?.toLowerCase().includes("weight")
+  //   );
+
+  //   const totalFixedAmount = fixedCharges.reduce(
+  //     (acc, item) => acc + (item.sellAmount || 0),
+  //     0
+  //   );
+
+  //   // Group by vendor
+  //   const vendorMap = weightCharges.reduce((map, charge) => {
+  //     const vendor =
+  //       charge.vendorName?.trim() || charge.vendorAgentName?.trim() || "NA";
+
+  //     if (!map[vendor]) {
+  //       map[vendor] = 0;
+  //     }
+
+  //     map[vendor] += parseFloat(charge.buyRate) || 0;
+
+  //     return map;
+  //   }, {});
+
+  //   const vendors = Object.keys(vendorMap);
+
+  //   const thStyle = {
+  //     textAlign: "center",
+  //     padding: "10px",
+  //     backgroundColor: "#E0E0E0",
+  //     border: "1px solid #000",
+  //   };
+
+  //   const tdLeft = {
+  //     textAlign: "left",
+  //     padding: "10px",
+  //     border: "1px solid #000",
+  //     fontWeight: "bold",
+  //   };
+
+  //   const tdRight = {
+  //     textAlign: "right",
+  //     padding: "10px",
+  //     border: "1px solid #000",
+  //   };
+
+  //   return (
+  //     <div className="mt-1">
+  //       <table
+  //         className="text-xs"
+  //         style={{ width: "50%", borderCollapse: "collapse" }}
+  //       >
+  //         <thead>
+  //           <tr>
+  //             <th colSpan={2} style={thStyle}>
+  //               Total of Variation & Fixed charges
+  //             </th>
+  //           </tr>
+  //         </thead>
+
+  //         <tbody>
+  //           {vendors.map((vendor, index) => {
+  //             const totalBuyRate = vendorMap[vendor];
+
+  //             // If NA vendor or no rate
+  //             if (vendor === "NA" || totalBuyRate === 0) {
+  //               return (
+  //                 <tr key={index}>
+  //                   <td style={tdLeft}>{vendor}</td>
+  //                   <td style={tdRight}>NA</td>
+  //                 </tr>
+  //               );
+  //             }
+
+  //             const totalCharge =
+  //               totalBuyRate * cargoWt + totalFixedAmount;
+
+  //             return (
+  //               <tr key={index}>
+  //                 <td style={tdLeft}>{vendor}</td>
+
+  //                 <td style={tdRight}>
+  //                   INR{" "}
+  //                   {totalCharge.toLocaleString("en-IN", {
+  //                     minimumFractionDigits: 2,
+  //                     maximumFractionDigits: 2,
+  //                   })}{" "}
+  //                   + GST
+  //                 </td>
+  //               </tr>
+  //             );
+  //           })}
+  //         </tbody>
+  //       </table>
+  //     </div>
+  //   );
+  // };
+
+  const TotalVariationFixedChargesTableCCS = ({ data }) => {
+    if (!data?.length || !data[0]?.tblRateRequestCharge) return null;
+
+    const cargoWt = data[0]?.cargoWt || 0;
+    const charges = data[0]?.tblRateRequestCharge;
+
+    // Fixed charges (everything)
+    const totalFixedAmount = charges.reduce(
+      (acc, item) => acc + (item.sellAmount || 0),
+      0,
+    );
+
+    // Group by vendor
+    const vendorMap = charges.reduce((map, charge) => {
+      const vendor =
+        charge.vendorName?.trim() || charge.vendorAgentName?.trim() || "NA";
+
+      if (!map[vendor]) map[vendor] = 0;
+
+      map[vendor] += parseFloat(charge.buyRate) || 0;
+      return map;
+    }, {});
+
+    const vendors = Object.keys(vendorMap);
+
+    const thStyle = {
+      textAlign: "center",
+      padding: "10px",
+      backgroundColor: "#E0E0E0",
+      border: "1px solid #000",
+    };
+
+    const tdLeft = {
+      textAlign: "left",
+      padding: "10px",
+      border: "1px solid #000",
+      fontWeight: "bold",
+    };
+
+    const tdRight = {
+      textAlign: "right",
+      padding: "10px",
+      border: "1px solid #000",
+    };
+
+    return (
+      <div className="mt-1">
+        <table
+          className="text-xs"
+          style={{ width: "50%", borderCollapse: "collapse" }}
+        >
+          <thead>
+            <tr>
+              <th colSpan={2} style={thStyle}>
+                Total of Variation & Fixed charges
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {vendors.map((vendor, index) => {
+              const totalBuyRate = vendorMap[vendor];
+
+              // If NA vendor or no rate
+              if (vendor === "NA" || totalBuyRate === 0) {
+                return (
+                  <tr key={index}>
+                    <td style={tdLeft}>{vendor}</td>
+                    <td style={tdRight}>NA</td>
+                  </tr>
+                );
+              }
+
+              const totalCharge = totalBuyRate * cargoWt + totalFixedAmount;
+
+              return (
+                <tr key={index}>
+                  <td style={tdLeft}>{vendor}</td>
+                  <td style={tdRight}>
+                    INR{" "}
+                    {totalCharge.toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    + GST
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const QuotationAirPrint = () => (
+    <div>
+      <div
+        id="QuotationAirPrint"
+        className="container mx-auto p-14 bodyColour text-black h-auto bgTheme"
+      >
+        <CompanyImgModule />
+        <h1 style={{ textAlign: "center", fontWeight: "bold" }}>
+          Export Air Quotation
+        </h1>
+        <QuotationAirCCSModule data={data} />
+        <ExportAirQuotationRateBasisModuleCCS data={data} />
+        <AirQuotationGridCCS data={data} />
+        <TotalVariationFixedChargesTableCCS data={data} />
+        {clientId === 2 && <QuotationExportParagrafModule data={data} />}
+        <p className="mt-5">(Authorized Signatory)</p>
+      </div>
+    </div>
+  );
 
   return (
     <main>
@@ -10800,6 +11524,21 @@ Operator/ Airport Authority or any other third party.
                     >
                       {ContainerPlanner()}
                     </div>
+                  </div>
+                </>
+              );
+            //Komal
+            case "Quotation Air Print":
+              return (
+                <>
+                  <div
+                    key={index}
+                    ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                    className={
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    }
+                  >
+                    {QuotationAirPrint()}
                   </div>
                 </>
               );

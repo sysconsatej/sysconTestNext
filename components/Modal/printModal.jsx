@@ -39,11 +39,11 @@ export default function PrintModal({
   const id = searchParams.id;
 
   console.log("PrintModal instance =>", {
-  submittedMenuId,
-  submittedRecordId,
-  tableName,
-  pageType,
-});
+    submittedMenuId,
+    submittedRecordId,
+    tableName,
+    pageType,
+  });
 
   useEffect(() => {
     setRedirectedPageType(pageType);
@@ -72,6 +72,7 @@ export default function PrintModal({
       let selectedHtmlReportData = [];
       let selectedRedirectionHtmlReportData = [];
       let selectedBlReportTemplateData = [];
+      let selectedCroReportTemplateData = [];
 
       if (reportType) {
         dispatch(
@@ -93,10 +94,14 @@ export default function PrintModal({
       );
 
       selectedBlReportTemplateData = reportData.filter(
-        (report) => report?.menuType === "B" || report?.menuType === "b",
+        (report) => report?.menuType === "bl" || report?.menuType === "BL",
       );
 
-      // New Code
+      selectedCroReportTemplateData = reportData.filter(
+        (report) => report?.menuType === "cro" || report?.menuType === "CRO",
+      );
+
+      // New Code For Bl Creater Viewer
       if (
         selectedBlReportTemplateData &&
         selectedBlReportTemplateData.length > 0
@@ -164,6 +169,81 @@ export default function PrintModal({
 
               const templateId = report?.reportTemplateId || null;
               const url = `/blReport?templateId=${templateId}&blId=${submittedRecordId}`;
+
+              window.open(url, "_blank");
+            }
+          }
+        }
+      }
+
+      // new code for CRO Creater Viewer
+      if (
+        selectedCroReportTemplateData &&
+        selectedCroReportTemplateData.length > 0
+      ) {
+        // ✅ validate once
+        if (!submittedRecordId) {
+          console.error("Unable to open the report: BL Id is not defined.", {
+            submittedRecordId,
+            selectedCroReportTemplateData,
+          });
+        } else {
+          if (reportType === "separate") {
+            for (
+              let index = 0;
+              index < selectedCroReportTemplateData.length;
+              index++
+            ) {
+              const report = selectedCroReportTemplateData[index];
+
+              const templateId =
+                report?.reportTemplateId || report?.ReportId || null;
+              const url = `/croReport?templateId=${templateId}&jobId=${submittedRecordId}`;
+
+              window.open(url, "_blank");
+            }
+          } else if (reportType === "combined") {
+            const groupedData = selectedCroReportTemplateData.reduce(
+              (acc, curr) => {
+                const existing = acc.find(
+                  (item) => item.ReportMenuLink === curr.ReportMenuLink,
+                );
+
+                if (existing) {
+                  if (
+                    curr?.ReportName &&
+                    !existing.ReportName.includes(curr.ReportName)
+                  ) {
+                    existing.ReportName.push(curr.ReportName);
+                  }
+                  // keep a template id if you want to open per group
+                  if (
+                    !existing.reportTemplateId &&
+                    (curr?.reportTemplateId || curr?.ReportId)
+                  ) {
+                    existing.reportTemplateId =
+                      curr?.reportTemplateId || curr?.ReportId;
+                  }
+                } else {
+                  acc.push({
+                    ReportMenuLink: curr?.ReportMenuLink,
+                    reportMenuId: curr?.reportMenuId,
+                    reportTemplateId:
+                      curr?.reportTemplateId || curr?.ReportId || null,
+                    ReportName: curr?.ReportName ? [curr.ReportName] : [],
+                  });
+                }
+                return acc;
+              },
+              [],
+            );
+
+            // ✅ open per group (because it's "combined")
+            for (let index = 0; index < groupedData.length; index++) {
+              const report = groupedData[index];
+
+              const templateId = report?.reportTemplateId || null;
+              const url = `/croReport?templateId=${templateId}&jobId=${submittedRecordId}`;
 
               window.open(url, "_blank");
             }
@@ -407,18 +487,28 @@ export default function PrintModal({
         const blEditerRequestBody = {
           columns: "tbp.id,tbp.name",
           tableName: "tblBlPrintTemplate tbp",
-          whereCondition: `tbp.clientId=${clientId} and tbp.blOfId=${companyId}`,
+          whereCondition: `tbp.clientId=${clientId} and tbp.blOfId=${companyId} and tbp.templateType='bl'`,
           clientIdCondition: `tbp.status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
         };
 
-        const [response, blResponse] = await Promise.all([
+        const croEditerRequestBody = {
+          columns: "tbp.id,tbp.name",
+          tableName: "tblBlPrintTemplate tbp",
+          whereCondition: `tbp.clientId=${clientId} and tbp.templateType='cro'`,
+          clientIdCondition: `tbp.status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+        };
+
+        const [response, blResponse, croResponse] = await Promise.all([
           fetchReportData(requestBody),
           fetchReportData(blEditerRequestBody),
+          fetchReportData(croEditerRequestBody),
         ]);
 
         const data = response?.data || response || [];
         const blData =
           tableName === "tblBl" ? blResponse?.data || blResponse || [] : [];
+        const croData =
+          tableName === "tblJob" ? croResponse?.data || croResponse || [] : [];
 
         const fetchedMenuNames = Array.isArray(data)
           ? data.map((item) => ({
@@ -438,17 +528,35 @@ export default function PrintModal({
               ReportId: item?.id,
               ReportName: item?.name,
               ReportMenuLink: "/blReport",
-              menuType: "B",
+              menuType: "bl",
               reportMenuId: null,
-              reportTemplateId: item?.id, 
+              reportTemplateId: item?.id,
               redirectionPath: null,
               displayName: item?.name,
             }))
           : [];
 
-          console.log('blPrintTemplate =>',blPrintTemplate)
-          console.log('fetchedMenuNames =>',fetchedMenuNames)
-          const combinedReportNames = [...fetchedMenuNames, ...blPrintTemplate];
+        const croPrintTemplate = Array.isArray(croData)
+          ? croData.map((item) => ({
+              ReportId: item?.id,
+              ReportName: item?.name,
+              ReportMenuLink: "/croReport",
+              menuType: "cro",
+              reportMenuId: null,
+              reportTemplateId: item?.id,
+              redirectionPath: null,
+              displayName: item?.name,
+            }))
+          : [];
+
+        console.log("blPrintTemplate =>", blPrintTemplate);
+        console.log("fetchedMenuNames =>", fetchedMenuNames);
+        console.log("croPrintTemplate =>", croPrintTemplate);
+        const combinedReportNames = [
+          ...fetchedMenuNames,
+          ...blPrintTemplate,
+          ...croPrintTemplate,
+        ];
         setReportNames(combinedReportNames);
       } catch (error) {
         console.error("Error fetching initial data:", error);

@@ -251,7 +251,7 @@ export default function StickyHeadTable() {
     // } else {
     //   addEditController("add");
     // }
-    router.push("/blCreator");
+    router.push("/croCreator");
   };
 
   const [dynamic, setDynamic] = useState([
@@ -479,7 +479,7 @@ export default function StickyHeadTable() {
           tableName: "tblblPrintTemplate",
           fieldName: searchFieldData,
           clientId: clientId,
-          filterCondition: "templateType='bl'",
+          filterCondition: "templateType='cro'",
           pageNo: 1,
           pageSize: rowsPerPage,
         };
@@ -488,7 +488,7 @@ export default function StickyHeadTable() {
           const getVoucherDataCount = {
             columns: "id",
             tableName: "tblblPrintTemplate",
-            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId}`,
+            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} and templateType='cro'`,
             clientIdCondition: `status = 1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
           };
           let Count = null;
@@ -569,7 +569,7 @@ export default function StickyHeadTable() {
           tableName: "tblblPrintTemplate",
           fieldName: searchFieldData,
           clientId: clientId,
-          filterCondition: "templateType='bl'",
+          filterCondition: "templateType='cro'",
           pageNo: 1,
           pageSize: rowsPerPage,
         };
@@ -578,7 +578,7 @@ export default function StickyHeadTable() {
           const getVoucherDataCount = {
             columns: "id",
             tableName: "tblblPrintTemplate",
-            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId}`,
+            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId}  and templateType='cro'`,
             clientIdCondition: `status = 1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
           };
           let Count = null;
@@ -631,7 +631,7 @@ export default function StickyHeadTable() {
           tableName: "tblblPrintTemplate",
           fieldName: searchFieldData,
           clientId: clientId,
-          filterCondition: "templateType='bl'",
+          filterCondition: "templateType='cro'",
           pageNo: columnSearchKeyName === "" ? selectedPage : 1,
           pageSize: rowsPerPage,
           keyName: columnSearchKeyName,
@@ -642,7 +642,7 @@ export default function StickyHeadTable() {
           const getVoucherDataCount = {
             columns: "id",
             tableName: "tblblPrintTemplate",
-            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId} `,
+            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId}  and templateType='cro'`,
             clientIdCondition: `status = 1 ${
               columnSearchKeyName === ""
                 ? ""
@@ -691,7 +691,7 @@ export default function StickyHeadTable() {
             tableName: "tblblPrintTemplate",
             fieldName: searchFieldData,
             clientId: clientId,
-            filterCondition: "templateType='bl'",
+            filterCondition: "templateType='cro'",
             pageNo: columnSearchKeyName === "" ? selectedPage : 1,
             pageSize: rowsPerPage,
             keyName: columnSearchKeyName,
@@ -701,7 +701,7 @@ export default function StickyHeadTable() {
           const getVoucherDataCount = {
             columns: "id",
             tableName: "tblblPrintTemplate",
-            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId})`,
+            whereCondition: `clientId=${clientId} and companyId=${defaultCompanyId} and companyBranchId=${defaultBranchId} and financialYearId=${defaultFinYearId})  and templateType='cro'`,
             clientIdCondition: `status = 1 ${
               columnSearchKeyName === ""
                 ? ""
@@ -906,9 +906,9 @@ export default function StickyHeadTable() {
         });
       }
       //router.push(`/formControl/addEdit//${queryString}`);
-      router.push(`/blCreator?id=${data?.id}`);
+      router.push(`/croCreator?id=${data?.id}`);
     } else if (data === "add") {
-      router.push(`/blCreator`);
+      router.push(`/croCreator`);
     } else {
       console.error("Invalid data or index provided for navigation");
       // Handle the error or provide feedback to the user
@@ -1704,7 +1704,7 @@ export default function StickyHeadTable() {
 
   return (
     <div className="relative">
-      <CustomeBreadCrumb name="BL Report Creator" />
+      <CustomeBreadCrumb name="CRO Report Creator" />
       <div className="flex mb-3 justify-end -mt-[10px] ">
         <div className="flex justify-between h-[27px] border border-gray-100 rounded-[7px] shadow-md">
           <Stack direction="row" className="">
@@ -2807,7 +2807,7 @@ const tableData = [
       {
         tableName: "tblblPrintTemplate",
         gridConfig:
-          '[{"fieldname":"name","controlname":"text","yourlabel":"Template Name"},{"fieldname":"draftFinal","controlname":"text","yourlabel":"Draft / Final"}]',
+          '[{"fieldname":"name","controlname":"text","yourlabel":"Template Name"}]',
       },
     ],
   },
@@ -2815,6 +2815,5 @@ const tableData = [
 
 const searchFieldData = [
   { fieldname: "name", controlname: "text", yourlabel: "Name" },
-  { fieldname: "draftFinal", controlname: "text", yourlabel: "Draft / Final" },
   { fieldname: "id", controlname: "text", yourlabel: "id" },
 ];
