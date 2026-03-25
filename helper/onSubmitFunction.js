@@ -327,6 +327,68 @@ export const userPassword = async (obj) => {
   };
 };
 
+// export const checkContainer = async ({
+//   args,
+//   newState,
+//   formControlData,
+//   values,
+//   setStateVariable,
+// }) => {
+//   try {
+//     const jobQtyList = newState.tblJobQty || [];
+//     const containerList = newState.tblJobContainer || [];
+//     const totalQty = jobQtyList.reduce(
+//       (acc, item) => acc + (Number(item.qty) || 0),
+//       0
+//     );
+//     const validContainerCount = containerList.filter(
+//       (container) =>
+//         container.containerNo && container.containerNo.trim() !== ""
+//     ).length;
+
+//     if (validContainerCount !== totalQty) {
+//       // return {
+//       //   type: "error",
+//       //   result: true,
+//       //   newState: newState,
+//       //   values: updatedValues,
+//       //   submitNewState: submitNewState,
+//       //   message: `Number of Container Nos (${validContainerCount}) does not match the quantity (${totalQty}) specified in Job Qty.`,
+
+//       // };
+//       // alert(`Number of Container Nos (${validContainerCount}) does not match the quantity (${totalQty}) specified in Job Qty.`)
+//       throw new Error(
+//         `Number of Container Nos (${validContainerCount}) does not match the quantity (${totalQty}) specified in Job Qty.`
+//       );
+//       // return false;
+//     }
+
+//     return {
+//       isCheck: true,
+//       type: "success",
+//       message: "Container numbers match the quantity.",
+//       alertShow: false,
+//       newState,
+//       values,
+//       formControlData,
+//     };
+//   } catch (error) {
+//     throw new Error(error.message);
+//     // return false;
+
+//     // return {
+//     //   isCheck: false,
+//     //   type: "error",
+//     //   message: `Error while validating containers: ${error.message}`,
+//     //   alertShow: true,
+//     //   newState,
+//     //   values,
+//     //   formControlData,
+//     // };
+//   }
+// };
+
+
 export const checkContainer = async ({
   args,
   newState,
@@ -335,32 +397,38 @@ export const checkContainer = async ({
   setStateVariable,
 }) => {
   try {
-    const jobQtyList = newState.tblJobQty || [];
-    const containerList = newState.tblJobContainer || [];
+    const jobQtyList = Array.isArray(newState.tblJobQty) ? newState.tblJobQty : [];
+    const containerList = Array.isArray(newState.tblJobContainer)
+      ? newState.tblJobContainer
+      : [];
+
     const totalQty = jobQtyList.reduce(
       (acc, item) => acc + (Number(item.qty) || 0),
       0
     );
-    const validContainerCount = containerList.filter(
-      (container) =>
-        container.containerNo && container.containerNo.trim() !== ""
-    ).length;
+
+    const validContainerCount = containerList.filter((container) => {
+      const hasContainerNo =
+        typeof container.containerNo === "string" &&
+        container.containerNo.trim() !== "";
+
+      const hasContainerId =
+        container.containerId !== undefined &&
+        container.containerId !== null &&
+        String(container.containerId).trim() !== "";
+
+      const hasDropdownLabel =
+        Array.isArray(container.containerIddropdown) &&
+        container.containerIddropdown.length > 0 &&
+        String(container.containerIddropdown[0]?.label || "").trim() !== "";
+
+      return hasContainerNo || hasContainerId || hasDropdownLabel;
+    }).length;
 
     if (validContainerCount !== totalQty) {
-      // return {
-      //   type: "error",
-      //   result: true,
-      //   newState: newState,
-      //   values: updatedValues,
-      //   submitNewState: submitNewState,
-      //   message: `Number of Container Nos (${validContainerCount}) does not match the quantity (${totalQty}) specified in Job Qty.`,
-
-      // };
-      // alert(`Number of Container Nos (${validContainerCount}) does not match the quantity (${totalQty}) specified in Job Qty.`)
       throw new Error(
-        `Number of Container Nos (${validContainerCount}) does not match the quantity (${totalQty}) specified in Job Qty.`
+        `Number of Containers (${validContainerCount}) does not match the quantity (${totalQty}) specified in Job Qty.`
       );
-      // return false;
     }
 
     return {
@@ -374,20 +442,8 @@ export const checkContainer = async ({
     };
   } catch (error) {
     throw new Error(error.message);
-    // return false;
-
-    // return {
-    //   isCheck: false,
-    //   type: "error",
-    //   message: `Error while validating containers: ${error.message}`,
-    //   alertShow: true,
-    //   newState,
-    //   values,
-    //   formControlData,
-    // };
   }
 };
-
 export const setRateToParent = (obj) => {
   const {
     args,
@@ -512,7 +568,7 @@ export const setRateToParentPurchase = (obj) => {
       (acc, item) =>
         acc +
         (Number(item[argNames[1]]) || 0) /
-          (newState[childName][childIndex][argNames[0]].length || 1),
+        (newState[childName][childIndex][argNames[0]].length || 1),
       0
     )
     .toFixed(2);
@@ -564,7 +620,7 @@ export const AmountHc = (obj) => {
       const avgAmountHc =
         validAmounts.length > 0
           ? validAmounts.reduce((sum, amt) => sum + amt, 0) /
-            validAmounts.length
+          validAmounts.length
           : 0;
 
       // Set the rate field to avgAmountHc
@@ -715,9 +771,8 @@ export const copyContainerData = (obj) => {
       type: "success",
       result: true,
       message: isFirstRow
-        ? `Set ${fieldsToCopy.join(", ")} on ${
-            hasSelection ? "selected" : "all"
-          } rows.`
+        ? `Set ${fieldsToCopy.join(", ")} on ${hasSelection ? "selected" : "all"
+        } rows.`
         : `Updated ${fieldsToCopy.join(", ")} on row ${srcIndex + 1} only.`,
       newState: updatedState,
       values: {},
@@ -779,9 +834,8 @@ export const rollupNoOfPackages = (obj) => {
     return {
       type: "success",
       result: true,
-      message: `${targetKey} set to ${sum}${
-        selectedOnly ? " (selected rows only)" : ""
-      }.`,
+      message: `${targetKey} set to ${sum}${selectedOnly ? " (selected rows only)" : ""
+        }.`,
       newState: updatedState,
       submitNewState: updatedState,
       values: {}, // clear transient values if your pipeline expects it

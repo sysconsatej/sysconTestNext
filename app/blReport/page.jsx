@@ -280,7 +280,7 @@ function getByPath(obj, path) {
 }
 
 function applyTokens(text, data, opts = {}) {
-  const { keepMissingTokens = false } = opts || {};
+  const { keepMissingTokens = false, formatValue } = opts || {};
   if (text == null) return "";
 
   return String(text).replace(/\{\{([^}]+)\}\}/g, (full, raw) => {
@@ -299,8 +299,348 @@ function applyTokens(text, data, opts = {}) {
         return norm(String(v));
       }
     }
-    return norm(String(v));
+
+    const next = typeof formatValue === "function" ? formatValue(v, key) : v;
+    return norm(String(next));
   });
+}
+
+function normalizeDecimalPlaces(v) {
+  if (v === "" || v === null || v === undefined) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, Math.min(8, Math.trunc(n)));
+}
+
+function toPlainNumber(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+
+  const cleaned = raw.replace(/,/g, "");
+  if (!/^[-+]?(?:\d+\.?\d*|\.\d+)$/.test(cleaned)) return null;
+
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatNumericValue(value, decimalPlaces) {
+  const dp = normalizeDecimalPlaces(decimalPlaces);
+  if (dp === null) return value == null ? "" : String(value);
+
+  const n = toPlainNumber(value);
+  if (n === null) return value == null ? "" : String(value);
+
+  return n.toFixed(dp);
+}
+
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+const MONTHS_LONG = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAYS_LONG = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+function pad2(n) {
+  return String(Number(n || 0)).padStart(2, "0");
+}
+
+function normalizeDateStyle(style = {}) {
+  return {
+    mode: String(style.dateFormatMode || "simple").toLowerCase(),
+    order: String(style.dateOrder || "DMY").toUpperCase(),
+    sep: style.dateSeparator == null ? "/" : String(style.dateSeparator),
+    pattern: String(style.datePattern || "DD/MM/YYYY"),
+    inputOrder: String(style.dateInputOrder || "DMY").toUpperCase(),
+    invalid: String(style.dateInvalidFallback || "raw").toLowerCase(),
+    monthCase: String(style.dateMonthCase || "title").toLowerCase(),
+    useUTC: !!style.dateUseUTC,
+  };
+}
+
+function applyMonthCase(txt, monthCase) {
+  if (monthCase === "upper") return String(txt).toUpperCase();
+  if (monthCase === "lower") return String(txt).toLowerCase();
+  return String(txt);
+}
+
+function parseDateParts(raw, opts = {}) {
+  if (raw == null || raw === "") return { ok: false };
+
+  if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
+    const d = raw;
+    const y = opts.useUTC ? d.getUTCFullYear() : d.getFullYear();
+    const m = (opts.useUTC ? d.getUTCMonth() : d.getMonth()) + 1;
+    const day = opts.useUTC ? d.getUTCDate() : d.getDate();
+    const hh = opts.useUTC ? d.getUTCHours() : d.getHours();
+    const mm = opts.useUTC ? d.getUTCMinutes() : d.getMinutes();
+    const ss = opts.useUTC ? d.getUTCSeconds() : d.getSeconds();
+    const wd = opts.useUTC ? d.getUTCDay() : d.getDay();
+
+    return {
+      ok: true,
+      parts: {
+        year: y,
+        month: m,
+        day,
+        hours: hh,
+        minutes: mm,
+        seconds: ss,
+        weekday: wd,
+      },
+    };
+  }
+
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    const ms = raw < 1e12 ? raw * 1000 : raw;
+    return parseDateParts(new Date(ms), opts);
+  }
+
+  const s = String(raw).trim();
+  if (!s) return { ok: false };
+
+  let m = s.match(
+    /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2})(?::(\d{1,2}))?(?::(\d{1,2}))?)?(?:\.\d+)?(?:Z)?$/i,
+  );
+  if (m) {
+    const year = Number(m[1]);
+    const month = Number(m[2]);
+    const day = Number(m[3]);
+    const hours = Number(m[4] || 0);
+    const minutes = Number(m[5] || 0);
+    const seconds = Number(m[6] || 0);
+    const d = new Date(year, month - 1, day, hours, minutes, seconds);
+
+    return {
+      ok: true,
+      parts: {
+        year,
+        month,
+        day,
+        hours,
+        minutes,
+        seconds,
+        weekday: d.getDay(),
+      },
+    };
+  }
+
+  m = s.match(
+    /^(\d{1,4})([\/.\- ])(\d{1,2})\2(\d{1,4})(?:[T\s](\d{1,2})(?::(\d{1,2}))?(?::(\d{1,2}))?)?$/i,
+  );
+  if (m) {
+    const a = Number(m[1]);
+    const b = Number(m[3]);
+    const c = Number(m[4]);
+    const hours = Number(m[5] || 0);
+    const minutes = Number(m[6] || 0);
+    const seconds = Number(m[7] || 0);
+
+    let year, month, day;
+    const inputOrder = String(opts.inputOrder || "DMY").toUpperCase();
+
+    if (inputOrder === "DMY") {
+      day = a;
+      month = b;
+      year = c;
+    } else if (inputOrder === "MDY") {
+      month = a;
+      day = b;
+      year = c;
+    } else {
+      year = a;
+      month = b;
+      day = c;
+    }
+
+    if (year < 100) year += year >= 70 ? 1900 : 2000;
+
+    const d = new Date(year, month - 1, day, hours, minutes, seconds);
+
+    return {
+      ok: true,
+      parts: {
+        year,
+        month,
+        day,
+        hours,
+        minutes,
+        seconds,
+        weekday: d.getDay(),
+      },
+    };
+  }
+
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) {
+    return parseDateParts(d, opts);
+  }
+
+  return { ok: false };
+}
+
+function buildSimplePattern(order = "DMY", sep = "/") {
+  const map = {
+    DMY: ["DD", "MM", "YYYY"],
+    MDY: ["MM", "DD", "YYYY"],
+    YMD: ["YYYY", "MM", "DD"],
+  };
+  return (map[String(order).toUpperCase()] || map.DMY).join(sep);
+}
+
+function formatPattern(parts, pattern, monthCase = "title") {
+  const year = Number(parts.year || 0);
+  const month = Number(parts.month || 0);
+  const day = Number(parts.day || 0);
+  const hours = Number(parts.hours || 0);
+  const minutes = Number(parts.minutes || 0);
+  const seconds = Number(parts.seconds || 0);
+  const weekday = Number(parts.weekday || 0);
+
+  const MMM = applyMonthCase(MONTHS_SHORT[month - 1] || "", monthCase);
+  const MMMM = applyMonthCase(MONTHS_LONG[month - 1] || "", monthCase);
+
+  const tokens = {
+    YYYY: String(year),
+    YY: String(year).slice(-2),
+    MMMM,
+    MMM,
+    MM: pad2(month),
+    M: String(month),
+    DD: pad2(day),
+    D: String(day),
+    dddd: DAYS_LONG[weekday] || "",
+    ddd: DAYS_SHORT[weekday] || "",
+    HH: pad2(hours),
+    H: String(hours),
+    hh: pad2(hours % 12 || 12),
+    h: String(hours % 12 || 12),
+    mm: pad2(minutes),
+    m: String(minutes),
+    ss: pad2(seconds),
+    s: String(seconds),
+    A: hours >= 12 ? "PM" : "AM",
+    a: hours >= 12 ? "pm" : "am",
+  };
+
+  return String(pattern)
+    .replaceAll("dddd", "\u0001")
+    .replaceAll("ddd", "\u0002")
+    .replaceAll("MMMM", "\u0003")
+    .replaceAll("MMM", "\u0004")
+    .replaceAll("YYYY", "\u0005")
+    .replaceAll("YY", "\u0006")
+    .replaceAll("DD", "\u0007")
+    .replaceAll("D", "\u0008")
+    .replaceAll("MM", "\u0009")
+    .replaceAll("M", "\u000A")
+    .replaceAll("HH", "\u000B")
+    .replaceAll("H", "\u000C")
+    .replaceAll("hh", "\u000D")
+    .replaceAll("h", "\u000E")
+    .replaceAll("mm", "\u000F")
+    .replaceAll("m", "\u0010")
+    .replaceAll("ss", "\u0011")
+    .replaceAll("s", "\u0012")
+    .replaceAll("A", "\u0013")
+    .replaceAll("a", "\u0014")
+    .replaceAll("\u0001", tokens.dddd)
+    .replaceAll("\u0002", tokens.ddd)
+    .replaceAll("\u0003", tokens.MMMM)
+    .replaceAll("\u0004", tokens.MMM)
+    .replaceAll("\u0005", tokens.YYYY)
+    .replaceAll("\u0006", tokens.YY)
+    .replaceAll("\u0007", tokens.DD)
+    .replaceAll("\u0008", tokens.D)
+    .replaceAll("\u0009", tokens.MM)
+    .replaceAll("\u000A", tokens.M)
+    .replaceAll("\u000B", tokens.HH)
+    .replaceAll("\u000C", tokens.H)
+    .replaceAll("\u000D", tokens.hh)
+    .replaceAll("\u000E", tokens.h)
+    .replaceAll("\u000F", tokens.mm)
+    .replaceAll("\u0010", tokens.m)
+    .replaceAll("\u0011", tokens.ss)
+    .replaceAll("\u0012", tokens.s)
+    .replaceAll("\u0013", tokens.A)
+    .replaceAll("\u0014", tokens.a);
+}
+
+function formatDateValue(raw, style = {}) {
+  const opts = normalizeDateStyle(style);
+  const parsed = parseDateParts(raw, opts);
+
+  if (!parsed.ok) {
+    return opts.invalid === "blank" ? "" : String(raw ?? "");
+  }
+
+  const pattern =
+    opts.mode === "custom"
+      ? opts.pattern
+      : buildSimplePattern(opts.order, opts.sep);
+
+  return formatPattern(parsed.parts, pattern, opts.monthCase);
+}
+
+function formatValueByStyle(value, style = {}, key = "") {
+  const s = style || {};
+  const valueType = String(s.valueType || "").toLowerCase();
+
+  if (
+    valueType === "date" ||
+    s.dateFormatMode ||
+    s.datePattern ||
+    s.dateOrder
+  ) {
+    return formatDateValue(value, s);
+  }
+
+  if (valueType === "number" || s.decimalPlaces != null) {
+    return formatNumericValue(value, s.decimalPlaces);
+  }
+
+  return value == null ? "" : String(value);
+}
+
+function hasTokenSyntax(text) {
+  return /\{\{[^}]+\}\}/.test(String(text || ""));
 }
 
 function escapeHtml(s) {
@@ -491,30 +831,43 @@ function applyAutoGrowFixedTablesToTemplate(template, data, opts) {
 
           if (!tokenText) continue;
 
-          const resolved = applyTokens(tokenText, data, {
-            keepMissingTokens: false,
-          });
-          const safe = isUnresolvedTokenString(resolved) ? "" : resolved;
+          const csx =
+            _pickFromMap(tmeta.cellStyle || tmeta.cellStyles || {}, r, c) || {};
+
+          const mergedStyle = {
+            ...(el.style || {}),
+            ...(tmeta.style || {}),
+            ...csx,
+            fontSize: tmeta.fontSize ?? el?.style?.fontSize ?? 11,
+            fontFamily:
+              (tmeta.style && tmeta.style.fontFamily) || el?.style?.fontFamily,
+            fontWeight:
+              (tmeta.style && tmeta.style.fontWeight) || el?.style?.fontWeight,
+            lineHeight:
+              (tmeta.style && tmeta.style.lineHeight) || el?.style?.lineHeight,
+            padding: cellPad,
+            decimalPlaces: normalizeDecimalPlaces(
+              csx.decimalPlaces ?? tmeta.decimalPlaces,
+            ),
+          };
+
+          const resolved = hasTokenSyntax(tokenText)
+            ? applyTokens(tokenText, data, {
+                keepMissingTokens: false,
+                formatValue: (v, key) =>
+                  formatValueByStyle(v, mergedStyle, key),
+              })
+            : formatValueByStyle(tokenText, mergedStyle);
+
+          const safe = isUnresolvedTokenString(resolved)
+            ? ""
+            : String(resolved || "");
           if (!safe) continue;
 
           const measured = measureTextMm({
             text: safe,
             widthMm: Math.max(1, Number(colMm[c] || 1)),
-            style: {
-              ...(el.style || {}),
-              ...(tmeta.style || {}),
-              fontSize: tmeta.fontSize ?? el?.style?.fontSize ?? 11,
-              fontFamily:
-                (tmeta.style && tmeta.style.fontFamily) ||
-                el?.style?.fontFamily,
-              fontWeight:
-                (tmeta.style && tmeta.style.fontWeight) ||
-                el?.style?.fontWeight,
-              lineHeight:
-                (tmeta.style && tmeta.style.lineHeight) ||
-                el?.style?.lineHeight,
-              padding: cellPad,
-            },
+            style: mergedStyle,
             data,
           });
 
@@ -895,6 +1248,7 @@ function isRepeatTableElement(el) {
 
 function resolveRepeatTableColumns(repeat, firstRowObj) {
   const colsRaw = Array.isArray(repeat?.columns) ? repeat.columns : [];
+
   if (colsRaw.length) {
     return colsRaw
       .map((c) => ({
@@ -902,14 +1256,33 @@ function resolveRepeatTableColumns(repeat, firstRowObj) {
         label: c?.label ?? c?.key ?? "",
         align: c?.align ?? "left",
         widthMm: c?.widthMm ?? null,
+        decimalPlaces: c?.decimalPlaces ?? null,
+        valueType: c?.valueType ?? null,
+        dateFormatMode: c?.dateFormatMode ?? null,
+        dateOrder: c?.dateOrder ?? null,
+        dateSeparator: c?.dateSeparator ?? null,
+        datePattern: c?.datePattern ?? null,
+        dateInputOrder: c?.dateInputOrder ?? null,
+        dateInvalidFallback: c?.dateInvalidFallback ?? null,
+        dateMonthCase: c?.dateMonthCase ?? null,
+        dateUseUTC: !!c?.dateUseUTC,
       }))
       .filter((c) => c.key);
   }
+
   if (firstRowObj && typeof firstRowObj === "object") {
     return Object.keys(firstRowObj)
       .slice(0, 8)
-      .map((k) => ({ key: k, label: k, align: "left", widthMm: null }));
+      .map((k) => ({
+        key: k,
+        label: k,
+        align: "left",
+        widthMm: null,
+        decimalPlaces: null,
+        valueType: null,
+      }));
   }
+
   return [];
 }
 
@@ -923,17 +1296,8 @@ function buildRepeatPrintChunk({
   const header = colsDef.map((c) => String(c.label ?? c.key ?? ""));
   const body = chunkRows.map((rowObj, idx) =>
     colsDef.map((c) => {
-      if (c.key === "__index__") return String(idx + 1);
-      const v = getByPath(rowObj || {}, String(c.key || ""));
-      if (v == null) return "";
-      if (typeof v === "object") {
-        try {
-          return JSON.stringify(v);
-        } catch {
-          return String(v);
-        }
-      }
-      return String(v);
+      if (c.key === "__index__") return idx + 1;
+      return getByPath(rowObj || {}, String(c.key || ""));
     }),
   );
 
@@ -1305,17 +1669,30 @@ function resolveCellTextForRender({ tmeta, r, c, data }) {
   const csx = pickFromMap(cellStyle, r, c) || {};
   const cell = pickFromMap(cells, r, c);
 
+  const mergedStyle = {
+    ...(tmeta.style || {}),
+    ...csx,
+    decimalPlaces: normalizeDecimalPlaces(
+      csx.decimalPlaces ?? tmeta.decimalPlaces,
+    ),
+  };
+
   const direct =
     (cell && (cell.text ?? cell.value ?? cell.label)) ??
     csx.text ??
     csx.value ??
     csx.label ??
     "";
+
   if (direct) {
-    const resolved = applyTokens(String(direct), data, {
-      keepMissingTokens: false,
-    });
-    return isUnresolvedTokenString(resolved) ? "" : resolved;
+    if (hasTokenSyntax(direct)) {
+      const resolved = applyTokens(String(direct), data, {
+        keepMissingTokens: false,
+        formatValue: (v, key) => formatValueByStyle(v, mergedStyle, key),
+      });
+      return isUnresolvedTokenString(resolved) ? "" : String(resolved || "");
+    }
+    return String(formatValueByStyle(direct, mergedStyle));
   }
 
   if (bind) {
@@ -1326,19 +1703,23 @@ function resolveCellTextForRender({ tmeta, r, c, data }) {
 
     if (path) {
       const v = getByPath(data, path);
-      if (v !== undefined && v !== null)
-        return String(v).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+      if (v !== undefined && v !== null) {
+        return String(formatValueByStyle(v, mergedStyle));
+      }
     }
 
     if (tokenKey) {
       const tokenResolved = applyTokens(`{{${tokenKey}}}`, data, {
         keepMissingTokens: false,
+        formatValue: (v, key) => formatValueByStyle(v, mergedStyle, key),
       });
-      if (tokenResolved && !isUnresolvedTokenString(tokenResolved))
-        return tokenResolved;
+
+      if (tokenResolved && !isUnresolvedTokenString(tokenResolved)) {
+        return String(tokenResolved);
+      }
     }
 
-    if (label != null) return String(label);
+    if (label != null) return String(formatValueByStyle(label, mergedStyle));
   }
 
   return "";
@@ -1355,7 +1736,6 @@ function isElementLike(v) {
   );
 }
 
-// 2) Update renderCellInnerHtml(...)
 function renderCellInnerHtml({
   text = "",
   sMerged = {},
@@ -1405,14 +1785,22 @@ function renderCellContentHtml({ cell, resolvedText, baseStyle, data }) {
       ...(cell.style || {}),
       ...(cell.css || {}),
     };
+
     const align = normalizeTextAlign(pickTextAlign(cellStyle) ?? "left");
     const vAlign = normalizeVAlign(pickVAlign(cellStyle) ?? "top");
 
     const rawText = cell.text ?? cell.value ?? cell.label ?? resolvedText ?? "";
-    const resolved = applyTokens(String(rawText), data || {}, {
-      keepMissingTokens: false,
-    });
-    const safe = isUnresolvedTokenString(resolved) ? "" : resolved;
+
+    const resolved = hasTokenSyntax(rawText)
+      ? applyTokens(String(rawText), data || {}, {
+          keepMissingTokens: false,
+          formatValue: (v, key) => formatValueByStyle(v, cellStyle, key),
+        })
+      : formatValueByStyle(rawText, cellStyle);
+
+    const safe = isUnresolvedTokenString(resolved)
+      ? ""
+      : String(resolved || "");
 
     return renderCellInnerHtml({
       text: safe,
@@ -1424,8 +1812,9 @@ function renderCellContentHtml({ cell, resolvedText, baseStyle, data }) {
 
   const align = normalizeTextAlign(pickTextAlign(baseStyle) ?? "left");
   const vAlign = normalizeVAlign(pickVAlign(baseStyle) ?? "top");
+
   return renderCellInnerHtml({
-    text: resolvedText ?? "",
+    text: String(formatValueByStyle(resolvedText ?? "", baseStyle || {})),
     sMerged: baseStyle || {},
     align,
     vAlign,
@@ -1475,7 +1864,6 @@ function renderElement(el, data) {
     `;
   }
 
-  // 3) Update renderElement(el, data) -> text branch only
   if (el.type === "text") {
     const align = normalizeHAlign(s.align ?? s.textAlign ?? s.hAlign);
     const textOpacity = normalizeOpacity(s.opacity, 1);
@@ -1489,27 +1877,39 @@ function renderElement(el, data) {
     const wrapCss =
       commonBox +
       `
-      display:flex;
-      align-items:${vAlignToAlignItems(normalizeVAlign(s.vAlign ?? s.verticalAlign))};
-      overflow:hidden;
-      background:${s.bg || "transparent"};
-      border:${border};
-      border-radius:${Number(s.borderRadius || 0)}px;
-    `;
+        display:flex;
+        align-items:${vAlignToAlignItems(normalizeVAlign(s.vAlign ?? s.verticalAlign))};
+        overflow:hidden;
+        background:${s.bg || "transparent"};
+        border:${border};
+        border-radius:${Number(s.borderRadius || 0)}px;
+      `;
 
     const innerCss = `
-    width:100%;
-    max-height:100%;
-    overflow:hidden;
-    white-space:pre-wrap;
-    text-align:${align};
-    word-break:break-word;
-    opacity:${textOpacity};
-    ${cssFromStyle({ ...s, align, bg: "transparent", borderWidth: 0 })}
-  `;
+      width:100%;
+      max-height:100%;
+      overflow:hidden;
+      white-space:pre-wrap;
+      text-align:${align};
+      word-break:break-word;
+      opacity:${textOpacity};
+      ${cssFromStyle({ ...s, align, bg: "transparent", borderWidth: 0 })}
+    `;
 
-    const txt = applyTokens(el.text || "", data, { keepMissingTokens: false });
-    const safeTxt = isUnresolvedTokenString(txt) ? "" : txt;
+    const textStyle = {
+      ...s,
+      decimalPlaces: normalizeDecimalPlaces(s.decimalPlaces),
+    };
+
+    const rawText = el.text || "";
+    const txt = hasTokenSyntax(rawText)
+      ? applyTokens(rawText, data, {
+          keepMissingTokens: false,
+          formatValue: (v, key) => formatValueByStyle(v, textStyle, key),
+        })
+      : formatValueByStyle(rawText, textStyle);
+
+    const safeTxt = isUnresolvedTokenString(txt) ? "" : String(txt || "");
 
     return `<div style="${wrapCss}"><div style="${innerCss}">${escapeHtml(safeTxt)}</div></div>`;
   }
@@ -1652,7 +2052,26 @@ function renderElement(el, data) {
           .map((c, ci) => {
             const align = normalizeTextAlign(c.align || "left");
             const vAlign = "top";
-            const txt = rowArr[ci] == null ? "" : String(rowArr[ci]);
+            const colStyle = {
+              ...c,
+              decimalPlaces: normalizeDecimalPlaces(
+                c?.decimalPlaces ?? tmeta.decimalPlaces,
+              ),
+            };
+
+            const rawVal = rowArr[ci];
+            const txt =
+              rawVal == null
+                ? ""
+                : typeof rawVal === "object"
+                  ? (() => {
+                      try {
+                        return JSON.stringify(rawVal);
+                      } catch {
+                        return String(rawVal);
+                      }
+                    })()
+                  : String(formatValueByStyle(rawVal, colStyle));
 
             const tdCss = `
               border:${gridBW}px solid ${gridBC};
@@ -1796,6 +2215,13 @@ function renderElement(el, data) {
             const align = normalizeTextAlign(c.align || "left");
             const vAlign = "top";
             const val = getByPath(rowObj, String(c.key || ""));
+            const colStyle = {
+              ...c,
+              decimalPlaces: normalizeDecimalPlaces(
+                c?.decimalPlaces ?? tmeta.decimalPlaces,
+              ),
+            };
+
             const txt =
               val == null
                 ? ""
@@ -1807,7 +2233,7 @@ function renderElement(el, data) {
                         return String(val);
                       }
                     })()
-                  : String(val);
+                  : String(formatValueByStyle(val, colStyle));
 
             const tdCss = `
               border:${gridBW}px solid ${gridBC};
@@ -1947,6 +2373,9 @@ function renderElement(el, data) {
         const cs = m ? m.cs : 1;
 
         const csx = pickFromMap(cellStyle, r, c) || {};
+        const decimalPlaces = normalizeDecimalPlaces(
+          csx.decimalPlaces ?? tmeta.decimalPlaces,
+        );
         const cell =
           pickFromMap(tmeta.cells || tmeta.cell || tmeta.data || {}, r, c) ||
           null;
@@ -2004,6 +2433,7 @@ function renderElement(el, data) {
             padding: pad,
             lineHeight: sMerged.lineHeight,
             letterSpacing: sMerged.letterSpacing,
+            decimalPlaces,
           },
           data,
         });
@@ -2394,9 +2824,22 @@ export default function BlReportPage() {
     const el = measureRef.current;
     if (!el) return 0;
 
-    const resolved = applyTokens(text || "", mData || {}, {
-      keepMissingTokens: false,
-    });
+    const mergedStyle = {
+      ...(style || {}),
+      decimalPlaces: normalizeDecimalPlaces(style?.decimalPlaces),
+    };
+
+    const rawText = text || "";
+    const resolved = hasTokenSyntax(rawText)
+      ? applyTokens(rawText, mData || {}, {
+          keepMissingTokens: false,
+          formatValue: (v, key) => formatValueByStyle(v, mergedStyle, key),
+        })
+      : formatValueByStyle(rawText, mergedStyle);
+
+    const displayText = isUnresolvedTokenString(resolved)
+      ? ""
+      : String(resolved || "");
 
     const s = style || {};
     const paddingPx = s.padding != null ? Number(s.padding) : 0;
@@ -2414,7 +2857,7 @@ export default function BlReportPage() {
     el.style.whiteSpace = "pre-wrap";
     el.style.wordBreak = "break-word";
 
-    el.textContent = isUnresolvedTokenString(resolved) ? "" : resolved;
+    el.textContent = displayText;
 
     const rect = el.getBoundingClientRect();
     const hPx = rect.height;
@@ -2465,7 +2908,6 @@ export default function BlReportPage() {
         measureTextMm,
       });
 
-      // 🔧 NEW STEP
       const reflowed = {
         ...grown,
         pages: (grown.pages || []).map((p) => {
@@ -2558,19 +3000,23 @@ export default function BlReportPage() {
   }, [laidTpl, data]);
 
   const renderBlockReason = useMemo(() => {
-    if (!laidTpl) return "";
+    if (loading) return "";
+
+    if (!tpl) return "Template is not loaded yet.";
+    if (!data) return "BL data is not loaded yet.";
+    if (!laidTpl) return "Layout is not ready yet.";
 
     const pagesCount = Array.isArray(laidTpl?.pages) ? laidTpl.pages.length : 0;
     if (pagesCount > MAX_SAFE_RENDER_PAGES) {
       return `Preview blocked because ${pagesCount} pages were generated, which exceeds the safe limit of ${MAX_SAFE_RENDER_PAGES}.`;
     }
 
-    if (!html && !loading && !error) {
-      return "Preview blocked because rendered HTML size exceeded the safe memory limit.";
+    if (!html && !error) {
+      return "Preview blocked because rendered HTML is empty or exceeded the safe memory limit.";
     }
 
     return "";
-  }, [laidTpl, html, loading, error]);
+  }, [tpl, data, laidTpl, html, loading, error]);
 
   const onPrint = async () => {
     try {
@@ -2583,7 +3029,7 @@ export default function BlReportPage() {
   };
 
   useEffect(() => {
-    if (!laidTpl) return;
+    if (!laidTpl || !DEBUG) return;
 
     const blPagesDetails = buildBlPagesDetails(laidTpl);
 
@@ -2594,7 +3040,7 @@ export default function BlReportPage() {
     }
 
     console.log("Akash blPagesDetails", blPagesDetails);
-  }, [laidTpl, layoutMessages]);
+  }, [laidTpl, layoutMessages, DEBUG]);
 
   const onDownloadPdf = async () => {
     try {

@@ -3399,6 +3399,7 @@ function ChildAccordianComponent({
     setChildObject((prev) => ({
       ...(prev || {}),
       destinationFreeDays: newState?.destinationFreeDays ?? "",
+      ///noOfPackages: newState?.noOfPackages ?? "",
       isChecked: true,
     }));
   };

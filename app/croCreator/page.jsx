@@ -4893,6 +4893,7 @@ export default function BlCreatorPage() {
                     Record: {
                       name: editTemplateName.trim(),
                       blPrintTemplateJson: JSON.stringify(toSave),
+                      templateType: "cro",
                     },
                     WhereCondition: `id = ${templateIdFromUrl} and clientId = ${clientId}`,
                   };
@@ -4984,6 +4985,7 @@ export default function BlCreatorPage() {
                       blPrintTemplateJson: JSON.stringify(toSave),
                       status: 1,
                       createdBy: userId,
+                      templateType: "cro",
                     },
                     WhereCondition: null,
                   };

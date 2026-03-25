@@ -5135,16 +5135,29 @@ export default function AddEditFormControll({ reportData }) {
           clientId,
         };
 
-        const formatJson = removeSingleQuotes(json)
+        const formatJson = removeSingleQuotes(json);
         const spResponse = await fetchExcelDataInsert(spName, formatJson);
-        console.log("handleUploadPurchaseInvoice spResponse =>", spResponse)
-        
+        console.log("handleUploadPurchaseInvoice spResponse =>", spResponse);
+
+        if (
+          spResponse.success == true
+        ) {
+          setFileUploadingLoader(false);
+          setFileUploadProgress(100);
+          setFileUploadStage("completed");
+          setFileUploadMessage("PDF data extracted successfully");
+          return toast.success(`${spResponse?.message || "PDF Uploaded successfully"}`);
+        } else {
+          setAllErrors(spResponse.rowsAffected[0].errors);
+          setEditableErrors(true);
+          setEditableErrorsData(spResponse.rowsAffected[0].errors);
+          setFileUploadingLoader(false);
+          setFileUploadProgress(100);
+          toast.error(`${spResponse?.message || "PDF Uploaded Failed"}`);
+          return extractedData;
+        }
+
         // toast.success("PDF data extracted successfully");
-        setFileUploadProgress(100);
-        setFileUploadStage("completed");
-        setFileUploadMessage("PDF data extracted successfully");
-        setFileUploadingLoader(false);
-        return extractedData;
       } catch (error) {
         console.error("handleUploadPurchaseInvoice error =>", error);
         toast.error(error?.message || "upload failed");
@@ -6653,7 +6666,9 @@ export default function AddEditFormControll({ reportData }) {
                   {/* Conditionally render the table based on menuType */}
                   {isDefaultDataShow &&
                     outputFileType &&
-                    (menuType === "D" || menuType === "M") &&
+                    (menuType === "D" ||
+                      menuType === "M" ||
+                      menuType === "J") &&
                     (isLoading ? (
                       <div
                         style={{
@@ -6856,7 +6871,7 @@ export default function AddEditFormControll({ reportData }) {
                           </Table>
                         </TableContainer>
                       </Paper>
-                    ) : initialLoadComplete ? (
+                    ) : initialLoadComplete && menuType.toLowerCase() != "j" ? (
                       <div style={{ textAlign: "center", marginTop: "20px" }}>
                         <Typography variant="h6">Data Not Found</Typography>
                       </div>
@@ -6864,7 +6879,9 @@ export default function AddEditFormControll({ reportData }) {
                   {/* Render a static table if menuType is "E" */}
                   {editableErrors &&
                     editableErrorsData?.length > 0 &&
-                    (menuType === "E" || menuType === "X") && (
+                    (menuType === "E" ||
+                      menuType === "X" ||
+                      menuType === "J") && (
                       <Paper
                         sx={{ ...displayReportTablePaperStyles }}
                         className={`${styles.pageBackground} `}
@@ -7067,7 +7084,7 @@ export default function AddEditFormControll({ reportData }) {
                       progress={fileUploadProgress}
                       // title={fileUploadStage || "Processing purchase invoice"}
                       // subtitle={fileUploadMessage || "Reading document"}
-                      title={"Processing purchase invoice"}
+                      title={"Processing Purchase Invoice"}
                       subtitle={"Reading document"}
                       allowPageInteraction={true}
                       showOverlay={true}

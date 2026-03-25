@@ -1518,13 +1518,13 @@ export default function AccordionUsage() {
         >
           {"GO"}
         </button>
-        <button
+        {/* <button
           className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
           type="button"
           onClick={() => handleEditLastActivityClick()}
         >
           {"Edit Last Activity"}
-        </button>
+        </button> */}
         <button
           className={`${styles.commonBtn} font-[${fontFamilyStyles}]`}
           type="button"

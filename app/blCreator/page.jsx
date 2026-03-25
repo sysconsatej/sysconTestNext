@@ -678,7 +678,8 @@ function makeElement(type, x, y) {
         ...base.style,
         bg: "transparent",
         borderWidth: 0,
-        opacity: 1, // ✅ NEW
+        opacity: 1,
+        decimalPlaces: null,
       },
     };
   }
@@ -729,19 +730,16 @@ function makeElement(type, x, y) {
 
   if (type === "table") {
     const rows = 4;
-    const cols = 5;
-    const colW = Array(cols).fill(Math.floor(520 / cols));
-    const rowH = Array(rows).fill(32);
-
+    const cols = 4;
     return {
       ...base,
-      w: 520 / MM_TO_PX, // mm
-      h: (rows * 32 + 2) / MM_TO_PX, // mm
+      w: 120,
+      h: 40,
       table: {
         rows,
         cols,
-        colW,
-        rowH,
+        colW: Array(cols).fill(30),
+        rowH: Array(rows).fill(10),
         borderColor: "#111827",
         borderWidth: 1,
         gridColor: "#111827",
@@ -754,6 +752,7 @@ function makeElement(type, x, y) {
         merges: [],
         activeCell: null,
         range: null,
+        decimalPlaces: null,
         repeat: {
           enabled: false,
           arrayPath: "",
@@ -762,7 +761,6 @@ function makeElement(type, x, y) {
           columns: [],
         },
       },
-      style: { ...base.style, borderWidth: 0, bg: "transparent", padding: 0 },
     };
   }
 
@@ -1308,6 +1306,42 @@ function templateToPrintableHTML({ wMm, hMm, elementsHtml, header }) {
 </html>`;
 }
 
+function getCreatorTableCellText(t, r, c) {
+  const bindings = t?.bindings || {};
+  const cellStyle = t?.cellStyle || {};
+  const cells = t?.cells || t?.cell || t?.data || {};
+
+  const k = cellKey(r, c);
+  const b = bindings[k];
+  const csx = cellStyle[k] || {};
+  const cell = cells[k] || {};
+
+  const decimalPlaces = normalizeDecimalPlaces(
+    csx.decimalPlaces ?? t?.decimalPlaces,
+  );
+
+  // direct cell text/value/label first
+  const direct =
+    cell.text ??
+    cell.value ??
+    cell.label ??
+    csx.text ??
+    csx.value ??
+    csx.label ??
+    "";
+
+  if (direct !== "" && direct !== null && direct !== undefined) {
+    return formatNumericValue(direct, decimalPlaces);
+  }
+
+  // creator stores only token reference for bound cells
+  if (b && b.columnKey) {
+    return `{{${b.columnKey}}}`;
+  }
+
+  return "";
+}
+
 function renderElementsToHtml(elements = []) {
   const sorted = [...(elements || [])]
     .filter((e) => !e.hidden)
@@ -1352,45 +1386,54 @@ function renderElementsToHtml(elements = []) {
       }
 
       if (el.type === "text") {
-        // ✅ FIX: text border/bg MUST be applied in PRINT
+        const s = el.style || {};
+        const align = s.align || s.textAlign || "left";
+        const vAlign = s.vAlign || s.verticalAlign || "top";
         const textOpacity = clamp(Number(s.opacity ?? 1), 0, 1);
+
         const bw = Number(s.borderWidth ?? 0);
         const border =
           bw > 0
-            ? `${bw}px ${s.borderStyle || "solid"} ${
-                s.borderColor || "#111827"
-              }`
+            ? `${bw}px ${s.borderStyle || "solid"} ${s.borderColor || "#111827"}`
             : "none";
 
-        const wrapCss =
-          commonBox +
-          `
-            display:flex;
-            align-items:${vAlignToAlignItems(s.vAlign)};
-            overflow:hidden;
-            background:${s.bg || "transparent"};
-            border:${border};
-            border-radius:${Number(s.borderRadius || 0)}px;
-          `;
+        const wrapCss = `
+    ${commonBox}
+    display:flex;
+    align-items:${
+      vAlign === "middle"
+        ? "center"
+        : vAlign === "bottom"
+          ? "flex-end"
+          : "flex-start"
+    };
+    overflow:hidden;
+    background:${s.bg || "transparent"};
+    border:${border};
+    border-radius:${Number(s.borderRadius || 0)}px;
+  `;
 
-        // ✅ FIX: inner is NOT full height; horizontal alignment uses text-align
         const innerCss = `
-  width:100%;
-  max-height:100%;
-  overflow:hidden;
-  white-space:pre-wrap;
-  word-break:break-word;
-  opacity:${textOpacity};
-  ${cssFromStyle({
-    ...s,
-    bg: "transparent",
-    borderWidth: 0,
-  })}
-`;
+    width:100%;
+    max-height:100%;
+    overflow:hidden;
+    white-space:pre-wrap;
+    word-break:break-word;
+    text-align:${align};
+    opacity:${textOpacity};
+    ${cssFromStyle({
+      ...s,
+      bg: "transparent",
+      borderWidth: 0,
+    })}
+  `;
 
-        return `<div style="${wrapCss}"><div style="${innerCss}">${escapeHtml(
-          el.text || "",
-        )}</div></div>`;
+        const printableText = formatNumericValue(
+          el.text ?? "",
+          s.decimalPlaces,
+        );
+
+        return `<div style="${wrapCss}"><div style="${innerCss}">${escapeHtml(printableText)}</div></div>`;
       }
 
       if (el.type === "box") {
@@ -1438,7 +1481,6 @@ function renderTableToHtml(el) {
   const rows = Number(t.rows || 1);
   const cols = Number(t.cols || 1);
   const merges = Array.isArray(t.merges) ? t.merges : [];
-  const bindings = t.bindings || {};
   const cellStyle = t.cellStyle || {};
 
   const colW =
@@ -1454,13 +1496,16 @@ function renderTableToHtml(el) {
   const widthMm = Number(el.w || 10);
   const rawHeightMm = Number(el.h || 10);
   const rowHUnit = String(t.rowHUnit || "").toLowerCase();
+
   const heightMm =
     rowHUnit === "mm"
       ? rowH.reduce((a, b) => a + (Number(b) || 0), 0) || rawHeightMm
       : rawHeightMm;
+
   const width = `${widthMm}mm`;
   const height = `${heightMm}mm`;
   const rotate = Number(el.rotate || 0);
+
   const borderW = t.borderWidth == null ? 0 : Number(t.borderWidth) || 0;
   const border =
     borderW > 0 ? `${borderW}px solid ${t.borderColor || "#111827"}` : "none";
@@ -1480,38 +1525,30 @@ function renderTableToHtml(el) {
   const colgroupHtml = colMm
     .map((mmw) => `<col style="width:${mmw}mm">`)
     .join("");
+
   let tbodyHtml = "";
 
   for (let r = 0; r < rows; r++) {
     let rowCells = "";
+
     for (let c = 0; c < cols; c++) {
       if (isCovered(r, c)) continue;
 
       const m = findMergeAt(merges, r, c);
       const rs = m ? m.rs : 1;
       const cs = m ? m.cs : 1;
-      // const k = cellKey(r, c);
-      // const b = bindings[k];
-
-      // let label = "";
-      // if (b && b.label) label = b.label;
-      // else if (b && b.columnKey) label = `{{${b.columnKey}}}`;
 
       const k = cellKey(r, c);
-      const b = bindings[k];
-
-      // ✅ always show token, never label
-      let label = "";
-      if (b && b.columnKey) label = `{{${b.columnKey}}}`;
-
       const csx = cellStyle[k] || {};
+
+      const text = getCreatorTableCellText(t, r, c);
+
       const pad = csx.padding ?? t.cellPadding ?? 6;
       const bg = csx.bg ?? "#fff";
       const color = csx.color ?? "#0f172a";
       const fs = csx.fontSize ?? t.fontSize ?? 11;
       const fw = csx.fontWeight ?? 600;
 
-      // ✅ normalize alignment so values like "middle"/"centre"/"end" don't become invalid CSS
       const align = normalizeTextAlign(
         csx.align ?? csx.textAlign ?? csx.hAlign ?? t.align ?? "left",
       );
@@ -1530,9 +1567,6 @@ function renderTableToHtml(el) {
         overflow:hidden;
       `;
 
-      // ✅ Two-wrapper approach:
-      //    - outer flex handles vertical align
-      //    - inner block handles horizontal align via text-align (reliable for plain text)
       const outerCss = `
         width:100%;
         height:100%;
@@ -1564,9 +1598,10 @@ function renderTableToHtml(el) {
       `;
 
       rowCells += `<td rowspan="${rs}" colspan="${cs}" style="${tdCss}"><div style="${outerCss}"><div style="${innerCss}">${escapeHtml(
-        label,
+        text,
       )}</div></div></td>`;
     }
+
     tbodyHtml += `<tr style="height:${rowMm[r]}mm">${rowCells}</tr>`;
   }
 
@@ -1596,6 +1631,326 @@ function renderTableToHtml(el) {
       </table>
     </div>
   `;
+}
+
+// put these near top of file, before BlCreatorPage and before Inspector
+
+function normalizeDecimalPlaces(v) {
+  if (v === "" || v === null || v === undefined) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, Math.min(8, Math.trunc(n)));
+}
+
+function toPlainNumber(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+
+  const cleaned = raw.replace(/,/g, "");
+  if (!/^[-+]?(?:\d+\.?\d*|\.\d+)$/.test(cleaned)) return null;
+
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatNumericValue(value, decimalPlaces) {
+  const dp = normalizeDecimalPlaces(decimalPlaces);
+  if (dp === null) return value == null ? "" : String(value);
+
+  const n = toPlainNumber(value);
+  if (n === null) return value == null ? "" : String(value);
+
+  return n.toFixed(dp);
+}
+
+function formatValueByStyle(value, style = {}, key = "") {
+  const s = style || {};
+  const valueType = String(s.valueType || "").toLowerCase();
+
+  if (
+    valueType === "date" ||
+    s.dateFormatMode ||
+    s.datePattern ||
+    s.dateOrder
+  ) {
+    return formatDateValue(value, s);
+  }
+
+  if (valueType === "number" || s.decimalPlaces != null) {
+    return formatNumericValue(value, s.decimalPlaces);
+  }
+
+  return value == null ? "" : String(value);
+}
+
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+const MONTHS_LONG = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAYS_LONG = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+function pad2(n) {
+  return String(Number(n || 0)).padStart(2, "0");
+}
+
+function normalizeDateStyle(style = {}) {
+  return {
+    mode: String(style.dateFormatMode || "simple").toLowerCase(),
+    order: String(style.dateOrder || "DMY").toUpperCase(),
+    sep: style.dateSeparator == null ? "/" : String(style.dateSeparator),
+    pattern: String(style.datePattern || "DD/MM/YYYY"),
+    inputOrder: String(style.dateInputOrder || "DMY").toUpperCase(),
+    invalid: String(style.dateInvalidFallback || "raw").toLowerCase(),
+    monthCase: String(style.dateMonthCase || "title").toLowerCase(),
+    useUTC: !!style.dateUseUTC,
+  };
+}
+
+function applyMonthCase(txt, monthCase) {
+  if (monthCase === "upper") return String(txt).toUpperCase();
+  if (monthCase === "lower") return String(txt).toLowerCase();
+  return String(txt);
+}
+
+function parseDateParts(raw, opts = {}) {
+  if (raw == null || raw === "") return { ok: false };
+
+  if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
+    const d = raw;
+    const y = opts.useUTC ? d.getUTCFullYear() : d.getFullYear();
+    const m = (opts.useUTC ? d.getUTCMonth() : d.getMonth()) + 1;
+    const day = opts.useUTC ? d.getUTCDate() : d.getDate();
+    const hh = opts.useUTC ? d.getUTCHours() : d.getHours();
+    const mm = opts.useUTC ? d.getUTCMinutes() : d.getMinutes();
+    const ss = opts.useUTC ? d.getUTCSeconds() : d.getSeconds();
+    const wd = opts.useUTC ? d.getUTCDay() : d.getDay();
+
+    return {
+      ok: true,
+      parts: {
+        year: y,
+        month: m,
+        day,
+        hours: hh,
+        minutes: mm,
+        seconds: ss,
+        weekday: wd,
+      },
+    };
+  }
+
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    const ms = raw < 1e12 ? raw * 1000 : raw;
+    return parseDateParts(new Date(ms), opts);
+  }
+
+  const s = String(raw).trim();
+  if (!s) return { ok: false };
+
+  let m = s.match(
+    /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2})(?::(\d{1,2}))?(?::(\d{1,2}))?)?(?:\.\d+)?(?:Z)?$/i,
+  );
+  if (m) {
+    const year = Number(m[1]);
+    const month = Number(m[2]);
+    const day = Number(m[3]);
+    const hours = Number(m[4] || 0);
+    const minutes = Number(m[5] || 0);
+    const seconds = Number(m[6] || 0);
+    const d = new Date(year, month - 1, day, hours, minutes, seconds);
+
+    return {
+      ok: true,
+      parts: { year, month, day, hours, minutes, seconds, weekday: d.getDay() },
+    };
+  }
+
+  m = s.match(
+    /^(\d{1,4})([\/.\- ])(\d{1,2})\2(\d{1,4})(?:[T\s](\d{1,2})(?::(\d{1,2}))?(?::(\d{1,2}))?)?$/i,
+  );
+  if (m) {
+    const a = Number(m[1]);
+    const b = Number(m[3]);
+    const c = Number(m[4]);
+    const hours = Number(m[5] || 0);
+    const minutes = Number(m[6] || 0);
+    const seconds = Number(m[7] || 0);
+
+    let year, month, day;
+    const inputOrder = String(opts.inputOrder || "DMY").toUpperCase();
+
+    if (inputOrder === "DMY") {
+      day = a;
+      month = b;
+      year = c;
+    } else if (inputOrder === "MDY") {
+      month = a;
+      day = b;
+      year = c;
+    } else {
+      year = a;
+      month = b;
+      day = c;
+    }
+
+    if (year < 100) year += year >= 70 ? 1900 : 2000;
+
+    const d = new Date(year, month - 1, day, hours, minutes, seconds);
+
+    return {
+      ok: true,
+      parts: { year, month, day, hours, minutes, seconds, weekday: d.getDay() },
+    };
+  }
+
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) {
+    return parseDateParts(d, opts);
+  }
+
+  return { ok: false };
+}
+
+function buildSimplePattern(order = "DMY", sep = "/") {
+  const map = {
+    DMY: ["DD", "MM", "YYYY"],
+    MDY: ["MM", "DD", "YYYY"],
+    YMD: ["YYYY", "MM", "DD"],
+  };
+  return (map[String(order).toUpperCase()] || map.DMY).join(sep);
+}
+
+function formatPattern(parts, pattern, monthCase = "title") {
+  const year = Number(parts.year || 0);
+  const month = Number(parts.month || 0);
+  const day = Number(parts.day || 0);
+  const hours = Number(parts.hours || 0);
+  const minutes = Number(parts.minutes || 0);
+  const seconds = Number(parts.seconds || 0);
+  const weekday = Number(parts.weekday || 0);
+
+  const MMM = applyMonthCase(MONTHS_SHORT[month - 1] || "", monthCase);
+  const MMMM = applyMonthCase(MONTHS_LONG[month - 1] || "", monthCase);
+
+  const tokens = {
+    YYYY: String(year),
+    YY: String(year).slice(-2),
+    MMMM,
+    MMM,
+    MM: pad2(month),
+    M: String(month),
+    DD: pad2(day),
+    D: String(day),
+    dddd: DAYS_LONG[weekday] || "",
+    ddd: DAYS_SHORT[weekday] || "",
+    HH: pad2(hours),
+    H: String(hours),
+    hh: pad2(hours % 12 || 12),
+    h: String(hours % 12 || 12),
+    mm: pad2(minutes),
+    m: String(minutes),
+    ss: pad2(seconds),
+    s: String(seconds),
+    A: hours >= 12 ? "PM" : "AM",
+    a: hours >= 12 ? "pm" : "am",
+  };
+
+  return String(pattern)
+    .replaceAll("dddd", "\u0001")
+    .replaceAll("ddd", "\u0002")
+    .replaceAll("MMMM", "\u0003")
+    .replaceAll("MMM", "\u0004")
+    .replaceAll("YYYY", "\u0005")
+    .replaceAll("YY", "\u0006")
+    .replaceAll("DD", "\u0007")
+    .replaceAll("D", "\u0008")
+    .replaceAll("MM", "\u0009")
+    .replaceAll("M", "\u000A")
+    .replaceAll("HH", "\u000B")
+    .replaceAll("H", "\u000C")
+    .replaceAll("hh", "\u000D")
+    .replaceAll("h", "\u000E")
+    .replaceAll("mm", "\u000F")
+    .replaceAll("m", "\u0010")
+    .replaceAll("ss", "\u0011")
+    .replaceAll("s", "\u0012")
+    .replaceAll("A", "\u0013")
+    .replaceAll("a", "\u0014")
+    .replaceAll("\u0001", tokens.dddd)
+    .replaceAll("\u0002", tokens.ddd)
+    .replaceAll("\u0003", tokens.MMMM)
+    .replaceAll("\u0004", tokens.MMM)
+    .replaceAll("\u0005", tokens.YYYY)
+    .replaceAll("\u0006", tokens.YY)
+    .replaceAll("\u0007", tokens.DD)
+    .replaceAll("\u0008", tokens.D)
+    .replaceAll("\u0009", tokens.MM)
+    .replaceAll("\u000A", tokens.M)
+    .replaceAll("\u000B", tokens.HH)
+    .replaceAll("\u000C", tokens.H)
+    .replaceAll("\u000D", tokens.hh)
+    .replaceAll("\u000E", tokens.h)
+    .replaceAll("\u000F", tokens.mm)
+    .replaceAll("\u0010", tokens.m)
+    .replaceAll("\u0011", tokens.ss)
+    .replaceAll("\u0012", tokens.s)
+    .replaceAll("\u0013", tokens.A)
+    .replaceAll("\u0014", tokens.a);
+}
+
+function formatDateValue(raw, style = {}) {
+  const opts = normalizeDateStyle(style);
+  const parsed = parseDateParts(raw, opts);
+
+  if (!parsed.ok) {
+    return opts.invalid === "blank" ? "" : String(raw ?? "");
+  }
+
+  const pattern =
+    opts.mode === "custom"
+      ? opts.pattern
+      : buildSimplePattern(opts.order, opts.sep);
+
+  return formatPattern(parsed.parts, pattern, opts.monthCase);
 }
 
 /** ---------- Main Page ---------- */
@@ -2470,6 +2825,28 @@ export default function BlCreatorPage() {
     switchToPage(targetPage.id);
 
     toast(`Pasted into ${targetName}`);
+  }
+
+  function normalizeDecimalPlaces(v) {
+    if (v === "" || v === null || v === undefined) return null;
+    const n = Number(v);
+    if (!Number.isFinite(n)) return null;
+    return Math.max(0, Math.min(8, Math.trunc(n)));
+  }
+
+  function toPlainNumber(value) {
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value : null;
+    }
+
+    const raw = String(value ?? "").trim();
+    if (!raw) return null;
+
+    const cleaned = raw.replace(/,/g, "");
+    if (!/^[-+]?(?:\d+\.?\d*|\.\d+)$/.test(cleaned)) return null;
+
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : null;
   }
 
   function copySelected() {
@@ -4894,6 +5271,7 @@ export default function BlCreatorPage() {
                     Record: {
                       name: editTemplateName.trim(),
                       blPrintTemplateJson: JSON.stringify(toSave),
+                      templateType: "bl",
                     },
                     WhereCondition: `id = ${templateIdFromUrl} and clientId = ${clientId}`,
                   };
@@ -4985,6 +5363,7 @@ export default function BlCreatorPage() {
                       blPrintTemplateJson: JSON.stringify(toSave),
                       status: 1,
                       createdBy: userId,
+                      templateType: "bl",
                     },
                     WhereCondition: null,
                   };
@@ -5916,6 +6295,7 @@ export default function BlCreatorPage() {
                     isAttachmentPage={isAttachmentPage}
                     activePage={activePage}
                     attachBands={attachBands}
+                    formatDateValue={formatDateValue}
                     onUpdateActivePage={(patch) => patchActivePageMeta(patch)}
                     onUpdateHeader={(patch) => {
                       const next = JSON.parse(
@@ -6063,6 +6443,7 @@ function Inspector({
   isAttachmentPage,
   activePage,
   attachBands,
+  formatDateValue,
   onUpdateActivePage,
   onUpdateHeader,
   onPatch,
@@ -6077,15 +6458,16 @@ function Inspector({
 }) {
   const s = el.style || {};
   const isTable = el.type === "table";
+  const t = el?.table || {};
+
+  const activeCellKey =
+    isTable && t?.activeCell ? `${t.activeCell.r},${t.activeCell.c}` : null;
+
+  const cellSX =
+    (isTable && activeCellKey && t?.cellStyle?.[activeCellKey]) || {};
   const isLine = el.type === "lineH" || el.type === "lineV";
   const isText = el.type === "text";
   const isImage = el.type === "image";
-
-  const t = el.table;
-  const activeCellKey =
-    isTable && t?.activeCell ? `${t.activeCell.r},${t.activeCell.c}` : null;
-  const cellSX =
-    (isTable && activeCellKey && t?.cellStyle?.[activeCellKey]) || {};
   const [uiFontSize, setUiFontSize] = React.useState(
     String(el?.style?.fontSize ?? 10),
   );
@@ -6491,7 +6873,140 @@ function Inspector({
                   onChange={(v) => onStyle({ opacity: v })}
                 />
               </KV>
+              <KV label="Decimals">
+                <input
+                  type="number"
+                  min={0}
+                  max={8}
+                  step={1}
+                  value={s.decimalPlaces ?? ""}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    onStyle({
+                      decimalPlaces:
+                        raw === ""
+                          ? null
+                          : Math.max(0, Math.min(8, Number(raw))),
+                    });
+                  }}
+                  style={stylesKV.input}
+                />
+              </KV>
             </div>
+            <div style={stylesKV.row}>
+              <KV label="Value Type">
+                <select
+                  value={s.valueType || "text"}
+                  onChange={(e) => onStyle({ valueType: e.target.value })}
+                  style={stylesKV.select}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                  <option value="date">Date</option>
+                </select>
+              </KV>
+
+              <KV label="Date Mode">
+                <select
+                  value={s.dateFormatMode || "simple"}
+                  onChange={(e) => onStyle({ dateFormatMode: e.target.value })}
+                  style={stylesKV.select}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  disabled={(s.valueType || "text") !== "date"}
+                >
+                  <option value="simple">Simple</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </KV>
+            </div>
+
+            {s.valueType === "date" && (
+              <>
+                {s.dateFormatMode !== "custom" ? (
+                  <div style={stylesKV.row}>
+                    <KV label="Order">
+                      <select
+                        value={s.dateOrder || "DMY"}
+                        onChange={(e) => onStyle({ dateOrder: e.target.value })}
+                        style={stylesKV.select}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        <option value="DMY">DD MM YYYY</option>
+                        <option value="MDY">MM DD YYYY</option>
+                        <option value="YMD">YYYY MM DD</option>
+                      </select>
+                    </KV>
+
+                    <KV label="Sep">
+                      <input
+                        value={s.dateSeparator ?? "/"}
+                        onChange={(e) =>
+                          onStyle({ dateSeparator: e.target.value })
+                        }
+                        style={stylesKV.input}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      />
+                    </KV>
+                  </div>
+                ) : (
+                  <div style={stylesKV.row}>
+                    <KV label="Pattern">
+                      <input
+                        value={s.datePattern || "DD/MM/YYYY"}
+                        onChange={(e) =>
+                          onStyle({ datePattern: e.target.value })
+                        }
+                        style={stylesKV.input}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      />
+                    </KV>
+                  </div>
+                )}
+
+                <div style={stylesKV.row}>
+                  <KV label="Input Order">
+                    <select
+                      value={s.dateInputOrder || "DMY"}
+                      onChange={(e) =>
+                        onStyle({ dateInputOrder: e.target.value })
+                      }
+                      style={stylesKV.select}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
+                      <option value="DMY">DMY</option>
+                      <option value="MDY">MDY</option>
+                      <option value="YMD">YMD</option>
+                    </select>
+                  </KV>
+
+                  <KV label="On Invalid">
+                    <select
+                      value={s.dateInvalidFallback || "raw"}
+                      onChange={(e) =>
+                        onStyle({ dateInvalidFallback: e.target.value })
+                      }
+                      style={stylesKV.select}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
+                      <option value="raw">Show Raw</option>
+                      <option value="blank">Blank</option>
+                    </select>
+                  </KV>
+                </div>
+
+                <div style={{ fontSize: 11, opacity: 0.75, marginTop: 6 }}>
+                  Preview: {formatDateValue("2026-03-20", s)}
+                </div>
+              </>
+            )}
           </div>
         </>
       ) : null}
@@ -7052,6 +7567,24 @@ function Inspector({
                 onChange={(v) => onTable({ fontSize: v })}
               />
             </KV>
+
+            <KV label="Default Decimals">
+              <input
+                type="number"
+                min={0}
+                max={8}
+                step={1}
+                value={el.table?.decimalPlaces ?? ""}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  onTable({
+                    decimalPlaces:
+                      raw === "" ? null : Math.max(0, Math.min(8, Number(raw))),
+                  });
+                }}
+                style={stylesKV.input}
+              />
+            </KV>
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
             <button onClick={onMerge} style={stylesKV.actionBtn}>
@@ -7129,6 +7662,25 @@ function Inspector({
                       onChange={(v) =>
                         onCellStyle(activeCellKey, { fontSize: v })
                       }
+                    />
+                  </KV>
+                  <KV label="Cell Decimals">
+                    <input
+                      type="number"
+                      min={0}
+                      max={8}
+                      step={1}
+                      value={cellSX?.decimalPlaces ?? ""}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        onCellStyle(activeCellKey, {
+                          decimalPlaces:
+                            raw === ""
+                              ? null
+                              : Math.max(0, Math.min(8, Number(raw))),
+                        });
+                      }}
+                      style={stylesKV.input}
                     />
                   </KV>
                 </div>

@@ -2544,6 +2544,67 @@ export default function AddEditFormControll({ reportData }) {
         toast.error(error.message);
       }
     },
+    handleGenerateCMC: async () => {
+      let selectedReportIds = null;
+      if (selectedIds.length > 0) {
+        selectedReportIds = selectedIds.map((row) => row?.id).join(",");
+      } else {
+        toast.error("Please select at least one row.");
+        return;
+      }
+      sessionStorage.setItem(
+        "selectedReportIds",
+        JSON.stringify("Import General Manifest"),
+      );
+
+      const filterConditionWithoutDropdowns =
+        removeDropdownFields(filterCondition);
+      const updatedCondition = {
+        ...filterConditionWithoutDropdowns,
+        companyId,
+        branchId,
+        financialYear,
+        userId,
+        clientId,
+      };
+
+      localStorage.setItem("selectedCMCRecordId", selectedReportIds || "");
+      localStorage.setItem(
+        "selectedVesselId",
+        updatedCondition?.vesselId || updatedCondition?.vessel || "",
+      );
+      localStorage.setItem(
+        "selectedVoyageId",
+        updatedCondition?.voyageId || updatedCondition?.voyage || "",
+      );
+      localStorage.setItem(
+        "selectedPodId",
+        updatedCondition?.podId || updatedCondition?.pod || "",
+      );
+      localStorage.setItem("selectedClientId", clientId || "");
+      const url = `/htmlReports/rptCmc?&reportId=1396`;
+      if (url) {
+        window.open(url, "_blank");
+      } else {
+        console.error(
+          "Unable to open the report: URL or ID is not defined.",
+          report,
+        );
+      }
+      //const json = {
+      //   ...updatedCondition,
+      //   data: selectedRows,
+      // };
+      // const response = await saveEditedReport({
+      //   json,
+      //   spName: saveSpName,
+      // });
+      // if (response.success === true) {
+      //   return;
+      //   //toast.success(response.message);
+      // }
+      //toast.error(response.message);
+    },
     handleGenerateReport: async () => {
       let selectedReportIds = null;
       if (selectedIds.length > 0) {

@@ -1393,7 +1393,7 @@ export default function rptDoLetter() {
       <div className="flex mt-1" style={{ width: "100%" }}>
         <div>
           <p className="text-black" style={{ fontSize: "10px" }}>
-            Please Accept the below mentioned Empty container(s).On account of
+            Please Accept the below mentioned Empty container(s).On account of {" "}
             <span className="text-black uppercase">{data[0]?.mlo || ""}</span>
           </p>
         </div>
@@ -1647,7 +1647,9 @@ export default function rptDoLetter() {
                   </p>
                 </th>
                 <th className="w-1/8 border font-normal border-black p-1">
-                  <p className="text-black" style={{ fontSize: "9px" }}></p>
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    N/A
+                  </p>
                 </th>
                 <th className="w-1/8 border border-black p-1">
                   <p

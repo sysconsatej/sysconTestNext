@@ -916,7 +916,9 @@ export default function AddEditFormControll() {
     totalAmount,
     safeTaxAmount,
     safeTaxAmountFc,
-    totalAmountFc
+    totalAmountFc,
+    safeTdsAmount,
+    safeTdsAmountFc
   ) {
     const { clientId } = getUserDetails();
     const { voucherTypeId } = newState || {};
@@ -953,10 +955,12 @@ export default function AddEditFormControll() {
         invoiceAmountFc: totalAmountFc,
         taxAmount: safeTaxAmount,
         taxAmountFc: safeTaxAmountFc,
+        tdsAmount: safeTdsAmount,
+        tdsAmountFc: safeTdsAmountFc,
+        tdsAmt: safeTdsAmount,
+        tdsAmtFC: safeTdsAmountFc,
         totalInvoiceAmount: roundedHc,
         totalInvoiceAmountFc: roundedFc,
-
-        // ✅ NEW fields
         roundOffAmount,
         roundOffAmountFc,
       }));
@@ -967,9 +971,12 @@ export default function AddEditFormControll() {
         invoiceAmountFc: totalAmountFc,
         taxAmount: safeTaxAmount,
         taxAmountFc: safeTaxAmountFc,
+        tdsAmount: safeTdsAmount,
+        tdsAmountFc: safeTdsAmountFc,
+        tdsAmt: safeTdsAmount,
+        tdsAmtFC: safeTdsAmountFc,
         totalInvoiceAmount,
         totalInvoiceAmountFc,
-
         roundOffAmount: 0,
         roundOffAmountFc: 0,
       }));
@@ -1016,8 +1023,40 @@ export default function AddEditFormControll() {
       return acc + temp;
     }, 0);
 
+    const tdsAmount = charges.reduce((acc, item) => {
+      const temp = (item?.tblInvoiceChargeTds || []).reduce((acc1, item1) => {
+        const isTdsApplicable =
+          item1?.tdsApplicable === true ||
+          item1?.tdsApplicable === "true" ||
+          item1?.tdsApplicable === 1 || item1?.id;
+
+        return isTdsApplicable
+          ? acc1 + (Number(item1?.tdsAmountHc) || 0)
+          : acc1;
+      }, 0);
+
+      return acc + temp;
+    }, 0);
+
+    const tdsAmountFc = charges.reduce((acc, item) => {
+      const temp = (item?.tblInvoiceChargeTds || []).reduce((acc1, item1) => {
+        const isTdsApplicable =
+          item1?.tdsApplicable === true ||
+          item1?.tdsApplicable === "true" ||
+          item1?.tdsApplicable === 1 || item1?.id;
+
+        return isTdsApplicable
+          ? acc1 + (Number(item1?.tdsAmountFc) || 0)
+          : acc1;
+      }, 0);
+
+      return acc + temp;
+    }, 0);
+
     const safeTaxAmount = Number.isNaN(taxAmount) ? 0 : taxAmount;
     const safeTaxAmountFc = Number.isNaN(taxAmountFc) ? 0 : taxAmountFc;
+    const safeTdsAmount = Number.isNaN(tdsAmount) ? 0 : tdsAmount;
+    const safeTdsAmountFc = Number.isNaN(tdsAmountFc) ? 0 : tdsAmountFc;
 
     let totalInvoiceAmount = totalAmount + safeTaxAmount;
     let totalInvoiceAmountFc = totalAmountFc + safeTaxAmountFc;
@@ -1028,7 +1067,9 @@ export default function AddEditFormControll() {
       totalAmount,
       safeTaxAmount,
       safeTaxAmountFc,
-      totalAmountFc
+      totalAmountFc,
+      safeTdsAmount,
+      safeTdsAmountFc
     );
   }, [newState?.tblInvoiceCharge, newState?.tblInvoiceCharge?.length, invoiceRoundOff]);
 
@@ -2239,7 +2280,7 @@ export default function AddEditFormControll() {
             ? newState.tblVoucherLedgerDetails
             : [],
         },
-      ].sort((a, b) => {b.debitAmount-a.debitAmount});
+      ].sort((a, b) => { b.debitAmount - a.debitAmount });
 
     const allDetails = ledgers.flatMap((l) =>
       Array.isArray(l?.tblVoucherLedgerDetails) ? l.tblVoucherLedgerDetails : []
@@ -3325,6 +3366,7 @@ function ParentAccordianComponent({
           <CustomeInputFields
             inputFieldData={parentsFields[section]}
             values={newState}
+            newState={newState}
             onValuesChange={handleFieldValuesChange}
             inEditMode={{ isEditMode: true, isCopy: isCopy }}
             onChangeHandler={(result) => {

@@ -3,6 +3,7 @@
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 const baseUrlSQl = process.env.NEXT_PUBLIC_BASE_URL_SQL;
 import { decrypt, encrypt } from "@/helper/security";
+import { getUserDetails } from "@/helper/userDetails";
 import { menu } from "@material-tailwind/react";
 
 /**
@@ -18,12 +19,14 @@ import { menu } from "@material-tailwind/react";
 
 export async function masterTableList(data) {
   // masterTableList
+  const { userTypeId } = getUserDetails();
   try {
     let insertedData = {
       ...data,
       loginCompany: sessionStorage.getItem("companyId"),
       loginBranch: sessionStorage.getItem("branchId"),
       loginfinYear: sessionStorage.getItem("financialYear"),
+      userTypeId: userTypeId,
     };
     const token = localStorage.getItem("token");
     const response = await fetch(`${baseUrlSQl}/api/master/dytablelist`, {

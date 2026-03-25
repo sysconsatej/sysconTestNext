@@ -1843,8 +1843,78 @@ const setTaxDetails = async (obj) => {
     });
   }
 };
+// const setTDSDetails = async (obj) => {
+//   let {
+//     args,
+//     newState,
+//     formControlData,
+//     setFormControlData,
+//     values,
+//     fieldName,
+//     tableName,
+//     setStateVariable,
+//   } = obj;
+
+//   let argNames;
+//   let splitArgs = [];
+//   if (
+//     args === undefined ||
+//     args === null ||
+//     args === "" ||
+//     (typeof args === "object" && Object.keys(args).length === 0)
+//   ) {
+//     argNames = args;
+//   } else {
+//     argNames = args.split(",").map((arg) => arg.trim());
+//     for (const iterator of argNames) {
+//       splitArgs.push(iterator.split("."));
+//     }
+//   }
+//   const {
+//     invoiceDate,
+//     businessSegmentId,
+//     placeOfSupplyStateId,
+//     sez,
+//     billingPartyId,
+//     ownStateId,
+//   } = newState;
+//   const { chargeId, chargeGlId, SelectedParentInvId } = values;
+
+//   const requestData = {
+//     // "chargeId": chargeId,
+//     invoiceDate: moment(invoiceDate).format("YYYY-MM-DD"),
+//     //"departmentId": departmentId,
+//     glId: chargeGlId,
+//     partyId: billingPartyId,
+//     formControlId: newState.menuID,
+//     totalAmount: values.totalAmount,
+//     exchangeRateGrid: values.exchangeRate,
+//   };
+
+//   const fetchTDSDetails = await getTDSDetails(requestData);
+//   if (fetchTDSDetails) {
+//     const { data } = fetchTDSDetails;
+//     // console.log("tblTax", tblTax);
+//     // values.tblInvoiceChargeTax = tblTax;
+//     setStateVariable((prev) => {
+//       const tempData = { ...prev };
+//       tempData.tblInvoiceChargeTds = data;
+//       return tempData;
+//     });
+//   }
+
+//   let endResult = {
+//     type: "success",
+//     result: true,
+//     newState: newState,
+//     formControlData: formControlData,
+//     message: "OnLoad function triggered",
+//   };
+//   return endResult;
+// };
+
 const setTDSDetails = async (obj) => {
-  let {
+  const  {
     args,
     newState,
     formControlData,
@@ -1854,65 +1924,76 @@ const setTDSDetails = async (obj) => {
     tableName,
     setStateVariable,
   } = obj;
+  const argNames = args.split(",").map((arg) => arg.trim());
+  const chargeGlId = values[argNames[0]];
 
-  let argNames;
-  let splitArgs = [];
-  if (
-    args === undefined ||
-    args === null ||
-    args === "" ||
-    (typeof args === "object" && Object.keys(args).length === 0)
-  ) {
-    argNames = args;
-  } else {
-    argNames = args.split(",").map((arg) => arg.trim());
-    for (const iterator of argNames) {
-      splitArgs.push(iterator.split("."));
-    }
-  }
+  const { clientId } = getUserDetails();
+
   const {
     invoiceDate,
-    businessSegmentId,
-    placeOfSupplyStateId,
-    sez,
     billingPartyId,
-    ownStateId,
-  } = newState;
-  const { chargeId, chargeGlId, SelectedParentInvId } = values;
+  } = newState || {};
+
+  // const chargeGlId =
+  //   values?.chargeGlId ??
+  //   values?.glId ??
+  //   newState?.chargeGlId ??
+  //   null;
+
+  if (!invoiceDate || !billingPartyId || !chargeGlId) {
+    return {
+      type: "error",
+      result: false,
+      newState,
+      formControlData,
+      message: "Missing required values for TDS calculation.",
+    };
+  }
 
   const requestData = {
-    // "chargeId": chargeId,
     invoiceDate: moment(invoiceDate).format("YYYY-MM-DD"),
-    //"departmentId": departmentId,
     glId: chargeGlId,
     partyId: billingPartyId,
-    formControlId: newState.menuID,
-    totalAmount: values.totalAmount,
-    exchangeRateGrid: values.exchangeRate,
+    formControlId: newState?.menuID,
+    totalAmount: values?.totalAmountHc || 0,
+    exchangeRateGrid: values?.exchangeRate || 1,
+    clientId: clientId,
   };
 
   const fetchTDSDetails = await getTDSDetails(requestData);
+
   if (fetchTDSDetails) {
-    const { data } = fetchTDSDetails;
-    // console.log("tblTax", tblTax);
-    // values.tblInvoiceChargeTax = tblTax;
-    setStateVariable((prev) => {
-      const tempData = { ...prev };
-      tempData.tblInvoiceChargeTds = data;
-      return tempData;
-    });
+    const tdsData = fetchTDSDetails?.data || [];
+
+    const updatedValues = {
+      ...values,
+      tblInvoiceChargeTds: tdsData,
+    };
+
+    setStateVariable((prev) => ({
+      ...prev,
+      tblInvoiceChargeTds: tdsData,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      values: updatedValues,
+      newState,
+      formControlData,
+      message: "TDS details fetched successfully",
+    };
   }
 
-  let endResult = {
-    type: "success",
-    result: true,
-    newState: newState,
-    formControlData: formControlData,
-    message: "OnLoad function triggered",
+  return {
+    type: "warning",
+    result: false,
+    values,
+    newState,
+    formControlData,
+    message: "No TDS details found",
   };
-  return endResult;
 };
-
 const getJobCharges = async (obj) => {
   let {
     args,
@@ -4860,6 +4941,71 @@ const balanceUpdate = async (obj) => {
     formControlData: formControlData,
   };
 };
+// const setGLSacDetails = async (obj) => {
+//   const {
+//     args,
+//     values,
+//     fieldName,
+//     newState,
+//     formControlData,
+//     setStateVariable,
+//   } = obj;
+//   const { companyId, branchId } = getUserDetails();
+//   const requestBody = {
+//     chargeId: values?.chargeId,
+//     voucherTypeId: newState?.voucherTypeId,
+//     companyId: companyId
+//   };
+
+//   const response = await getGLChargeDetails(requestBody);
+
+//   if (response.data && response.data.length > 0) {
+//     const glId = response.data[0]?.glId;
+//     const sacId = response.data[0]?.sacId;
+//     const glName = response.data[0]?.glName;
+//     const sacName = response.data[0]?.sacName;
+
+//     // update state with proper dropdown objects
+//     setStateVariable((prev) => ({
+//       ...prev,
+//       chargeGlId: glId,
+//       sacId: sacId,
+//       sacIddropdown: sacId ? [{ value: sacId, label: sacName }] : null,
+//       chargeGlIddropdown: glId ? [{ value: glId, label: glName }] : null,
+//     }));
+
+//     const updatedValues = {
+//       ...values,
+//       glId: glId,
+//       sacId: sacId,
+//       sacIddropDown: sacId ? [{ value: sacId, label: sacName }] : null,
+//       chargeGlIddropdown: glId ? [{ value: glId, label: glName }] : null,
+//     };
+
+//     return {
+//       values: updatedValues,
+//       type: "success",
+//       message: `GL and SAC details fetched successfully`,
+//       alertShow: true,
+//       fieldName: fieldName,
+//       isCheck: false,
+//       newState: newState,
+//       formControlData: formControlData,
+//     };
+//   } else {
+//     return {
+//       values,
+//       type: "warning",
+//       message: "No GL/SAC details found",
+//       alertShow: true,
+//       fieldName: fieldName,
+//       isCheck: false,
+//       newState,
+//       formControlData,
+//     };
+//   }
+// };
+
 const setGLSacDetails = async (obj) => {
   const {
     args,
@@ -4869,11 +5015,13 @@ const setGLSacDetails = async (obj) => {
     formControlData,
     setStateVariable,
   } = obj;
-  const { companyId, branchId } = getUserDetails();
+
+  const { companyId } = getUserDetails();
+
   const requestBody = {
     chargeId: values?.chargeId,
     voucherTypeId: newState?.voucherTypeId,
-    companyId: companyId
+    companyId: companyId,
   };
 
   const response = await getGLChargeDetails(requestBody);
@@ -4884,7 +5032,16 @@ const setGLSacDetails = async (obj) => {
     const glName = response.data[0]?.glName;
     const sacName = response.data[0]?.sacName;
 
-    // update state with proper dropdown objects
+    // row-level values update
+    const updatedValues = {
+      ...values,
+      chargeGlId: glId,
+      sacId: sacId,
+      sacIddropdown: sacId ? [{ value: sacId, label: sacName }] : null,
+      chargeGlIddropdown: glId ? [{ value: glId, label: glName }] : null,
+    };
+
+    // state update
     setStateVariable((prev) => ({
       ...prev,
       chargeGlId: glId,
@@ -4892,14 +5049,6 @@ const setGLSacDetails = async (obj) => {
       sacIddropdown: sacId ? [{ value: sacId, label: sacName }] : null,
       chargeGlIddropdown: glId ? [{ value: glId, label: glName }] : null,
     }));
-
-    const updatedValues = {
-      ...values,
-      glId: glId,
-      sacId: sacId,
-      sacIddropDown: sacId ? [{ value: sacId, label: sacName }] : null,
-      chargeGlIddropdown: glId ? [{ value: glId, label: glName }] : null,
-    };
 
     return {
       values: updatedValues,
@@ -4924,7 +5073,6 @@ const setGLSacDetails = async (obj) => {
     };
   }
 };
-
 const checkVehicleGridDuplicate = (obj) => {
   const {
     args,
@@ -9422,10 +9570,10 @@ const getBlChargesForPaty = async (obj) => {
 const getBillingPartyFromJob = async (obj) => {
   let { newState, setStateVariable, values } = obj;
 
-  const { blId,voucherTypeId } = newState;
+  const { blId, voucherTypeId } = newState;
   const { companyId, clientId } = getUserDetails();
 
-  const requestData = { id: blId,clientId:clientId,voucherTypeId:voucherTypeId,companyId:companyId };
+  const requestData = { id: blId, clientId: clientId, voucherTypeId: voucherTypeId, companyId: companyId };
   const fetchInvoice = await getGeneralLegerBillingParty(requestData);
 
   // normalize response
@@ -11999,6 +12147,66 @@ const activityDateCompare = async (obj) => {
     };
   }
 };
+
+const setPartyLedgerData = async (obj) => {
+  const { args, newState, values, setStateVariable } = obj;
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+    const companyId = newState[argNames[0]];
+    const companyBranchId = values[argNames[1]]
+    const request = {
+      columns: "*",
+      tableName: "tblCompanyBranch",
+      whereCondition: `id = ${companyBranchId} and companyId=${companyId} and status = 1`,
+      clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+    };
+
+    const response = await fetchReportData(request);
+
+    const address = response?.data?.[0]?.address;
+    const city = response?.data?.[0]?.cityId;
+    const pinCode = response?.data?.[0]?.pincode;
+    const gstNo = response?.data?.[0]?.taxRegistrationNo;
+    const state = response?.data?.[0]?.stateId;
+
+    setStateVariable((prev) => ({
+      ...prev,
+      address: address,
+      cityId: city,
+      pincode: pinCode,
+      taxRegistrationNo: gstNo,
+      stateId: state
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "Billing party set successfully.",
+      values: {
+        ...values, address: address,
+        cityId: city,
+        pinCode: pinCode,
+        taxRegistrationNo: gstNo,
+        stateId: state
+      },
+      newState: {
+        ...newState, address: address,
+        cityId: city,
+        pinCode: pinCode,
+        taxRegistrationNo: gstNo,
+        stateId: state
+      },
+    };
+
+  } catch (error) {
+    console.error("Error in setBillingPartyForBl:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Error while setting billing party. Please try again.",
+    };
+  }
+}
 export {
   setSameCurrencyFc,
   setSameCurrencyHc,
@@ -12145,5 +12353,6 @@ export {
   SetVehicleTyeChassiNo,
   compareDatewithFin,
   setexFromVoyageDailyExrate,
-  activityDateCompare
+  activityDateCompare,
+  setPartyLedgerData
 };
