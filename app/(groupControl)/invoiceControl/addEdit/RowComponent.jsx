@@ -165,6 +165,67 @@ export default function RowComponent({
     setOpenChildEdit((prev) => !prev);
   };
 
+  const isSameEditableRow = (leftRow, rightRow) => {
+    if (!leftRow || !rightRow) return false;
+
+    if (leftRow?._id != null && rightRow?._id != null) {
+      return leftRow._id === rightRow._id;
+    }
+
+    if (
+      leftRow?.voucherOutstandingId != null &&
+      rightRow?.voucherOutstandingId != null
+    ) {
+      return leftRow.voucherOutstandingId === rightRow.voucherOutstandingId;
+    }
+
+    if (leftRow?.indexValue != null && rightRow?.indexValue != null) {
+      return leftRow.indexValue === rightRow.indexValue;
+    }
+
+    return false;
+  };
+
+  const applyVoucherDetailManualFlags = (nextRow, prevRow = {}) => {
+    if (sectionData?.tableName !== "tblVoucherLedgerDetails") {
+      return nextRow;
+    }
+
+    const toNum = (value) => {
+      if (value === null || value === undefined || value === "") return 0;
+      const parsed = Number(String(value).replace(/,/g, ""));
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const didHcChange =
+      String(prevRow?.debitAmount ?? "") !== String(nextRow?.debitAmount ?? "") ||
+      String(prevRow?.creditAmount ?? "") !==
+        String(nextRow?.creditAmount ?? "");
+
+    const didFcChange =
+      String(prevRow?.debitAmountFc ?? "") !==
+        String(nextRow?.debitAmountFc ?? "") ||
+      String(prevRow?.creditAmountFc ?? "") !==
+        String(nextRow?.creditAmountFc ?? "");
+
+    const hasManualHc =
+      toNum(nextRow?.debitAmount) !== 0 || toNum(nextRow?.creditAmount) !== 0;
+
+    const hasManualFc =
+      toNum(nextRow?.debitAmountFc) !== 0 ||
+      toNum(nextRow?.creditAmountFc) !== 0;
+
+    return {
+      ...nextRow,
+      __manualAllocHC: didHcChange
+        ? hasManualHc
+        : !!prevRow?.__manualAllocHC,
+      __manualAllocFC: didFcChange
+        ? hasManualFc
+        : !!prevRow?.__manualAllocFC,
+    };
+  };
+
   const toggleSubChildRow = (key) => {
     // Prevent toggling if groupedData[key].isHideGrid is true
     if (groupedData[key]?.isHideGrid) return;
@@ -552,36 +613,39 @@ export default function RowComponent({
                       ) : (
                         <></>
                       )}
-                      <GridInputFields
-                        fieldData={field}
-                        indexValue={index}
-                        onValuesChange={(e) => {
-                          setChildValuseObj((prev) => {
-                            return { ...prev, ...e };
-                          });
-                          setCopyChildValueObj((prev) => {
-                            // Clone the previous state to avoid direct mutation
-                            const newCopy = { ...prev };
-                            let tableName = Object.keys(newCopy)[0];
-                            // Loop through the outer array of 'tblJobQty'
-                            newCopy[tableName] = newCopy[tableName]?.map(
-                              (nestedArray) => {
-                                // Loop through the objects in the nested array
-                                return nestedArray.map((item) => {
-                                  // Find the object with the matching '_id'
-                                  if (item._id === childValuseObj._id) {
-                                    // Update the 'qty' of the matched object
-                                    return { ...item, ...e };
-                                  }
-                                  // Return the item unchanged if it's not the one to update
-                                  return item;
-                                });
-                              },
-                            );
+                    <GridInputFields
+                      fieldData={field}
+                      indexValue={index}
+                      onValuesChange={(e) => {
+                        setChildValuseObj((prev) => {
+                          return applyVoucherDetailManualFlags(
+                            { ...prev, ...e },
+                            prev
+                          );
+                        });
+                        setCopyChildValueObj((prev) => {
+                          // Clone the previous state to avoid direct mutation
+                          const newCopy = { ...prev };
+                          let tableName = Object.keys(newCopy)[0];
+                          // Loop through the outer array of 'tblJobQty'
+                          newCopy[tableName] = newCopy[tableName]?.map(
+                            (nestedArray) => {
+                              // Loop through the objects in the nested array
+                              return nestedArray.map((item) => {
+                                if (isSameEditableRow(item, childValuseObj)) {
+                                  return applyVoucherDetailManualFlags(
+                                    { ...item, ...e },
+                                    item
+                                  );
+                                }
+                                return item;
+                              });
+                            },
+                          );
 
-                            // Return the updated state
-                            return newCopy;
-                          });
+                          // Return the updated state
+                          return newCopy;
+                        });
                         }}
                         values={childValuseObj}
                         inEditMode={inEditMode}
@@ -674,14 +738,19 @@ export default function RowComponent({
                         altText={"Save"}
                         title={"Save"}
                         onClick={() => {
+                          const nextChildRow = applyVoucherDetailManualFlags(
+                            childValuseObj,
+                            row
+                          );
+
                           for (const feild of fields) {
                             if (
                               feild.isRequired &&
                               (!Object.prototype.hasOwnProperty.call(
-                                childValuseObj,
+                                nextChildRow,
                                 feild.fieldname,
                               ) ||
-                                childValuseObj[feild.fieldname]
+                                nextChildRow[feild.fieldname]
                                   .toString()
                                   .trim() === "")
                             ) {
@@ -712,7 +781,7 @@ export default function RowComponent({
                             const newState = { ...prev };
                             // Assuming you have the index of the item you want to update
                             // For example, let's say the index is stored in childValuseObj.index
-                            const idToUpdate = childValuseObj.indexValue;
+                            const idToUpdate = nextChildRow.indexValue;
 
                             newState[sectionData.tableName] = newState[
                               sectionData.tableName
@@ -721,7 +790,7 @@ export default function RowComponent({
                               console.log(record.indexValue);
                               if (record.indexValue === idToUpdate) {
                                 // Update the record
-                                return childValuseObj;
+                                return nextChildRow;
                               }
                               return record;
                             });
@@ -733,7 +802,7 @@ export default function RowComponent({
                             const newState = { ...prev };
                             // Assuming you have the index of the item you want to update
                             // For example, let's say the index is stored in childValuseObj.index
-                            const idToUpdate = childValuseObj.indexValue;
+                            const idToUpdate = nextChildRow.indexValue;
 
                             newState[sectionData.tableName] = newState[
                               sectionData.tableName
@@ -742,7 +811,7 @@ export default function RowComponent({
                               console.log(record.indexValue);
                               if (record.indexValue === idToUpdate) {
                                 // Update the record
-                                return childValuseObj;
+                                return nextChildRow;
                               }
                               return record;
                             });

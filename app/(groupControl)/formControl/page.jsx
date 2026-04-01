@@ -240,6 +240,8 @@ export default function StickyHeadTable() {
   const [submittedMenuId, setSubmittedMenuId] = useState(null);
   const [submittedRecordId, setSubmittedRecordId] = useState(null);
   const [printTableName, setPrintTableName] = useState(null);
+  const [blStatus, setBlStatus] = useState(null);
+  const [blOfId, setBlOfId] = useState(null);
   const [isReportPresent, setisReportPresent] = useState(false);
   //const [defaultCompanyBranch, setDefaultCompanyBranch] = useState([]);
   const [operatorsBg, setOperatorsBg] = useState("blue");
@@ -606,12 +608,27 @@ export default function StickyHeadTable() {
     }
   }
 
-  const handlePrint = (row) => {
-    if (isReportPresent) {
-      setOpenPrintModal((prev) => !prev);
-      setSubmittedMenuId(search);
-      setSubmittedRecordId(row.id);
-      setPrintTableName(tableName);
+  const handlePrint = async (row) => {
+    if (!isReportPresent) return;
+
+    setOpenPrintModal((prev) => !prev);
+    setSubmittedMenuId(search);
+    setSubmittedRecordId(row?.id);
+    setPrintTableName(tableName);
+
+    if (tableName?.toLowerCase() == "tblbl") {
+      const fetchBlDataRequestBody = {
+        columns: "bl.id, bl.blOfId, bl.blStatus",
+        tableName: "tblbl bl",
+        whereCondition: `bl.id=${row?.id} and bl.clientId=${clientId}`,
+        clientIdCondition: "bl.status=1 FOR JSON PATH, INCLUDE_NULL_VALUES",
+      };
+
+      const blData = await fetchReportData(fetchBlDataRequestBody);
+      const data = blData?.data?.[0] || {};
+
+      setBlStatus(data?.blStatus ?? null);
+      setBlOfId(data?.blOfId ?? null);
     }
   };
 
@@ -3262,6 +3279,8 @@ export default function StickyHeadTable() {
             openPrintModal={openPrintModal}
             tableName={tableName}
             pageType={"searchPage"}
+            blOfId={blOfId}
+            blStatus={blStatus}
           />
         )}
       </div>

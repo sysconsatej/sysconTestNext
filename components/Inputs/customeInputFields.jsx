@@ -783,7 +783,7 @@ function InputFieldRenderer(props) {
   const acceptButtonRef = useRef(null);
   const firstRender = useRef(true);
   const { dateFormat } = getUserDetails();
-  const { companyId, financialYear, branchId } = getUserDetails();
+  const { companyId, financialYear, branchId, userId } = getUserDetails();
   const portalTarget = typeof window !== "undefined" ? document.body : null;
 
   useEffect(() => {

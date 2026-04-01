@@ -952,11 +952,12 @@ function rptInvoice() {
 
     return (
       <div
-        className="flex border-t border-l border-r border-black p-2 w-full"
+        className="flex border-t border-l border-r border-black w-full"
         style={{
           borderTop: "1px solid #000",
           borderRight: "1px solid #000",
           borderLeft: "1px solid #000",
+          paddingTop: "5px",
         }}
       >
         {/* 70% left side */}
@@ -2233,7 +2234,7 @@ function rptInvoice() {
               No. of Pkg :{" "}
             </p>
             <p style={{ width: "60%" }}>
-              {data[0]?.noOfPackages || ""} {data[0]?.packagingTypeCode || ""}
+              {data[0]?.blNoOfPackages || ""} {data[0]?.packagingTypeCode || ""}
             </p>
           </div>
           <div className="flex pt-1 w-full">
@@ -2446,7 +2447,7 @@ function rptInvoice() {
               No. of Pkg :{" "}
             </p>
             <p style={{ width: "60%" }}>
-              {data[0]?.noOfPackages || ""} {data[0]?.packagingTypeCode || ""}
+              {data[0]?.blNoOfPackages || ""} {data[0]?.packagingTypeCode || ""}
             </p>
           </div>
           <div className="flex pt-1 w-full">
@@ -2982,24 +2983,37 @@ function rptInvoice() {
     const showVal = (row, v, fallback = "") =>
       isCont(row) ? "" : (v ?? fallback);
 
-    // ✅ Total (removed IGST/CGST/SGST from calculation)
-    let totalAmount = 0;
-    (charge || []).forEach((group) => {
-      (group || []).forEach((item) => {
-        if (!isNaN(item?.totalAmount) && item?.totalAmount !== null) {
-          totalAmount += Number(item.totalAmount);
-        }
-      });
-    });
+    const getTaxableAmount = (row) => {
+      if (isCont(row)) return "";
+
+      const qty = Number(row?.qty || 0);
+      const rate = Number(row?.rate || 0);
+      const exchangeRate = Number(row?.exchangeRate || 1);
+
+      return qty * rate * exchangeRate;
+    };
+
+    const getTaxAmount = (row) => {
+      if (isCont(row)) return "";
+
+      return Number(row?.taxAmount || 0);
+    };
+
+    const getAmountInCurrency = (row) => {
+      if (isCont(row)) return "";
+
+      const taxableAmount = getTaxableAmount(row);
+      const taxAmount = getTaxAmount(row);
+
+      return taxableAmount + taxAmount;
+    };
 
     const gridTotal = (data?.[0]?.tblInvoiceCharge || []).reduce(
       (acc, curr) => {
-        const qty = Number(curr?.qty || 0);
-        const rate = Number(curr?.rate || 0);
-        const exchangeRate = Number(curr?.exchangeRate || 1);
+        const taxableAmount = Number(getTaxableAmount(curr) || 0);
+        const taxAmount = Number(curr?.taxAmount || 0);
 
-        const rowTotal = qty * rate * exchangeRate; // ✅ removed taxes
-        return acc + rowTotal;
+        return acc + taxableAmount + taxAmount;
       },
       0,
     );
@@ -3020,7 +3034,7 @@ function rptInvoice() {
 
     const isSinglePage = (charge?.length || 0) === 1;
 
-    //const chargeGridHeight = "200px";
+    // const chargeGridHeight = "200px";
     const chargeGridHeight = "300px";
 
     const showHsnGrid =
@@ -3069,13 +3083,9 @@ function rptInvoice() {
             style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {charge?.[index]?.map((chargeData, idx, array) => {
-              const cont = isCont(chargeData);
-
-              const qty = cont ? 0 : Number(chargeData?.qty || 0);
-              const rate = cont ? 0 : Number(chargeData?.rate || 0);
-              const exr = cont ? 1 : Number(chargeData?.exchangeRate || 1);
-
-              const amount = cont ? "" : (qty * rate * exr).toFixed(2); // ✅ removed taxes
+              const taxableAmount = getTaxableAmount(chargeData);
+              const taxAmount = getTaxAmount(chargeData);
+              const amountInCurrency = getAmountInCurrency(chargeData);
 
               return (
                 <div
@@ -3091,6 +3101,7 @@ function rptInvoice() {
                   >
                     {chargeData?.description || chargeData?.chargeGl || ""}
                   </p>
+
                   <p
                     className="pb-1 border-r border-black text-center"
                     style={{ width: "11%" }}
@@ -3131,24 +3142,23 @@ function rptInvoice() {
                     className="pb-1 border-r border-black text-center"
                     style={{ width: "10%" }}
                   >
-                    {showVal(chargeData, chargeData?.totalAmountHc, "")}
+                    {isCont(chargeData) ? "" : taxableAmount.toFixed(2)}
                   </p>
 
                   <p
                     className="pb-1 border-r border-black text-center"
                     style={{ width: "7%" }}
                   >
-                    {showVal(chargeData, chargeData?.taxAmount, "")}
+                    {isCont(chargeData) ? "" : taxAmount.toFixed(2)}
                   </p>
 
                   <p className="pb-1 text-center" style={{ width: "10%" }}>
-                    {amount}
+                    {isCont(chargeData) ? "" : amountInCurrency.toFixed(2)}
                   </p>
                 </div>
               );
             })}
 
-            {/* Footer */}
             <div
               className="flex w-full border-t border-b border-black"
               style={{ fontSize: "9px", width: "100%" }}
@@ -3171,10 +3181,10 @@ function rptInvoice() {
         )}
 
         {/* {showHsnGrid && index === totalPages - 1 && (
-          <div>
-            <TgkTaxInvoiceHsnSummaryGrid hsnSac={hsnSac} data={data} />
-          </div>
-        )} */}
+        <div>
+          <TgkTaxInvoiceHsnSummaryGrid hsnSac={hsnSac} data={data} />
+        </div>
+      )} */}
       </>
     );
   };
@@ -4899,39 +4909,79 @@ function rptInvoice() {
         >
           <div className="flex w-full p-1" style={{ fontSize: "8px" }}>
             <div style={{ width: "70%" }}>
-              <div>
+              <div style={{ width: "100%" }}>
                 <div className="flex">
-                  <p className="font-bold line-height-2 flex-1">BANK NAME :</p>
-                  <p className="font-bold line-height-2 flex-1">
-                    {data[0]?.bankName || ""}
+                  <p
+                    className="font-bold line-height-2"
+                    style={{ width: "20%" }}
+                  >
+                    BANK NAME :
+                  </p>
+                  <p
+                    className="font-bold line-height-2"
+                    style={{ width: "80%" }}
+                  >
+                    {data?.[0]?.bankName || ""}
                   </p>
                 </div>
+
                 <div className="flex">
-                  <p className="font-bold line-height-2 flex-1">
+                  <p
+                    className="font-bold line-height-2"
+                    style={{ width: "20%" }}
+                  >
                     BANK ADDRESS :
                   </p>
-                  <p className="font-bold line-height-2 flex-1">
-                    {data[0]?.bankAddress || ""}
+                  <p
+                    className="font-bold line-height-2"
+                    style={{ width: "80%" }}
+                  >
+                    {data?.[0]?.bankAddress || ""}
                   </p>
                 </div>
+
                 <div className="flex">
-                  <p className="font-bold line-height-2 flex-1">
+                  <p
+                    className="font-bold line-height-2"
+                    style={{ width: "20%" }}
+                  >
                     CURRENT A/C NO :
                   </p>
-                  <p className="font-bold line-height-2 flex-1">
-                    {data[0]?.bankAccountNo || ""}
+                  <p
+                    className="font-bold line-height-2"
+                    style={{ width: "80%" }}
+                  >
+                    {data?.[0]?.bankAccountNo || ""}
                   </p>
                 </div>
+
                 <div className="flex">
-                  <p className="font-bold line-height-2 flex-1">SWIFT CODE :</p>
-                  <p className="font-bold line-height-2 flex-1">
-                    {data[0]?.bankSwiftCode || ""}
+                  <p
+                    className="font-bold line-height-2"
+                    style={{ width: "20%" }}
+                  >
+                    SWIFT CODE :
+                  </p>
+                  <p
+                    className="font-bold line-height-2"
+                    style={{ width: "80%" }}
+                  >
+                    {data?.[0]?.bankSwiftCode || ""}
                   </p>
                 </div>
+
                 <div className="flex">
-                  <p className="font-bold line-height-2 flex-1">IFSC CODE :</p>
-                  <p className="font-bold line-height-2 flex-1">
-                    {data[0]?.bankIfscCode || ""}
+                  <p
+                    className="font-bold line-height-2"
+                    style={{ width: "20%" }}
+                  >
+                    IFSC CODE :
+                  </p>
+                  <p
+                    className="font-bold line-height-2"
+                    style={{ width: "80%" }}
+                  >
+                    {data?.[0]?.bankIfscCode || ""}
                   </p>
                 </div>
               </div>

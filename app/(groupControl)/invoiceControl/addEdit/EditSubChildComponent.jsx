@@ -152,6 +152,68 @@ export default function EditSubChildComponent(props) {
   const toggleSubChildEdit = () => {
     setOpenSubChildEdit((prev) => !prev);
   };
+
+  const isSameEditableRow = (leftRow, rightRow) => {
+    if (!leftRow || !rightRow) return false;
+
+    if (leftRow?._id != null && rightRow?._id != null) {
+      return leftRow._id === rightRow._id;
+    }
+
+    if (
+      leftRow?.voucherOutstandingId != null &&
+      rightRow?.voucherOutstandingId != null
+    ) {
+      return leftRow.voucherOutstandingId === rightRow.voucherOutstandingId;
+    }
+
+    if (leftRow?.indexValue != null && rightRow?.indexValue != null) {
+      return leftRow.indexValue === rightRow.indexValue;
+    }
+
+    return false;
+  };
+
+  const applyVoucherDetailManualFlags = (nextRow, prevRow = {}) => {
+    if (subChild?.tableName !== "tblVoucherLedgerDetails") {
+      return nextRow;
+    }
+
+    const toNum = (value) => {
+      if (value === null || value === undefined || value === "") return 0;
+      const parsed = Number(String(value).replace(/,/g, ""));
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const didHcChange =
+      String(prevRow?.debitAmount ?? "") !== String(nextRow?.debitAmount ?? "") ||
+      String(prevRow?.creditAmount ?? "") !==
+        String(nextRow?.creditAmount ?? "");
+
+    const didFcChange =
+      String(prevRow?.debitAmountFc ?? "") !==
+        String(nextRow?.debitAmountFc ?? "") ||
+      String(prevRow?.creditAmountFc ?? "") !==
+        String(nextRow?.creditAmountFc ?? "");
+
+    const hasManualHc =
+      toNum(nextRow?.debitAmount) !== 0 || toNum(nextRow?.creditAmount) !== 0;
+
+    const hasManualFc =
+      toNum(nextRow?.debitAmountFc) !== 0 ||
+      toNum(nextRow?.creditAmountFc) !== 0;
+
+    return {
+      ...nextRow,
+      __manualAllocHC: didHcChange
+        ? hasManualHc
+        : !!prevRow?.__manualAllocHC,
+      __manualAllocFC: didFcChange
+        ? hasManualFc
+        : !!prevRow?.__manualAllocFC,
+    };
+  };
+
   function copyDocument(obj) {
     if (Object.keys(obj).length !== 0) {
       const tmpData = { ...newState };
@@ -602,7 +664,10 @@ const syncLedgerTotalsFromDetails = () => {
                       indexValue={index}
                       onValuesChange={(e) => {
                         setEditSubChildObj((prev) => {
-                          return { ...prev, ...e };
+                          return applyVoucherDetailManualFlags(
+                            { ...prev, ...e },
+                            prev
+                          );
                         });
                         setCopyChildValueObj((prev) => {
                           // Clone the previous state to avoid direct mutation
@@ -614,10 +679,12 @@ const syncLedgerTotalsFromDetails = () => {
                             (nestedArray) => {
                               // Loop through the objects in the nested array
                               return nestedArray.map((item) => {
-                                // Find the object with the matching '_id'
-                                if (item._id === editSubChildObj._id) {
+                                if (isSameEditableRow(item, editSubChildObj)) {
                                   // Update the value of the matched object
-                                  return { ...item, ...e };
+                                  return applyVoucherDetailManualFlags(
+                                    { ...item, ...e },
+                                    item
+                                  );
                                 }
                                 // Return the item unchanged if it's not the one to update
                                 return item;
@@ -694,14 +761,19 @@ const syncLedgerTotalsFromDetails = () => {
                         altText={"Save"}
                         title={"Save 1"}
                         onClick={() => {
+                          const nextEditedRow = applyVoucherDetailManualFlags(
+                            editSubChildObj,
+                            subChildObject
+                          );
+
                           for (const feild of subChild.fields) {
                             if (
                               feild.isRequired &&
                               (!Object.prototype.hasOwnProperty.call(
-                                editSubChildObj,
+                                nextEditedRow,
                                 feild.fieldname
                               ) ||
-                                editSubChildObj[feild.fieldname]
+                                nextEditedRow[feild.fieldname]
                                   .toString()
                                   .trim() === "")
                             ) {
@@ -719,7 +791,7 @@ const syncLedgerTotalsFromDetails = () => {
                                   fun,
                                   newState,
                                   formControlData,
-                                  editSubChildObj,
+                                  nextEditedRow,
                                   setEditSubChildObj,
                                   childName,
                                   childIndex,
@@ -760,7 +832,7 @@ const syncLedgerTotalsFromDetails = () => {
                             const newState = JSON.parse(JSON.stringify(prev));
                             // Assuming you have the index of the item you want to update
                             // For example, let's say the index is stored in childValuseObj.index
-                            const idToUpdate = editSubChildObj.indexValue;
+                            const idToUpdate = nextEditedRow.indexValue;
 
                             newState[childName][childIndex][
                               subChild.tableName
@@ -771,7 +843,7 @@ const syncLedgerTotalsFromDetails = () => {
                               console.log(record.indexValue);
                               if (record.indexValue === idToUpdate) {
                                 // Update the record
-                                return editSubChildObj;
+                                return nextEditedRow;
                               }
                               return record;
                             });
@@ -783,7 +855,7 @@ const syncLedgerTotalsFromDetails = () => {
                             const newState = JSON.parse(JSON.stringify(prev));
                             // Assuming you have the index of the item you want to update
                             // For example, let's say the index is stored in childValuseObj.index
-                            const idToUpdate = editSubChildObj.indexValue;
+                            const idToUpdate = nextEditedRow.indexValue;
 
                             newState[childName][childIndex][
                               subChild.tableName
@@ -794,7 +866,7 @@ const syncLedgerTotalsFromDetails = () => {
                               console.log(record.indexValue);
                               if (record.indexValue === idToUpdate) {
                                 // Update the record
-                                return editSubChildObj;
+                                return nextEditedRow;
                               }
                               return record;
                             });

@@ -31,7 +31,8 @@ import {
   getTariffChargeDetails,
   checkDischargeDoneForBLData,
   checkJobCreatedAgainstBLData,
-  getBillingPartyOnBlData
+  getBillingPartyOnBlData,
+  getChargeForTariffData
 } from "@/services/auth/FormControl.services";
 import { getUserDetails } from "@/helper/userDetails";
 import moment from "moment";
@@ -1803,6 +1804,7 @@ const setTaxDetails = async (obj) => {
     totalInvoiceAmountFc,
     voucherTypeId
   } = newState;
+  //const chargeGlId =
   const { chargeId, chargeGlId, SelectedParentInvId } = values;
   const requestData = {
     chargeId: chargeId,
@@ -1914,7 +1916,7 @@ const setTaxDetails = async (obj) => {
 // };
 
 const setTDSDetails = async (obj) => {
-  const  {
+  const {
     args,
     newState,
     formControlData,
@@ -1925,20 +1927,14 @@ const setTDSDetails = async (obj) => {
     setStateVariable,
   } = obj;
   const argNames = args.split(",").map((arg) => arg.trim());
-  const chargeGlId = values[argNames[0]];
-
+  //const chargeGlId = values[argNames[0]];
   const { clientId } = getUserDetails();
+  const { chargeGlId } = values;
 
   const {
     invoiceDate,
     billingPartyId,
   } = newState || {};
-
-  // const chargeGlId =
-  //   values?.chargeGlId ??
-  //   values?.glId ??
-  //   newState?.chargeGlId ??
-  //   null;
 
   if (!invoiceDate || !billingPartyId || !chargeGlId) {
     return {
@@ -2112,13 +2108,12 @@ const getJobCharges = async (obj) => {
           tblTax || chargeValues.tblInvoiceChargeTax || [];
       }
     }
-
     const updatedCharges = Array.isArray(Chargers) ? Chargers : [];
-
     setStateVariable((prev) => ({
       ...prev,
       tblInvoiceCharge: updatedCharges,
     }));
+    
   }
 };
 const validateContainerNo = (obj) => {
@@ -5022,6 +5017,7 @@ const setGLSacDetails = async (obj) => {
     chargeId: values?.chargeId,
     voucherTypeId: newState?.voucherTypeId,
     companyId: companyId,
+    glId:values?.chargeGlId
   };
 
   const response = await getGLChargeDetails(requestBody);
@@ -6982,8 +6978,6 @@ const homeCurrencyInvoice = async (obj) => {
         currencyId: currency,
         exchangeRate: 1,
       };
-      //       demurragecurrencyId: currency,
-      // demurrageCurrencyId: currency,
       setStateVariable((prev) => ({
         ...prev,
         currencyId: currency,
@@ -10188,7 +10182,7 @@ const setVesselVoyageKenya = async (obj) => {
 const getBlCharges = async (obj) => {
   const { newState, values, setStateVariable } = obj;
 
-  // 1️⃣ Fetch charges and taxes
+  // 1️⃣ Fetch charges
   const requestData = {
     clientId: getUserDetails().clientId,
     voucherType: newState?.voucherTypeId,
@@ -10222,12 +10216,13 @@ const getBlCharges = async (obj) => {
     });
 
     // Safe numeric fields
-    const safeTotalAmount = Number(charge.totalAmount) || 0;
+    const safeTotalAmount = Number(charge.totalAmount || charge.totalAmountHc) || 0;
     const safeTotalAmountFc = Number(charge.totalAmountFc) || 0;
-    const safeChargeGlId = charge.chargeGlId || 0;
+    const safeChargeGlId = charge.chargeGlId || charge.glId || 0;
     const safeSacId = charge.sacId || 0;
+    const safeExchangeRate = Number(charge.exchangeRate || newState?.exchangeRate || 1) || 1;
 
-    // Fetch tax
+    // 2️⃣ Fetch GST / Tax
     const taxRequestData = {
       chargeId: charge.chargeId || 0,
       invoiceDate: newState.invoiceDate
@@ -10254,20 +10249,49 @@ const getBlCharges = async (obj) => {
       totalAmtInvoiceCurr: Number(newState.totalInvoiceAmountFc) || 0,
       billingPartyBranch: newState.billingPartyBranchId || 0,
       billingPartyState: newState.billingPartyStateId || 0,
-      voucherTypeId: newState?.voucherTypeId || 0
+      voucherTypeId: newState?.voucherTypeId || 0,
     };
 
     const fetchGST = await getTaxDetails(taxRequestData);
+
     charge.tblInvoiceChargeTax =
       (fetchGST?.tblTax || []).map((t) => ({
         ...t,
-        taxAmount: Number((t.taxAmount || 0).toFixed(2)),
-        taxableAmount: Number((t.taxableAmount || 0).toFixed(2)),
+        taxAmount: Number(Number(t.taxAmount || 0).toFixed(2)),
+        taxableAmount: Number(Number(t.taxableAmount || 0).toFixed(2)),
       })) || [];
+
+    // 3️⃣ Fetch TDS exactly the same way per charge
+    if (newState?.invoiceDate && newState?.billingPartyId && safeChargeGlId) {
+      const tdsRequestData = {
+        invoiceDate: moment(newState.invoiceDate).format("YYYY-MM-DD"),
+        glId: safeChargeGlId,
+        partyId: newState.billingPartyId || 0,
+        formControlId: newState?.menuID || 0,
+        totalAmount: Number(charge?.totalAmountHc || charge?.totalAmount || 0),
+        exchangeRateGrid: safeExchangeRate,
+        clientId: getUserDetails().clientId,
+      };
+
+      const fetchTDS = await getTDSDetails(tdsRequestData);
+
+      charge.tblInvoiceChargeTds =
+        (fetchTDS?.data || []).map((t) => ({
+          ...t,
+          tdsAmount: Number(Number(t.tdsAmount || 0).toFixed(2)),
+          tdsAmountFc: Number(
+            Number(
+              t.tdsAmountFc ||
+              ((Number(t.tdsAmount || 0) / safeExchangeRate) || 0)
+            ).toFixed(2)
+          ),
+        })) || [];
+    } else {
+      charge.tblInvoiceChargeTds = [];
+    }
   }
 
-  // 2️⃣ Fetch Vessel, Voyage, FPD
-  const blId = newState.blId || values.blId;
+  // 4️⃣ Fetch Vessel, Voyage, FPD
   const vesselResponse = await setVesselVoyageKenya({
     args: "blId",
     values,
@@ -10275,7 +10299,7 @@ const getBlCharges = async (obj) => {
     setStateVariable,
   });
 
-  // 3️⃣ Update state **once** with charges + taxes + vessel info
+  // 5️⃣ Update state once
   setStateVariable((prev) => ({
     ...prev,
     tblInvoiceCharge: Chargers,
@@ -12207,6 +12231,116 @@ const setPartyLedgerData = async (obj) => {
     };
   }
 }
+const getChargeForTariff = async (obj) => {
+  const { args, values, fieldName, newState, setStateVariable } = obj;
+
+  try {
+    // const argNames = args.split(",").map((arg) => arg.trim());
+    //const blId = newState[argNames[0]]; // e.g., "blId"
+    const {
+      labourRate,
+      agentId,
+      depotId
+    } = newState;
+    const { repairLocationId, repairTypeId, componentId, damageId } = values;
+    const requestData = {
+      labourRate: labourRate,
+      agentId:agentId,
+      depotId:depotId,
+      repairLocationId: repairLocationId,
+      repairTypeId: repairTypeId,
+      componentId: componentId,
+      damageId: damageId,
+      clientId: clientId
+    };
+    const res = await getChargeForTariffData(requestData);
+    const chargers = res?.Chargers ?? res?.data?.Chargers;
+    // setStateVariable((prev) => ({
+    //   ...prev,
+    //   billingPartyId: billingPartyId || 0,
+    // }));
+
+    // return {
+    //   type: "success",
+    //   result: true,
+    //   message: "Billing party set successfully.",
+    //   values: { ...values, billingPartyId: billingPartyId || 0 },
+    //   newState: { ...newState, billingPartyId: billingPartyId || 0 },
+    // };
+
+  } catch (error) {
+    console.error("Error in setBillingPartyForBl:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Error while setting billing party. Please try again.",
+    };
+  }
+};
+
+const setGLSacDetailsGeneral = async (obj) => {
+  const {
+    args,
+    values,
+    fieldName,
+    newState,
+    formControlData,
+    setStateVariable,
+  } = obj;
+
+  const { companyId } = getUserDetails();
+
+  const requestBody = {
+    chargeId: values?.chargeId,
+    voucherTypeId: newState?.voucherTypeId,
+    companyId: companyId,
+    glId:values?.chargeGlId
+  };
+
+  const response = await getGLChargeDetails(requestBody);
+
+  if (response.data && response.data.length > 0) {
+    const sacId = response.data[0]?.sacId;
+    const sacName = response.data[0]?.sacName;
+
+    // row-level values update
+    const updatedValues = {
+      ...values,
+      sacId: sacId,
+      sacIddropdown: sacId ? [{ value: sacId, label: sacName }] : null,
+    };
+
+    // state update
+    setStateVariable((prev) => ({
+      ...prev,
+      sacId: sacId,
+      sacIddropdown: sacId ? [{ value: sacId, label: sacName }] : null,
+    }));
+
+    return {
+      values: updatedValues,
+      type: "success",
+      message: `GL and SAC details fetched successfully`,
+      alertShow: true,
+      fieldName: fieldName,
+      isCheck: false,
+      newState: newState,
+      formControlData: formControlData,
+    };
+  } else {
+    return {
+      values,
+      type: "warning",
+      message: "No GL/SAC details found",
+      alertShow: true,
+      fieldName: fieldName,
+      isCheck: false,
+      newState,
+      formControlData,
+    };
+  }
+};
+
 export {
   setSameCurrencyFc,
   setSameCurrencyHc,
@@ -12354,5 +12488,7 @@ export {
   compareDatewithFin,
   setexFromVoyageDailyExrate,
   activityDateCompare,
-  setPartyLedgerData
+  setPartyLedgerData,
+  getChargeForTariff,
+  setGLSacDetailsGeneral
 };

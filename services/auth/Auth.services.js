@@ -46,6 +46,7 @@ export function getLocationAndLogin(data, rememberMe) {
         sessionStorage.setItem("companyId", responseData.defaultCompanyId);
         sessionStorage.setItem("branchId", responseData.defaultBranchId);
         sessionStorage.setItem("financialYear", responseData.defaultFinYearId);
+        sessionStorage.setItem("userId", responseData.id);
 
         const serverThemeData = {
           lightTheme: themeData,
@@ -408,7 +409,7 @@ export async function fetchNews(clientId) {
       body: JSON.stringify(clientId),
     });
 
-    const {data} = await response.json();
+    const { data } = await response.json();
 
     return data;
   } catch (error) {
@@ -443,7 +444,7 @@ export async function clearPassByRedis(emailId) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ id : Number(emailId) }),
+      body: JSON.stringify({ id: Number(emailId) }),
     });
     await response.json();
   } catch (error) {
@@ -457,9 +458,10 @@ export async function menuAccessSubmit(menuObj) {
     const url = new URL(`${baseUrlSQl}/api/menuControl/menuAccessSubmit`);
     const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json",
+      headers: {
+        "Content-Type": "application/json",
         "x-access-token": JSON.parse(token),
-       },
+      },
       body: JSON.stringify(menuObj),
     });
     const data = await response.json();

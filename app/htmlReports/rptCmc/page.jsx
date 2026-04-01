@@ -1,11 +1,10 @@
 "use client";
 /* eslint-disable */
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-
+import {fetchReportData} from "@/services/auth/FormControl.services.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./rptCmc.css";
 import Print from "@/components/Print/page";
-
 const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
 
 import "@/public/style/reportTheme.css";
@@ -85,6 +84,7 @@ const paginateContainers = (
 
 export default function RptIGM() {
   const { clientId } = getUserDetails();
+  const { companyId } = getUserDetails();
   const enquiryModuleRefs = useRef([]);
   const measurementRefs = useRef({
     pageInner: null,
@@ -161,10 +161,28 @@ export default function RptIGM() {
           if (storedUserData) {
             const decryptedData = decrypt(storedUserData);
             const userData = JSON.parse(decryptedData);
-            const companyNameValue = userData[0]?.companyName;
-            if (companyNameValue) {
-              setCompanyName(companyNameValue);
+            console.log("userData", userData);
+            const requestBodyCompany = {
+              columns: "name",
+              tableName: "tblCompany",
+              whereCondition: `id = ${companyId}`,
+              clientIdCondition: `status = 1 FOR JSON PATH`,
+            };
+            try {
+              const cmData = await fetchReportData(requestBodyCompany);
+              
+              if (cmData && cmData.data && cmData.data.length > 0) {
+                setCompanyName(cmData.data[0].name);
+              } else {
+                console.error("No data found");
+              }
+            } catch (error) {
+              console.error("Error fetching data:", error);
             }
+            // const companyNameValue = userData[0]?.companyName;
+            // if (companyNameValue) {
+            //   setCompanyName(companyNameValue);
+            // }
           }
         } catch (error) {
           console.error("Error fetching job data:", error);
@@ -350,7 +368,7 @@ export default function RptIGM() {
         />
         <CMCContainerTable rows={page.rows} startSerial={page.startSerial} />
         {isLastPage && <CMCFooter totalContainers={totalContainers} />}
-        <div
+        {/* <div
           style={{
             width: "100%",
             textAlign: "right",
@@ -361,7 +379,7 @@ export default function RptIGM() {
           }}
         >
           Page {page.pageNo} of {page.totalPages}
-        </div>
+        </div> */}
       </div>
     );
   };
@@ -413,7 +431,7 @@ export default function RptIGM() {
             >
               Date : {new Date().toLocaleDateString("en-GB")}
             </p>
-            <p
+            {/* <p
               style={{
                 color: "black",
                 fontSize: "10px",
@@ -422,7 +440,7 @@ export default function RptIGM() {
               }}
             >
               Page {pageNo} / {totalPages}
-            </p>
+            </p> */}
           </div>
         </div>
 
@@ -650,9 +668,6 @@ export default function RptIGM() {
           <div>
             <p style={{ color: "black", fontSize: "10px", fontWeight: "bold" }}>
               As Agents
-            </p>
-            <p style={{ color: "black", fontSize: "10px", fontWeight: "bold" }}>
-              The application is in order please.
             </p>
           </div>
 

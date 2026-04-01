@@ -26,6 +26,8 @@ export default function PrintModal({
   submittedMenuId,
   pageType,
   tableName,
+  blOfId,
+  blStatus,
 }) {
   const dispatch = useDispatch();
   const { clientId } = getUserDetails();
@@ -38,12 +40,12 @@ export default function PrintModal({
   const [redirectedPageType, setRedirectedPageType] = useState(null);
   const id = searchParams.id;
 
-  console.log("PrintModal instance =>", {
-    submittedMenuId,
-    submittedRecordId,
-    tableName,
-    pageType,
-  });
+  // console.log("PrintModal instance =>", {
+  //   submittedMenuId,
+  //   submittedRecordId,
+  //   tableName,
+  //   pageType,
+  // });
 
   useEffect(() => {
     setRedirectedPageType(pageType);
@@ -487,8 +489,8 @@ export default function PrintModal({
         const blEditerRequestBody = {
           columns: "tbp.id,tbp.name",
           tableName: "tblBlPrintTemplate tbp",
-          whereCondition: `tbp.clientId=${clientId} and tbp.blOfId=${companyId} and tbp.templateType='bl'`,
-          clientIdCondition: `tbp.status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+          whereCondition: `tbp.clientId=${clientId} and tbp.blOfId=${blOfId} and tbp.templateType='bl'`,
+          clientIdCondition: `tbp.draftFinal='${blStatus}' and tbp.status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
         };
 
         const croEditerRequestBody = {
@@ -532,7 +534,7 @@ export default function PrintModal({
               reportMenuId: null,
               reportTemplateId: item?.id,
               redirectionPath: null,
-              displayName: item?.name,
+              displayName: "BL Report",
             }))
           : [];
 
@@ -565,7 +567,7 @@ export default function PrintModal({
     };
 
     fetchData();
-  }, [submittedMenuId]);
+  }, [submittedMenuId, blStatus, blOfId]);
 
   useEffect(() => {
     const fetchMenuTableNames = async () => {
@@ -744,4 +746,6 @@ PrintModal.propTypes = {
   submittedMenuId: PropTypes.number,
   pageType: PropTypes.string,
   tableName: PropTypes.string,
+  blStatus: PropTypes.any.blStatus,
+  blOfId: PropTypes.any.blOfId,
 };

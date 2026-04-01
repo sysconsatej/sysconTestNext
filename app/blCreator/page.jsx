@@ -1,6 +1,6 @@
 "use client";
 /* eslint-disable */
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { use, useEffect, useMemo, useRef, useState } from "react";
 import { decrypt } from "@/helper/security";
 import {
   fetchReportData,
@@ -9,11 +9,18 @@ import {
 import { getUserDetails } from "@/helper/userDetails";
 import { useSearchParams } from "next/navigation";
 import {
+  Autocomplete,
   Box,
   Button,
   Checkbox,
+  FormControl,
+  FormControlLabel,
+  FormHelperText,
+  FormLabel,
   ListItemText,
   MenuItem,
+  Radio,
+  RadioGroup,
   TextField,
   Tooltip,
   Typography,
@@ -2000,7 +2007,54 @@ export default function BlCreatorPage() {
   const [editTemplateName, setEditTemplateName] = useState("");
   const [schemaModalOpen, setSchemaModalOpen] = useState(false);
   const [schemaJsonText, setSchemaJsonText] = useState("");
+  const [blOfOptions, setBlOfOptions] = useState([]);
+  const [selectedBlOfId, setSelectedBlOfId] = useState("");
+  const [selectedBlStatus, setSelectedBlStatus] = useState(""); // D or F
+  const [sidebarErrors, setSidebarErrors] = useState({
+    blOf: false,
+    blStatus: false,
+  });
   const pageClipboardRef = useRef(null);
+  useEffect(() => {
+    const fetchBLOF = async () => {
+      const requestBodyBLOF = {
+        columns: "id,name",
+        tableName: "tblCompany",
+        whereCondition: `status=1 and id in (
+        Select companyId
+        from tblCompanySubtype
+        where subTypeId in (
+          Select id
+          from tblMasterData
+          where name in ('PRINCIPAL','NVOCC AGENT','Shipping Line')
+            and status = 1
+        )
+        and status = 1
+      )`,
+        clientIdCondition: `status = 1 and clientId = ${clientId} FOR JSON PATH, INCLUDE_NULL_VALUES`,
+      };
+
+      try {
+        const response = await fetchReportData(requestBodyBLOF);
+        let rows = response?.data || [];
+
+        if (typeof rows === "string") {
+          try {
+            rows = JSON.parse(rows);
+          } catch {
+            rows = [];
+          }
+        }
+
+        setBlOfOptions(Array.isArray(rows) ? rows : []);
+      } catch (error) {
+        console.error("Error fetching BL OF data:", error);
+        setBlOfOptions([]);
+      }
+    };
+
+    if (clientId) fetchBLOF();
+  }, [clientId]);
   const columns = useMemo(() => {
     const arr = Array.isArray(blData) ? blData : [];
 
@@ -2056,30 +2110,74 @@ export default function BlCreatorPage() {
 
   useEffect(() => {
     const fetchBlPrintTemplateData = async () => {
-      // If URL has no id, do not fetch/load any DB template
       if (!templateIdFromUrl) {
         setStoredTemplate([]);
         return;
       }
+
       const requestBodyMenu = {
-        columns: "id,name,blPrintTemplateJson",
+        columns: "id,name,blOfId,draftFinal,blPrintTemplateJson",
         tableName: "tblBlPrintTemplate",
-        whereCondition: `blOfId = \'${companyId}\' and clientId = ${clientId} and id = ${templateIdFromUrl}`,
-        clientIdCondition: `status = 1 FOR JSON PATH`,
+        whereCondition: `id = ${templateIdFromUrl}`,
+        clientIdCondition: `status = 1 and clientId = ${clientId} FOR JSON PATH, INCLUDE_NULL_VALUES`,
       };
 
       try {
         const data = await fetchReportData(requestBodyMenu);
-        const rows = Array.isArray(data?.data) ? data.data : [];
-        setStoredTemplate(rows);
+        let rows = data?.data || [];
+
+        if (typeof rows === "string") {
+          try {
+            rows = JSON.parse(rows);
+          } catch {
+            rows = [];
+          }
+        }
+
+        setStoredTemplate(Array.isArray(rows) ? rows : []);
       } catch (error) {
-        console.error("Error fetching data:", error);
-        setStoredTemplate([]); // ✅ keep it safe even on error
+        console.error("Error fetching template:", error);
+        setStoredTemplate([]);
       }
     };
 
     fetchBlPrintTemplateData();
-  }, [companyId, clientId, templateIdFromUrl]);
+  }, [clientId, templateIdFromUrl]);
+
+  useEffect(() => {
+    if (!templateIdFromUrl) {
+      setEditTemplateName("");
+      setSelectedBlOfId("");
+      setSelectedBlStatus("");
+      return;
+    }
+
+    if (!Array.isArray(storedTemplate) || storedTemplate.length === 0) return;
+
+    const picked = storedTemplate.find(
+      (t) => String(t.id) === String(templateIdFromUrl),
+    );
+
+    if (!picked) return;
+
+    if (picked?.name) {
+      setEditTemplateName(String(picked.name));
+    }
+
+    let parsedJson = null;
+    try {
+      parsedJson =
+        typeof picked?.blPrintTemplateJson === "string"
+          ? JSON.parse(picked.blPrintTemplateJson)
+          : picked?.blPrintTemplateJson || null;
+    } catch {
+      parsedJson = null;
+    }
+
+    setSelectedBlOfId(picked?.blOfId ?? parsedJson?.meta?.blOfId ?? "");
+
+    setSelectedBlStatus(picked?.draftFinal ?? parsedJson?.meta?.blStatus ?? "");
+  }, [templateIdFromUrl, storedTemplate]);
 
   // ✅ Edit mode: hydrate template name from fetched template record
   useEffect(() => {
@@ -2163,6 +2261,17 @@ export default function BlCreatorPage() {
       canGrowColumns: normalized,
     };
     commit(next);
+  }
+
+  function validateSidebarFields() {
+    const nextErrors = {
+      blOf: !selectedBlOfId,
+      blStatus: !selectedBlStatus,
+    };
+
+    setSidebarErrors(nextErrors);
+
+    return !nextErrors.blOf && !nextErrors.blStatus;
   }
 
   // keep templateRef synced immediately when needed (pointermove)
@@ -5255,21 +5364,50 @@ export default function BlCreatorPage() {
               <Button
                 size="small"
                 variant="contained"
-                disabled={!editTemplateName.trim() || !templateIdFromUrl}
+                disabled={
+                  !editTemplateName.trim() ||
+                  !templateIdFromUrl ||
+                  !selectedBlOfId ||
+                  !selectedBlStatus
+                }
                 onClick={async () => {
                   if (!templateIdFromUrl) return;
                   if (!editTemplateName.trim()) return;
+
+                  const nextErrors = {
+                    blOf: !selectedBlOfId,
+                    blStatus: !selectedBlStatus,
+                  };
+
+                  setSidebarErrors(nextErrors);
+
+                  if (nextErrors.blOf || nextErrors.blStatus) {
+                    toast("Please select BL OF and BL Status");
+                    return;
+                  }
 
                   const toSave0 = syncActiveAliasesToPages(
                     templateRef.current,
                     activePageId,
                   );
-                  const toSave = ensureNeighborsInTemplate(toSave0);
+                  const toSave1 = ensureNeighborsInTemplate(toSave0);
+
+                  const toSave = {
+                    ...toSave1,
+                    meta: {
+                      ...(toSave1?.meta || {}),
+                      blOfId: selectedBlOfId || null,
+                      // blOfName: selectedBlOfName || "",
+                      blStatus: selectedBlStatus || null,
+                    },
+                  };
 
                   const payload = {
                     TableName: "tblBlPrintTemplate",
                     Record: {
                       name: editTemplateName.trim(),
+                      blOfId: selectedBlOfId,
+                      draftFinal: selectedBlStatus,
                       blPrintTemplateJson: JSON.stringify(toSave),
                       templateType: "bl",
                     },
@@ -5280,22 +5418,26 @@ export default function BlCreatorPage() {
                     await insertReportData(payload);
                     toast("Template updated successfully");
 
-                    // keep local copy in sync
                     setStoredTemplate((prev) => {
                       const arr = Array.isArray(prev) ? prev.slice() : [];
                       if (!arr.length) return prev;
+
                       const idx = arr.findIndex(
                         (t) => String(t.id) === String(templateIdFromUrl),
                       );
+
                       if (idx >= 0) {
                         arr[idx] = {
                           ...arr[idx],
                           name: editTemplateName.trim(),
+                          blOfId: selectedBlOfId,
+                          draftFinal: selectedBlStatus,
                           blPrintTemplateJson:
                             payload.Record.blPrintTemplateJson,
                         };
                         return arr;
                       }
+
                       return prev;
                     });
                   } catch (err) {
@@ -5343,23 +5485,49 @@ export default function BlCreatorPage() {
               <Button
                 size="small"
                 variant="contained"
-                disabled={!newTemplateName.trim()}
+                disabled={
+                  !newTemplateName.trim() ||
+                  !selectedBlOfId ||
+                  !selectedBlStatus
+                }
                 onClick={async () => {
                   if (!newTemplateName.trim()) return;
+
+                  const nextErrors = {
+                    blOf: !selectedBlOfId,
+                    blStatus: !selectedBlStatus,
+                  };
+
+                  setSidebarErrors(nextErrors);
+
+                  if (nextErrors.blOf || nextErrors.blStatus) {
+                    toast("Please select BL OF and BL Status");
+                    return;
+                  }
 
                   const toSave0 = syncActiveAliasesToPages(
                     templateRef.current,
                     activePageId,
                   );
-                  const toSave = ensureNeighborsInTemplate(toSave0);
+                  const toSave1 = ensureNeighborsInTemplate(toSave0);
+
+                  const toSave = {
+                    ...toSave1,
+                    meta: {
+                      ...(toSave1?.meta || {}),
+                      blOfId: selectedBlOfId || null,
+                      blOfName: selectedBlOfName || "",
+                      blStatus: selectedBlStatus || "",
+                    },
+                  };
 
                   const payload = {
                     TableName: "tblBlPrintTemplate",
                     Record: {
                       name: newTemplateName.trim(),
-                      blOfId: companyId,
+                      blOfId: selectedBlOfId,
                       clientId: clientId,
-                      draftFinal: "D",
+                      draftFinal: selectedBlStatus,
                       blPrintTemplateJson: JSON.stringify(toSave),
                       status: 1,
                       createdBy: userId,
@@ -5776,6 +5944,227 @@ export default function BlCreatorPage() {
                 >
                   +
                 </button>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                  marginTop: 20,
+                  marginBottom: 10,
+                }}
+              >
+                <Autocomplete
+                  fullWidth
+                  size="small"
+                  options={blOfOptions}
+                  value={
+                    blOfOptions.find(
+                      (opt) => String(opt.id) === String(selectedBlOfId),
+                    ) || null
+                  }
+                  onChange={(e, newValue) => {
+                    setSelectedBlOfId(newValue?.id || "");
+                    setSidebarErrors((prev) => ({ ...prev, blOf: false }));
+                  }}
+                  getOptionLabel={(option) => option?.name || ""}
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value.id
+                  }
+                  renderOption={(props, option) => (
+                    <Box
+                      component="li"
+                      {...props}
+                      sx={{
+                        fontSize: 11,
+                        color: "#fff",
+                        backgroundColor: "#0b1730",
+                        "&.Mui-focused": {
+                          backgroundColor: "rgba(96,165,250,0.15)",
+                        },
+                        "&[aria-selected='true']": {
+                          backgroundColor: "rgba(96,165,250,0.22)",
+                        },
+                      }}
+                    >
+                      {option.name}
+                    </Box>
+                  )}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      required
+                      label="BL OF"
+                      error={sidebarErrors.blOf}
+                      helperText={sidebarErrors.blOf ? "BL OF is required" : ""}
+                      InputLabelProps={{
+                        shrink: true,
+                        sx: {
+                          fontSize: 9,
+                          color: "rgba(255,255,255,0.75)",
+                          "&.Mui-focused": {
+                            color: "#60a5fa",
+                          },
+                        },
+                      }}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: "10px",
+                          background: "#00153a",
+                          color: "#fff",
+                          minHeight: 36,
+                          fontSize: 10,
+
+                          "& fieldset": {
+                            borderColor: "rgba(148,163,184,0.35)",
+                          },
+                          "&:hover fieldset": {
+                            borderColor: "#60a5fa",
+                          },
+                          "&.Mui-focused fieldset": {
+                            borderColor: "#60a5fa",
+                            borderWidth: "1px",
+                          },
+                        },
+
+                        "& .MuiInputBase-input": {
+                          color: "#fff !important",
+                          WebkitTextFillColor: "#fff !important",
+                          caretColor: "#fff",
+                          fontSize: 10,
+                          padding: "8px 10px !important",
+                        },
+
+                        "& .MuiAutocomplete-input": {
+                          color: "#fff !important",
+                          WebkitTextFillColor: "#fff !important",
+                        },
+
+                        "& .MuiInputLabel-root": {
+                          fontSize: 9,
+                          color: "rgba(255,255,255,0.75)",
+                        },
+
+                        "& .MuiFormHelperText-root": {
+                          fontSize: 9,
+                          marginLeft: 0,
+                          color: "#f87171",
+                        },
+
+                        "& input": {
+                          color: "#fff !important",
+                          WebkitTextFillColor: "#fff !important",
+                        },
+
+                        "& .MuiSvgIcon-root": {
+                          color: "#fff",
+                        },
+                      }}
+                    />
+                  )}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "10px",
+                      background: "#00153a",
+                      color: "#fff",
+                    },
+                    "& .MuiAutocomplete-popupIndicator": {
+                      color: "#fff",
+                    },
+                    "& .MuiAutocomplete-clearIndicator": {
+                      color: "#fff",
+                    },
+                  }}
+                  slotProps={{
+                    paper: {
+                      sx: {
+                        background: "#0b1730",
+                        color: "#fff",
+                        border: "1px solid rgba(148,163,184,0.2)",
+                        mt: 0.5,
+                        "& .MuiAutocomplete-option": {
+                          fontSize: 10,
+                          minHeight: 32,
+                          color: "#fff",
+                        },
+                      },
+                    },
+                  }}
+                />
+
+                <FormControl required error={sidebarErrors.blStatus}>
+                  <FormLabel
+                    sx={{
+                      fontSize: 10,
+                      color: "#fff !important",
+                      mb: 0.5,
+                      marginTop: 2,
+                    }}
+                  >
+                    BL Status
+                  </FormLabel>
+
+                  <RadioGroup
+                    row
+                    value={selectedBlStatus}
+                    onChange={(e) => {
+                      setSelectedBlStatus(e.target.value);
+                      setSidebarErrors((prev) => ({
+                        ...prev,
+                        blStatus: false,
+                      }));
+                    }}
+                  >
+                    <FormControlLabel
+                      value="D"
+                      control={
+                        <Radio
+                          size="small"
+                          sx={{
+                            color: "rgba(255,255,255,0.7)",
+                            "&.Mui-checked": {
+                              color: "#60a5fa",
+                            },
+                          }}
+                        />
+                      }
+                      label={
+                        <span style={{ fontSize: 10, color: "#fff" }}>
+                          DRAFT
+                        </span>
+                      }
+                    />
+
+                    <FormControlLabel
+                      value="F"
+                      control={
+                        <Radio
+                          size="small"
+                          sx={{
+                            color: "rgba(255,255,255,0.7)",
+                            "&.Mui-checked": {
+                              color: "#60a5fa",
+                            },
+                          }}
+                        />
+                      }
+                      label={
+                        <span style={{ fontSize: 10, color: "#fff" }}>
+                          FINAL
+                        </span>
+                      }
+                    />
+                  </RadioGroup>
+
+                  {sidebarErrors.blStatus ? (
+                    <FormHelperText
+                      sx={{ fontSize: 9, marginLeft: 0, color: "#f87171" }}
+                    >
+                      BL Status is required
+                    </FormHelperText>
+                  ) : null}
+                </FormControl>
               </div>
               {/* </div> */}
             </div>
@@ -7059,6 +7448,7 @@ function Inspector({
                 "type",
                 "sizeType",
                 "noOfPackages",
+                "noOfPackagesAndCode",
                 "package",
                 "grossWt",
                 "grossWtAndUnit",

@@ -736,27 +736,37 @@ export default function SubChildComponent({
       }
     }
     setNewState((prev) => {
+      const nextChildRows = Array.isArray(prev?.[childName])
+        ? prev[childName].map((childRow, idx) =>
+          idx === childIndex
+            ? {
+              ...childRow,
+              [tableName]: copyChildValueObj[tableName]?.[0] || [],
+            }
+            : childRow
+        )
+        : prev?.[childName];
+
       return {
         ...prev,
-        [childName]: {
-          ...prev[childName],
-          [childIndex]: {
-            ...prev[childName][childIndex],
-            [tableName]: copyChildValueObj[tableName]?.[0],
-          },
-        },
+        [childName]: nextChildRows,
       };
     });
     setSubmitNewState((prev) => {
+      const nextChildRows = Array.isArray(prev?.[childName])
+        ? prev[childName].map((childRow, idx) =>
+          idx === childIndex
+            ? {
+              ...childRow,
+              [tableName]: copyChildValueObj[tableName]?.[0] || [],
+            }
+            : childRow
+        )
+        : prev?.[childName];
+
       return {
         ...prev,
-        [childName]: {
-          ...prev[childName],
-          [childIndex]: {
-            ...prev[childName][childIndex],
-            [tableName]: copyChildValueObj[tableName]?.[0],
-          },
-        },
+        [childName]: nextChildRows,
       };
     });
     setIsGridEdit(!isGridEdit);

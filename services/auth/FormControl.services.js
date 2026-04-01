@@ -2601,3 +2601,24 @@ export async function GetPurchaseInvoiceReadingStatus() {
     };
   }
 }
+export async function getChargeForTariffData(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${baseUrl}/Sql/api/spInvoice/getChargeForTariff`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(data),
+      },
+    ).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}

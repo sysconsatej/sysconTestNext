@@ -2657,7 +2657,7 @@ export default function BlReportPage() {
           PRINT
         </Button>
 
-        <Button
+        {/* <Button
           variant="outlined"
           startIcon={<DownloadRoundedIcon />}
           onClick={onDownloadPdf}
@@ -2665,7 +2665,7 @@ export default function BlReportPage() {
           sx={{ height: 32, fontSize: 12, borderRadius: 1 }}
         >
           DOWNLOAD PDF
-        </Button>
+        </Button> */}
       </Box>
 
       {!!renderBlockReason && !loading && (

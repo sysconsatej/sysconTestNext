@@ -6550,6 +6550,21 @@ function Inspector({
                 "grossWt",
                 "weightUnit",
                 "grossWtAndUnit",
+                //new Fields
+                "equipmentType",
+                "typeCode",
+                "grossWtUnitCode",
+                "grossWtNameAndCode",
+                "odcLength",
+                "odcWidth",
+                "odcHeight",
+                "odcUnit",
+                "odcGuage",
+                "refTemp",
+                "refTempUnitCode",
+                "ventilation",
+                "typeCode",
+                "humidity",
               ],
             };
 
