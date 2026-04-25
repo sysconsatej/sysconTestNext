@@ -34,6 +34,15 @@ import Checkbox from "@mui/material/Checkbox";
 import { ActionButton } from "@/components/ActionsButtons";
 import * as onSubmitValidation from "@/helper/onSubmitFunction";
 
+function isConfigFlagEnabled(value) {
+  if (value === true || value === 1 || value === "1") return true;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return ["true", "yes", "y", "t"].includes(normalized);
+  }
+  return false;
+}
+
 function onSubmitFunctionCall(functionData, newState, formControlData, values, setStateVariable, childName, childIndex) {
 
   const funcNameMatch = functionData?.match(/^(\w+)/);
@@ -156,6 +165,8 @@ export default function EditSubChildComponent(props) {
   const [openSubChildEdit, setOpenSubChildEdit] = useState(false);
   const [hoveredIcon, setHoveredIcon] = useState(null);
   const [transformedState, setTransformedState] = useState();
+  const isSubChildDeleteHidden = isConfigFlagEnabled(subChild?.isDeleteHide);
+  const isSubChildCopyHidden = isConfigFlagEnabled(subChild?.isAddHide);
 
   useEffect(() => {
     setEditSubChildObj({ ...subChildObject });
@@ -172,6 +183,7 @@ export default function EditSubChildComponent(props) {
   };
 
   function copyDocument(obj) {
+    if (isSubChildCopyHidden) return;
     if (Object.keys(obj).length !== 0) {
       const tmpData = { ...newState };
       tmpData[childName][childIndex][subChild.tableName].push({
@@ -351,42 +363,46 @@ export default function EditSubChildComponent(props) {
 
               ))}
             <div className="absolute right-0 w-fit">
-              <LightTooltip title="Delete Record">
-                <IconButton
-                  aria-label="Delete"
-                  className={styles.icon}
-                  onClick={() => { deleteSubChildRecord(index), reCalculate(childIndex, childName); }}
-                  onMouseEnter={() => setHoveredIcon("delete")}
-                  onMouseLeave={() => setHoveredIcon(null)}
-                >
-                  <Image
-                    src={
-                      hoveredIcon === "delete"
-                        ? DeleteHover
-                        : DeleteIcon2
-                    }
-                    alt="Delete Icon"
-                    priority={false}
-                    className="gridIcons2"
-                  />
-                </IconButton>
-              </LightTooltip>
-              <LightTooltip title="Copy Document">
-                <IconButton
-                  aria-label="Document"
-                  className={styles.icon}
-                  onClick={() => copyDocument(editSubChildObj)}
-                  onMouseEnter={() => setHoveredIcon("copy")}
-                  onMouseLeave={() => setHoveredIcon(null)}
-                >
-                  <Image
-                    src={hoveredIcon === "copy" ? CopyHover : copyDoc}
-                    alt="Document Icon"
-                    className="gridIcons2"
-                    priority={false}
-                  />
-                </IconButton>
-              </LightTooltip>
+              {!isSubChildDeleteHidden && (
+                <LightTooltip title="Delete Record">
+                  <IconButton
+                    aria-label="Delete"
+                    className={styles.icon}
+                    onClick={() => { deleteSubChildRecord(index), reCalculate(childIndex, childName); }}
+                    onMouseEnter={() => setHoveredIcon("delete")}
+                    onMouseLeave={() => setHoveredIcon(null)}
+                  >
+                    <Image
+                      src={
+                        hoveredIcon === "delete"
+                          ? DeleteHover
+                          : DeleteIcon2
+                      }
+                      alt="Delete Icon"
+                      priority={false}
+                      className="gridIcons2"
+                    />
+                  </IconButton>
+                </LightTooltip>
+              )}
+              {!isSubChildCopyHidden && (
+                <LightTooltip title="Copy Document">
+                  <IconButton
+                    aria-label="Document"
+                    className={styles.icon}
+                    onClick={() => copyDocument(editSubChildObj)}
+                    onMouseEnter={() => setHoveredIcon("copy")}
+                    onMouseLeave={() => setHoveredIcon(null)}
+                  >
+                    <Image
+                      src={hoveredIcon === "copy" ? CopyHover : copyDoc}
+                      alt="Document Icon"
+                      className="gridIcons2"
+                      priority={false}
+                    />
+                  </IconButton>
+                </LightTooltip>
+              )}
             </div>
           </TableRow>
         </>
@@ -420,6 +436,8 @@ export default function EditSubChildComponent(props) {
                         key={index}
                         onCopy={() => copyDocument(editSubChildObj)}
                         onDelete={() => deleteSubChildRecord(index)}
+                        showDelete={!isSubChildDeleteHidden}
+                        showCopy={!isSubChildCopyHidden}
                       />
                     ) : (
                       <></>

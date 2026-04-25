@@ -41,7 +41,7 @@ import {
   formControlMenuList,
   deleteMasterRecord,
   dynamicDropDownFieldsData,
-  fetchSearchPageData,
+  fetchBLCreatorSearchPageData,
 } from "@/services/auth/FormControl.services.js";
 import {
   viewIcon,
@@ -479,11 +479,14 @@ export default function StickyHeadTable() {
           tableName: "tblblPrintTemplate",
           fieldName: searchFieldData,
           clientId: clientId,
+          companyId: null,
+          companyBranchId: defaultBranchId,
+          financialYearId: null,
           filterCondition: "templateType='cro'",
           pageNo: 1,
           pageSize: rowsPerPage,
         };
-        const apiResponse = await fetchSearchPageData(requestData);
+        const apiResponse = await fetchBLCreatorSearchPageData(requestData);
         if (apiResponse.success === true && apiResponse.data?.length > 0) {
           const getVoucherDataCount = {
             columns: "id",
@@ -569,11 +572,14 @@ export default function StickyHeadTable() {
           tableName: "tblblPrintTemplate",
           fieldName: searchFieldData,
           clientId: clientId,
+          companyId: null,
+          companyBranchId: defaultBranchId,
+          financialYearId: null,
           filterCondition: "templateType='cro'",
           pageNo: 1,
           pageSize: rowsPerPage,
         };
-        const apiResponse = await fetchSearchPageData(requestData);
+        const apiResponse = await fetchBLCreatorSearchPageData(requestData);
         if (apiResponse.data?.length > 0) {
           const getVoucherDataCount = {
             columns: "id",
@@ -631,13 +637,16 @@ export default function StickyHeadTable() {
           tableName: "tblblPrintTemplate",
           fieldName: searchFieldData,
           clientId: clientId,
+          companyId: null,
+          companyBranchId: defaultBranchId,
+          financialYearId: null,
           filterCondition: "templateType='cro'",
           pageNo: columnSearchKeyName === "" ? selectedPage : 1,
           pageSize: rowsPerPage,
           keyName: columnSearchKeyName,
           keyValue: columnSearchKeyValue,
         };
-        apiResponse = await fetchSearchPageData(requestData);
+        apiResponse = await fetchBLCreatorSearchPageData(requestData);
         if (apiResponse.data?.length > 0) {
           const getVoucherDataCount = {
             columns: "id",
@@ -691,13 +700,16 @@ export default function StickyHeadTable() {
             tableName: "tblblPrintTemplate",
             fieldName: searchFieldData,
             clientId: clientId,
+            companyId: null,
+            companyBranchId: defaultBranchId,
+            financialYearId: null,
             filterCondition: "templateType='cro'",
             pageNo: columnSearchKeyName === "" ? selectedPage : 1,
             pageSize: rowsPerPage,
             keyName: columnSearchKeyName,
             keyValue: columnSearchKeyValue,
           };
-          const apiResponse = await fetchSearchPageData(requestData);
+          const apiResponse = await fetchBLCreatorSearchPageData(requestData);
           const getVoucherDataCount = {
             columns: "id",
             tableName: "tblblPrintTemplate",
@@ -2807,7 +2819,7 @@ const tableData = [
       {
         tableName: "tblblPrintTemplate",
         gridConfig:
-          '[{"fieldname":"name","controlname":"text","yourlabel":"Template Name"}]',
+          '[{"fieldname":"name","controlname":"text","yourlabel":"Template Name"},{"fieldname":"companyBranchId","referenceTable":"tblCompanyBranch","referenceColumn":"name","controlname":"dropdown","yourlabel":"Company Branch"}]',
       },
     ],
   },
@@ -2816,4 +2828,11 @@ const tableData = [
 const searchFieldData = [
   { fieldname: "name", controlname: "text", yourlabel: "Name" },
   { fieldname: "id", controlname: "text", yourlabel: "id" },
+  {
+    fieldname: "companyBranchId",
+    controlname: "dropdown",
+    yourlabel: "Company Branch",
+    referenceTable: "tblCompanyBranch",
+    referenceColumn: "name",
+  },
 ];

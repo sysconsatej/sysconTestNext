@@ -140,7 +140,7 @@ export default function AddEditFormControll() {
           const missingField = Object.entries(fields).find(
             // eslint-disable-next-line no-unused-vars
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -184,7 +184,7 @@ export default function AddEditFormControll() {
           const missingField = Object.entries(fields).find(
             // eslint-disable-next-line no-unused-vars
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -229,7 +229,7 @@ export default function AddEditFormControll() {
     // Sort each group by 'sectionOrder'
     Object.keys(groupedFields).forEach((section) => {
       groupedFields[section].sort(
-        (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0)
+        (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0),
       );
     });
 
@@ -269,7 +269,7 @@ export default function AddEditFormControll() {
                 secondIndex <
                 (
                   formData[item.tableName][firstIndex]?.[
-                  subchildItem.tableName
+                    subchildItem.tableName
                   ] || []
                 ).length;
                 secondIndex++
@@ -284,7 +284,7 @@ export default function AddEditFormControll() {
                     thirdIndex <
                     (
                       formData[item.tableName][firstIndex][
-                      subchildItem.tableName
+                        subchildItem.tableName
                       ][secondIndex][fourthChild.tableName] || []
                     ).length;
                     thirdIndex++
@@ -545,7 +545,7 @@ function ChildAccordianComponent({
     const lastIndex = renderedData.length + 10;
     const newData = newState[section.tableName]?.slice(
       renderedData.length,
-      lastIndex
+      lastIndex,
     );
     setRenderedData((prevData) => [...prevData, ...newData]);
     setDummyData((prevData) => [...prevData, ...newData]);
@@ -569,7 +569,7 @@ function ChildAccordianComponent({
           feild.isRequired &&
           (!Object.prototype.hasOwnProperty.call(
             childObject,
-            feild.fieldname
+            feild.fieldname,
           ) ||
             childObject[feild.fieldname].trim() === "")
         ) {
@@ -607,9 +607,9 @@ function ChildAccordianComponent({
     setNewState((prevState) => {
       const newStateCopy = { ...prevState };
       const updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx !== index
+        (_, idx) => idx !== index,
       );
-      newStateCopy[section.tableName][index].status = 0
+      newStateCopy[section.tableName][index].status = 0;
       console.log("updatedData", updatedData);
       newStateCopy[section.tableName] = updatedData;
       if (newStateCopy[section.tableName].length === 0) {
@@ -852,8 +852,16 @@ function ChildAccordianComponent({
 
   useEffect(() => {
     // Initialize with initial data
-    setRenderedData(newState[section.tableName]?.filter(item => item.status !== 0)?.slice(0, 10)); // Initially render 10 items
-    setDummyData(newState[section.tableName]?.filter(item => item.status !== 0)?.slice(0, 10)); // Initially render 10 items
+    setRenderedData(
+      newState[section.tableName]
+        ?.filter((item) => item.status !== 0)
+        ?.slice(0, 10),
+    ); // Initially render 10 items
+    setDummyData(
+      newState[section.tableName]
+        ?.filter((item) => item.status !== 0)
+        ?.slice(0, 10),
+    ); // Initially render 10 items
   }, [newState]);
 
   useEffect(() => {
@@ -891,8 +899,8 @@ function ChildAccordianComponent({
       const right = Math.round(
         Math.floor(
           tableRef.current?.getBoundingClientRect()?.width +
-          tableRef.current?.scrollLeft
-        )
+            tableRef.current?.scrollLeft,
+        ),
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
         setTableBodyWidth(`${right - 70}`);
@@ -1040,13 +1048,16 @@ function ChildAccordianComponent({
               </div>
             )}
 
-            {newState[section.tableName] && Array.isArray(newState[section.tableName]) &&
-              newState[section.tableName].filter((item) => item.status !== 0).length > 0 && (
+            {newState[section.tableName] &&
+              Array.isArray(newState[section.tableName]) &&
+              newState[section.tableName].filter((item) => item.status !== 0)
+                .length > 0 && (
                 <>
                   {/* Table grid view Section at bottom*/}
                   <div
-                    className={`${inputFieldsVisible ? "" : ""} ${styles.pageBackground
-                      }`}
+                    className={`${inputFieldsVisible ? "" : ""} ${
+                      styles.pageBackground
+                    }`}
                   >
                     <TableContainer
                       component={Paper}
@@ -1085,7 +1096,7 @@ function ChildAccordianComponent({
                                       event,
                                       field.fieldname,
                                       section,
-                                      section.fields
+                                      section.fields,
                                     )
                                   } // Add the right-click handler here
                                   align="left"
@@ -1102,7 +1113,7 @@ function ChildAccordianComponent({
                                       onClick={() => {
                                         inputFieldsVisible == false &&
                                           setInputFieldsVisible(
-                                            (prev) => !prev
+                                            (prev) => !prev,
                                           );
                                       }}
                                     />

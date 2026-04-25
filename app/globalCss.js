@@ -199,10 +199,10 @@ export const dropDownStyleCSS2 = ({ fieldname, isFocused4, value }) => {
       top: isFocused4
         ? "5px"
         : fieldname?.length > 0 && value?.length > 0
-        ? "5px"
-        : fieldname?.length > 0 && value?.length === 0
-        ? "-2px"
-        : "-2px",
+          ? "5px"
+          : fieldname?.length > 0 && value?.length === 0
+            ? "-2px"
+            : "-2px",
     },
     "& .MuiAutocomplete-input": {
       position: "absolute",
@@ -277,10 +277,10 @@ export const dropDownStyleCSS3 = ({ fieldname, isFocused3, value }) => {
       top: isFocused3
         ? "5px"
         : fieldname?.length > 0 && value?.length > 0
-        ? "5px"
-        : fieldname?.length > 0 && value?.length === 0
-        ? "-2px"
-        : "-9px",
+          ? "5px"
+          : fieldname?.length > 0 && value?.length === 0
+            ? "-2px"
+            : "-9px",
 
       // top: isFocused3 ? '5px' : '-10px'
     },
@@ -662,8 +662,10 @@ export const customDataPickerStyleCss = ({ fieldname, isFocused }) => {
   };
 };
 
-
-export const customDataPickerStyleCssForStaticPage = ({ fieldname, isFocused }) => {
+export const customDataPickerStyleCssForStaticPage = ({
+  fieldname,
+  isFocused,
+}) => {
   return {
     // ✅ responsive width: mobile full, tablet half, desktop fixed 10rem
     width: { xs: "100%", sm: "100%", md: "50%", lg: "10rem" },
@@ -729,7 +731,6 @@ export const customDataPickerStyleCssForStaticPage = ({ fieldname, isFocused }) 
   };
 };
 
-
 export const customTimePickerStyleCss = ({ fieldname, isFocused }) => {
   return {
     // ✅ responsive width: mobile full, tablet half, desktop fixed 12rem
@@ -771,7 +772,6 @@ export const customTimePickerStyleCss = ({ fieldname, isFocused }) => {
     },
   };
 };
-
 
 export const customDateTimePickerStyleCss = ({ fieldname, isFocused }) => {
   return {
@@ -1127,7 +1127,7 @@ export const checkBoxStyle = {
 
   "&.MuiCheckbox-root": {
     color: "var(--table-text-color)", // unchecked border/icon color
-    padding: "0 6px",                 // ✅ keeps checkbox centered in 27px height
+    padding: "0 6px", // ✅ keeps checkbox centered in 27px height
     "&:hover": {
       backgroundColor: "transparent",
     },
@@ -1360,6 +1360,70 @@ export const childAccordionSection = {
   },
 };
 
+export const childAccordionSectionCreateFormControl = {
+  backgroundColor: "var(--accordionChildHeaderBg) !important",
+  marginTop: "6px !important",
+  borderRadius: "4px",
+  borderBottom: "1px solid var(--commonBg)",
+  borderLeft: "0.5px solid var(--commonBg)",
+  borderRight: "0.5px solid var(--commonBg)",
+
+  width: "100% !important",
+  maxWidth: "100% !important",
+  minWidth: "100% !important",
+  display: "block",
+  flex: "1 1 100%",
+
+  "&.MuiAccordion-root": {
+    width: "100% !important",
+    maxWidth: "100% !important",
+    minWidth: "100% !important",
+    margin: 0,
+    "&:before": {
+      display: "none",
+    },
+  },
+
+  "& .MuiAccordionSummary-root": {
+    minHeight: "27px !important",
+    height: "27px !important",
+    width: "100%",
+    maxWidth: "100%",
+    paddingLeft: "0px",
+    paddingRight: "8px",
+  },
+
+  "& .MuiAccordionSummary-content": {
+    margin: "0 !important",
+    width: "100%",
+    minWidth: 0,
+  },
+
+  "& .MuiTypography-root": {
+    color: "var(--accordionChildHeaderTextColor)",
+    fontSize: "var(--accordionChildHeaderFontSize)",
+    fontWeight: "var(--accordionChildHeaderFontWeight)",
+  },
+
+  "& .MuiFormControlLabel-root .MuiTypography-root": {
+    color: "var(--inputTextColor)",
+    fontSize: "var(--inputFontSize)",
+    fontWeight: "var(--inputFontWeight)",
+  },
+
+  "& .MuiAccordionDetails-root": {
+    background: "var(--accordionBodyBg) !important",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: "100%",
+    padding: 0,
+  },
+
+  "& .MuiAccordionSummary-root .MuiSvgIcon-root": {
+    color: "var(--accordionChildHeaderTextColor)",
+  },
+};
+
 export const SummaryStyles = {
   "& .MuiAccordionSummary-root.Mui-expanded": {
     minWidth: "0px",
@@ -1424,8 +1488,7 @@ export const navbarStyles =
 export const CompanyLogostyles1 =
   "mx-auto flex flex-row lg:flex-row items-center justify-between flex-nowrap text-blue-gray-900";
 
-export const middleDataStyles =
-  "flex flex-row w-full ml-auto mr-auto";
+export const middleDataStyles = "flex flex-row w-full ml-auto mr-auto";
 
 export const gridEditIconStyles = {
   color: "white",
@@ -1513,7 +1576,8 @@ export const textInputStyle3 = ({ fieldname, isFocused } = {}) => {
 
     "& .MuiInputLabel-root": {
       position: "absolute",
-      top: isFocused || (fieldname && `${fieldname}`.length > 0) ? "3px" : "-2px",
+      top:
+        isFocused || (fieldname && `${fieldname}`.length > 0) ? "3px" : "-2px",
       fontWeight: "var(--inputFontWeight)",
       fontSize: "var(--inputFontSize)",
       color: "var(--inputTextColor)",

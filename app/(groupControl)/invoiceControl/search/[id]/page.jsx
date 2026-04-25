@@ -152,6 +152,15 @@ function groupAndSortFields(fields) {
   return result;
 }
 
+function isConfigFlagEnabled(value) {
+  if (value === true || value === 1 || value === "1") return true;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return ["true", "yes", "y", "t"].includes(normalized);
+  }
+  return false;
+}
+
 function onSubmitFunctionCall(
   functionData,
   newState,
@@ -666,7 +675,7 @@ export default function AddEditFormControll() {
             if (tallyDebitCreditData.success === true) {
               setParaText(tallyDebitCreditData.message);
               setIsError(false);
-              setOpenModal((prev) => !prev);
+              //setOpenModal((prev) => !prev);
               return;
             }
           }
@@ -747,25 +756,21 @@ export default function AddEditFormControll() {
               setIsError(false);
               setOpenModal((prev) => !prev);
             }
-            let invoiceType = "n";
-            if (invoiceType === "y") {
-              if (newState.tableName == "tblInvoice") {
-                let insertData = {
-                  invoiceId: data?.data?.recordset[0]?.ParentId || 0,
-                  billingPartyId: newState.billingPartyId,
-                  companyId: newState.companyId,
-                };
-                let invoiceRes = await eInvoicing(insertData);
-                if (invoiceRes.success == true) {
-                  toast.success(invoiceRes.message);
-                } else {
-                  setNewState((per) => {
-                    return {
-                      ...per,
-                      id: data?.data?.recordset[0]?.ParentId,
-                    };
-                  });
-                  return toast.error(invoiceRes?.message);
+            if (newState.tableName == "tblInvoice") {
+              const insertedInvoiceId =
+                data?.data?.recordset?.at(-1)?.id ??
+                data?.data?.recordset?.at(-1)?.ParentId ??
+                data?.data?.recordset?.at(-1)?.InsertedId ??
+                0;
+
+              if (insertedInvoiceId) {
+                const invoiceRes = await eInvoicing({
+                  invoiceId: insertedInvoiceId,
+                  billingPartyId: newState?.billingPartyId,
+                });
+
+                if (invoiceRes?.success !== true) {
+                  toast.error(invoiceRes?.message || "E-Invoicing failed.");
                 }
               }
             }
@@ -777,6 +782,7 @@ export default function AddEditFormControll() {
           toast.error(error.message);
           setIsFormSaved(false);
         }
+        setOpenModal(false);
       } else {
         toast.error("No changes made");
       }
@@ -2352,86 +2358,192 @@ export default function AddEditFormControll() {
       }));
     }
   }
+  // useEffect(() => {
+  //   if (isVoucherDrivenForm()) return;
+
+  //   console.log("changes in charges", newState?.tblInvoiceCharge);
+
+  //   const charges = newState?.tblInvoiceCharge || [];
+
+  //   const totalAmount = charges.reduce(
+  //     (acc, item) => acc + (Number(item?.totalAmountHc) || 0),
+  //     0
+  //   );
+
+  //   const taxAmount = charges.reduce((acc, item) => {
+  //     const isTaxApplicable =
+  //       item?.taxApplicable === true ||
+  //       item?.taxApplicable === "true" ||
+  //       item?.taxApplicable === 1;
+
+  //     const temp = (item?.tblInvoiceChargeTax || []).reduce((acc1, item1) => {
+  //       return isTaxApplicable ? acc1 + (Number(item1?.taxAmountHc) || 0) : acc1;
+  //     }, 0);
+
+  //     return acc + temp;
+  //   }, 0);
+
+  //   const totalAmountFc = charges.reduce(
+  //     (acc, item) => acc + (Number(item?.totalAmountFc) || 0),
+  //     0
+  //   );
+
+  //   const taxAmountFc = charges.reduce((acc, item) => {
+  //     const isTaxApplicable =
+  //       item?.taxApplicable === true ||
+  //       item?.taxApplicable === "true" ||
+  //       item?.taxApplicable === 1;
+
+  //     const temp = (item?.tblInvoiceChargeTax || []).reduce((acc1, item1) => {
+  //       return isTaxApplicable ? acc1 + (Number(item1?.taxAmountFc) || 0) : acc1;
+  //     }, 0);
+
+  //     return acc + temp;
+  //   }, 0);
+
+  //   const tdsAmount = charges.reduce((acc, item) => {
+  //     const temp = (item?.tblInvoiceChargeTds || []).reduce((acc1, item1) => {
+  //       const isTdsApplicable =
+  //         item1?.tdsApplicable === true ||
+  //         item1?.tdsApplicable === "true" ||
+  //         item1?.tdsApplicable === 1;
+
+  //       return isTdsApplicable
+  //         ? acc1 + (Number(item1?.tdsAmountHc) || 0)
+  //         : acc1;
+  //     }, 0);
+
+  //     return acc + temp;
+  //   }, 0);
+
+  //   const tdsAmountFc = charges.reduce((acc, item) => {
+  //     const temp = (item?.tblInvoiceChargeTds || []).reduce((acc1, item1) => {
+  //       const isTdsApplicable =
+  //         item1?.tdsApplicable === true ||
+  //         item1?.tdsApplicable === "true" ||
+  //         item1?.tdsApplicable === 1;
+
+  //       return isTdsApplicable
+  //         ? acc1 + (Number(item1?.tdsAmountFc) || 0)
+  //         : acc1;
+  //     }, 0);
+
+  //     return acc + temp;
+  //   }, 0);
+
+  //   const safeTaxAmount = Number.isNaN(taxAmount) ? 0 : taxAmount;
+  //   const safeTaxAmountFc = Number.isNaN(taxAmountFc) ? 0 : taxAmountFc;
+  //   const safeTdsAmount = Number.isNaN(tdsAmount) ? 0 : tdsAmount;
+  //   const safeTdsAmountFc = Number.isNaN(tdsAmountFc) ? 0 : tdsAmountFc;
+
+  //   let totalInvoiceAmount =  Number((totalAmount + safeTaxAmount).toFixed(2));;
+  //   let totalInvoiceAmountFc = Number((totalAmountFc + safeTaxAmountFc).toFixed(2));
+
+  //   getRoundOffSetting(
+  //     totalInvoiceAmount,
+  //     totalInvoiceAmountFc,
+  //     totalAmount,
+  //     safeTaxAmount,
+  //     safeTaxAmountFc,
+  //     totalAmountFc,
+  //     safeTdsAmount,
+  //     safeTdsAmountFc
+  //   );
+  // }, [newState?.tblInvoiceCharge, newState?.tblInvoiceCharge?.length, invoiceRoundOff]);
+
+  // new useffect to set decimal
   useEffect(() => {
     if (isVoucherDrivenForm()) return;
 
     console.log("changes in charges", newState?.tblInvoiceCharge);
 
+    const round2 = (val) => (Number(val) || 0).toFixed(2);
+
     const charges = newState?.tblInvoiceCharge || [];
 
-    const totalAmount = charges.reduce(
-      (acc, item) => acc + (Number(item?.totalAmountHc) || 0),
-      0
+    const totalAmount = round2(
+      charges.reduce((acc, item) => acc + (Number(item?.totalAmountHc) || 0), 0)
     );
 
-    const taxAmount = charges.reduce((acc, item) => {
-      const isTaxApplicable =
-        item?.taxApplicable === true ||
-        item?.taxApplicable === "true" ||
-        item?.taxApplicable === 1;
+    const taxAmount = round2(
+      charges.reduce((acc, item) => {
+        const isTaxApplicable =
+          item?.taxApplicable === true ||
+          item?.taxApplicable === "true" ||
+          item?.taxApplicable === 1;
 
-      const temp = (item?.tblInvoiceChargeTax || []).reduce((acc1, item1) => {
-        return isTaxApplicable ? acc1 + (Number(item1?.taxAmountHc) || 0) : acc1;
-      }, 0);
+        const temp = (item?.tblInvoiceChargeTax || []).reduce((acc1, item1) => {
+          return isTaxApplicable
+            ? acc1 + (Number(item1?.taxAmountHc) || 0)
+            : acc1;
+        }, 0);
 
-      return acc + temp;
-    }, 0);
-
-    const totalAmountFc = charges.reduce(
-      (acc, item) => acc + (Number(item?.totalAmountFc) || 0),
-      0
+        return acc + temp;
+      }, 0)
     );
 
-    const taxAmountFc = charges.reduce((acc, item) => {
-      const isTaxApplicable =
-        item?.taxApplicable === true ||
-        item?.taxApplicable === "true" ||
-        item?.taxApplicable === 1;
+    const totalAmountFc = round2(
+      charges.reduce((acc, item) => acc + (Number(item?.totalAmountFc) || 0), 0)
+    );
 
-      const temp = (item?.tblInvoiceChargeTax || []).reduce((acc1, item1) => {
-        return isTaxApplicable ? acc1 + (Number(item1?.taxAmountFc) || 0) : acc1;
-      }, 0);
+    const taxAmountFc = round2(
+      charges.reduce((acc, item) => {
+        const isTaxApplicable =
+          item?.taxApplicable === true ||
+          item?.taxApplicable === "true" ||
+          item?.taxApplicable === 1;
 
-      return acc + temp;
-    }, 0);
+        const temp = (item?.tblInvoiceChargeTax || []).reduce((acc1, item1) => {
+          return isTaxApplicable
+            ? acc1 + (Number(item1?.taxAmountFc) || 0)
+            : acc1;
+        }, 0);
 
-    const tdsAmount = charges.reduce((acc, item) => {
-      const temp = (item?.tblInvoiceChargeTds || []).reduce((acc1, item1) => {
-        const isTdsApplicable =
-          item1?.tdsApplicable === true ||
-          item1?.tdsApplicable === "true" ||
-          item1?.tdsApplicable === 1;
+        return acc + temp;
+      }, 0)
+    );
 
-        return isTdsApplicable
-          ? acc1 + (Number(item1?.tdsAmountHc) || 0)
-          : acc1;
-      }, 0);
+    const tdsAmount = round2(
+      charges.reduce((acc, item) => {
+        const temp = (item?.tblInvoiceChargeTds || []).reduce((acc1, item1) => {
+          const isTdsApplicable =
+            item1?.tdsApplicable === true ||
+            item1?.tdsApplicable === "true" ||
+            item1?.tdsApplicable === 1;
 
-      return acc + temp;
-    }, 0);
+          return isTdsApplicable
+            ? acc1 + (Number(item1?.tdsAmountHc) || 0)
+            : acc1;
+        }, 0);
 
-    const tdsAmountFc = charges.reduce((acc, item) => {
-      const temp = (item?.tblInvoiceChargeTds || []).reduce((acc1, item1) => {
-        const isTdsApplicable =
-          item1?.tdsApplicable === true ||
-          item1?.tdsApplicable === "true" ||
-          item1?.tdsApplicable === 1;
+        return acc + temp;
+      }, 0)
+    );
 
-        return isTdsApplicable
-          ? acc1 + (Number(item1?.tdsAmountFc) || 0)
-          : acc1;
-      }, 0);
+    const tdsAmountFc = round2(
+      charges.reduce((acc, item) => {
+        const temp = (item?.tblInvoiceChargeTds || []).reduce((acc1, item1) => {
+          const isTdsApplicable =
+            item1?.tdsApplicable === true ||
+            item1?.tdsApplicable === "true" ||
+            item1?.tdsApplicable === 1;
 
-      return acc + temp;
-    }, 0);
+          return isTdsApplicable
+            ? acc1 + (Number(item1?.tdsAmountFc) || 0)
+            : acc1;
+        }, 0);
 
-    const safeTaxAmount = Number.isNaN(taxAmount) ? 0 : taxAmount;
-    const safeTaxAmountFc = Number.isNaN(taxAmountFc) ? 0 : taxAmountFc;
-    const safeTdsAmount = Number.isNaN(tdsAmount) ? 0 : tdsAmount;
-    const safeTdsAmountFc = Number.isNaN(tdsAmountFc) ? 0 : tdsAmountFc;
+        return acc + temp;
+      }, 0)
+    );
 
-    let totalInvoiceAmount = totalAmount + safeTaxAmount;
-    let totalInvoiceAmountFc = totalAmountFc + safeTaxAmountFc;
+    const safeTaxAmount = round2(Number.isNaN(Number(taxAmount)) ? 0 : taxAmount);
+    const safeTaxAmountFc = round2(Number.isNaN(Number(taxAmountFc)) ? 0 : taxAmountFc);
+    const safeTdsAmount = round2(Number.isNaN(Number(tdsAmount)) ? 0 : tdsAmount);
+    const safeTdsAmountFc = round2(Number.isNaN(Number(tdsAmountFc)) ? 0 : tdsAmountFc);
+
+    const totalInvoiceAmount = round2(Number(totalAmount) + Number(safeTaxAmount));
+    const totalInvoiceAmountFc = round2(Number(totalAmountFc) + Number(safeTaxAmountFc));
 
     getRoundOffSetting(
       totalInvoiceAmount,
@@ -2444,6 +2556,7 @@ export default function AddEditFormControll() {
       safeTdsAmountFc
     );
   }, [newState?.tblInvoiceCharge, newState?.tblInvoiceCharge?.length, invoiceRoundOff]);
+  //till here 
 
   const recalculateAllChargeTaxes = async () => {
     const charges = newState?.tblInvoiceCharge || [];
@@ -2524,44 +2637,45 @@ export default function AddEditFormControll() {
     chargeTaxRecalcDependency,
   ]);
 
-  useEffect(() => {
-    if (!Array.isArray(newState?.tblInvoiceCharge)) return;
+  // useEffect(() => {
+  //   if (!Array.isArray(newState?.tblInvoiceCharge)) return;
 
-    const updatedCharges = newState.tblInvoiceCharge.map((item) => {
-      const qty = parseFloat(item.qty) || 0;
-      const rate = parseFloat(item.rate) || 0;
-      const exchangeRate = parseFloat(item.exchangeRate) || 0;
-      const noOfDays = parseFloat(item.noOfDays);
+  //   const updatedCharges = newState.tblInvoiceCharge.map((item) => {
+  //     const qty = parseFloat(item.qty) || 0;
+  //     const rate = parseFloat(item.rate) || 0;
+  //     const exchangeRate = parseFloat(item.exchangeRate) || 0;
+  //     const noOfDays = parseFloat(item.noOfDays);
 
-      const effectiveNoOfDays = isNaN(noOfDays) || noOfDays <= 0 ? 1 : noOfDays;
+  //     const effectiveNoOfDays = isNaN(noOfDays) || noOfDays <= 0 ? 1 : noOfDays;
 
-      const totalAmountFc = qty * rate * effectiveNoOfDays;
-      const totalAmount = totalAmountFc * exchangeRate;
+  //     const totalAmountFc = qty * rate * effectiveNoOfDays;
+  //     const totalAmount = totalAmountFc * exchangeRate;
 
-      if (
-        Number(item.totalAmountFc) === Number(totalAmountFc.toFixed(2)) &&
-        Number(item.totalAmountHc) === Number(totalAmount.toFixed(2))
-      ) {
-        return item; // no change
-      }
+  //     if (
+  //       Number(item.totalAmountFc) === Number(totalAmountFc.toFixed(2)) &&
+  //       Number(item.totalAmountHc) === Number(totalAmount.toFixed(2))
+  //     ) {
+  //       return item; // no change
+  //     }
 
-      return {
-        ...item,
-        totalAmountFc: totalAmountFc.toFixed(2),
-        totalAmountHc: totalAmount.toFixed(2),
-      };
-    });
+  //     return {
+  //       ...item,
+  //       totalAmountFc: totalAmountFc.toFixed(2),
+  //       totalAmountHc: totalAmount.toFixed(2),
+  //     };
+  //   });
 
-    if (
-      JSON.stringify(updatedCharges) !==
-      JSON.stringify(newState.tblInvoiceCharge)
-    ) {
-      setNewState((prev) => ({
-        ...prev,
-        tblInvoiceCharge: updatedCharges,
-      }));
-    }
-  }, [newState?.tblInvoiceCharge]);
+  //   if (
+  //     JSON.stringify(updatedCharges) !==
+  //     JSON.stringify(newState.tblInvoiceCharge)
+  //   ) {
+  //     setNewState((prev) => ({
+  //       ...prev,
+  //       tblInvoiceCharge: updatedCharges,
+  //     }));
+  //   }
+  // }, [newState?.tblInvoiceCharge]);
+  
 
   function onLoadFunctionCall(
     functionData,
@@ -3638,6 +3752,8 @@ function ChildAccordianComponent({
   const [calculateData, setCalculateData] = useState(0);
   const [dummyFieldArray, setDummyFieldArray] = useState([]);
   const [tableBodyWidth, setTableBodyWidth] = useState("0px");
+  const isChildAddHidden = isConfigFlagEnabled(section?.isAddHide);
+  const isChildDeleteHidden = isConfigFlagEnabled(section?.isDeleteHide);
 
 
   const handleFieldChildrenValuesChange = (updatedValues) => {
@@ -3719,6 +3835,7 @@ function ChildAccordianComponent({
   // };
 
   const childButtonHandler = (section, indexValue, islastTab) => {
+    if (isConfigFlagEnabled(section?.isAddHide)) return;
     //    console.log("childButtonHandler", section);
     if (isChildAccordionOpen) {
       setClickCount((prevCount) => prevCount + 1);
@@ -4048,6 +4165,7 @@ function ChildAccordianComponent({
   };
 
   const deleteChildRecord = (index) => {
+    if (isChildDeleteHidden) return;
     setNewState((prevState) => {
       const newStateCopy = { ...prevState };
       const updatedData = newStateCopy[section.tableName].filter(
@@ -4617,7 +4735,7 @@ function ChildAccordianComponent({
           <div key={indexValue} className=" w-full ">
             {/* Icon Button on the right */}
             <div className="absolute top-1 right-[-3px] flex  justify-end">
-              {clickCount === 0 && (
+              {!isChildAddHidden && clickCount === 0 && (
                 <HoverIcon
                   defaultIcon={addLogo}
                   hoverIcon={plusIconHover}
@@ -4631,7 +4749,7 @@ function ChildAccordianComponent({
             </div>
 
             {/* Custom Input Fields in the middle */}
-            {inputFieldsVisible && (
+            {!isChildAddHidden && inputFieldsVisible && (
               <div
                 className={` overflow-hidden  flex    items-start gap-4 mt-[0.5rem] ml-[1rem] mb-[0.5rem]  justify-between`}
               >
@@ -4759,7 +4877,8 @@ function ChildAccordianComponent({
                                       >
                                         {index === 0 &&
                                           (section?.showSrNo === true ||
-                                            section?.showSrNo === "true") && (
+                                            section?.showSrNo === "true") &&
+                                          !isChildAddHidden && (
                                             <HoverIcon
                                               defaultIcon={addLogo}
                                               hoverIcon={plusIconHover}
@@ -4798,6 +4917,7 @@ function ChildAccordianComponent({
                                     } // Add the right-click handler here
                                   >
                                     {index === 0 &&
+                                      !isChildAddHidden &&
                                       !(section?.showSrNo == true ||
                                         section?.showSrNo == "true") && (
                                         <HoverIcon
@@ -4849,7 +4969,6 @@ function ChildAccordianComponent({
                               childIndex={index}
                               childName={section.tableName}
                               subChild={section.subChild}
-                              sectionData={section}
                               key={index}
                               row={row}
                               newState={newState}
@@ -4879,6 +4998,10 @@ function ChildAccordianComponent({
                               }
                               formControlData={formControlData}
                               setFormControlData={setFormControlData}
+                              sectionData={{
+                                ...section,
+                                isDeleteHide: isChildDeleteHidden,
+                              }}
                               showSrNo={
                                 section?.showSrNo === true ||
                                 section?.showSrNo === "true"

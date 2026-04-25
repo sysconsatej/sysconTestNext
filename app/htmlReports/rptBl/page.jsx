@@ -51,6 +51,13 @@ function rptAirwayBill() {
 
     loadHtml2pdf();
   }, []);
+  const storedUserData = localStorage.getItem("userData");
+  let signatureLogoPath = null;
+  if (storedUserData) {
+    const decryptedData = decrypt(storedUserData);
+    const userData = JSON.parse(decryptedData);
+    signatureLogoPath = userData[0]?.signatureLogoPath;
+  }
 
   useEffect(() => {
     const storedReportIds = sessionStorage.getItem("selectedReportIds");
@@ -20676,7 +20683,7 @@ function rptAirwayBill() {
           </div>
           <div style={{ width: "12%" }}>
             <p className="text-black text-xs font-bold text-right p-1">
-              {bldata?.blType}
+              {bldata?.blTypeInfo}
             </p>
           </div>
         </div>
@@ -21049,41 +21056,37 @@ function rptAirwayBill() {
                     className="text-left align-top"
                     style={{ fontSize: "9px" }}
                   >
-                    {(bldata?.marksAndNosDetails || "").replace(
+                    {(bldata?.containerMarksAndNos || "").replace(
                       /\r\n|\r/g,
                       "\n",
                     )}
                   </pre>
 
-                  {Array.isArray(bldata?.tblBlContainer) && (
+                  {/* {Array.isArray(bldata?.tblBlContainer) && (
                     <>
                       {bldata.tblBlContainer.length <= 4 ? (
-                        // Case: 4 or fewer containers
                         bldata.tblBlContainer.slice(0, 4).map((c, idx) => (
                           <div key={idx} className="leading-tight mt-2">
                             <div>
                               {c?.containerNo ?? ""}
-                              {c?.sizeType ? ` ${c.sizeType}` : ""}
-                              {c?.agentSealNo ?? ""} {c?.customSealNo ?? ""}
+                              {c?.sizeType ? ` ${c.sizeType}` : ""} <br />
+                              Agent Seal No: {c?.agentSealNo ?? ""} {c?.customSealNo ?? ""}
                             </div>
                             <div>PKGS: {c?.package ?? ""}</div>
                             <div>GW: {c?.grossWt ?? ""}</div>
                             <div>NW: {c?.netWt ?? ""}</div>
-                            {/* <div>CBM: {c?.tareWt ?? ""}</div> */}
                           </div>
                         ))
-                      ) : (
-                        // Case: more than 4 containers – show alternative content
+                      ) : (bldata?.containerMarksAndNosAttach ?? "").trim() !== "" ? (
                         <div
                           className="text-black font-bold mt-2"
                           style={{ fontSize: "9px" }}
                         >
-                          {/* Replace this line with your custom display as per the attached sheet */}
                           CONTAINER DETAILS ATTACHED AS PER AS PER ANNEXURE .
                         </div>
-                      )}
+                      ) : null}
                     </>
-                  )}
+                  )} */}
                 </td>
 
                 <td
@@ -21239,7 +21242,7 @@ function rptAirwayBill() {
                 <div>
                   <p
                     style={{ fontSize: "8px", fontWeight: "bold" }}
-                    className="text-left align-top p-2"
+                    className="text-left align-top pt-2 pl-2 pr-2"
                   >
                     In witness of the contract herein the above stated number of
                     originals have been issued on which being accomplished the
@@ -21257,8 +21260,20 @@ function rptAirwayBill() {
                   >
                     For {bldata?.company}
                   </p>
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <img
+                      src={`${baseUrlNext}${signatureLogoPath}`}
+                      alt="Authorised Signatory"
+                      style={{
+                        height: "40px",
+                        width: "40px",
+                        padding: "0px",
+                        marginRight: "60px",
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="flex mt-6">
+                <div className="flex">
                   <div>
                     <p
                       style={{ fontSize: "9px", fontWeight: "bold" }}
@@ -21827,7 +21842,7 @@ function rptAirwayBill() {
               </div> */}
               <div>
                 {Array.isArray(bldata.tblBlContainer) &&
-                  bldata.tblBlContainer.length < 4 ? (
+                bldata.tblBlContainer.length < 4 ? (
                   <p></p>
                 ) : (
                   <p>– Continuing on Attach Sheet</p>
@@ -23162,24 +23177,39 @@ function rptAirwayBill() {
               </div>
 
               {/* Office / Logo block */}
-              <div className="" style={{ height: "78%", position: "relative" }}>
-                {/* watermark-ish (optional, very light) */}
-                {/* <div
+              <div style={{ height: "78%", position: "relative" }}>
+                <div
                   style={{
-                    position: "absolute",
-                    inset: 0,
+                    height: "100%",
+                    width: "100%",
                     display: "flex",
-                    alignItems: "center",
                     justifyContent: "center",
-                    pointerEvents: "none",
-                    opacity: 0.05,
-                    fontSize: "30px",
-                    fontWeight: 800,
-                    transform: "rotate(-18deg)",
+                    alignItems: "center",
+                    overflow: "hidden",
                   }}
                 >
-                  NEGOTIABLE
-                </div> */}
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "200px",
+                      overflow: "hidden",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <img
+                      src={`${baseUrlNext}${signatureLogoPath}`}
+                      alt="Authorised Signatory"
+                      style={{
+                        width: "100%",
+                        height: "200px",
+                        objectFit: "contain",
+                        transformOrigin: "center",
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -23450,7 +23480,7 @@ function rptAirwayBill() {
                 transform: "rotate(-18deg)",
               }}
             >
-              NON-NEGOTIABLE
+              {bldata?.blTypeInfo}
             </div>
           </div>
           {/* ===================== BOTTOM SECTION ===================== */}
@@ -27254,34 +27284,94 @@ function rptAirwayBill() {
           margin: "0 auto",
           backgroundColor: "white",
         }}
-      ><div className="border-t border-l border-r  border border-black font-bold text-center " style={{ height: "5%", minHeight: "5%", maxHeight: "5%" }}>
+      >
+        <div
+          className="border-t border-l border-r  border border-black font-bold text-center "
+          style={{ height: "5%", minHeight: "5%", maxHeight: "5%" }}
+        >
           <span>COMBINED TRANSPORT DOCUMENT BILL OF LADING</span>
         </div>
-        <div className="border-r border-l border-black flex" style={{ height: "22%", width: "100%", fontSize: "10px", minHeight: "22%", maxHeight: "22%" }}>
+        <div
+          className="border-r border-l border-black flex"
+          style={{
+            height: "22%",
+            width: "100%",
+            fontSize: "10px",
+            minHeight: "22%",
+            maxHeight: "22%",
+          }}
+        >
           <div className="border-r border-black" style={{ width: "50%" }}>
-            <div className="border-b border-black" style={{ height: "33%" }}>shipper</div>
-            <div className="border-b border-black" style={{ height: "33%" }}>consignee</div>
+            <div className="border-b border-black" style={{ height: "33%" }}>
+              shipper
+            </div>
+            <div className="border-b border-black" style={{ height: "33%" }}>
+              consignee
+            </div>
             <div style={{ height: "34%" }}>notify party</div>
           </div>
           <div style={{ width: "50%", fontSize: "10px" }}>
-            <div className="border-b border-black" style={{ height: "23%" }}>blno:</div>
-            <div className="border-b border-black" style={{ height: "43%" }}>image</div>
+            <div className="border-b border-black" style={{ height: "23%" }}>
+              blno:
+            </div>
+            <div className="border-b border-black" style={{ height: "43%" }}>
+              image
+            </div>
             <div style={{ height: "34%" }}>delivery agent</div>
           </div>
         </div>
-        <div className="border-r border-l border-b border-t border-black flex" style={{ height: "4%", width: "100%", fontSize: "10px", minHeight: "4%", maxHeight: "4%" }}>
-          <div className="border-r border-black " style={{ width: "25%" }}>vessel</div>
-          <div className="border-r border-black " style={{ width: "25%" }}>voyage</div>
-          <div className="border-r border-black " style={{ width: "25%" }}>place of receipt</div>
+        <div
+          className="border-r border-l border-b border-t border-black flex"
+          style={{
+            height: "4%",
+            width: "100%",
+            fontSize: "10px",
+            minHeight: "4%",
+            maxHeight: "4%",
+          }}
+        >
+          <div className="border-r border-black " style={{ width: "25%" }}>
+            vessel
+          </div>
+          <div className="border-r border-black " style={{ width: "25%" }}>
+            voyage
+          </div>
+          <div className="border-r border-black " style={{ width: "25%" }}>
+            place of receipt
+          </div>
           <div style={{ width: "25%" }}>place of delivery</div>
         </div>
-        <div className="border-r border-l border-black flex" style={{ height: "4%", width: "100%", fontSize: "10px", minHeight: "4%", maxHeight: "4%" }}>
-          <div className="border-r border-black " style={{ width: "25%" }}>port of loading</div>
-          <div className="border-r border-black " style={{ width: "25%" }}>port of discharge</div>
-          <div className="border-r border-black " style={{ width: "25%" }}></div>
+        <div
+          className="border-r border-l border-black flex"
+          style={{
+            height: "4%",
+            width: "100%",
+            fontSize: "10px",
+            minHeight: "4%",
+            maxHeight: "4%",
+          }}
+        >
+          <div className="border-r border-black " style={{ width: "25%" }}>
+            port of loading
+          </div>
+          <div className="border-r border-black " style={{ width: "25%" }}>
+            port of discharge
+          </div>
+          <div
+            className="border-r border-black "
+            style={{ width: "25%" }}
+          ></div>
           <div style={{ width: "25%" }}></div>
         </div>
-        <div className="border-r border-l border-t border-black text-center font-bold" style={{ height: "3%", fontSize: "11px", minHeight: "3%", maxHeight: "3%" }}>
+        <div
+          className="border-r border-l border-t border-black text-center font-bold"
+          style={{
+            height: "3%",
+            fontSize: "11px",
+            minHeight: "3%",
+            maxHeight: "3%",
+          }}
+        >
           PARTICULAR FURNISHED BY SHIPPER-CARRIER NOT RESPONSIBLE
         </div>
         {/* <div className="border-r border-l border-t border-black" style={{ height: "30%", fontSize: "10px", minHeight: "30%", maxHeight: "30%" }}>lesson</div> */}
@@ -27303,7 +27393,8 @@ function rptAirwayBill() {
                 </th>
 
                 <th style={{ width: "13%", textAlign: "center" }}>
-                  Number and Type of<br />
+                  Number and Type of
+                  <br />
                   Package
                 </th>
 
@@ -27312,12 +27403,17 @@ function rptAirwayBill() {
                 </th>
 
                 <th style={{ width: "17%", textAlign: "center" }}>
-                  GROSS WEIGHT<br />
+                  GROSS WEIGHT
+                  <br />
                   (KGS)
                 </th>
 
-                <th className="p-1" style={{ width: "17%", textAlign: "center" }}>
-                  MEASUREMENT<br />
+                <th
+                  className="p-1"
+                  style={{ width: "17%", textAlign: "center" }}
+                >
+                  MEASUREMENT
+                  <br />
                   (M3)
                 </th>
               </tr>
@@ -27369,35 +27465,74 @@ function rptAirwayBill() {
             </tbody>
           </table>
         </div>
-        <div className="border-r border-l border-black  font-bold" style={{ height: "2%", fontSize: "11px", minHeight: "2%", maxHeight: "2%" }}>
-          above particulars as declared by shipper ,but without responsibility of or representation by Carrier
+        <div
+          className="border-r border-l border-black  font-bold"
+          style={{
+            height: "2%",
+            fontSize: "11px",
+            minHeight: "2%",
+            maxHeight: "2%",
+          }}
+        >
+          above particulars as declared by shipper ,but without responsibility
+          of or representation by Carrier
         </div>
-        <div className="border border-black flex" style={{ height: "10%", fontSize: "10px", minHeight: "10%", maxHeight: "10%", width: "100%" }}>
-          <div className="" style={{ width: "20%" }}>rate</div>
-          <div className="" style={{ width: "20%" }}>unit</div>
-          <div className="" style={{ width: "20%" }}>currency</div>
-          <div className="" style={{ width: "20%" }}>prepaid</div>
-          <div className="" style={{ width: "20%" }}>collect</div>
-        </div>
-        <div className="border-r border-l border-b border-black flex" style={{ height: "20%", fontSize: "10px", minHeight: "20%", maxHeight: "20%", width: "100%" }}>
-          <div className="border-r  border-black" style={{ width: "50%" }}></div>
-          <div className="" style={{ width: "50%", fontSize: "9px" }}>
-            PRINCIPAL SPECIFIC TERMS & CONDITIONS
-            RECEIVED FOR SHIPMENT from the MERCHANT in apparent good order and condition unless otherwise stated herein, the GOODS mentioned above to be transported as provided herein, by any
-            mode of transport for all or any part of the Carriage, SUBJECT TO ALL THE TERMS AND CONDITIONS
-            appear- ing on the face and back hereof and in the CARRIER’S applicable Tariff, to which the
-            Merchant agrees by accepting this BILL OF LADING. Where applicable law requires and not
-            otherwise, one original Bill OF LADING must be surrendered, duly endorsed, in exchange for the
-            GOODS or CONTAINER(S) or other PACKAGE(S), the others to stand void. If a ‘Non-Negotiable’ BILL
-            OF LADING is issued, neither an original nor a copy need be sur-rendered in exchange for delivery
-            unless applicable law so requires
-            signed on behalf of the carrier SATT SHIPPING LINE
-
+        <div
+          className="border border-black flex"
+          style={{
+            height: "10%",
+            fontSize: "10px",
+            minHeight: "10%",
+            maxHeight: "10%",
+            width: "100%",
+          }}
+        >
+          <div className="" style={{ width: "20%" }}>
+            rate
+          </div>
+          <div className="" style={{ width: "20%" }}>
+            unit
+          </div>
+          <div className="" style={{ width: "20%" }}>
+            currency
+          </div>
+          <div className="" style={{ width: "20%" }}>
+            prepaid
+          </div>
+          <div className="" style={{ width: "20%" }}>
+            collect
           </div>
         </div>
-
-
-
+        <div
+          className="border-r border-l border-b border-black flex"
+          style={{
+            height: "20%",
+            fontSize: "10px",
+            minHeight: "20%",
+            maxHeight: "20%",
+            width: "100%",
+          }}
+        >
+          <div
+            className="border-r  border-black"
+            style={{ width: "50%" }}
+          ></div>
+          <div className="" style={{ width: "50%", fontSize: "9px" }}>
+            PRINCIPAL SPECIFIC TERMS & CONDITIONS RECEIVED FOR SHIPMENT from the
+            MERCHANT in apparent good order and condition unless otherwise
+            stated herein, the GOODS mentioned above to be transported as
+            provided herein, by any mode of transport for all or any part of the
+            Carriage, SUBJECT TO ALL THE TERMS AND CONDITIONS appear- ing on the
+            face and back hereof and in the CARRIER’S applicable Tariff, to
+            which the Merchant agrees by accepting this BILL OF LADING. Where
+            applicable law requires and not otherwise, one original Bill OF
+            LADING must be surrendered, duly endorsed, in exchange for the GOODS
+            or CONTAINER(S) or other PACKAGE(S), the others to stand void. If a
+            ‘Non-Negotiable’ BILL OF LADING is issued, neither an original nor a
+            copy need be sur-rendered in exchange for delivery unless applicable
+            law so requires signed on behalf of the carrier SATT SHIPPING LINE
+          </div>
+        </div>
       </div>
     );
   };
@@ -27761,8 +27896,9 @@ function rptAirwayBill() {
                   <div
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
-                    className={`bg-white ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      }`}
+                    className={`bg-white ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    }`}
                     style={{
                       width: "297mm", // A4 landscape width
                       height: "210mm", // A4 landscape height
@@ -27986,8 +28122,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -28362,8 +28498,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -28549,9 +28685,6 @@ function rptAirwayBill() {
                 bldata?.marksAndNosDetailsAttach || "",
                 { debug: true }, // optional
               );
-
-              console.log("cutDataFromBack RESULT:", result);
-
               // --- utilities (inline) ---
               const splitLines = (txt) =>
                 txt ? String(txt).split(/\r?\n/) : [];
@@ -28649,52 +28782,54 @@ function rptAirwayBill() {
               };
 
               // Your grid columns
-              const columns = [
-                {
-                  key: "containerNumber",
-                  header: "Container No.",
-                  render: (c) => c.containerNumber,
-                  align: "center",
-                },
-                {
-                  key: "Marks",
-                  header: "Marks",
-                  render: (c) => c.containerNumber,
-                  align: "center",
-                },
-                {
-                  key: "size",
-                  header: "Type",
-                  render: (c) => `${c.sizeType || ""}`.trim(),
-                  align: "center",
-                },
-                {
-                  key: "seal",
-                  header: "Agent/Custom Seal No",
-                  render: (c) =>
-                    `${c.customSealNo || ""} ${c.agentSealNo || ""}`.trim(),
-                  align: "center",
-                },
-                {
-                  key: "No of Packages",
-                  header: "Packages",
-                  render: (c) =>
-                    `${c.noOfPackages || ""} ${c.packageCode || ""}`.trim(),
-                  align: "center",
-                },
-                {
-                  key: "grossWt",
-                  header: "Gross WT (KGS)",
-                  render: (c) => c.grossWt || "",
-                  align: "center",
-                },
-                {
-                  key: "netWt",
-                  header: "Net Wt (KGS)",
-                  render: (c) => `${c.netWt || ""}`.trim(),
-                  align: "center",
-                },
-              ];
+              // const columns = [
+              //   {
+              //     key: "containerNumber",
+              //     header: "Container No.",
+              //     render: (c) => c.containerNumber,
+              //     align: "center",
+              //   },
+              //   {
+              //     key: "Marks",
+              //     header: "Marks",
+              //     render: (c) => c.containerNumber,
+              //     align: "center",
+              //   },
+              //   {
+              //     key: "size",
+              //     header: "Type",
+              //     render: (c) => `${c.sizeType || ""}`.trim(),
+              //     align: "center",
+              //   },
+              //   {
+              //     key: "seal",
+              //     header: "Agent/Custom Seal No",
+              //     render: (c) =>
+              //       `${c.customSealNo || ""} ${c.agentSealNo || ""}`.trim(),
+              //     align: "center",
+              //   },
+              //   {
+              //     key: "No of Packages",
+              //     header: "Packages",
+              //     render: (c) =>
+              //       `${c.noOfPackages || ""} ${c.packageCode || ""}`.trim(),
+              //     align: "center",
+              //   },
+              //   {
+              //     key: "grossWt",
+              //     header: "Gross WT (KGS)",
+              //     render: (c) => c.grossWt || "",
+              //     align: "center",
+              //   },
+              //   {
+              //     key: "netWt",
+              //     header: "Net Wt (KGS)",
+              //     render: (c) => `${c.netWt || ""}`.trim(),
+              //     align: "center",
+              //   },
+              // ];
+
+              const columns = [];
 
               return (
                 // ⬇️ single wrapper so ref captures EVERYTHING (main + attachments + grid pages)
@@ -28759,8 +28894,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
 
                       const showThisPage =
@@ -29065,8 +29200,9 @@ function rptAirwayBill() {
                   key: "No of Packages",
                   header: "Packages",
                   render: (c) =>
-                    `${c.noOfPackages || ""}${" "}${c.packageCode || ""
-                      }`.trim(),
+                    `${c.noOfPackages || ""}${" "}${
+                      c.packageCode || ""
+                    }`.trim(),
                   align: "center",
                 },
                 {
@@ -29151,8 +29287,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -29520,8 +29656,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -29896,8 +30032,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -30272,8 +30408,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||

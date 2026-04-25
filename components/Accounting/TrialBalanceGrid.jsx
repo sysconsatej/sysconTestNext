@@ -16,22 +16,20 @@ import {
 } from "@mui/material";
 
 import styles from "@/app/app.module.css";
+
 const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
-// ---------------------------------------------
+
 const FONT_L1 = "11px";
 const FONT_L2 = "10px";
 const FONT_L3 = "9px";
 
-// ✅ SORTING ORDERS
 const LEVEL1_ORDER = ["Liability", "Assets", "Income", "Expense"];
 const INCOME_L2_ORDER = ["Direct Incomes", "Indirect Incomes"];
 const EXPENSE_L2_ORDER = ["Direct Expenses", "Indirect Expenses"];
 
-// ✅ key ordering helper (applies only where needed)
 const getOrderedKeys = (obj, { level, rootKey }) => {
   const keys = Object.keys(obj || {});
 
-  // Level-1 (top) ordering
   if (level === 0) {
     return [
       ...LEVEL1_ORDER.filter((k) => obj?.[k]),
@@ -39,7 +37,6 @@ const getOrderedKeys = (obj, { level, rootKey }) => {
     ];
   }
 
-  // Level-2 ordering ONLY under Income
   if (level === 1 && rootKey === "Income") {
     return [
       ...INCOME_L2_ORDER.filter((k) => obj?.[k]),
@@ -47,7 +44,6 @@ const getOrderedKeys = (obj, { level, rootKey }) => {
     ];
   }
 
-  // Level-2 ordering ONLY under Expense
   if (level === 1 && rootKey === "Expense") {
     return [
       ...EXPENSE_L2_ORDER.filter((k) => obj?.[k]),
@@ -55,21 +51,17 @@ const getOrderedKeys = (obj, { level, rootKey }) => {
     ];
   }
 
-  // default (insertion order)
   return keys;
 };
 
-// Format number
 const fmt = (num) => Number(num || 0).toFixed(2);
 
-// Split amount into DR/CR
 const splitAmount = (amt) => {
   if (amt > 0) return { dr: amt, cr: 0 };
   if (amt < 0) return { dr: 0, cr: Math.abs(amt) };
   return { dr: 0, cr: 0 };
 };
 
-// Build Level1 → Level2 → Level3 structure
 const buildTree = (data, showAllLevels) => {
   const root = {};
 
@@ -79,6 +71,7 @@ const buildTree = (data, showAllLevels) => {
     const close = splitAmount(row.closingBalance);
 
     const ledgerRow = {
+      glId: row.glId,
       name: row.glName,
       OpeningDrAmt: open.dr,
       OpeningCrAmt: open.cr,
@@ -100,7 +93,7 @@ const buildTree = (data, showAllLevels) => {
       : [row.BalanceSheetName, row.tb1GroupName, row.glName];
 
     const levels = rawLevels.filter(
-      (v) => v !== null && v !== undefined && v !== ""
+      (v) => v !== null && v !== undefined && v !== "",
     );
 
     let current = root;
@@ -119,7 +112,6 @@ const buildTree = (data, showAllLevels) => {
   return root;
 };
 
-// Sum totals
 const sumLevelTotals = (rows) => {
   const totals = {
     OpeningDrAmt: 0,
@@ -147,7 +139,7 @@ const getBase64FromUrl = async (url) => {
   const blob = await res.blob();
   return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result.split(",")[1]); // remove prefix
+    reader.onloadend = () => resolve(reader.result.split(",")[1]);
     reader.readAsDataURL(blob);
   });
 };
@@ -182,23 +174,23 @@ const getColumnLabel = (key) => {
   return map[key] || key;
 };
 
-// ============================================================
-// ⭐ COMPONENT WITH FORWARD REF
-// ============================================================
+const handleGlClick = (glId) => {
+  if (!glId) return;
+  const url = `/dynamicReports?menuName=993&glId=${glId}`;
+  window.open(url, "_blank");
+};
+
 const TrialBalanceGrid = forwardRef(
   ({ balanceSheetData, selectedRadio, selectedRadioType, toggle }, ref) => {
-    if (!balanceSheetData || balanceSheetData.length === 0)
-      return <div>No Data Found</div>;
+    const [hoveredGlId, setHoveredGlId] = React.useState(null);
 
-    const isDetailMode = selectedRadio === "D"; // D-* → 6 levels, S-* → 2 levels
+    const safeData = Array.isArray(balanceSheetData) ? balanceSheetData : [];
+    const hasData = safeData.length > 0;
 
-    // 🔹 build tree using 6 or 2 levels
-    const tree = buildTree(balanceSheetData, isDetailMode);
-
-    const LEVEL1_ORDER = ["Liability", "Assets", "Income", "Expense"];
-    const orderedLevel1 = LEVEL1_ORDER.filter((k) => tree[k]);
-
+    const isDetailMode = selectedRadio === "D";
+    const tree = hasData ? buildTree(safeData, isDetailMode) : {};
     const columns = getColumns(selectedRadio, selectedRadioType);
+
     const makeEmptyTotals = () => ({
       OpeningDrAmt: 0,
       OpeningCrAmt: 0,
@@ -207,6 +199,7 @@ const TrialBalanceGrid = forwardRef(
       ClosingDrAmt: 0,
       ClosingCrAmt: 0,
     });
+
     const addTotals = (a, b) => ({
       OpeningDrAmt: a.OpeningDrAmt + b.OpeningDrAmt,
       OpeningCrAmt: a.OpeningCrAmt + b.OpeningCrAmt,
@@ -215,7 +208,7 @@ const TrialBalanceGrid = forwardRef(
       ClosingDrAmt: a.ClosingDrAmt + b.ClosingDrAmt,
       ClosingCrAmt: a.ClosingCrAmt + b.ClosingCrAmt,
     });
-    // 🔹 Recursively sum a node: its own __rows + all children
+
     const sumNodeTotals = (node) => {
       let total = makeEmptyTotals();
 
@@ -227,7 +220,7 @@ const TrialBalanceGrid = forwardRef(
       walk(node);
       return total;
     };
-    // 🔹 Grand total = sum of all top-level nodes
+
     const computeGrandTotal = () => {
       let total = makeEmptyTotals();
       Object.values(tree).forEach((node) => {
@@ -237,18 +230,13 @@ const TrialBalanceGrid = forwardRef(
     };
 
     const grandTotal = computeGrandTotal();
-    // ==========================================================
-    // ⭐ EXPORT TO EXCEL — FULL WORKING IMPLEMENTATION
-    // ==========================================================
+
     const exportToExcel = async () => {
-      if (!balanceSheetData || balanceSheetData.length === 0) {
+      if (!hasData) {
         alert("No data to export");
         return;
       }
 
-      // ==============================
-      // 🔹 GET LOGO
-      // ==============================
       const storedUserData = localStorage.getItem("userData");
       let imageHeader = null;
 
@@ -263,24 +251,15 @@ const TrialBalanceGrid = forwardRef(
       let logoBase64 = null;
       if (imageHeader) logoBase64 = await getBase64FromUrl(imageHeader);
 
-      // ==============================
-      // 🔹 BUILD TREE
-      // ==============================
-      const isDetailMode = selectedRadio === "D";
-      const tree = buildTree(balanceSheetData, isDetailMode);
-
-      const LEVEL1_ORDER = ["Liability", "Assets", "Income", "Expense"];
-      const orderedLevel1 = LEVEL1_ORDER.filter((k) => tree[k]);
-      const columns = getColumns(selectedRadio, selectedRadioType);
+      const exportTree = buildTree(safeData, isDetailMode);
+      const orderedLevel1 = LEVEL1_ORDER.filter((k) => exportTree[k]);
+      const exportColumns = getColumns(selectedRadio, selectedRadioType);
 
       const workbook = new ExcelJS.Workbook();
       const sheet = workbook.addWorksheet("Trial Balance", {
         properties: { defaultRowHeight: 18 },
       });
 
-      // ==============================
-      // 🔹 INSERT LOGO
-      // ==============================
       if (logoBase64) {
         const imageId = workbook.addImage({
           base64: logoBase64,
@@ -297,11 +276,10 @@ const TrialBalanceGrid = forwardRef(
       sheet.addRow([]);
       sheet.addRow([]);
 
-      // ==============================
-      // 🔹 HEADER
-      // ==============================
       const headerRow = sheet.addRow(
-        columns.map((c) => (c === "Ledger Name" ? "" : getColumnLabel(c)))
+        exportColumns.map((c) =>
+          c === "Ledger Name" ? "" : getColumnLabel(c),
+        ),
       );
 
       headerRow.eachCell((cell) => {
@@ -315,14 +293,10 @@ const TrialBalanceGrid = forwardRef(
         cell.border = {};
       });
 
-      // ==============================
-      // 🔹 STYLES
-      // ==============================
       const STYLES = {
         L1: { font: { bold: true, size: 11 } },
         L2_BOLD: { font: { bold: true, size: 10 } },
         L2_NORMAL: { font: { bold: false, size: 10 } },
-        L3: { font: { bold: false, size: 9 } },
       };
 
       const setNumber = (cell, value) => {
@@ -337,9 +311,6 @@ const TrialBalanceGrid = forwardRef(
         row.eachCell((cell) => (cell.border = {}));
       };
 
-      // ==============================
-      // 🔹 RECURSIVE EXCEL RENDER (MATCHES UI)
-      // ==============================
       const renderExcelTree = (node, level = 0, rootKey = null) => {
         const orderedKeys = getOrderedKeys(node, { level, rootKey });
 
@@ -347,7 +318,6 @@ const TrialBalanceGrid = forwardRef(
           const value = node[key];
           const totals = sumNodeTotals(value);
 
-          // ✅ SUMMARY: ONLY 2 LEVELS
           if (!isDetailMode && level > 1) return;
 
           const isLeaf =
@@ -357,48 +327,39 @@ const TrialBalanceGrid = forwardRef(
 
           const row = sheet.addRow([
             " ".repeat(level * 4) + key,
-            ...columns.slice(1).map(() => ""),
+            ...exportColumns.slice(1).map(() => ""),
           ]);
 
           const style =
             level === 0
               ? STYLES.L1
               : isBold
-              ? STYLES.L2_BOLD
-              : STYLES.L2_NORMAL;
+                ? STYLES.L2_BOLD
+                : STYLES.L2_NORMAL;
 
           row.getCell(1).style = style;
 
-          columns.slice(1).forEach((c, i) => {
+          exportColumns.slice(1).forEach((c, i) => {
             const cell = row.getCell(i + 2);
             setNumber(cell, totals[c]);
             cell.style = style;
           });
 
           applyBorderless(row);
-
-          // ✅ PASS ROOTKEY DOWN
           renderExcelTree(value.__children || {}, level + 1, rootKey || key);
         });
       };
 
-      // ==============================
-      // 🔹 RENDER BODY
-      // ==============================
       orderedLevel1.forEach((lvl1) => {
-        const rootNode = tree[lvl1];
-        renderExcelTree({ [lvl1]: rootNode }, 0);
+        renderExcelTree({ [lvl1]: exportTree[lvl1] }, 0);
       });
 
-      // ==============================
-      // 🔹 GRAND TOTAL (CORRECT)
-      // ==============================
       const gRow = sheet.addRow([
         "Grand Total",
-        ...columns.slice(1).map(() => ""),
+        ...exportColumns.slice(1).map(() => ""),
       ]);
 
-      columns.slice(1).forEach((c, i) => {
+      exportColumns.slice(1).forEach((c, i) => {
         const cell = gRow.getCell(i + 2);
         setNumber(cell, grandTotal[c]);
       });
@@ -413,9 +374,6 @@ const TrialBalanceGrid = forwardRef(
         cell.border = {};
       });
 
-      // ==============================
-      // 🔹 AUTO WIDTH
-      // ==============================
       sheet.columns.forEach((col) => {
         let max = 10;
         col.eachCell({ includeEmpty: true }, (cell) => {
@@ -425,24 +383,12 @@ const TrialBalanceGrid = forwardRef(
         col.width = max + 3;
       });
 
-      // ==============================
-      // 🔹 SAVE FILE
-      // ==============================
       const buffer = await workbook.xlsx.writeBuffer();
       saveAs(new Blob([buffer]), "TrialBalance.xlsx");
     };
 
-    // expose to parent
-    useImperativeHandle(ref, () => ({
-      exportToExcel,
-      exportToPDF,
-    }));
-
-    // ==========================================================
-    // ⭐ EXPORT TO PDF — FULL WORKING IMPLEMENTATION
-    // ==========================================================
     const exportToPDF = async () => {
-      if (!balanceSheetData || balanceSheetData.length === 0) {
+      if (!hasData) {
         alert("No data to export");
         return;
       }
@@ -454,14 +400,9 @@ const TrialBalanceGrid = forwardRef(
       });
 
       const pageWidth = doc.internal.pageSize.getWidth();
-      const isDetailMode = selectedRadio === "D";
-
-      // ===============================
-      // 🔹 FETCH HEADER IMAGE
-      // ===============================
-      const storedUserData = localStorage.getItem("userData");
       let logoBase64 = null;
 
+      const storedUserData = localStorage.getItem("userData");
       if (storedUserData) {
         const decryptedData = decrypt(storedUserData);
         const userData = JSON.parse(decryptedData);
@@ -472,9 +413,6 @@ const TrialBalanceGrid = forwardRef(
         }
       }
 
-      // ===============================
-      // 🔹 DRAW HEADER IMAGE (EVERY PAGE)
-      // ===============================
       const drawHeader = () => {
         if (logoBase64) {
           doc.addImage(logoBase64, "PNG", 0, 0, pageWidth, 26);
@@ -483,19 +421,11 @@ const TrialBalanceGrid = forwardRef(
 
       drawHeader();
 
-      // ===============================
-      // 🔹 BUILD TREE
-      // ===============================
-      const tree = buildTree(balanceSheetData, isDetailMode);
-      const LEVEL1_ORDER = ["Liability", "Assets", "Income", "Expense"];
-      const orderedLevel1 = LEVEL1_ORDER.filter((k) => tree[k]);
-      const columns = getColumns(selectedRadio, selectedRadioType);
-
+      const exportTree = buildTree(safeData, isDetailMode);
+      const orderedLevel1 = LEVEL1_ORDER.filter((k) => exportTree[k]);
+      const exportColumns = getColumns(selectedRadio, selectedRadioType);
       const bodyRows = [];
 
-      // ===============================
-      // 🔹 RECURSIVE PDF ROW BUILDER
-      // ===============================
       const buildPdfRows = (node, level = 0, rootKey = null) => {
         const orderedKeys = getOrderedKeys(node, { level, rootKey });
 
@@ -503,60 +433,52 @@ const TrialBalanceGrid = forwardRef(
           const value = node[key];
           const totals = sumNodeTotals(value);
 
-          // ✅ SUMMARY MODE → ONLY 2 LEVELS
           if (!isDetailMode && level > 1) return;
 
           const isLeaf =
             !value.__children || Object.keys(value.__children).length === 0;
 
-          // ✅ BOLD RULES (MATCH UI + EXCEL)
           const shouldBold = isDetailMode ? !isLeaf : level === 0;
 
           bodyRows.push([
             " ".repeat(level * 4) + key,
-            ...columns.slice(1).map((c) => Number(totals[c] || 0).toFixed(2)),
-            "__BOLD__:" + (shouldBold ? "1" : "0"), // marker
+            ...exportColumns
+              .slice(1)
+              .map((c) => Number(totals[c] || 0).toFixed(2)),
+            "__BOLD__:" + (shouldBold ? "1" : "0"),
           ]);
 
-          // ✅ PASS ROOTKEY DOWN
           buildPdfRows(value.__children || {}, level + 1, rootKey || key);
         });
       };
 
       orderedLevel1.forEach((lvl1) => {
-        buildPdfRows({ [lvl1]: tree[lvl1] }, 0);
+        buildPdfRows({ [lvl1]: exportTree[lvl1] }, 0);
       });
 
-      // ===============================
-      // 🔹 ADD GRAND TOTAL
-      // ===============================
       bodyRows.push([
         "Grand Total",
-        ...columns.slice(1).map((c) => Number(grandTotal[c] || 0).toFixed(2)),
+        ...exportColumns
+          .slice(1)
+          .map((c) => Number(grandTotal[c] || 0).toFixed(2)),
         "__BOLD__:1",
       ]);
 
-      // ===============================
-      // 🔹 TABLE GENERATION
-      // ===============================
       autoTable(doc, {
         startY: 38,
         margin: { top: 38, left: 5, right: 5 },
-
         head: [
-          columns.map((c) => (c === "Ledger Name" ? "" : getColumnLabel(c))),
+          exportColumns.map((c) =>
+            c === "Ledger Name" ? "" : getColumnLabel(c),
+          ),
         ],
-
-        body: bodyRows.map((r) => r.slice(0, -1)), // remove marker col
-
+        body: bodyRows.map((r) => r.slice(0, -1)),
         theme: "grid",
-
         styles: {
           fontSize: 7.2,
           cellPadding: 1.5,
           valign: "middle",
         },
-
         headStyles: {
           fillColor: [126, 155, 207],
           textColor: 255,
@@ -564,31 +486,32 @@ const TrialBalanceGrid = forwardRef(
           halign: "center",
           fontSize: 7.6,
         },
-
         didParseCell: (data) => {
           const rawRow = bodyRows[data.row.index];
           if (!rawRow) return;
 
-          const boldFlag = rawRow[rawRow.length - 1]; // "__BOLD__:1"
+          const boldFlag = rawRow[rawRow.length - 1];
           if (boldFlag === "__BOLD__:1") {
             data.cell.styles.fontStyle = "bold";
           }
         },
-
         didDrawPage: () => {
           drawHeader();
         },
       });
 
-      // ===============================
-      // 🔹 SAVE FILE
-      // ===============================
       doc.save("TrialBalance.pdf");
     };
 
-    // ==========================================================
-    // UI
-    // ==========================================================
+    useImperativeHandle(ref, () => ({
+      exportToExcel,
+      exportToPDF,
+    }));
+
+    if (!hasData) {
+      return <div>No Data Found</div>;
+    }
+
     return (
       <Paper
         sx={{
@@ -643,7 +566,6 @@ const TrialBalanceGrid = forwardRef(
 
             <TableBody>
               {(() => {
-                // ✅ UI RENDER WITH SORTING
                 const renderTree = (node, level = 0, rootKey = null) => {
                   const orderedKeys = getOrderedKeys(node, { level, rootKey });
 
@@ -657,21 +579,38 @@ const TrialBalanceGrid = forwardRef(
                       !value.__children ||
                       Object.keys(value.__children).length === 0;
 
+                    const glId = isLeaf ? value?.__rows?.[0]?.glId : null;
+                    const isClickable = Boolean(isLeaf && glId);
+                    const isHovered = isClickable && hoveredGlId === glId;
                     const isBold = isDetailMode ? !isLeaf : level === 0;
 
                     return (
-                      <React.Fragment key={key}>
+                      <React.Fragment
+                        key={`${key}-${level}-${glId ?? "group"}`}
+                      >
                         <TableRow
+                          onClick={() => {
+                            if (isClickable) handleGlClick(glId);
+                          }}
+                          onMouseEnter={() => {
+                            if (isClickable) setHoveredGlId(glId);
+                          }}
+                          onMouseLeave={() => {
+                            if (isClickable) setHoveredGlId(null);
+                          }}
                           sx={{
-                            transition: "background-color 0.15s ease-in-out",
+                            transition:
+                              "background-color 0.15s ease-in-out, color 0.15s ease-in-out",
                             "&:hover": {
-                              backgroundColor: "rgba(126,155,207,0.18)", // soft blue hover
-                              cursor: "pointer",
+                              backgroundColor: "rgba(126,155,207,0.18)",
+                              cursor: isClickable ? "pointer" : "default",
                             },
                           }}
                         >
                           <TableCell
-                            sx={{ fontWeight: isBold ? "bold" : "normal" }}
+                            sx={{
+                              fontWeight: isBold ? "bold" : "normal",
+                            }}
                           >
                             <Box
                               sx={{
@@ -680,10 +619,13 @@ const TrialBalanceGrid = forwardRef(
                                   level === 0
                                     ? FONT_L1
                                     : level === 1
-                                    ? FONT_L2
-                                    : FONT_L3,
-                                color: "var(--tableRowTextColor)",
+                                      ? FONT_L2
+                                      : FONT_L3,
+                                color: isHovered
+                                  ? "#1976d2"
+                                  : "var(--tableRowTextColor)",
                                 fontWeight: isBold ? "bold" : "normal",
+                                textDecoration: "none",
                               }}
                             >
                               {key}
@@ -700,8 +642,8 @@ const TrialBalanceGrid = forwardRef(
                                   level === 0
                                     ? FONT_L1
                                     : level === 1
-                                    ? FONT_L2
-                                    : FONT_L3,
+                                      ? FONT_L2
+                                      : FONT_L3,
                                 color: "var(--tableRowTextColor)",
                               }}
                             >
@@ -713,26 +655,24 @@ const TrialBalanceGrid = forwardRef(
                         {renderTree(
                           value.__children || {},
                           level + 1,
-                          rootKey || key
+                          rootKey || key,
                         )}
                       </React.Fragment>
                     );
                   });
                 };
 
-                // ✅ render in fixed order, then render any remaining top-level groups (if any)
                 const topKeys = Object.keys(tree);
                 const fixedKeys = ["Liability", "Assets", "Income", "Expense"];
 
                 const orderedKeys = [
                   ...fixedKeys.filter((k) => tree[k]),
-                  ...topKeys.filter((k) => !fixedKeys.includes(k)), // keep others after
+                  ...topKeys.filter((k) => !fixedKeys.includes(k)),
                 ];
 
                 return orderedKeys.map((k) => renderTree({ [k]: tree[k] }, 0));
               })()}
 
-              {/* ✅ GRAND TOTAL */}
               <TableRow
                 sx={{
                   position: "sticky",
@@ -760,7 +700,7 @@ const TrialBalanceGrid = forwardRef(
         </div>
       </Paper>
     );
-  }
+  },
 );
 
 export default TrialBalanceGrid;

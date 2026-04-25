@@ -35,7 +35,7 @@ function AnimatedDots({ active = true }) {
 export default function DocumentReadingLoader({
   open = false,
   progress = 0,
-  title = "Processing Purchase Invoice",
+  title,
   subtitle = "Reading pages, validating content, and extracting structured data",
   size = 88,
   allowPageInteraction = true,

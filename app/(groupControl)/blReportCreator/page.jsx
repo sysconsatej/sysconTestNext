@@ -41,7 +41,7 @@ import {
   formControlMenuList,
   deleteMasterRecord,
   dynamicDropDownFieldsData,
-  fetchSearchPageData,
+  fetchBLCreatorSearchPageData,
 } from "@/services/auth/FormControl.services.js";
 import {
   viewIcon,
@@ -479,11 +479,14 @@ export default function StickyHeadTable() {
           tableName: "tblblPrintTemplate",
           fieldName: searchFieldData,
           clientId: clientId,
+          companyId: null,
+          companyBranchId: null,
+          financialYearId: null,
           filterCondition: "templateType='bl'",
           pageNo: 1,
           pageSize: rowsPerPage,
         };
-        const apiResponse = await fetchSearchPageData(requestData);
+        const apiResponse = await fetchBLCreatorSearchPageData(requestData);
         if (apiResponse.success === true && apiResponse.data?.length > 0) {
           const getVoucherDataCount = {
             columns: "id",
@@ -569,11 +572,14 @@ export default function StickyHeadTable() {
           tableName: "tblblPrintTemplate",
           fieldName: searchFieldData,
           clientId: clientId,
+          companyId: null,
+          companyBranchId: null,
+          financialYearId: null,
           filterCondition: "templateType='bl'",
           pageNo: 1,
           pageSize: rowsPerPage,
         };
-        const apiResponse = await fetchSearchPageData(requestData);
+        const apiResponse = await fetchBLCreatorSearchPageData(requestData);
         if (apiResponse.data?.length > 0) {
           const getVoucherDataCount = {
             columns: "id",
@@ -632,12 +638,15 @@ export default function StickyHeadTable() {
           fieldName: searchFieldData,
           clientId: clientId,
           filterCondition: "templateType='bl'",
+          companyId: null,
+          companyBranchId: null,
+          financialYearId: null,
           pageNo: columnSearchKeyName === "" ? selectedPage : 1,
           pageSize: rowsPerPage,
           keyName: columnSearchKeyName,
           keyValue: columnSearchKeyValue,
         };
-        apiResponse = await fetchSearchPageData(requestData);
+        apiResponse = await fetchBLCreatorSearchPageData(requestData);
         if (apiResponse.data?.length > 0) {
           const getVoucherDataCount = {
             columns: "id",
@@ -692,12 +701,15 @@ export default function StickyHeadTable() {
             fieldName: searchFieldData,
             clientId: clientId,
             filterCondition: "templateType='bl'",
+            companyId: null,
+            companyBranchId: null,
+            financialYearId: null,
             pageNo: columnSearchKeyName === "" ? selectedPage : 1,
             pageSize: rowsPerPage,
             keyName: columnSearchKeyName,
             keyValue: columnSearchKeyValue,
           };
-          const apiResponse = await fetchSearchPageData(requestData);
+          const apiResponse = await fetchBLCreatorSearchPageData(requestData);
           const getVoucherDataCount = {
             columns: "id",
             tableName: "tblblPrintTemplate",
@@ -2807,7 +2819,7 @@ const tableData = [
       {
         tableName: "tblblPrintTemplate",
         gridConfig:
-          '[{"fieldname":"name","controlname":"text","yourlabel":"Template Name"},{"fieldname":"draftFinal","controlname":"text","yourlabel":"Draft / Final"}]',
+          '[{"fieldname":"name","controlname":"text","yourlabel":"Template Name"},{"fieldname":"blOfId","referenceTable":"tblCompany","referenceColumn":"name","controlname":"dropdown","yourlabel":"BL OF"},{"fieldname":"draftFinal","controlname":"text","yourlabel":"Draft / Final"}]',
       },
     ],
   },
@@ -2815,6 +2827,13 @@ const tableData = [
 
 const searchFieldData = [
   { fieldname: "name", controlname: "text", yourlabel: "Name" },
+  {
+    fieldname: "blOfId",
+    controlname: "dropdown",
+    yourlabel: "BL OF",
+    referenceTable: "tblCompany",
+    referenceColumn: "name",
+  },
   { fieldname: "draftFinal", controlname: "text", yourlabel: "Draft / Final" },
   { fieldname: "id", controlname: "text", yourlabel: "id" },
 ];

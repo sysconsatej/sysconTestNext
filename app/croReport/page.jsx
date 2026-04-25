@@ -96,34 +96,112 @@ function dbgLog(enabled, ...args) {
 }
 
 function applyVerticalReflowToPage(page) {
-  const els = [...(page.elements || [])].sort(
-    (a, b) => Number(a.y) - Number(b.y),
-  );
+  const elements = Array.isArray(page?.elements) ? page.elements : [];
 
-  for (let i = 0; i < els.length; i++) {
-    const el = els[i];
+  const normalEls = [];
+  const fixedBandEls = [];
 
-    const originalH = Number(el._originalHeight ?? el.h);
-    const newH = Number(el.h);
+  elements.forEach((el) => {
+    const band = String(el?.attachBand || "").toLowerCase();
 
-    const delta = newH - originalH;
-
-    if (delta > 0.01) {
-      for (let j = i + 1; j < els.length; j++) {
-        els[j] = {
-          ...els[j],
-          y: Number(els[j].y || 0) + delta,
-        };
-      }
+    // Header/Footer should not move with body content
+    if (band === "header" || band === "footer") {
+      fixedBandEls.push(el);
+    } else {
+      normalEls.push(el);
     }
+  });
 
-    els[i] = {
-      ...els[i],
-      _originalHeight: newH,
-    };
+  const sorted = normalEls
+    .map((el, index) => ({
+      ...el,
+      __sortIndex: index,
+      _originalY: Number(el._originalY ?? el.y ?? 0),
+      _originalHeight: Number(el._originalHeight ?? el.h ?? 0),
+    }))
+    .sort((a, b) => {
+      const ay = Number(a._originalY ?? a.y ?? 0);
+      const by = Number(b._originalY ?? b.y ?? 0);
+
+      if (Math.abs(ay - by) > 0.25) return ay - by;
+
+      return (
+        Number(a.x || 0) - Number(b.x || 0) ||
+        Number(a.z || 0) - Number(b.z || 0)
+      );
+    });
+
+  // Group elements that start on the same Y line.
+  // This prevents side-by-side elements from pushing each other.
+  const groups = [];
+
+  sorted.forEach((el) => {
+    const y = Number(el._originalY ?? el.y ?? 0);
+    const last = groups[groups.length - 1];
+
+    if (!last || Math.abs(last.y - y) > 0.25) {
+      groups.push({ y, elements: [el] });
+    } else {
+      last.elements.push(el);
+    }
+  });
+
+  let shiftDown = 0;
+  const reflowed = [];
+
+  groups.forEach((group) => {
+    let maxGrowthInGroup = 0;
+
+    const movedGroup = group.elements.map((el) => {
+      const originalY = Number(el._originalY ?? el.y ?? 0);
+      const originalH = Number(el._originalHeight ?? el.h ?? 0);
+      const newH = Number(el.h || 0);
+
+      const growth = Math.max(0, newH - originalH);
+      maxGrowthInGroup = Math.max(maxGrowthInGroup, growth);
+
+      return {
+        ...el,
+        y: originalY + shiftDown,
+      };
+    });
+
+    reflowed.push(...movedGroup);
+
+    if (maxGrowthInGroup > 0.01) {
+      shiftDown += maxGrowthInGroup;
+    }
+  });
+
+  page.elements = [...fixedBandEls, ...reflowed].map((el) => {
+    const { __sortIndex, ...clean } = el;
+    return clean;
+  });
+}
+
+function markOriginalElementMetrics(tpl) {
+  if (!tpl) return tpl;
+
+  const cloned = JSON.parse(JSON.stringify(tpl));
+
+  if (Array.isArray(cloned.pages)) {
+    cloned.pages = cloned.pages.map((page) => ({
+      ...page,
+      elements: (page.elements || []).map((el) => ({
+        ...el,
+        _originalY: Number(el.y || 0),
+        _originalHeight: Number(el.h || 0),
+      })),
+    }));
+  } else {
+    cloned.elements = (cloned.elements || []).map((el) => ({
+      ...el,
+      _originalY: Number(el.y || 0),
+      _originalHeight: Number(el.h || 0),
+    }));
   }
 
-  page.elements = els;
+  return cloned;
 }
 
 function dbgGroup(enabled, title) {
@@ -537,10 +615,6 @@ function applyAutoGrowFixedTablesToTemplate(template, data, opts) {
           rowHUnit: "mm",
           autoGrow: true,
         };
-
-        for (let j = i + 1; j < els.length; j++) {
-          els[j] = { ...els[j], y: Number(els[j].y || 0) + delta };
-        }
       }
     }
 
@@ -2439,7 +2513,9 @@ export default function BlReportPage() {
         getMarginMmFromTpl(tpl),
       );
 
-      const laid = layoutTemplateForData(tpl, data, {
+      const baseTpl = markOriginalElementMetrics(tpl);
+
+      const laid = layoutTemplateForData(baseTpl, data, {
         paperMm,
         marginMm: { top: 0, left: 0, right: 0, bottom: 0 },
         headerEnabled: !!tpl?.header?.enabled,

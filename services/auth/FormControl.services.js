@@ -74,6 +74,32 @@ export async function fetchSearchPageData(data) {
     return false;
   }
 }
+export async function fetchBLCreatorSearchPageData(data) {
+  // masterTableList
+  try {
+    let insertedData = {
+      ...data,
+    };
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${baseUrlSQl}/api/master/fetchBLCreatorSearchpageData`,
+      {
+        method: "POST",
+        // credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(insertedData),
+      },
+    ).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
 export async function fetchVoucherData(data) {
   // masterTableList
   try {
@@ -2573,6 +2599,50 @@ export async function UploadPurchaseInvoice(data) {
   }
 }
 
+export async function UploadBl(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const files = data?.invoiceUploads || [];
+
+    if (!Array.isArray(files) || files.length === 0) {
+      return {
+        success: false,
+        statusCode: 400,
+        message: "No file found to upload",
+        data: null,
+      };
+    }
+
+    const file = files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`${baseUrlSQl}/api/ai/extract/blPdfData`, {
+      method: "POST",
+      headers: {
+        "x-access-token": JSON.parse(token),
+      },
+      body: formData,
+    });
+
+    const response = await res.json();
+    console.log("response Ak", response);
+    return {
+      ...response,
+      statusCode: res.status,
+    };
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return {
+      success: false,
+      statusCode: 500,
+      message: "File upload failed",
+      data: null,
+    };
+  }
+}
+
 export async function GetPurchaseInvoiceReadingStatus() {
   try {
     const token = localStorage.getItem("token");
@@ -2601,6 +2671,39 @@ export async function GetPurchaseInvoiceReadingStatus() {
     };
   }
 }
+
+export async function GetBlReadingStatus() {
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(
+      `${baseUrlSQl}/api/ai/extract/blPdfData/readingStatus`,
+      {
+        method: "GET",
+        headers: {
+          "x-access-token": JSON.parse(token),
+        },
+      },
+    );
+
+    const response = await res.json();
+
+    return {
+      ...response,
+      statusCode: res.status,
+    };
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return {
+      success: false,
+      statusCode: 500,
+      message: "Failed to fetch reading status",
+      readingStatus: null,
+    };
+  }
+}
+
 export async function getChargeForTariffData(data) {
   try {
     const token = localStorage.getItem("token");

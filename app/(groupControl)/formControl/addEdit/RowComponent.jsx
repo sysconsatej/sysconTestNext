@@ -45,6 +45,15 @@ import { updateFlag } from "@/app/counterSlice";
 
 const icons = [PlayIcon1, PlayIcon2, PlayIcon3, PlayIcon4];
 
+function isConfigFlagEnabled(value) {
+  if (value === true || value === 1 || value === "1") return true;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return ["true", "yes", "y", "t"].includes(normalized);
+  }
+  return false;
+}
+
 async function onSubmitFunctionCall(
   functionData,
   newState,
@@ -167,6 +176,8 @@ export default function RowComponent({
   const [subChildComponent, setSubChildComponent] = useState(
     expandAll ? true : false
   );
+  const isChildDeleteHidden = isConfigFlagEnabled(sectionData?.isDeleteHide);
+  const isChildCopyHidden = isConfigFlagEnabled(sectionData?.isAddHide);
   if (openChildEdit) {
     dispatch(
       updateFlag({
@@ -206,6 +217,7 @@ export default function RowComponent({
   };
 
   function copyDocument(obj) {
+    if (isChildCopyHidden) return;
     if (Object.keys(obj).length !== 0) {
       const tmpData = { ...newState };
       delete obj?.id;
@@ -713,51 +725,55 @@ export default function RowComponent({
               className={`group-hover:visible flex flex-nowrap justify-end invisible absolute`}
               style={stylesIconsHover}
             >
-              <LightTooltip title="Delete Record ">
-                <IconButton
-                  disabled={
-                    typeof sectionData.isDeleteFunctionality !== "undefined"
-                      ? !sectionData.isDeleteFunctionality
-                      : false
-                  }
-                  aria-label="Delete"
-                  className={styles.icon}
-                  onClick={() => {
-                    deleteChildRecord(childIndex);
-                    reCalculate(childIndex, childName);
-                  }}
-                  onMouseEnter={() => setHoveredIcon("delete")}
-                  onMouseLeave={() => setHoveredIcon(null)}
-                >
-                  <Image
-                    src={hoveredIcon === "delete" ? DeleteHover : DeleteIcon2}
-                    alt="Delete Icon"
-                    priority={false}
-                    className="gridIcons2"
-                  />
-                </IconButton>
-              </LightTooltip>
-              <LightTooltip title="Copy Document">
-                <IconButton
-                  disabled={
-                    typeof sectionData.isCopyFunctionality !== "undefined"
-                      ? !sectionData.isCopyFunctionality
-                      : false
-                  }
-                  aria-label="Document"
-                  className={styles.icon}
-                  onClick={() => copyDocument(childValuseObj)}
-                  onMouseEnter={() => setHoveredIcon("copy")}
-                  onMouseLeave={() => setHoveredIcon(null)}
-                >
-                  <Image
-                    src={hoveredIcon === "copy" ? CopyHover : copyDoc}
-                    alt="Document Icon"
-                    priority={false}
-                    className="gridIcons2"
-                  />
-                </IconButton>
-              </LightTooltip>
+              {!isChildDeleteHidden && (
+                <LightTooltip title="Delete Record ">
+                  <IconButton
+                    disabled={
+                      typeof sectionData.isDeleteFunctionality !== "undefined"
+                        ? !sectionData.isDeleteFunctionality
+                        : false
+                    }
+                    aria-label="Delete"
+                    className={styles.icon}
+                    onClick={() => {
+                      deleteChildRecord(childIndex);
+                      reCalculate(childIndex, childName);
+                    }}
+                    onMouseEnter={() => setHoveredIcon("delete")}
+                    onMouseLeave={() => setHoveredIcon(null)}
+                  >
+                    <Image
+                      src={hoveredIcon === "delete" ? DeleteHover : DeleteIcon2}
+                      alt="Delete Icon"
+                      priority={false}
+                      className="gridIcons2"
+                    />
+                  </IconButton>
+                </LightTooltip>
+              )}
+              {!isChildCopyHidden && (
+                <LightTooltip title="Copy Document">
+                  <IconButton
+                    disabled={
+                      typeof sectionData.isCopyFunctionality !== "undefined"
+                        ? !sectionData.isCopyFunctionality
+                        : false
+                    }
+                    aria-label="Document"
+                    className={styles.icon}
+                    onClick={() => copyDocument(childValuseObj)}
+                    onMouseEnter={() => setHoveredIcon("copy")}
+                    onMouseLeave={() => setHoveredIcon(null)}
+                  >
+                    <Image
+                      src={hoveredIcon === "copy" ? CopyHover : copyDoc}
+                      alt="Document Icon"
+                      priority={false}
+                      className="gridIcons2"
+                    />
+                  </IconButton>
+                </LightTooltip>
+              )}
 
               {Object.keys(groupedData).map((key, index) => {
                 if (groupedData[key]?.isHideGrid) {
@@ -815,6 +831,8 @@ export default function RowComponent({
                           hover={hoveredIcon}
                           copyImagepath={copyDoc}
                           deleteImagePath={DeleteIcon2}
+                          showDelete={!isChildDeleteHidden}
+                          showCopy={!isChildCopyHidden}
                         />
                       ) : (
                         <></>

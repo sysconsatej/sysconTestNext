@@ -594,61 +594,61 @@ export const setRateToParentPurchase = (obj) => {
   };
 };
 
-export const AmountHc = (obj) => {
-  const { newState } = obj;
+// export const AmountHc = (obj) => {
+//   const { newState } = obj;
 
-  // Ensure tblInvoiceCharge exists and has at least one item
-  if (!newState?.tblInvoiceCharge?.length) {
-    return {
-      type: "error",
-      result: false,
-      message: "No invoice charges found",
-    };
-  }
+//   // Ensure tblInvoiceCharge exists and has at least one item
+//   if (!newState?.tblInvoiceCharge?.length) {
+//     return {
+//       type: "error",
+//       result: false,
+//       message: "No invoice charges found",
+//     };
+//   }
 
-  // Loop through each tblInvoiceCharge item
-  const updatedInvoiceCharge = newState.tblInvoiceCharge.map((invoice) => {
-    const details = invoice.tblInvoiceChargeDetails || [];
+//   // Loop through each tblInvoiceCharge item
+//   const updatedInvoiceCharge = newState.tblInvoiceCharge.map((invoice) => {
+//     const details = invoice.tblInvoiceChargeDetails || [];
 
-    if (details.length > 0) {
-      // Filter only items with a valid amountHc
-      const validAmounts = details
-        .map((item) => item.amountHc)
-        .filter((amt) => amt != null && amt !== 0);
+//     if (details.length > 0) {
+//       // Filter only items with a valid amountHc
+//       const validAmounts = details
+//         .map((item) => item.amountHc)
+//         .filter((amt) => amt != null && amt !== 0);
 
-      // Calculate average only if there are valid amounts
-      const avgAmountHc =
-        validAmounts.length > 0
-          ? validAmounts.reduce((sum, amt) => sum + amt, 0) /
-          validAmounts.length
-          : 0;
+//       // Calculate average only if there are valid amounts
+//       const avgAmountHc =
+//         validAmounts.length > 0
+//           ? validAmounts.reduce((sum, amt) => sum + amt, 0) /
+//           validAmounts.length
+//           : 0;
+//       console.log("avgAmountHc", avgAmountHc);
+//       // Set the rate field to avgAmountHc
+//       return {
+//         ...invoice,
+//         rate: avgAmountHc,
+//       };
+//     }
 
-      // Set the rate field to avgAmountHc
-      return {
-        ...invoice,
-        rate: avgAmountHc,
-      };
-    }
+//     return invoice;
+//   });
 
-    return invoice;
-  });
-
-  // Return updated newState
-  return {
-    type: "success",
-    result: true,
-    newState: {
-      ...newState,
-      tblInvoiceCharge: updatedInvoiceCharge,
-    },
-    values: {},
-    submitNewState: {
-      ...newState,
-      tblInvoiceCharge: updatedInvoiceCharge,
-    },
-    message: "Rate updated with average amountHc successfully!",
-  };
-};
+//   // Return updated newState
+//   return {
+//     type: "success",
+//     result: true,
+//     newState: {
+//       ...newState,
+//       tblInvoiceCharge: updatedInvoiceCharge,
+//     },
+//     values: {},
+//     submitNewState: {
+//       ...newState,
+//       tblInvoiceCharge: updatedInvoiceCharge,
+//     },
+//     message: "Rate updated with average amountHc successfully!",
+//   };
+// };
 
 // export const copyContainerData = (obj) => {
 //   const {
@@ -713,6 +713,56 @@ export const AmountHc = (obj) => {
 //   }
 // };
 
+export const AmountHc = (obj) => {
+  const { newState } = obj;
+
+  if (!newState?.tblInvoiceCharge?.length) {
+    return {
+      type: "error",
+      result: false,
+      message: "No invoice charges found",
+    };
+  }
+
+  const updatedInvoiceCharge = newState.tblInvoiceCharge.map((invoice) => {
+    const details = Array.isArray(invoice.tblInvoiceChargeDetails)
+      ? invoice.tblInvoiceChargeDetails
+      : [];
+
+    if (details.length > 0) {
+      const validAmounts = details
+        .map((item) => Number(item.amountHc) || 0)
+        .filter((amt) => amt !== 0);
+
+      const avgAmountHc =
+        validAmounts.length > 0
+          ? validAmounts.reduce((sum, amt) => sum + amt, 0) / validAmounts.length
+          : 0;
+
+      return {
+        ...invoice,
+        rate: avgAmountHc,
+      };
+    }
+
+    return invoice;
+  });
+
+  return {
+    type: "success",
+    result: true,
+    newState: {
+      ...newState,
+      tblInvoiceCharge: updatedInvoiceCharge,
+    },
+    values: {},
+    submitNewState: {
+      ...newState,
+      tblInvoiceCharge: updatedInvoiceCharge,
+    },
+    message: "Rate updated with average amountHc successfully!",
+  };
+};
 export const copyContainerData = (obj) => {
   const { args = "", newState = {}, values = {} } = obj;
 
@@ -1199,4 +1249,57 @@ export const setToDate = (obj) => {
   }
 };
 
+export const checkDuplicateCharge = async ({
+  args,
+  newState,
+  formControlData,
+  values,
+  setStateVariable,
+}) => {
+  try {
+    const chargeList = Array.isArray(newState?.tblJobCharge)
+      ? newState.tblJobCharge
+      : [];
+
+    const seenCharges = new Map();
+
+    for (let i = 0; i < chargeList.length; i++) {
+      const row = chargeList[i] || {};
+
+      const chargeId = String(
+        row?.chargeId ?? row?.chargeIddropdown?.[0]?.value ?? ""
+      ).trim();
+
+      if (!chargeId) continue;
+
+      const chargeLabel =
+        row?.chargeDescription ||
+        row?.chargeIddropdown?.[0]?.label ||
+        `Charge ID ${chargeId}`;
+
+      if (seenCharges.has(chargeId)) {
+        const firstRowIndex = seenCharges.get(chargeId) + 1;
+        const currentRowIndex = i + 1;
+
+        throw new Error(
+          `${chargeLabel} is duplicate. It is already selected in row ${firstRowIndex} and again in row ${currentRowIndex}.`
+        );
+      }
+
+      seenCharges.set(chargeId, i);
+    }
+
+    return {
+      isCheck: true,
+      type: "success",
+      message: "No duplicate charges found.",
+      alertShow: false,
+      newState,
+      values,
+      formControlData,
+    };
+  } catch (error) {
+    throw new Error(error?.message || "Duplicate charge validation failed.");
+  }
+};
 

@@ -8,9 +8,11 @@ import React, { useState, useEffect, useRef, use } from "react";
 import styles from "@/app/app.module.css";
 import CustomeModal from "@/components/Modal/customModal";
 import {
-  GetPurchaseInvoiceReadingStatus,
+  GetPurchaseInvoiceReadingStatus,  
   ledgerData,
   saveEditedReport,
+  GetBlReadingStatus,
+  UploadBl,
   UploadPurchaseInvoice,
 } from "@/services/auth/FormControl.services.js";
 import { uploadInvoicePurchase } from "@/helper/uploadInvoicePurchase.js";
@@ -352,6 +354,7 @@ export default function AddEditFormControll({ reportData }) {
   const [uploadedFileData, setUploadedFileData] = useState(null);
   const [uploadedWarnings, setUploadedWarnings] = useState(null);
   const [uploadedMessages, setUploadedMessages] = useState(null);
+  const [uploadedTitle, setUploadedTitle] = useState(null);
   const [fileUploadProgress, setFileUploadProgress] = useState(0);
   const [fileUploadStage, setFileUploadStage] = useState("");
   const [fileUploadMessage, setFileUploadMessage] = useState("");
@@ -5053,6 +5056,7 @@ export default function AddEditFormControll({ reportData }) {
         setFileUploadStage("starting");
         setFileUploadMessage("Starting PDF extraction");
         setUploadedMessages([]);
+        setUploadedTitle("Processing Purchase Invoice");
 
         const requestBodyForMenuReportDetails = {
           columns:
@@ -5139,14 +5143,14 @@ export default function AddEditFormControll({ reportData }) {
         const spResponse = await fetchExcelDataInsert(spName, formatJson);
         console.log("handleUploadPurchaseInvoice spResponse =>", spResponse);
 
-        if (
-          spResponse.success == true
-        ) {
+        if (spResponse.success == true) {
           setFileUploadingLoader(false);
           setFileUploadProgress(100);
           setFileUploadStage("completed");
           setFileUploadMessage("PDF data extracted successfully");
-          return toast.success(`${spResponse?.message || "PDF Uploaded successfully"}`);
+          return toast.success(
+            `${spResponse?.message || "PDF Uploaded successfully"}`,
+          );
         } else {
           setAllErrors(spResponse.rowsAffected[0].errors);
           setEditableErrors(true);
@@ -5168,6 +5172,184 @@ export default function AddEditFormControll({ reportData }) {
         return null;
       }
     },
+
+handleUploadBl: async () => {
+  try {
+    setFileUploadingLoader(true);
+    setFileUploadProgress(0);
+    setFileUploadStage("starting");
+    setFileUploadMessage("Starting PDF extraction");
+    setUploadedMessages([]);
+    setUploadedTitle("Processing BL");
+
+    const requestBodyForMenuReportDetails = {
+      columns:
+        "spName,reportCriteriaId,isDefaultDataShow,outputFileType,isSp",
+      tableName: "tblMenuReportMapping",
+      whereCondition: `menuId = ${search}`,
+      clientIdCondition: `status = 1 FOR JSON PATH,INCLUDE_NULL_VALUES`,
+    };
+
+    const reportData = await fetchReportData(
+      requestBodyForMenuReportDetails,
+    );
+
+    const spName = reportData?.data?.[0]?.spName;
+
+    // if (!spName) {
+    //   toast.error("SP name not found");
+    //   setFileUploadingLoader(false);
+    //   setFileUploadProgress(0);
+    //   setFileUploadStage("failed");
+    //   setFileUploadMessage("SP name not found");
+    //   return null;
+    // }
+
+    const files = uploadedFileData?.invoiceUploads || [];
+
+    if (!Array.isArray(files) || files.length === 0) {
+      toast.error("Please select a PDF file");
+      setFileUploadingLoader(false);
+      setFileUploadProgress(0);
+      setFileUploadStage("failed");
+      setFileUploadMessage("Please select a PDF file");
+      return null;
+    }
+
+    const invalidFile = files.find(
+      (file) =>
+        !(file instanceof File) ||
+        !(
+          file?.type === "application/pdf" ||
+          String(file?.name || "").toLowerCase().endsWith(".pdf")
+        ),
+    );
+
+    if (invalidFile) {
+      toast.error("Only PDF files are allowed");
+      setFileUploadingLoader(false);
+      setFileUploadProgress(0);
+      setFileUploadStage("failed");
+      setFileUploadMessage("Only PDF files are allowed");
+      return null;
+    }
+
+    const startResponse = await UploadBl(uploadedFileData);
+
+    if (
+      startResponse?.statusCode === 409 &&
+      startResponse?.readingStatus?.status === "running"
+    ) {
+      setFileUploadProgress(
+        Number(startResponse?.readingStatus?.progress || 0),
+      );
+      setFileUploadStage(startResponse?.readingStatus?.stage || "running");
+      setFileUploadMessage(
+        startResponse?.readingStatus?.message ||
+          "Another extraction is already running",
+      );
+    } else if (!startResponse?.success) {
+      toast.error(
+        startResponse?.error ||
+          startResponse?.message ||
+          "Failed to start PDF extraction",
+      );
+      setFileUploadingLoader(false);
+      setFileUploadProgress(0);
+      setFileUploadStage("failed");
+      setFileUploadMessage(
+        startResponse?.error ||
+          startResponse?.message ||
+          "Failed to start PDF extraction",
+      );
+      return null;
+    }
+
+    const finalStatus = await pollPdfReadingStatusForBl({
+      setFileUploadingLoader,
+      setFileUploadProgress,
+      setFileUploadStage,
+      setFileUploadMessage,
+    });
+
+    const extractedData = finalStatus?.data ?? {};
+
+    console.log("finalStatus =>", finalStatus);
+    console.log("extractedData =>", extractedData);
+    console.log("finalStatus.data =>", finalStatus?.data);
+
+    if (
+      !extractedData ||
+      typeof extractedData !== "object" ||
+      Array.isArray(extractedData) ||
+      Object.keys(extractedData).length === 0
+    ) {
+      toast.error("No extracted data found from PDF");
+      setFileUploadingLoader(false);
+      setFileUploadProgress(0);
+      setFileUploadStage("failed");
+      setFileUploadMessage("No extracted data found from PDF");
+      return null;
+    }
+
+    setFileUploadProgress(95);
+    setFileUploadStage("saving");
+    setFileUploadMessage("Saving extracted PDF data");
+
+    const json = {
+      data: extractedData,
+      companyId,
+      branchId,
+      financialYear,
+      userId,
+      clientId,
+    };
+
+    // Do not use removeSingleQuotes here.
+    // It can corrupt valid extracted text.
+    // If fetchExcelDataInsert expects a string, send JSON.stringify(json).
+    // If it expects an object, send json directly.
+    //const requestPayload = JSON.stringify(json);
+
+    const spResponse = await fetchExcelDataInsert(spName, json);
+    console.log("handleUploadBl spResponse =>", spResponse);
+
+    if (spResponse?.success === true) {
+      setFileUploadingLoader(false);
+      setFileUploadProgress(100);
+      setFileUploadStage("completed");
+      setFileUploadMessage("PDF data extracted successfully");
+      toast.success(spResponse?.message || "PDF uploaded successfully");
+      return extractedData;
+    } else {
+      const errors =
+        spResponse?.rowsAffected?.[0]?.errors ||
+        spResponse?.errors ||
+        [];
+
+      if (Array.isArray(errors) && errors.length > 0) {
+        setAllErrors(errors);
+        setEditableErrors(true);
+        setEditableErrorsData(errors);
+      }
+
+      setFileUploadingLoader(false);
+      setFileUploadProgress(100);
+      setFileUploadStage("failed");
+      setFileUploadMessage(spResponse?.message || "PDF upload failed");
+      toast.error(spResponse?.message || "PDF upload failed");
+      return extractedData;
+    }
+  } catch (error) {
+    console.error("handleUploadBl error =>", error);
+    toast.error(error?.message || "Upload failed");
+    setFileUploadingLoader(false);
+    setFileUploadProgress(0);
+    setFileUploadStage("failed");
+    setFileUploadMessage(error?.message || "Upload failed");
+    return null;
+  }
+},
   };
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -5217,6 +5399,76 @@ export default function AddEditFormControll({ reportData }) {
       await sleep(intervalMs);
     }
   }
+
+async function pollPdfReadingStatusForBl({
+  setFileUploadingLoader,
+  setFileUploadProgress,
+  setFileUploadStage,
+  setFileUploadMessage,
+  timeoutMs = 180000,
+  intervalMs = 1500,
+  maxTransientFailures = 3,
+}) {
+  const startTime = Date.now();
+  let transientFailures = 0;
+
+  while (true) {
+    let statusResponse;
+
+    try {
+      statusResponse = await GetBlReadingStatus();
+      transientFailures = 0;
+    } catch (error) {
+      transientFailures += 1;
+
+      if (transientFailures >= maxTransientFailures) {
+        throw new Error(error?.message || "Failed to get reading status");
+      }
+
+      await sleep(intervalMs);
+      continue;
+    }
+
+    if (!statusResponse?.success) {
+      transientFailures += 1;
+
+      if (transientFailures >= maxTransientFailures) {
+        throw new Error(
+          statusResponse?.error ||
+            statusResponse?.message ||
+            "Failed to get reading status",
+        );
+      }
+
+      await sleep(intervalMs);
+      continue;
+    }
+
+    const currentStatus = statusResponse?.readingStatus || {};
+
+    setFileUploadingLoader?.(true);
+    setFileUploadProgress?.(Number(currentStatus?.progress || 0));
+    setFileUploadStage?.(currentStatus?.stage || currentStatus?.status || "");
+    setFileUploadMessage?.(currentStatus?.message || "");
+
+    if (currentStatus?.status === "completed") {
+      setFileUploadProgress?.(100);
+      return currentStatus;
+    }
+
+    if (currentStatus?.status === "failed") {
+      throw new Error(
+        currentStatus?.error || currentStatus?.message || "Upload failed",
+      );
+    }
+
+    if (Date.now() - startTime > timeoutMs) {
+      throw new Error("PDF extraction timed out");
+    }
+
+    await sleep(intervalMs);
+  }
+}
 
   const getBase64FromUrl = async (url) => {
     const res = await fetch(url);
@@ -7084,7 +7336,7 @@ export default function AddEditFormControll({ reportData }) {
                       progress={fileUploadProgress}
                       // title={fileUploadStage || "Processing purchase invoice"}
                       // subtitle={fileUploadMessage || "Reading document"}
-                      title={"Processing Purchase Invoice"}
+                      title={uploadedTitle || "Processing Purchase Invoice"}
                       subtitle={"Reading document"}
                       allowPageInteraction={true}
                       showOverlay={true}

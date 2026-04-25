@@ -587,17 +587,28 @@ export default function StickyHeadTable() {
       const blEditerRequestBody = {
         columns: "tbp.id,tbp.name",
         tableName: "tblBlPrintTemplate tbp",
-        whereCondition: `tbp.clientId=${clientId} and tbp.blOfId=${defaultCompanyId}`,
+        whereCondition: `tbp.clientId=${clientId} and tbp.templateType='bl'`,
         clientIdCondition: `tbp.status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
       };
+
+      const croEditerRequestBody = {
+        columns: "tbp.id,tbp.name",
+        tableName: "tblBlPrintTemplate tbp",
+        whereCondition: `tbp.clientId=${clientId} and tbp.templateType='cro'`,
+        clientIdCondition: `tbp.status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+      };
+
       try {
         const response = await fetchReportData(requestBody);
-        const data = response.data || response;
+        const data = response?.data || response;
 
         const blEditerResponse = await fetchReportData(blEditerRequestBody);
-        const blEditerData = blEditerResponse.data || blEditerResponse;
+        const blEditerData = blEditerResponse?.data || blEditerResponse;
 
-        if (data.length > 0 || blEditerData.length > 0) {
+        const croEditerResponse = await fetchReportData(croEditerRequestBody);
+        const croEditerData = croEditerResponse?.data || croEditerResponse;
+
+        if (data.length > 0 || blEditerData.length > 0 || croEditerData.length > 0) {
           setisReportPresent(true);
         } else {
           setisReportPresent(false);

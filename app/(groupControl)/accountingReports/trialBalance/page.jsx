@@ -40,6 +40,7 @@ const TrialBalance = () => {
   const searchParamsReportType = searchParams.get("reportType") ?? null;
   const searchParamsBalanceType = searchParams.get("balanceType") ?? null;
   const searchParamsTbGroupId = searchParams.get("tbGroupId") ?? null;
+  const glId = searchParams.get("glId") ?? null;
   const [toggle, setToggle] = useState(false);
   const [typeofModal, setTypeofModal] = useState("onClose");
   const [selectedRadio, setSelectedRadio] = useState("S");
@@ -362,6 +363,7 @@ const TrialBalance = () => {
       clientId: toIntOrNull(clientId),
       finYearId: toIntOrNull(defaultFinYearId),
       tbGroupId: toIntOrNull(searchParamsTbGroupId),
+      glId: toIntOrNull(glId),
     };
 
     const data = await trialBalanceReportData(requestBody);
@@ -446,7 +448,7 @@ const TrialBalance = () => {
               >
                 Go
               </button>
-               <button
+              <button
                 // onClick={async () => {
                 //   await handleExportToExcel();
                 // }}

@@ -118,18 +118,28 @@ function groupAndSortFields(fields) {
   // Sort each group by 'sectionOrder'
   Object.keys(groupedFields).forEach((section) => {
     groupedFields[section].sort(
-      (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0)
+      (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0),
     );
   });
 
   return groupedFields;
 }
+
+function isConfigFlagEnabled(value) {
+  if (value === true || value === 1 || value === "1") return true;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return ["true", "yes", "y", "t"].includes(normalized);
+  }
+  return false;
+}
+
 async function onSubmitFunctionCall(
   functionData,
   newState,
   formControlData,
   values,
-  setStateVariable
+  setStateVariable,
 ) {
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
@@ -236,7 +246,7 @@ export default function AddEditFormControll() {
         updateFlag({
           flag: "isRedirection",
           value: isDataMatched,
-        })
+        }),
       );
     } else {
       // setIsChangesMade(isDataMatched);
@@ -244,7 +254,7 @@ export default function AddEditFormControll() {
         updateFlag({
           flag: "isRedirection",
           value: isDataMatched,
-        })
+        }),
       );
     }
   }, [newState]);
@@ -327,9 +337,8 @@ export default function AddEditFormControll() {
                     sellAmount: buyRate,
                     clientId: clientId,
                   };
-                  const fetchTaxDetails = await getTaxDetailsQuotation(
-                    requestData
-                  );
+                  const fetchTaxDetails =
+                    await getTaxDetailsQuotation(requestData);
                   const taxRate = fetchTaxDetails.Chargers[0]?.taxAmount;
                   if (taxRate && buyRate) {
                     taxAmount = (taxRate * buyRate) / 100;
@@ -343,7 +352,7 @@ export default function AddEditFormControll() {
               } catch (error) {
                 console.error(
                   `Error fetching charge details for chargeId ${chargeId}`,
-                  error
+                  error,
                 );
               }
             }
@@ -352,7 +361,7 @@ export default function AddEditFormControll() {
               tblRateRequestCharge: prevState.tblRateRequestCharge.map(
                 (charge) => {
                   const updatedCharge = newState.tblRateRequestCharge.find(
-                    (c) => c.indexValue === charge.indexValue
+                    (c) => c.indexValue === charge.indexValue,
                   );
                   if (updatedCharge) {
                     return {
@@ -361,7 +370,7 @@ export default function AddEditFormControll() {
                     };
                   }
                   return charge; // Return other charges unchanged
-                }
+                },
               ),
             }));
           } else if (newState.calculateTax === false) {
@@ -426,7 +435,7 @@ export default function AddEditFormControll() {
 
     const newData = newState?.tblRateRequestCharge?.map((item) => {
       const newItem = data?.find(
-        (update) => update?.indexValue === item?.indexValue
+        (update) => update?.indexValue === item?.indexValue,
       );
       return newItem ? newItem : item;
       // return newItem
@@ -530,7 +539,7 @@ export default function AddEditFormControll() {
   const handleFieldValuesChange2 = async (
     updatedValues,
     field,
-    formControlData
+    formControlData,
   ) => {
     try {
       console.log("field", field);
@@ -555,7 +564,7 @@ export default function AddEditFormControll() {
             formControlData?.controlname.toLowerCase() == "multiselect"
           ) {
             dataToCopy[data.toColmunName] = newState[data.toColmunName].concat(
-              getCopyDetails.data[0][data.toColmunName]
+              getCopyDetails.data[0][data.toColmunName],
             );
           } else {
             dataToCopy[data.toColmunName] =
@@ -566,13 +575,18 @@ export default function AddEditFormControll() {
         .filter((data) => data.isChild)
         .forEach((data) => {
           // dataToCopy[data.tableName] = getCopyDetails.data[0][data?.toTableName];
-          dataToCopy[data?.toTableName] = formControlData?.controlname.toLowerCase() == "multiselect" ? [...newState[data?.toTableName], ...getCopyDetails.data[0][data?.toTableName]] : getCopyDetails.data[0][data?.toTableName]
-            ;
+          dataToCopy[data?.toTableName] =
+            formControlData?.controlname.toLowerCase() == "multiselect"
+              ? [
+                  ...newState[data?.toTableName],
+                  ...getCopyDetails.data[0][data?.toTableName],
+                ]
+              : getCopyDetails.data[0][data?.toTableName];
         });
 
       //      console.log("dataToCopy", dataToCopy);
       let childData = getCopyDetails.keyToValidate.fieldsMaping.filter(
-        (data) => data.isChild == "true"
+        (data) => data.isChild == "true",
       );
       setChildsFields((prev) => {
         // Create a copy of the previous state
@@ -580,7 +594,7 @@ export default function AddEditFormControll() {
 
         childData.forEach((data) => {
           let index = updatedFields.findIndex(
-            (i) => i.tableName === data.toColmunName
+            (i) => i.tableName === data.toColmunName,
           );
 
           if (index !== -1) {
@@ -656,7 +670,7 @@ export default function AddEditFormControll() {
     // setSectionName(section);
     parentsFields[section]?.forEach((field) => {
       const keyMapping = keysTovalidate.find(
-        (key) => key?.toColmunName === field?.fieldname
+        (key) => key?.toColmunName === field?.fieldname,
       );
       if (keyMapping) {
         //        console.log("keyMapping", keyMapping);
@@ -705,7 +719,7 @@ export default function AddEditFormControll() {
 
       if (isFormSaved)
         return toast.error(
-          "This form has already been saved. Please refresh the screen to save one more record"
+          "This form has already been saved. Please refresh the screen to save one more record",
         );
       const isEqual = areObjectsEqual(newState, initialState);
       if (!isEqual) {
@@ -714,7 +728,7 @@ export default function AddEditFormControll() {
           const missingField = Object.entries(fields).find(
             // eslint-disable-next-line no-unused-vars
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -737,14 +751,14 @@ export default function AddEditFormControll() {
                   newState,
                   setNewState,
                   submitNewState,
-                  setSubmitNewState
+                  setSubmitNewState,
                 ).then((res) => {
                   fetchedApiResponseData._onSubmitResults = {
                     function: e,
                     result: res,
                   };
-                })
-              )
+                }),
+              ),
             );
           }
         } catch (error) {
@@ -763,7 +777,7 @@ export default function AddEditFormControll() {
               updateFlag({
                 flag: "isRedirection",
                 value: true,
-              })
+              }),
             );
             setIsFormSaved(true);
             toast.success(data.message);
@@ -797,6 +811,7 @@ export default function AddEditFormControll() {
           toast.error(error.message);
           setIsFormSaved(false);
         }
+        setOpenModal(false);
       } else {
         toast.error("No changes made");
       }
@@ -860,7 +875,7 @@ export default function AddEditFormControll() {
 
       const getChargeDropDown = (chargesId) => {
         const chargedGroupData = chargedData?.filter((x) =>
-          x?.charges?.some((y) => y?.id === chargesId)
+          x?.charges?.some((y) => y?.id === chargesId),
         );
         return (
           chargedGroupData?.map((r) => ({
@@ -873,7 +888,7 @@ export default function AddEditFormControll() {
 
       const getChargeDropDownId = (chargesId) => {
         const chargedGroupData = chargedData?.filter((x) =>
-          x?.charges?.some((y) => y?.id === chargesId)
+          x?.charges?.some((y) => y?.id === chargesId),
         );
         const id = chargedGroupData?.map((item) => item.id).join(", ");
         //        console.log("chargedGroupData", chargedGroupData);
@@ -886,7 +901,7 @@ export default function AddEditFormControll() {
       //   megeredIntoTheRateRequestCharge
       // );
       const filterData = megeredIntoTheRateRequestCharge?.filter((x) =>
-        newData.some((y) => y?.chargeId === x?.chargeId)
+        newData.some((y) => y?.chargeId === x?.chargeId),
       );
 
       const formatData = filterData?.flatMap((item) =>
@@ -919,8 +934,8 @@ export default function AddEditFormControll() {
             vendorId: null,
             vendorIdDropdown: null,
             vendorIddropdown: [],
-          }))
-        )
+          })),
+        ),
       );
 
       const updatedData =
@@ -942,21 +957,21 @@ export default function AddEditFormControll() {
             const updatedCharge = await fetchExchangeRates(
               charge,
               parentCurrencyId,
-              parentExchangeRate
+              parentExchangeRate,
             );
             return updatedCharge;
           } catch (error) {
             console.error("Failed to fetch exchange rates:", error);
             return charge;
           }
-        })
+        }),
       );
       setNewState((prev) => {
         return {
           ...prev,
           tblRateRequestCharge:
             newState?.scopeOfWork === null ||
-              newState?.scopeOfWork?.length === 0
+            newState?.scopeOfWork?.length === 0
               ? []
               : chargesWithExchangeRates.filter((r) => r !== undefined),
         };
@@ -984,7 +999,7 @@ export default function AddEditFormControll() {
           ...prev,
           tblRateRequestCharge:
             newState?.scopeOfWork === null ||
-              newState?.scopeOfWork?.length === 0
+            newState?.scopeOfWork?.length === 0
               ? []
               : submitData.filter((r) => r !== undefined),
         };
@@ -1015,7 +1030,7 @@ export default function AddEditFormControll() {
             scopeOfWorkMultiselect = newState?.scopeOfWorkmultiselect;
             for (const work of scopeOfWork) {
               filteredScopeOfWork = scopeOfWorkMultiselect?.find(
-                (x) => x?.value === parseInt(work)
+                (x) => x?.value === parseInt(work),
               );
 
               const chargesQuery = {
@@ -1176,12 +1191,12 @@ export default function AddEditFormControll() {
                 ],
                 buyExchangeRate:
                   item.buyExchangeRate !== null &&
-                    item.buyExchangeRate !== undefined
+                  item.buyExchangeRate !== undefined
                     ? String(item.buyExchangeRate)
                     : null,
                 sellExchangeRate:
                   item.sellExchangeRate !== null &&
-                    item.sellExchangeRate !== undefined
+                  item.sellExchangeRate !== undefined
                     ? String(item.sellExchangeRate)
                     : null,
               };
@@ -1196,14 +1211,14 @@ export default function AddEditFormControll() {
                 const updatedCharge = await fetchExchangeRates(
                   charge,
                   parentCurrencyId,
-                  parentExchangeRate
+                  parentExchangeRate,
                 );
                 return updatedCharge;
               } catch (error) {
                 console.error("Failed to fetch exchange rates:", error);
                 return charge;
               }
-            })
+            }),
           );
 
           setNewState((prev) => ({
@@ -1275,14 +1290,14 @@ export default function AddEditFormControll() {
         updateFlag({
           flag: "isRedirection",
           value: true,
-        })
+        }),
       );
     },
     handleSaveClose: async () => {
       // formControlData._onSubmitResults = {};
       if (isFormSaved)
         return toast.error(
-          "This form has already been saved. Please refresh the screen to save one more record"
+          "This form has already been saved. Please refresh the screen to save one more record",
         );
       const isEqual = areObjectsEqual(newState, initialState);
       if (!isEqual) {
@@ -1291,7 +1306,7 @@ export default function AddEditFormControll() {
           const missingField = Object.entries(fields).find(
             // eslint-disable-next-line no-unused-vars
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -1314,14 +1329,14 @@ export default function AddEditFormControll() {
                   newState,
                   setNewState,
                   submitNewState,
-                  setSubmitNewState
+                  setSubmitNewState,
                 ).then((res) => {
                   fetchedApiResponseData._onSubmitResults = {
                     function: e,
                     result: res,
                   };
-                })
-              )
+                }),
+              ),
             );
           }
         } catch (error) {
@@ -1339,7 +1354,7 @@ export default function AddEditFormControll() {
               updateFlag({
                 flag: "isRedirection",
                 value: true,
-              })
+              }),
             );
             setIsFormSaved(false);
             toast.success(data.message);
@@ -1359,7 +1374,7 @@ export default function AddEditFormControll() {
                   id: uriDecodedMenu.id,
                   menuName: uriDecodedMenu.menuName,
                   parentMenuId: uriDecodedMenu.parentMenuId,
-                })}`
+                })}`,
               );
             }, 500);
           } else {
@@ -1382,7 +1397,7 @@ export default function AddEditFormControll() {
           const missingField = Object.entries(fields).find(
             // eslint-disable-next-line no-unused-vars
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -1404,8 +1419,8 @@ export default function AddEditFormControll() {
                   newState,
                   formControlData,
                   newState,
-                  setNewState
-                )
+                  setNewState,
+                ),
               );
           }
         } catch (error) {
@@ -1463,7 +1478,7 @@ export default function AddEditFormControll() {
             id: uriDecodedMenu.id,
             menuName: uriDecodedMenu.menuName,
             parentMenuId: uriDecodedMenu.parentMenuId,
-          })}`
+          })}`,
         );
       }
     } else if (conformData.type === "onCheck") {
@@ -1506,7 +1521,7 @@ export default function AddEditFormControll() {
         tempNewState = {
           ...tempNewState,
           [element.fieldname]: ["checkbox", "radio", "multicheckbox"].includes(
-            element.controlname.toLowerCase()
+            element.controlname.toLowerCase(),
           )
             ? element.controlDefaultValue !== null
               ? element.controlDefaultValue
@@ -1545,7 +1560,7 @@ export default function AddEditFormControll() {
         let updatedFormControlDataParentsFields = { ...resData };
         console.log(
           "updatedFormControlDataParentsFields",
-          updatedFormControlDataParentsFields
+          updatedFormControlDataParentsFields,
         );
         setParentsFields(updatedFormControlDataParentsFields);
       }
@@ -1729,7 +1744,7 @@ export default function AddEditFormControll() {
     // Find all matching records in actionFieldNames
     matchedRecordArray =
       actionFieldNames?.filter((record) =>
-        changedFieldNames.includes(record.parentFieldName)
+        changedFieldNames.includes(record.parentFieldName),
       ) || [];
 
     //    console.log("Matched Records Array:", matchedRecordArray);
@@ -1755,16 +1770,16 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: true }
-                : field
+                : field,
           );
 
           const hiddenFieldsFormatted = updatedState[sectionsArray[0]]
             .filter((field) => hiddenColumnIds.includes(field.id))
             .map(
               (field, index) =>
-                `${field.controlname}_${field.fieldname}_${field?.id}`
+                `${field.controlname}_${field.fieldname}_${field?.id}`,
             );
 
           //          console.log("Formatted Hidden Fields:", hiddenFieldsFormatted);
@@ -1776,7 +1791,7 @@ export default function AddEditFormControll() {
             updatedState[sectionsArray[0]].some(
               (field) =>
                 hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+                field.isControlShow !== false,
             )
           ) {
             updatedState[sectionsArray[0]] = updatedContainerPlanner;
@@ -1795,9 +1810,9 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, isEditable: true }
-                : field
+                : field,
           );
 
           if (
@@ -1805,7 +1820,7 @@ export default function AddEditFormControll() {
               (field) =>
                 disabledColumnIds.includes(field.id) &&
                 field.isControlShow !== false &&
-                !field.isEditable
+                !field.isEditable,
             )
           ) {
             updatedState[sectionsArray[0]] = updatedContainerPlanner;
@@ -1842,7 +1857,7 @@ export default function AddEditFormControll() {
     // Find all matching records in actionFieldNames
     matchedRecordArray =
       actionFieldNames?.filter((record) =>
-        changedFieldNames.includes(record.parentFieldName)
+        changedFieldNames.includes(record.parentFieldName),
       ) || [];
 
     //    console.log("Matched Records Array:", matchedRecordArray);
@@ -1900,16 +1915,16 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: false }
-                : field
+                : field,
           );
 
           const hiddenFieldsFormatted = updatedState[sectionsArray[0]]
             .filter((field) => hiddenColumnIds.includes(field.id))
             .map(
               (field, index) =>
-                `${field.controlname}_${field.fieldname}_${field?.id}`
+                `${field.controlname}_${field.fieldname}_${field?.id}`,
             );
 
           //          console.log("Formatted Hidden Fields:", hiddenFieldsFormatted);
@@ -1921,7 +1936,7 @@ export default function AddEditFormControll() {
             updatedState[sectionsArray[0]].some(
               (field) =>
                 hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+                field.isControlShow !== false,
             )
           ) {
             updatedState[sectionsArray[0]] = updatedContainerPlanner;
@@ -1940,16 +1955,16 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, isEditable: false }
-                : field
+                : field,
           );
 
           if (
             updatedState[sectionsArray[0]].some(
               (field) =>
                 disabledColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+                field.isControlShow !== false,
             )
           ) {
             updatedState[sectionsArray[0]] = updatedContainerPlanner;
@@ -2198,7 +2213,7 @@ export default function AddEditFormControll() {
 
         // Check for matching buyCurrencyId
         const matchingBuyRows = newState.tblRateRequestCharge.filter(
-          (innerRow) => innerRow.buyCurrencyId === row.buyCurrencyId
+          (innerRow) => innerRow.buyCurrencyId === row.buyCurrencyId,
         );
 
         // If there's a change in the buy exchange rate
@@ -2211,7 +2226,7 @@ export default function AddEditFormControll() {
 
         // Check for matching sellCurrencyId
         const matchingSellRows = newState.tblRateRequestCharge.filter(
-          (innerRow) => innerRow.sellCurrencyId === row.sellCurrencyId
+          (innerRow) => innerRow.sellCurrencyId === row.sellCurrencyId,
         );
 
         // If there's a change in the sell exchange rate
@@ -2229,9 +2244,9 @@ export default function AddEditFormControll() {
       const hasChanges = updatedRows.some((updatedRow, index) => {
         return (
           updatedRow.buyExchangeRate !==
-          newState.tblRateRequestCharge[index].buyExchangeRate ||
+            newState.tblRateRequestCharge[index].buyExchangeRate ||
           updatedRow.sellExchangeRate !==
-          newState.tblRateRequestCharge[index].sellExchangeRate
+            newState.tblRateRequestCharge[index].sellExchangeRate
         );
       });
 
@@ -2257,7 +2272,7 @@ export default function AddEditFormControll() {
     functionData,
     formControlData,
     setFormControlData,
-    setStateVariable
+    setStateVariable,
   ) {
     const funcNameMatch = functionData?.match(/^(\w+)/);
     const argsMatch = functionData?.match(/\((.*)\)/);
@@ -2305,7 +2320,7 @@ export default function AddEditFormControll() {
             funcCall,
             formControlData,
             setFormControlData,
-            setNewState
+            setNewState,
           );
         });
       }
@@ -2830,6 +2845,8 @@ function ChildAccordianComponent({
 
   // for scrolling table
   const [tableBodyWidhth, setTableBodyWidth] = useState("0px");
+  const isChildAddHidden = isConfigFlagEnabled(section?.isAddHide);
+  const isChildDeleteHidden = isConfigFlagEnabled(section?.isDeleteHide);
 
   console.log("copyChildValueObj", copyChildValueObj);
 
@@ -2909,6 +2926,7 @@ function ChildAccordianComponent({
   };
 
   const childButtonHandler = (section, indexValue, islastTab) => {
+    if (isConfigFlagEnabled(section?.isAddHide)) return;
     //    console.log("childButtonHandler", section);
     if (isChildAccordionOpen) {
       setClickCount((prevCount) => prevCount + 1);
@@ -2922,7 +2940,7 @@ function ChildAccordianComponent({
           feild.isRequired &&
           (!Object.prototype.hasOwnProperty.call(
             childObject,
-            feild.fieldname
+            feild.fieldname,
           ) ||
             //childObject[feild.fieldname]?.trim() === "")
             String(childObject[feild.fieldname] || "").trim() === "")
@@ -2948,7 +2966,7 @@ function ChildAccordianComponent({
               newState,
               formControlData,
               Data,
-              setChildObject
+              setChildObject,
             );
             if (updatedData?.alertShow == true) {
               // if (updatedData.type == "success") {
@@ -3077,12 +3095,12 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-              const parsedValue =
-                typeof row[item.fieldname] === "number"
-                  ? row[item.fieldname]
-                  : parseFloat(row[item.fieldname] || 0);
-              return isNaN(parsedValue) ? sum : sum + parsedValue;
-            }, 0) // Calculate sum for 's' type
+                const parsedValue =
+                  typeof row[item.fieldname] === "number"
+                    ? row[item.fieldname]
+                    : parseFloat(row[item.fieldname] || 0);
+                return isNaN(parsedValue) ? sum : sum + parsedValue;
+              }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -3139,7 +3157,10 @@ function ChildAccordianComponent({
 
     setNewState((prevState) => {
       // If your state ever had a legacy key, prefer it
-      const targetKey = Object.prototype.hasOwnProperty.call(prevState, "noOfpackages")
+      const targetKey = Object.prototype.hasOwnProperty.call(
+        prevState,
+        "noOfpackages",
+      )
         ? "noOfpackages"
         : "noOfPackages";
 
@@ -3152,11 +3173,10 @@ function ChildAccordianComponent({
       };
     });
   };
-  
-  
-    useEffect(() => {
-      calculateTotalNoOfPackages();
-    }, [newState.tblJobContainer]);
+
+  useEffect(() => {
+    calculateTotalNoOfPackages();
+  }, [newState.tblJobContainer]);
   const calculateTotalGrossWeight = () => {
     if (!newState || !Array.isArray(newState.tblJobContainer)) {
       return newState;
@@ -3218,12 +3238,13 @@ function ChildAccordianComponent({
     const lastIndex = renderedData.length + 10;
     const newData = newState[section.tableName]?.slice(
       renderedData.length,
-      lastIndex
+      lastIndex,
     );
     setRenderedData((prevData) => [...prevData, ...newData]);
   };
 
   const deleteChildRecord = (index) => {
+    if (isChildDeleteHidden) return;
     try {
       if (section.functionOnDelete && section.functionOnDelete !== null) {
         let functonsArray = section.functionOnDelete?.trim().split(";");
@@ -3232,7 +3253,7 @@ function ChildAccordianComponent({
         let UpdatedNewState = {
           ...newState,
           [section.tableName]: newState[section.tableName].filter(
-            (_, i) => i !== index
+            (_, i) => i !== index,
           ),
         };
         let Data = { ...newState[section.tableName][index] };
@@ -3245,7 +3266,7 @@ function ChildAccordianComponent({
             UpdatedNewState,
             formControlData,
             {},
-            setChildObject
+            setChildObject,
           );
           if (updatedData?.alertShow == true) {
             // if (updatedData.type == "success") {
@@ -3284,7 +3305,7 @@ function ChildAccordianComponent({
         setNewState((prevState) => {
           const newStateCopy = { ...prevState };
           const updatedData = newStateCopy[section.tableName].filter(
-            (_, idx) => idx !== index
+            (_, idx) => idx !== index,
           );
           newStateCopy[section.tableName] = updatedData;
 
@@ -3296,7 +3317,7 @@ function ChildAccordianComponent({
         setSubmitNewState((prevState) => {
           const newStateCopy = { ...prevState };
           const updatedData = newStateCopy[section.tableName].filter(
-            (_, idx) => idx !== index
+            (_, idx) => idx !== index,
           );
           newStateCopy[section.tableName] = updatedData;
           if (updatedData.length === 0) {
@@ -3307,7 +3328,7 @@ function ChildAccordianComponent({
         setOriginalData((prevState) => {
           const newStateCopy = { ...prevState };
           const updatedData = newStateCopy[section?.tableName]?.filter(
-            (_, idx) => idx !== index
+            (_, idx) => idx !== index,
           );
           newStateCopy[section.tableName] = updatedData;
           if (updatedData?.length === 0) {
@@ -3321,7 +3342,7 @@ function ChildAccordianComponent({
       setNewState((prevState) => {
         const newStateCopy = { ...prevState };
         const updatedData = newStateCopy[section.tableName].filter(
-          (_, idx) => idx !== index
+          (_, idx) => idx !== index,
         );
         newStateCopy[section.tableName] = updatedData;
 
@@ -3333,7 +3354,7 @@ function ChildAccordianComponent({
       setSubmitNewState((prevState) => {
         const newStateCopy = { ...prevState };
         const updatedData = newStateCopy[section.tableName].filter(
-          (_, idx) => idx !== index
+          (_, idx) => idx !== index,
         );
         newStateCopy[section.tableName] = updatedData;
         if (updatedData.length === 0) {
@@ -3344,7 +3365,7 @@ function ChildAccordianComponent({
       setOriginalData((prevState) => {
         const newStateCopy = { ...prevState };
         const updatedData = newStateCopy[section?.tableName]?.filter(
-          (_, idx) => idx !== index
+          (_, idx) => idx !== index,
         );
         newStateCopy[section.tableName] = updatedData;
         if (updatedData?.length === 0) {
@@ -3393,6 +3414,7 @@ function ChildAccordianComponent({
   };
 
   const handleAddContainerRow = (section, indexValue) => {
+    if (isConfigFlagEnabled(section?.isAddHide)) return;
     setIschildAccordionOpen(true);
     setInputFieldsVisible(true);
 
@@ -3409,7 +3431,7 @@ function ChildAccordianComponent({
       const newStateCopy = { ...newState, ...prevState };
       // Assume each entry in the array has an 'id' property
       let updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx === index
+        (_, idx) => idx === index,
       );
       updatedData = { ...updatedData[0], isChecked: false };
       newStateCopy[section.tableName][index] = updatedData;
@@ -3422,7 +3444,7 @@ function ChildAccordianComponent({
       //   (item) => item._id !== id
       // );
       let updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx === index
+        (_, idx) => idx === index,
       );
       updatedData = { ...updatedData[0], isChecked: false };
       newStateCopy[section.tableName][index] = updatedData;
@@ -3751,8 +3773,8 @@ function ChildAccordianComponent({
       const right = Math.round(
         Math.floor(
           tableRef.current?.getBoundingClientRect()?.width +
-          tableRef.current?.scrollLeft
-        )
+            tableRef.current?.scrollLeft,
+        ),
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
         setTableBodyWidth(`${right - 70}`);
@@ -3775,7 +3797,7 @@ function ChildAccordianComponent({
     formControlData,
     setFormControlData,
     setStateVariable,
-    values
+    values,
   ) {
     const funcNameMatch = functionData?.match(/^(\w+)/);
     const argsMatch = functionData?.match(/\((.*)\)/);
@@ -3824,7 +3846,7 @@ function ChildAccordianComponent({
             formControlData,
             setFormControlData,
             setChildObject,
-            childObject
+            childObject,
           );
         });
       }
@@ -3900,7 +3922,11 @@ function ChildAccordianComponent({
         <AccordionDetails
           className={`${styles.pageBackground} flex relative`}
           sx={{
-            height: inputFieldsVisible ? "auto" : clickCount === 0 ? "3.5rem" : "auto",
+            height: inputFieldsVisible
+              ? "auto"
+              : clickCount === 0
+                ? "3.5rem"
+                : "auto",
             padding: inputFieldsVisible ? "0" : "0",
             width: "100%",
           }}
@@ -3908,7 +3934,7 @@ function ChildAccordianComponent({
           <div key={indexValue} className=" w-full ">
             {/* Icon Button on the right */}
             <div className="absolute top-1 right-[-3px] flex  justify-end">
-              {clickCount === 0 && !inputFieldsVisible && (
+              {!isChildAddHidden && clickCount === 0 && !inputFieldsVisible && (
                 <HoverIcon
                   defaultIcon={addLogo}
                   hoverIcon={plusIconHover}
@@ -3932,7 +3958,7 @@ function ChildAccordianComponent({
             </div>
 
             {/* Custom Input Fields in the middle */}
-            {inputFieldsVisible && (
+            {!isChildAddHidden && inputFieldsVisible && (
               <div
                 className={` overflow-hidden  flex    items-start gap-4 mt-[0.5rem] ml-[1rem] mb-[0.5rem]  justify-between`}
               >
@@ -4077,20 +4103,23 @@ function ChildAccordianComponent({
                                           minWidth: "64px",
                                         }}
                                       >
-                                        {index === 0 && (section?.showSrNo == true || section?.showSrNo == "true") && (
-                                          <HoverIcon
-                                            defaultIcon={addLogo}
-                                            hoverIcon={plusIconHover}
-                                            altText={"Add"}
-                                            title={"Add"}
-                                            onClick={() => {
-                                              inputFieldsVisible == false &&
-                                                setInputFieldsVisible(
-                                                  (prev) => !prev
-                                                );
-                                            }}
-                                          />
-                                        )}
+                                        {index === 0 &&
+                                          (section?.showSrNo == true ||
+                                            section?.showSrNo == "true") &&
+                                          !isChildAddHidden && (
+                                            <HoverIcon
+                                              defaultIcon={addLogo}
+                                              hoverIcon={plusIconHover}
+                                              altText={"Add"}
+                                              title={"Add"}
+                                              onClick={() => {
+                                                inputFieldsVisible == false &&
+                                                  setInputFieldsVisible(
+                                                    (prev) => !prev,
+                                                  );
+                                              }}
+                                            />
+                                          )}
                                         <span className={`${styles.labelText}`}>
                                           Sr No.
                                         </span>
@@ -4101,33 +4130,40 @@ function ChildAccordianComponent({
                                     // align="left"
                                     sx={{
                                       ...childTableHeaderStyle,
-                                      paddingLeft: (
+                                      paddingLeft:
                                         section?.showSrNo === true ||
-                                        section?.showSrNo === "true") ? "29px !important":"0px !important",
+                                        section?.showSrNo === "true"
+                                          ? "29px !important"
+                                          : "0px !important",
                                     }}
                                     onContextMenu={(event) =>
                                       handleRightClick(
                                         event,
                                         field.fieldname,
                                         section,
-                                        section.fields
+                                        section.fields,
                                       )
                                     } // Add the right-click handler here
                                   >
-                                    {index === 0 && !(section?.showSrNo == true || section?.showSrNo == "true") && (
-                                      <HoverIcon
-                                        defaultIcon={addLogo}
-                                        hoverIcon={plusIconHover}
-                                        altText={"Add"}
-                                        title={"Add"}
-                                        onClick={() => {
-                                          inputFieldsVisible == false &&
-                                            setInputFieldsVisible(
-                                              (prev) => !prev
-                                            );
-                                        }}
-                                      />
-                                    )}
+                                    {index === 0 &&
+                                      !isChildAddHidden &&
+                                      !(
+                                        section?.showSrNo == true ||
+                                        section?.showSrNo == "true"
+                                      ) && (
+                                        <HoverIcon
+                                          defaultIcon={addLogo}
+                                          hoverIcon={plusIconHover}
+                                          altText={"Add"}
+                                          title={"Add"}
+                                          onClick={() => {
+                                            inputFieldsVisible == false &&
+                                              setInputFieldsVisible(
+                                                (prev) => !prev,
+                                              );
+                                          }}
+                                        />
+                                      )}
                                     <span
                                       className={`${styles.labelText}`}
                                       onClick={() =>
@@ -4153,7 +4189,6 @@ function ChildAccordianComponent({
                                       {renderSortIcon(field.fieldname)}
                                     </span>
                                   </TableCell>
-
                                 </React.Fragment>
                               ))}
                           </TableRow>
@@ -4165,7 +4200,11 @@ function ChildAccordianComponent({
                               childIndex={index}
                               childName={section.tableName}
                               subChild={section.subChild}
-                              sectionData={section}
+                              sectionData={{
+                                ...section,
+                                isAddHide: isChildAddHidden,
+                                isDeleteHide: isChildDeleteHidden,
+                              }}
                               key={index}
                               row={row}
                               newState={newState}
@@ -4202,7 +4241,7 @@ function ChildAccordianComponent({
                                 section?.showSrNo === true ||
                                 section?.showSrNo === "true"
                               }
-                            // expandAll={expandAll}
+                              // expandAll={expandAll}
                             />
                           ))}
                           <>
@@ -4237,7 +4276,7 @@ function ChildAccordianComponent({
                                               {(field.type === "number" ||
                                                 field.type === "decimal" ||
                                                 field.type === "string") &&
-                                                field.gridTotal
+                                              field.gridTotal
                                                 ? columnTotals[field.fieldname]
                                                 : ""}
                                             </div>
@@ -4260,8 +4299,7 @@ function ChildAccordianComponent({
                                                 <div
                                                   className={`${childTableRowStyles} `}
                                                   style={{
-                                                    backgroundColor:
-                                                      "#E0E0E0",
+                                                    backgroundColor: "#E0E0E0",
                                                   }}
                                                 />
                                               </div>

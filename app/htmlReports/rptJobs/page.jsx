@@ -387,9 +387,8 @@ const rptJobs = () => {
                 key={index}
                 ref={enquiryModuleRef}
                 id={`report-${reportId}`}
-                className={`black-text ${
-                  index < reportIds.length - 1 ? "report-spacing" : ""
-                } shadow-2xl`}
+                className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                  } shadow-2xl`}
                 style={{
                   width: "210mm",
                   height: "297mm",
@@ -414,9 +413,8 @@ const rptJobs = () => {
                 key={index}
                 ref={enquiryModuleRef}
                 id={`report-${reportId}`}
-                className={`black-text ${
-                  index < reportIds.length - 1 ? "report-spacing" : ""
-                } shadow-2xl`}
+                className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                  } shadow-2xl`}
                 style={{
                   width: "210mm",
                   height: "297mm",
@@ -440,9 +438,8 @@ const rptJobs = () => {
               key={index}
               ref={enquiryModuleRef}
               id={`report-${reportId}`}
-              className={`black-text ${
-                index < reportIds.length - 1 ? "report-spacing" : ""
-              } shadow-2xl`}
+              className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                } shadow-2xl`}
               style={{
                 width: "210mm",
                 height: "297mm",
@@ -462,9 +459,8 @@ const rptJobs = () => {
               key={index}
               ref={enquiryModuleRef}
               id={`report-${reportId}`}
-              className={`black-text  ${
-                index < reportIds.length - 1 ? "report-spacing" : ""
-              } shadow-2xl`}
+              className={`black-text  ${index < reportIds.length - 1 ? "report-spacing" : ""
+                } shadow-2xl`}
               style={{
                 width: "210mm",
                 height: "297mm",
@@ -484,9 +480,8 @@ const rptJobs = () => {
               key={index}
               ref={enquiryModuleRef}
               id={`report-${reportId}`}
-              className={`mt-5 black-text ${
-                index < reportIds.length - 1 ? "report-spacing" : ""
-              } shadow-2xl`}
+              className={`mt-5 black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                } shadow-2xl`}
               style={{
                 width: "210mm",
                 height: "297mm",
@@ -506,9 +501,8 @@ const rptJobs = () => {
               key={index}
               ref={enquiryModuleRef}
               id={`report-${reportId}`}
-              className={`black-text ${
-                index < reportIds.length - 1 ? "report-spacing" : ""
-              } shadow-2xl`}
+              className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                } shadow-2xl`}
               style={{
                 width: "210mm",
                 height: "297mm",
@@ -528,9 +522,8 @@ const rptJobs = () => {
               key={index}
               ref={enquiryModuleRef}
               id={`report-${reportId}`}
-              className={`black-text ${
-                index < reportIds.length - 1 ? "report-spacing" : ""
-              } shadow-2xl`}
+              className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                } shadow-2xl`}
               style={{
                 width: "210mm",
                 height: "297mm",
@@ -1437,9 +1430,8 @@ const rptJobs = () => {
                   <tr key={`job-${index}-container-${containerIndex}`}>
                     <td style={thTdStyle}>{container.containerNo || ""}</td>
                     <td style={thTdStyle}>
-                      {`${container.sizeName || ""}/${
-                        container.typeName || ""
-                      }`}
+                      {`${container.sizeName || ""}/${container.typeName || ""
+                        }`}
                     </td>
                     <td style={thTdStyle}>
                       {container.containerStatusName || ""}
@@ -1462,33 +1454,29 @@ const rptJobs = () => {
     const mblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].mblDate) : null;
     const MblDatesFormat = mblDate
-      ? `${mblDate.getDate()}/${
-          mblDate.getMonth() + 1
-        }/${mblDate.getFullYear()}`
+      ? `${mblDate.getDate()}/${mblDate.getMonth() + 1
+      }/${mblDate.getFullYear()}`
       : "";
 
     const hblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].hblDate) : null;
     const hblDatesFormat = hblDate
-      ? `${hblDate.getDate()}/${
-          hblDate.getMonth() + 1
-        }/${hblDate.getFullYear()}`
+      ? `${hblDate.getDate()}/${hblDate.getMonth() + 1
+      }/${hblDate.getFullYear()}`
       : "";
 
     const sailData =
       jobData && jobData.length > 0 ? new Date(jobData[0].salingDate) : null;
     const sailDataFormat = sailData
-      ? `${sailData.getDate()}/${
-          sailData.getMonth() + 1
-        }/${sailData.getFullYear()}`
+      ? `${sailData.getDate()}/${sailData.getMonth() + 1
+      }/${sailData.getFullYear()}`
       : "";
 
     const arrivalData =
       jobData && jobData.length > 0 ? new Date(jobData[0].arrivalDate) : null;
     const arrivalDataFormat = arrivalData
-      ? `${arrivalData.getDate()}/${
-          arrivalData.getMonth() + 1
-        }/${arrivalData.getFullYear()}`
+      ? `${arrivalData.getDate()}/${arrivalData.getMonth() + 1
+      }/${arrivalData.getFullYear()}`
       : "";
 
     const thStyle = {
@@ -1644,33 +1632,29 @@ const rptJobs = () => {
     const sailData =
       jobData && jobData.length > 0 ? new Date(jobData[0].salingDate) : null;
     const sailDataFormat = sailData
-      ? `${sailData.getDate()}/${
-          sailData.getMonth() + 1
-        }/${sailData.getFullYear()}`
+      ? `${sailData.getDate()}/${sailData.getMonth() + 1
+      }/${sailData.getFullYear()}`
       : "";
 
     const arrivalData =
       jobData && jobData.length > 0 ? new Date(jobData[0].arrivalDate) : null;
     const arrivalDataFormat = arrivalData
-      ? `${arrivalData.getDate()}/${
-          arrivalData.getMonth() + 1
-        }/${arrivalData.getFullYear()}`
+      ? `${arrivalData.getDate()}/${arrivalData.getMonth() + 1
+      }/${arrivalData.getFullYear()}`
       : "";
 
     const mblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].mblDate) : null;
     const MblDatesFormat = mblDate
-      ? `${mblDate.getDate()}/${
-          mblDate.getMonth() + 1
-        }/${mblDate.getFullYear()}`
+      ? `${mblDate.getDate()}/${mblDate.getMonth() + 1
+      }/${mblDate.getFullYear()}`
       : "";
 
     const hblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].hblDate) : null;
     const hblDatesFormat = hblDate
-      ? `${hblDate.getDate()}/${
-          hblDate.getMonth() + 1
-        }/${hblDate.getFullYear()}`
+      ? `${hblDate.getDate()}/${hblDate.getMonth() + 1
+      }/${hblDate.getFullYear()}`
       : "";
 
     const thStyle = {
@@ -1844,9 +1828,8 @@ const rptJobs = () => {
 
     const sailDateFormat =
       sailDate instanceof Date && !isNaN(sailDate)
-        ? `${sailDate.getDate()}/${
-            sailDate.getMonth() + 1
-          }/${sailDate.getFullYear()}`
+        ? `${sailDate.getDate()}/${sailDate.getMonth() + 1
+        }/${sailDate.getFullYear()}`
         : "";
 
     const thStyle = {
@@ -1968,17 +1951,15 @@ const rptJobs = () => {
     const mblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].mblDate) : null;
     const MblDatesFormat = mblDate
-      ? `${mblDate.getDate()}/${
-          mblDate.getMonth() + 1
-        }/${mblDate.getFullYear()}`
+      ? `${mblDate.getDate()}/${mblDate.getMonth() + 1
+      }/${mblDate.getFullYear()}`
       : "";
 
     const hblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].hblDate) : null;
     const hblDatesFormat = hblDate
-      ? `${hblDate.getDate()}/${
-          hblDate.getMonth() + 1
-        }/${hblDate.getFullYear()}`
+      ? `${hblDate.getDate()}/${hblDate.getMonth() + 1
+      }/${hblDate.getFullYear()}`
       : "";
 
     const thStyle = {
@@ -2515,33 +2496,29 @@ const rptJobs = () => {
     const DepatureData =
       jobData && jobData.length > 0 ? new Date(jobData[0].salingDate) : null;
     const DepatureDataFormat = DepatureData
-      ? `${DepatureData.getDate()}/${
-          DepatureData.getMonth() + 1
-        }/${DepatureData.getFullYear()}`
+      ? `${DepatureData.getDate()}/${DepatureData.getMonth() + 1
+      }/${DepatureData.getFullYear()}`
       : "";
 
     const arrivalData =
       jobData && jobData.length > 0 ? new Date(jobData[0].arrivalDate) : null;
     const arrivalDataFormat = arrivalData
-      ? `${arrivalData.getDate()}/${
-          arrivalData.getMonth() + 1
-        }/${arrivalData.getFullYear()}`
+      ? `${arrivalData.getDate()}/${arrivalData.getMonth() + 1
+      }/${arrivalData.getFullYear()}`
       : "";
 
     const mblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].mblDate) : null;
     const MblDatesFormat = mblDate
-      ? `${mblDate.getDate()}/${
-          mblDate.getMonth() + 1
-        }/${mblDate.getFullYear()}`
+      ? `${mblDate.getDate()}/${mblDate.getMonth() + 1
+      }/${mblDate.getFullYear()}`
       : "";
 
     const hblDate =
       jobData && jobData.length > 0 ? new Date(jobData[0].hblDate) : null;
     const hblDatesFormat = hblDate
-      ? `${hblDate.getDate()}/${
-          hblDate.getMonth() + 1
-        }/${hblDate.getFullYear()}`
+      ? `${hblDate.getDate()}/${hblDate.getMonth() + 1
+      }/${hblDate.getFullYear()}`
       : "";
 
     return (
@@ -4116,19 +4093,21 @@ const rptJobs = () => {
   const JobContainerModule = ({ jobData }) => {
     const thStyle = {
       width: "15%",
-      padding: "5px",
+      padding: "2px",
       verticalAlign: "top",
       fontWeight: "600",
       border: "2px solid #A9A9A9",
       textAlign: "center",
+      fontSize: "9px",
     };
 
     const tdStyle = {
       width: "15%",
-      textAlign: "left",
-      padding: "5px",
+      textAlign: "center",
+      padding: "2px",
       verticalAlign: "top",
       border: "2px solid #A9A9A9",
+      fontSize: "9px",
     };
 
     const tableStyle = {
@@ -4158,30 +4137,30 @@ const rptJobs = () => {
             <tbody>
               {Array.isArray(jobData)
                 ? jobData.map((job, jobIndex) =>
-                    Array.isArray(job.tblJobContainer)
-                      ? job.tblJobContainer.map((container, containerIndex) => (
-                          <tr
-                            key={`${jobIndex}-${containerIndex}`}
-                            style={hoverHighlightStyle}
-                          >
-                            <td style={tdStyle}>
-                              {container.containerNo || ""}
-                            </td>
-                            <td style={tdStyle}>{container.sizeName || ""}</td>
-                            <td style={tdStyle}>{container.typeName || ""}</td>
-                            <td style={tdStyle}>
-                              {container.grossWt ? container.grossWt : ""}
-                            </td>
-                            <td style={tdStyle}>
-                              {container.netWt ? container.netWt : ""}
-                            </td>
-                            <td style={tdStyle}>
-                              {container.noOfPackages || ""}
-                            </td>
-                          </tr>
-                        ))
-                      : null,
-                  )
+                  Array.isArray(job.tblJobContainer)
+                    ? job.tblJobContainer.map((container, containerIndex) => (
+                      <tr
+                        key={`${jobIndex}-${containerIndex}`}
+                        style={hoverHighlightStyle}
+                      >
+                        <td style={tdStyle}>
+                          {container.containerNo || ""}
+                        </td>
+                        <td style={tdStyle}>{container.sizeName || ""}</td>
+                        <td style={tdStyle}>{container.typeName || ""}</td>
+                        <td style={tdStyle}>
+                          {container.grossWt ? container.grossWt : ""}
+                        </td>
+                        <td style={tdStyle}>
+                          {container.netWt ? container.netWt : ""}
+                        </td>
+                        <td style={tdStyle}>
+                          {container.noOfPackages || ""}
+                        </td>
+                      </tr>
+                    ))
+                    : null,
+                )
                 : null}
             </tbody>
           </table>
@@ -4196,19 +4175,21 @@ const rptJobs = () => {
   const JobDetailsModule = ({ jobData }) => {
     const thStyle = {
       textAlign: "left",
-      padding: "5px 11px",
+      padding: "2px 11px",
       verticalAlign: "top",
       fontWeight: "600",
       border: "2px solid #A9A9A9",
       width: "10%",
+      fontSize: "9px",
     };
 
     const tdStyle = {
       textAlign: "left",
-      padding: "5px 11px",
+      padding: "2px 11px",
       verticalAlign: "top",
       border: "2px solid #A9A9A9",
       width: "20%",
+      fontSize: "9px",
     };
 
     const tableStyle = {
@@ -4243,17 +4224,27 @@ const rptJobs = () => {
                 <th style={thStyle}>Customer:</th>
                 <td style={{ ...tdStyle }} colSpan="3">
                   {jobData && jobData.length > 0
+                    ? jobData[0].customerName
+                    : ""}<br />
+                  {jobData && jobData.length > 0
                     ? jobData[0].customerAddress
                     : ""}
                 </td>
                 <th style={thStyle}>Shipper:</th>
                 <td style={{ ...tdStyle }} colSpan="3">
                   {jobData && jobData.length > 0
+                    ? jobData[0].shipperName
+                    : ""}<br />
+                  <br />
+                  {jobData && jobData.length > 0
                     ? jobData[0].shipperAddress
                     : ""}
                 </td>
                 <th style={thStyle}>Consignee:</th>
                 <td style={{ ...tdStyle }} colSpan="3">
+                  {jobData && jobData.length > 0
+                    ? jobData[0].consigneeName
+                    : ""}<br />
                   {jobData && jobData.length > 0
                     ? jobData[0].consigneeAddress
                     : ""}
@@ -4282,11 +4273,11 @@ const rptJobs = () => {
                 </td>
                 <th style={thStyle}>Departure Vessel:</th>
                 <td style={{ ...tdStyle }} colSpan="3">
-                  /
+                  {jobData && jobData.length > 0 ? jobData[0].polVesselText : ""} / {jobData && jobData.length > 0 ? jobData[0].polVoyageText : ""}
                 </td>
                 <th style={thStyle}>Arrival Vessel:</th>
                 <td style={{ ...tdStyle }} colSpan="3">
-                  /
+                  {jobData && jobData.length > 0 ? jobData[0].podVesselText : ""} / {jobData && jobData.length > 0 ? jobData[0].podVoyageText : ""}
                 </td>
               </tr>
               {/* No of Packages, Gross weight, Volume */}
@@ -4302,7 +4293,7 @@ const rptJobs = () => {
                 <th style={thStyle}>Volume:</th>
                 <td style={{ ...tdStyle }} colSpan="3">
                   {jobData && jobData.length > 0
-                    ? `${jobData[0].volume} ${jobData[0].volumeUnitName}`
+                    ? `${jobData[0].volume || ""} ${jobData[0].volumeUnitName || ""}`
                     : ""}
                 </td>
               </tr>
@@ -4311,7 +4302,7 @@ const rptJobs = () => {
                 <th style={thStyle}>Sales Person:</th>
                 <td style={{ ...tdStyle }} colSpan="3">
                   {jobData && jobData.length > 0
-                    ? jobData[0].salesPersonName
+                    ? jobData[0].salesExecutivePerson
                     : ""}
                 </td>
                 {/* Placeholder for potentially additional data */}
@@ -5218,7 +5209,7 @@ const rptJobs = () => {
     </div>
   );
 
-  const JobChargeModule = ({ jobData, voucherData }) => {
+  const JobChargeModule = ({ jobData = [] }) => {
     const tableStyle = {
       width: "100%",
       borderCollapse: "collapse",
@@ -5228,32 +5219,31 @@ const rptJobs = () => {
     const headerStyle = {
       backgroundColor: "#e0e0e0",
       color: "#000",
-      border: "2px solid #707070",
-      padding: "8px",
+      border: "1px solid #707070",
+      padding: "2px",
       textAlign: "center",
+      fontWeight: "bold",
+      fontSize: "8px",
     };
 
     const cellStyle = {
-      border: "2px solid #707070",
-      padding: "8px",
+      border: "1px solid #707070",
+      padding: "2px",
+      fontSize: "8px",
       textAlign: "center",
+      fontWeight: "normal",
     };
+
+    const toNumber = (value) => {
+      const num = Number(value);
+      return Number.isFinite(num) ? num : 0;
+    };
+
     let totalRevenueProvisional = 0;
     let totalCostProvisional = 0;
     let totalRevenueActual = 0;
     let totalCostActual = 0;
 
-    let allVoucherDetails = [];
-
-    // Flatten the array of arrays into a single array of voucher details
-    voucherData?.forEach((voucher) => {
-      voucher.tblVoucherLedger?.forEach((ledger) => {
-        allVoucherDetails.push(...ledger.tblVoucherLedgerDetails);
-      });
-    });
-
-    // Assuming jobData and voucherData are arrays of job charges.
-    // If the structures are different, you will need to adjust the mapping logic accordingly.
     return (
       <>
         <style>{`
@@ -5261,6 +5251,7 @@ const rptJobs = () => {
           background-color: #f2f2f2;
         }
       `}</style>
+
         <div>
           <table style={tableStyle} className="table-fixed text-xs">
             <thead>
@@ -5286,66 +5277,60 @@ const rptJobs = () => {
                 <th style={headerStyle}>Neutral</th>
               </tr>
             </thead>
+
             <tbody>
-              {jobData &&
-                jobData.map(
-                  (job, jobIndex) =>
-                    job.tblJobCharge &&
-                    job.tblJobCharge.map((charge, chargeIndex) => {
-                      const profitProvisional =
-                        (charge.sellAmount || 0) - (charge.buyAmount || 0);
-                      totalRevenueProvisional += charge.sellAmount || 0;
-                      totalCostProvisional += charge.buyAmount || 0;
+              {jobData?.map((job, jobIndex) =>
+                job?.tblJobCharge?.map((charge, chargeIndex) => {
+                  // Provisional
+                  const provisionalRevenue = toNumber(charge?.sellNetAmount);
+                  const provisionalCost = toNumber(charge?.buyNetAmount);
+                  const provisionalProfit =
+                    provisionalRevenue - provisionalCost;
 
-                      // For actual amounts, use similar logic as above.
-                      // totalRevenueActual += charge.actualSellAmount || 0;
-                      // totalCostActual += charge.actualBuyAmount || 0;
+                  // Actual
+                  const actualRevenue = toNumber(charge?.sellTotalAmountHc);
+                  const actualCost = toNumber(charge?.buyTotalAmountHc);
+                  const actualProfit = actualRevenue - actualCost;
 
-                      // Get corresponding voucher details
-                      const voucherDetail =
-                        allVoucherDetails[chargeIndex] || {};
-                      const revenueActual = voucherDetail.creditAmount || 0;
-                      const costActual = voucherDetail.debitAmount || 0;
-                      const profitActual = revenueActual - costActual;
+                  totalRevenueProvisional += provisionalRevenue;
+                  totalCostProvisional += provisionalCost;
+                  totalRevenueActual += actualRevenue;
+                  totalCostActual += actualCost;
 
-                      // Sum up actual totals
-                      totalRevenueActual += revenueActual;
-                      totalCostActual += costActual;
+                  return (
+                    <tr key={`job-${jobIndex}-charge-${chargeIndex}`}>
+                      <td style={cellStyle}>{charge?.charge || "/"}</td>
 
-                      return (
-                        <tr key={`job-${jobIndex}-charge-${chargeIndex}`}>
-                          <td style={cellStyle}>{charge.chargeName || "/"}</td>
-                          <td style={cellStyle}>{charge.sellAmount || "/"}</td>
-                          <td style={cellStyle}>{charge.buyAmount || "/"}</td>
-                          <td style={cellStyle}>{profitProvisional || "/"}</td>
-                          <td style={cellStyle}></td>
-                          {/* Actual columns can be filled in when you have the data */}
-                          <td style={cellStyle}>{revenueActual}</td>
-                          <td style={cellStyle}>{costActual}</td>
-                          <td style={cellStyle}>{profitActual}</td>
-                          <td style={cellStyle}></td>{" "}
-                          {/* Neutral - placeholder */}{" "}
-                          {/* This is for 'Neutral' which you haven't defined */}
-                          {/* < {totalRevenueActual} , {totalCostActual} , {totalProfitActual}  > */}
-                        </tr>
-                      );
-                    }),
-                )}
+                      <td style={cellStyle}>{provisionalRevenue.toFixed(2)}</td>
+                      <td style={cellStyle}>{provisionalCost.toFixed(2)}</td>
+                      <td style={cellStyle}>{provisionalProfit.toFixed(2)}</td>
+                      <td style={cellStyle}></td>
+
+                      <td style={cellStyle}>{actualRevenue.toFixed(2)}</td>
+                      <td style={cellStyle}>{actualCost.toFixed(2)}</td>
+                      <td style={cellStyle}>{actualProfit.toFixed(2)}</td>
+                      <td style={cellStyle}></td>
+                    </tr>
+                  );
+                }),
+              )}
             </tbody>
+
             <tfoot>
               <tr>
                 <th style={cellStyle}>Grand Total:</th>
-                <td style={cellStyle}>{totalRevenueProvisional}</td>
-                <td style={cellStyle}>{totalCostProvisional}</td>
+
+                <td style={cellStyle}>{totalRevenueProvisional.toFixed(2)}</td>
+                <td style={cellStyle}>{totalCostProvisional.toFixed(2)}</td>
                 <td style={cellStyle}>
-                  {totalRevenueProvisional - totalCostProvisional}
+                  {(totalRevenueProvisional - totalCostProvisional).toFixed(2)}
                 </td>
-                {/* Actual totals can be added when you have the data */}
                 <td style={cellStyle}>/</td>
-                <td style={cellStyle}>{totalRevenueActual}</td>
-                <td style={cellStyle}>{totalCostActual}</td>
+
+                <td style={cellStyle}>{totalRevenueActual.toFixed(2)}</td>
+                <td style={cellStyle}>{totalCostActual.toFixed(2)}</td>
                 <td style={cellStyle}>
-                  {totalRevenueActual - totalCostActual}
+                  {(totalRevenueActual - totalCostActual).toFixed(2)}
                 </td>
                 <td style={cellStyle}>/</td>
               </tr>
@@ -5366,7 +5351,7 @@ const rptJobs = () => {
         <CompanyImgModule />
         <div className="flex justify-center">
           <div
-            className="mt-5 text-xs"
+            className="mt-2 text-xs"
             style={{ width: "30%", backgroundColor: "#e0e0e0" }}
           >
             <h1
@@ -5397,9 +5382,7 @@ const rptJobs = () => {
         >
           <h2 className="font-semibold px-3 py-1">Charge Details :</h2>
         </div>
-        {voucherData && (
-          <JobChargeModule jobData={jobData} voucherData={voucherData} />
-        )}
+        <JobChargeModule jobData={jobData} />
       </div>
     </div>
   );
@@ -7480,27 +7463,27 @@ const rptJobs = () => {
               jobData.map((job, jobIndex) =>
                 Array.isArray(job.tblJobContainer)
                   ? job.tblJobContainer.map((container, containerIndex) => (
-                      <tr key={`${jobIndex}-${containerIndex}`}>
-                        <td style={tdStyle}>{container.containerNo || ""}</td>
-                        <td style={tdStyle}>{container.sizeName || ""}</td>
-                        <td style={tdStyle}>{container.typeName || ""}</td>
-                        <td style={tdStyle}>
-                          {container.grossWt
-                            ? `${parseFloat(
-                                container.grossWt,
-                              ).toLocaleString()} KGS`
-                            : ""}
-                        </td>
-                        <td style={tdStyle}>
-                          {container.netWt ? `${container.netWt} KGS` : ""}
-                        </td>
-                        <td style={tdStyle}>
-                          {container.noOfPackages
-                            ? parseFloat(container.noOfPackages).toFixed(2)
-                            : ""}
-                        </td>
-                      </tr>
-                    ))
+                    <tr key={`${jobIndex}-${containerIndex}`}>
+                      <td style={tdStyle}>{container.containerNo || ""}</td>
+                      <td style={tdStyle}>{container.sizeName || ""}</td>
+                      <td style={tdStyle}>{container.typeName || ""}</td>
+                      <td style={tdStyle}>
+                        {container.grossWt
+                          ? `${parseFloat(
+                            container.grossWt,
+                          ).toLocaleString()} KGS`
+                          : ""}
+                      </td>
+                      <td style={tdStyle}>
+                        {container.netWt ? `${container.netWt} KGS` : ""}
+                      </td>
+                      <td style={tdStyle}>
+                        {container.noOfPackages
+                          ? parseFloat(container.noOfPackages).toFixed(2)
+                          : ""}
+                      </td>
+                    </tr>
+                  ))
                   : null,
               )}
           </tbody>
@@ -7671,8 +7654,8 @@ const rptJobs = () => {
     tblJobContainer = [],
   ) => {
     const normDepot = (s) => (s == null ? "Unknown" : String(s).trim());
-    console.log('tblJobQty',tblJobQty)
-     console.log('tblJobContainer',tblJobContainer)
+    console.log("tblJobQty", tblJobQty);
+    console.log("tblJobContainer", tblJobContainer);
 
     // 1) Aggregate qty (and first non-null meta) by depot
     const byDepot = new Map();
@@ -7721,7 +7704,7 @@ const rptJobs = () => {
     // 3) Finalize + fallbacks
     return Array.from(byDepot.values()).map((x) => ({
       depot: x.depot,
-      depotAddress:x.depotAddress,
+      depotAddress: x.depotAddress,
       qty: x.qty,
       size: x.size ?? "—",
       type: x.type ?? "—",
@@ -8098,7 +8081,7 @@ const rptJobs = () => {
               {/* {jobData[0].podVessel} {" / "} {jobData[0].podVoyage} */}
               {jobData && jobData.length > 0 ? jobData[0].polVessel : ""}{" "}
               {" / "}{" "}
-              {jobData && jobData.length > 0 ? jobData[0].podVoyage : ""}
+              {jobData && jobData.length > 0 ? jobData[0].polVoyage : ""}
             </td>
           </tr>
           <tr>
@@ -8135,7 +8118,7 @@ const rptJobs = () => {
             </td>
           </tr>
           {clientId === 22 &&
-          jobData?.[0]?.carrierBookingNo?.toString().trim() ? (
+            jobData?.[0]?.carrierBookingNo?.toString().trim() ? (
             <tr>
               <th style={thStyle}>Carrier Booking No.</th>
               <td style={tdStyle}>{jobData[0].carrierBookingNo}</td>
@@ -8763,9 +8746,8 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -8794,9 +8776,8 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${
-                      index < reportIds.length - 1 ? "page-break" : ""
-                    }`}
+                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -8824,9 +8805,8 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${
-                      index < reportIds.length - 1 ? "page-break" : ""
-                    }`}
+                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -8855,9 +8835,8 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${
-                      index < reportIds.length - 1 ? "page-break" : ""
-                    }`}
+                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -8884,9 +8863,8 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${
-                      index < reportIds.length - 1 ? "page-break" : ""
-                    }`}
+                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -8914,9 +8892,8 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${
-                      index < reportIds.length - 1 ? "page-break" : ""
-                    }`}
+                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -8944,9 +8921,8 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${
-                      index < reportIds.length - 1 ? "page-break" : ""
-                    }`}
+                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -8978,9 +8954,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${
-                      index < reportIds.length - 1 ? "page-break" : ""
-                    }`}
+                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -9010,9 +8985,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${
-                      index < reportIds.length - 1 ? "page-break" : ""
-                    }`}
+                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -9040,9 +9014,8 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${
-                      index < reportIds.length - 1 ? "page-break" : ""
-                    }`}
+                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -9074,9 +9047,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9107,9 +9079,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9140,9 +9111,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text  ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text  ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9173,9 +9143,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9206,9 +9175,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9239,9 +9207,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${
-                      index < reportIds.length - 1 ? "page-break" : ""
-                    }`}
+                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -9271,9 +9238,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${
-                      index < reportIds.length - 1 ? "page-break" : ""
-                    }`}
+                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9304,9 +9270,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9337,9 +9302,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9370,9 +9334,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9403,9 +9366,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9436,9 +9398,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9469,9 +9430,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9502,9 +9462,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9535,9 +9494,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9568,9 +9526,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9599,9 +9556,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9632,9 +9588,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -9663,9 +9618,8 @@ const rptJobs = () => {
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text shadow-2xl ${
-                      index < reportIds.length - 1 ? "page-break" : ""
-                    }`}
+                    className={`black-text shadow-2xl ${index < reportIds.length - 1 ? "page-break" : ""
+                      }`}
                     style={{
                       width: "210mm",
                       margin: "auto",
@@ -9695,9 +9649,8 @@ const rptJobs = () => {
                     //ref={enquiryModuleRef}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
                     id={`report-${reportId}`}
-                    className={`black-text ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    } shadow-2xl`}
+                    className={`black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      } shadow-2xl`}
                     style={{
                       width: "210mm",
                       height: "297mm",
@@ -10043,11 +9996,10 @@ const rptJobs = () => {
                                 (enquiryModuleRefs.current[depotIndex] = el)
                               }
                               id={`report-${reportId}`}
-                              className={`black-text ${
-                                depotIndex < jobData[0].tblJobQty.length - 1
-                                  ? "report-spacing"
-                                  : ""
-                              } shadow-2xl`}
+                              className={`black-text ${depotIndex < jobData[0].tblJobQty.length - 1
+                                ? "report-spacing"
+                                : ""
+                                } shadow-2xl`}
                               style={{
                                 width: "210mm",
                                 height: "297mm",
@@ -10102,11 +10054,10 @@ const rptJobs = () => {
                                 (enquiryModuleRefs.current[depotIndex] = el)
                               }
                               id={`report-${reportId}`}
-                              className={`black-text ${
-                                depotIndex < jobData[0].tblJobQty.length - 1
-                                  ? "report-spacing"
-                                  : ""
-                              } shadow-2xl`}
+                              className={`black-text ${depotIndex < jobData[0].tblJobQty.length - 1
+                                ? "report-spacing"
+                                : ""
+                                } shadow-2xl`}
                               style={{
                                 width: "210mm",
                                 height: "297mm",
@@ -10150,9 +10101,8 @@ const rptJobs = () => {
                               (enquiryModuleRefs.current[index] = el)
                             }
                             id={`report-${index}`}
-                            className={`black-text ${
-                              index < rows.length - 1 ? "report-spacing" : ""
-                            } shadow-2xl`}
+                            className={`black-text ${index < rows.length - 1 ? "report-spacing" : ""
+                              } shadow-2xl`}
                             style={{
                               width: "210mm",
                               minHeight: "297mm", // use minHeight for safer flow

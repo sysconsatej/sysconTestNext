@@ -52,6 +52,16 @@ import {
 import EditNoteRoundedIcon from "@mui/icons-material/EditNoteRounded";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import * as onSubmitValidation from "@/helper/onSubmitFunction";
+
+function isConfigFlagEnabled(value) {
+  if (value === true || value === 1 || value === "1") return true;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return ["true", "yes", "y", "t"].includes(normalized);
+  }
+  return false;
+}
+
 function sortJSON(jsonArray, field, sortOrder) {
   return jsonArray.sort((a, b) => {
     const valueA = a[field];
@@ -170,8 +180,12 @@ export default function SubChildComponent({
   formControlData,
   setFormControlData,
 }) {
+  const isSubChildAddHidden = isConfigFlagEnabled(subChild?.isAddHide);
+  const isSubChildDeleteHidden = isConfigFlagEnabled(subChild?.isDeleteHide);
   const [hideSubChildInputs, setHideSubChildInputs] = useState(
-    expandAll
+    isSubChildAddHidden
+      ? true
+      : expandAll
       ? row[subChild?.tableName] && row[subChild?.tableName]?.length === 0
         ? false
         : true
@@ -199,6 +213,7 @@ export default function SubChildComponent({
   };
 
   const hideSubChildInputComponent = () => {
+    if (isSubChildAddHidden) return;
     setHideSubChildInputs((prev) => !prev);
   };
 
@@ -218,6 +233,7 @@ export default function SubChildComponent({
     subChild,
     islastTab
   ) => {
+    if (isSubChildAddHidden) return;
     if (isChildAccordionOpen) {
       setClickCount((prevCount) => prevCount + 1);
     }
@@ -381,6 +397,7 @@ export default function SubChildComponent({
   }, [newState]);
 
   const deleteSubChildRecord = (indexValue) => {
+    if (isSubChildDeleteHidden) return;
     let tmpData = { ...newState };
     tmpData[childName][childIndex][subChild.tableName].splice(indexValue, 1);
     if (subChild?.functionOnDelete && subChild?.functionOnDelete !== null) {
@@ -978,7 +995,7 @@ export default function SubChildComponent({
             {(!row[subChild.tableName] ||
               row[subChild.tableName].length === 0) && (
                 <div className="absolute top-1 right-[-3px] flex justify-end ">
-                  {!isView && clickCount === 0 && (
+                  {!isView && !isSubChildAddHidden && clickCount === 0 && (
                     <HoverIcon
                       defaultIcon={addLogo}
                       hoverIcon={plusIconHover}
@@ -995,7 +1012,7 @@ export default function SubChildComponent({
                   )}
                 </div>
               )}
-            {inputFieldsVisible && (
+            {!isSubChildAddHidden && inputFieldsVisible && (
               <div className=" my-3 flex justify-between ">
                 <CustomeInputFields
                   key={index}
@@ -1097,6 +1114,7 @@ export default function SubChildComponent({
                                 } // Add the right-click handler here
                               >
                                 {!isView &&
+                                  !isSubChildAddHidden &&
                                   index === 0 &&
                                   !inputFieldsVisible && (
                                     <IconButton

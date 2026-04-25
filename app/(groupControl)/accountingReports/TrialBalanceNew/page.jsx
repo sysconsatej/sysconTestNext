@@ -29,6 +29,7 @@ const TrialBalance = () => {
   const searchParamsReportType = searchParams.get("reportType") ?? null;
   const searchParamsBalanceType = searchParams.get("balanceType") ?? null;
   const searchParamsTbGroupId = searchParams.get("tbGroupId") ?? null;
+  const glId = searchParams.get("glId") ?? null;
   const [toggle, setToggle] = useState(false);
   const [typeofModal, setTypeofModal] = useState("onClose");
   const [selectedRadio, setSelectedRadio] = useState("S");
@@ -241,25 +242,47 @@ const TrialBalance = () => {
     };
   }, []); // keep empty to run once on mount
 
-  useEffect(async () => {
-    const rt = searchParamsReportType ?? "";
-    const bt = searchParamsBalanceType ?? "";
+  useEffect(() => {
+    let cancelled = false;
 
-    // only update if both exist (non-empty) and actually changed
-    if (rt && bt) {
+    const run = async () => {
+      const rt = searchParamsReportType ?? "";
+      const bt = searchParamsBalanceType ?? "";
+
+      if (!rt || !bt) return;
+
+      const nextState = {
+        ...newState,
+        reportType: String(rt),
+        balanceType: String(bt),
+      };
+
       setNewState((prev) => {
         const next = {
           ...prev,
           reportType: String(rt),
           balanceType: String(bt),
         };
+
         return prev.reportType === next.reportType &&
           prev.balanceType === next.balanceType
           ? prev
           : next;
       });
-      await fetchTrialBalanceData();
-    }
+
+      setSelectedRadio(String(rt));
+      setSelectedRadioType(String(bt));
+
+      if (!cancelled) {
+        await fetchTrialBalanceDataOnPageLoad(nextState);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
   }, [searchParamsReportType, searchParamsBalanceType]);
 
   const getLabelValue = (labelValue) => {
@@ -379,6 +402,7 @@ const TrialBalance = () => {
       clientId: toIntOrNull(clientId),
       finYearId: toIntOrNull(defaultFinYearId),
       tbGroupId: toIntOrNull(searchParamsTbGroupId),
+      glId: toIntOrNull(glId),
       suppressZero:
         newState?.suppressZero == true
           ? 1
@@ -423,6 +447,7 @@ const TrialBalance = () => {
       clientId: toIntOrNull(clientId),
       finYearId: toIntOrNull(defaultFinYearId),
       tbGroupId: toIntOrNull(searchParamsTbGroupId),
+      glId: toIntOrNull(glId),
       suppressZero:
         newState?.suppressZero == true
           ? 1

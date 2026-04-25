@@ -13,6 +13,7 @@ import { getUserDetails } from "@/helper/userDetails";
 import "./rptDoLetter.css";
 import moment from "moment";
 import { encryptText, decryptText } from "@/helper/cryptoUrl";
+import { fetchReportData } from "@/services/auth/FormControl.services";
 
 export default function rptDoLetter() {
   // You had this variable; not used in your fetches, leaving fetch baseUrl unchanged intentionally
@@ -35,10 +36,11 @@ export default function rptDoLetter() {
   const [reportIds, setReportIds] = useState([]);
   const [doReportName, setDoReportName] = useState([]);
   const [data, setData] = useState([]);
+  const [canData, setCANData] = useState([]);
   const [getDisplayButton, setDisplayButton] = useState(true);
   const [userName, setUserName] = useState(null);
   const enquiryModuleRefs = useRef([]);
-  enquiryModuleRefs.current = []; // do not remove this line
+  // enquiryModuleRefs.current = []; // do not remove this line
   const { clientId } = getUserDetails();
   const [printGeneratedDate] = useState(() => new Date());
   const chunkSize = 6;
@@ -52,6 +54,42 @@ export default function rptDoLetter() {
   const SaudiDeliveryOrderSize = 6;
   const canReportContainerChunkSize = 15;
   const [qrUrl, setQrUrl] = useState("");
+  const [termsAndConditions, setTermsAndConditions] = useState("");
+  console.log("enquiryModuleRefs", enquiryModuleRefs);
+
+  // useEffect(() => {
+  //   console.log("AFTER COMMIT refs:", enquiryModuleRefs.current);
+  //   console.log(
+  //     "AFTER COMMIT html:",
+  //     enquiryModuleRefs.current
+  //       .filter(Boolean)
+  //       .map((el) => el.outerHTML)
+  //       .join(""),
+  //   );
+  // });
+
+  useEffect(() => {
+    console.log(
+      "final ref ids",
+      enquiryModuleRefs.current.filter(Boolean).map((el) => el.id),
+    );
+  }, [reportIds, data]);
+
+  let refCursor = 0;
+
+  const getPagedMeta = (list) => {
+    const safeList = Array.isArray(list) ? list.filter(Boolean) : [];
+    const pages = safeList.length > 0 ? safeList : [undefined];
+    const startRefIndex = refCursor;
+    refCursor += pages.length;
+    return { pages, startRefIndex };
+  };
+
+  const getSingleMeta = () => {
+    const startRefIndex = refCursor;
+    refCursor += 1;
+    return startRefIndex;
+  };
 
   // DEMO token (kept from your code)
   const token =
@@ -127,6 +165,8 @@ export default function rptDoLetter() {
   // 3) Fetch DO data using resolvedRecordId (replaces your old recordId dependency)
   useEffect(() => {
     if (!resolvedRecordId) return;
+    const isCanReport = reportIds.includes("CAN Report");
+    if (isCanReport) return;
 
     (async () => {
       try {
@@ -258,6 +298,7 @@ export default function rptDoLetter() {
         const requestBody = {
           id: resolvedRecordId,
           clientId: clientId,
+          reportId: reportId,
         };
         const response = await fetch(`${baseUrl}/Sql/api/Reports/blDataForDO`, {
           method: "POST",
@@ -270,6 +311,7 @@ export default function rptDoLetter() {
         if (!response.ok) throw new Error("Failed to fetch DO data");
         const data = await response.json();
         setData(Array.isArray(data?.data) ? data.data : []);
+        fetchTermsAndConditionsData(data?.data || []);
 
         const storedUserData = localStorage.getItem("userData");
         if (storedUserData) {
@@ -286,6 +328,78 @@ export default function rptDoLetter() {
       fetchdata();
     }
   }, [reportIds, resolvedRecordId, clientId]);
+
+  useEffect(() => {
+    const fetchdata = async () => {
+      if (!resolvedRecordId) return;
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("No token found");
+        const requestBody = {
+          filterCondition: String(resolvedRecordId),
+        };
+        const response = await fetch(`${baseUrl}/Sql/api/Reports/bl`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-access-token": JSON.parse(token),
+          },
+          body: JSON.stringify(requestBody),
+        });
+        if (!response.ok) throw new Error("Failed to fetch DO data");
+        const data = await response.json();
+        setCANData(Array.isArray(data?.data) ? data.data : []);
+        fetchTermsAndConditionsData(data?.data || []);
+
+        const storedUserData = localStorage.getItem("userData");
+        if (storedUserData) {
+          const decryptedData = decrypt(storedUserData);
+          const userData = JSON.parse(decryptedData);
+          setUserName(userData?.[0]?.name ?? null);
+        }
+      } catch (error) {
+        console.error("Error fetching job data:", error);
+      }
+    };
+    if (reportIds.length > 0) {
+      fetchdata();
+    }
+  }, [reportIds, resolvedRecordId, clientId]);
+
+  const fetchTermsAndConditionsData = async (department) => {
+    const menuReportId = searchParams.get("reportId");
+    if (menuReportId) {
+      const storedUserData = localStorage.getItem("userData");
+      if (storedUserData) {
+        const decryptedData = decrypt(storedUserData);
+        const userData = JSON.parse(decryptedData);
+        const clientId = userData[0].clientId;
+
+        const requestBody = {
+          columns: "termsCondition",
+          tableName: "tblTermsCondition",
+          whereCondition: `reportsId = ${menuReportId} and status = 1 and businessSegmentId = ${department[0]?.businessSegmentId} `,
+          clientIdCondition: `clientId in (${clientId},(select id from tblClient where clientCode = 'SYSCON')) FOR JSON PATH`,
+        };
+
+        const data = await fetchReportData(requestBody);
+
+        // applyTheme(enquiryModuleRefs.current);
+
+        if (data) {
+          setTermsAndConditions(data?.data[0]?.termsCondition || "");
+        } else {
+          //setTermsAndConditions(terms);
+        }
+      }
+    }
+  };
+
+  const canContainers =
+    canData[0]?.tblBlContainer.map((item, i) => ({
+      ...item,
+      containerNoIndex: i,
+    })) || [];
 
   console.log("Do_Data", data);
 
@@ -395,10 +509,21 @@ export default function rptDoLetter() {
       <img
         src={imageFooter ? baseUrlNext + imageFooter : ""}
         style={{ width: "100%" }}
-        alt="Footer"
+        alt=""
       />
     );
   };
+
+  console.log("dataAk", data);
+
+  console.log(
+    "isTermsAndConditionAvailable",
+    data[0]?.isTermsAndConditionAvailable,
+  );
+  console.log("termsAndConditions", data[0]?.termsCondition);
+
+  const isTermsAndConditionAvailable =
+    data[0]?.isTermsAndConditionAvailable || 0;
 
   const containers =
     data[0]?.tblBlContainer.map((item, i) => ({
@@ -412,7 +537,15 @@ export default function rptDoLetter() {
     return out;
   };
   const chunks =
-    chunkSize > 0 ? chunkArray(containers, chunkSize) : [containers];
+    chunkSize > 0
+      ? chunkArray(
+        containers,
+        isTermsAndConditionAvailable ? chunkSize - 1 : chunkSize,
+      )
+      : [containers];
+
+  // const chunks =
+  //   chunkSize > 0 ? chunkArray(containers, chunkSize) : [containers];
 
   const deliveryOrderKenyaChunks =
     deliveryOrderKenya > 0
@@ -452,8 +585,8 @@ export default function rptDoLetter() {
 
   const canReportChunks =
     canReportContainerChunkSize > 0
-      ? chunkArray(containers, canReportContainerChunkSize)
-      : [containers];
+      ? chunkArray(canContainers, canReportContainerChunkSize)
+      : [canContainers];
 
   // Calculate totals
   const totalGrossWt = containers.reduce(
@@ -486,6 +619,30 @@ export default function rptDoLetter() {
       ></img>
     );
   };
+
+  const renderTerms = (tc) => {
+    if (Array.isArray(tc)) {
+      return tc.map((line, i) => (
+        <React.Fragment key={i}>
+          {line}
+          <br />
+        </React.Fragment>
+      ));
+    }
+
+    if (typeof tc === "string") {
+      return tc.split(/\r?\n/).map((line, i) => (
+        <React.Fragment key={i}>
+          {line.trim()}
+          <br />
+        </React.Fragment>
+      ));
+    }
+
+    return null;
+  };
+
+  const reportTerms = data?.termsCondition || termsAndConditions || "";
 
   const DoLetter = (input, i) => {
     const containers = Array.isArray(input)
@@ -927,6 +1084,17 @@ export default function rptDoLetter() {
                 {data[0]?.marksNos || ""}
               </p>
             </div>
+          </div>
+        </div>
+
+        <div className="flex" style={{ width: "100%" }}>
+          <div style={{ width: "85%" }}>
+            <p
+              className="text-black"
+              style={{ lineHeight: 1.4, fontSize: "8px" }}
+            >
+              {reportTerms ? renderTerms(reportTerms) : null}
+            </p>
           </div>
         </div>
 
@@ -2130,7 +2298,7 @@ export default function rptDoLetter() {
               </td>
               <td className="w-2/6 border-t border-b border-r border-black p-1">
                 <p className="text-black" style={{ fontSize: "9px" }}>
-                  {data[0]?.arrivalDate || ""}
+                  {formatDateToYMD(data[0]?.arrivalDate)}
                 </p>
               </td>
             </tr>
@@ -4878,292 +5046,631 @@ export default function rptDoLetter() {
     );
   };
 
-  const CanReport = (input, i) => {
+  const CanReport = (input, i = 0, totalPages = 1) => {
     const containers = Array.isArray(input)
       ? input
       : Array.isArray(input?.containers)
         ? input.containers
-        : []; // 👈 safe fallback
+        : [];
+
+    const pageIndex = i;
 
     return (
       <div>
         <div className="mx-auto">
           <CompanyImgModule />
         </div>
-        {/* Header */}
-        <div className="mx-auto text-black">
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center w-full">
-            <div></div>
+        <div
+          style={{
+            width: "100%",
+            color: "#000",
+            fontFamily: "Arial, sans-serif",
+          }}
+        >
+          {/* Header Section */}
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              tableLayout: "fixed",
+            }}
+          >
+            <colgroup>
+              <col style={{ width: "30%" }} />
+              <col style={{ width: "35%" }} />
+              <col style={{ width: "35%" }} />
+            </colgroup>
 
-            <h1 className="text-black font-bold text-sm text-center underline m-0">
-              Cargo Arrival Notice
-            </h1>
+            <tbody>
+              {/* Title + Company Block */}
+              <tr>
+                <td style={{ verticalAlign: "top" }}></td>
 
-            <div className="justify-self-end flex items-center whitespace-nowrap mr-6">
-              <p
-                className="text-black font-bold mr-1 m-0"
-                style={{ fontSize: "10px" }}
-              >
-                Print Date:
-              </p>
-              <p
-                className="text-black m-0"
-                style={{ fontSize: "10px" }}
-              >
-                {printGeneratedDate ? formatDateToYMDMonths(printGeneratedDate) : ""}
-              </p>
-            </div>
-          </div>
+                <td
+                  style={{
+                    verticalAlign: "top",
+                    textAlign: "center",
+                    paddingTop: "0px",
+                  }}
+                >
+                  <h1
+                    style={{
+                      margin: 0,
+                      fontSize: "14px",
+                      fontWeight: "bold",
+                      textDecoration: "underline",
+                      lineHeight: "18px",
+                      color: "#000",
+                    }}
+                  >
+                    Cargo Arrival Notice
+                  </h1>
+                </td>
+
+                <td
+                  style={{
+                    verticalAlign: "top",
+                    textAlign: "right",
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "9px",
+                      fontWeight: "bold",
+                      lineHeight: "12px",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {canData?.[0]?.company || ""}
+                  </p>
+                </td>
+              </tr>
+
+              {/* Right-side meta details */}
+              <tr>
+                <td></td>
+                <td></td>
+
+                <td style={{ verticalAlign: "top", paddingTop: "2px" }}>
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      tableLayout: "fixed",
+                    }}
+                  >
+                    <colgroup>
+                      <col style={{ width: "34%" }} />
+                      <col style={{ width: "6%" }} />
+                      <col style={{ width: "60%" }} />
+                    </colgroup>
+
+                    <tbody>
+                      <tr>
+                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
+                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                            Date
+                          </p>
+                        </td>
+                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
+                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                            :
+                          </p>
+                        </td>
+                        <td
+                          style={{
+                            padding: "0 0 2px 0",
+                            verticalAlign: "top",
+                            textAlign: "right",
+                          }}
+                        >
+                          <p style={{ margin: 0, fontSize: "9px" }}>
+                            {formatDateToYMDMonths(canData?.[0]?.hblDate)}
+                          </p>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
+                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                            Our Reference
+                          </p>
+                        </td>
+                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
+                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                            :
+                          </p>
+                        </td>
+                        <td
+                          style={{
+                            padding: "0 0 2px 0",
+                            verticalAlign: "top",
+                            textAlign: "right",
+                          }}
+                        >
+                          <p style={{ margin: 0, fontSize: "9px" }}>
+                            {canData?.[0]?.blNo || ""}
+                          </p>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
+                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                            From
+                          </p>
+                        </td>
+                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
+                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                            :
+                          </p>
+                        </td>
+                        <td
+                          style={{
+                            padding: "0 0 2px 0",
+                            verticalAlign: "top",
+                            textAlign: "right",
+                          }}
+                        >
+                          <p style={{ margin: 0, fontSize: "9px" }}>
+                            IMPORT
+                          </p>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
+                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                            Email
+                          </p>
+                        </td>
+                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
+                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                            :
+                          </p>
+                        </td>
+                        <td
+                          style={{
+                            padding: "0 0 2px 0",
+                            verticalAlign: "top",
+                            textAlign: "right",
+                          }}
+                        >
+                          <p style={{ margin: 0, fontSize: "9px" }}>
+                            {canData?.[0]?.companyEmail || ""}
+                          </p>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td style={{ padding: "0", verticalAlign: "top" }}>
+                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                            Page
+                          </p>
+                        </td>
+                        <td style={{ padding: "0", verticalAlign: "top" }}>
+                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                            :
+                          </p>
+                        </td>
+                        <td
+                          style={{
+                            padding: "0",
+                            verticalAlign: "top",
+                            textAlign: "right",
+                          }}
+                        >
+                          <p style={{ margin: 0, fontSize: "9px" }}>
+                            {pageIndex + 1} of {totalPages}
+                          </p>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Gap before details table */}
+          <div style={{ height: "18px" }} />
+
         </div>
-        {/* Main Grid */}
-        <table className="w-full table-fixed border border-black border-collapse mt-4">
+
+        {/* BL / Shipper / Consignee Details */}
+        <table
+          style={{
+            width: "100%",
+            borderTop: "1px solid #000",
+            borderBottom: "1px solid #000",
+            borderCollapse: "collapse",
+            tableLayout: "fixed",
+            color: "#000",
+            fontFamily: "Arial, sans-serif",
+          }}
+        >
+          <colgroup>
+            <col style={{ width: "15%" }} />
+            <col style={{ width: "2%" }} />
+            <col style={{ width: "33%" }} />
+            <col style={{ width: "15%" }} />
+            <col style={{ width: "2%" }} />
+            <col style={{ width: "33%" }} />
+          </colgroup>
+
           <tbody>
             <tr>
-              <td className="w-1/6 border-t border-b border-l border-black p-1">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  VESSEL/VOY :
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Vessel
                 </p>
               </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  {data[0]?.podVessel || ""} {data[0]?.podVoyage || ""}
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.podVessel || ""}
                 </p>
               </td>
-              <td className="w-1/6 border-t border-b border-l border-black p-1">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  ARRIVAL DATE:
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Voyage
                 </p>
               </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  {formatDateToYMDMonths(data[0]?.arrivalDate)}
-                </p>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
               </td>
-            </tr>
-            <tr>
-              <td className="w-1/6 border-t border-b border-l border-black p-1">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  PLACE OF ORIGIN :
-                </p>
-              </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  {data[0]?.plr || ""}
-                </p>
-              </td>
-              <td className="w-1/6 border-t border-b border-l border-black p-1">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  LOAD PORT :
-                </p>
-              </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  {data[0]?.pol || ""}
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.podVoyage || ""}
                 </p>
               </td>
             </tr>
+
             <tr>
-              <td className="w-1/6 border-t border-b border-l border-black p-1">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  DISCH PORT :
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Place of Receipt
                 </p>
               </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  {data[0]?.pod || ""}
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.plr || ""}
                 </p>
               </td>
-              <td className="w-1/6 border-t border-b border-l border-black p-1">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  FINAL DEST :
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Port of Loading
                 </p>
               </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  {data[0]?.fpd || ""}
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.pol || ""}
                 </p>
               </td>
             </tr>
+
             <tr>
-              <td className="w-1/6 border-t border-b border-l border-black p-1">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  B/L NO. :
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Port of Discharge
                 </p>
               </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  {data[0]?.blNo || ""}
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.pod || ""}
                 </p>
               </td>
-              <td className="w-1/6 border-t border-b border-l border-black p-1">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  B/L DATE :
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Final Destination
                 </p>
               </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  {formatDateToYMDMonths(data[0]?.blDate)}
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.fpd || ""}
                 </p>
               </td>
             </tr>
+
             <tr>
-              <td className="w-1/6 border-t border-b border-l border-black p-1">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  IGM NO. :
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  MBL No.
                 </p>
               </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  {data[0]?.igmNo || ""}
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.mblNo || ""}
                 </p>
               </td>
-              <td className="w-1/6 border-t border-b border-l border-black p-1">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  IGM DATE :
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  MBL Date
                 </p>
               </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  {formatDateToYMDMonths(data[0]?.igmDate)}
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {formatDateToYMDMonths(canData[0]?.mblDate || "")}
                 </p>
               </td>
             </tr>
+
             <tr>
-              <td className="w-1/6 border-t border-b border-l border-black p-1 align-top">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  ITEM NO. :
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  HBL No.
                 </p>
               </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  {data[0]?.lineNo || ""}
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.hblNo || ""}
                 </p>
               </td>
-              <td className="w-1/6 border-t border-b border-l border-black p-1 align-top">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  PICKUP LOCATION:
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  HBL Date
                 </p>
               </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  {data[0]?.destuffName || ""}
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {formatDateToYMDMonths(canData[0]?.hblDate || "")}
                 </p>
               </td>
             </tr>
+
+            {/* Separator */}
             <tr>
-              <td className="w-1/6 border-t border-b border-l border-black p-1 align-top">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  CONSIGNEE :
+              <td
+                colSpan={6}
+                style={{
+                  borderTop: "1px solid #000",
+                  padding: 0,
+                  height: "0px",
+                  lineHeight: 0,
+                }}
+              />
+            </tr>
+
+            {/* Shipper / Consignee */}
+            <tr>
+              <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Shipper
                 </p>
               </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  <span>{data[0]?.consigneeText || ""}</span>
+              <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+              </td>
+              <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    lineHeight: "13px",
+                    whiteSpace: "pre-line",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {canData[0]?.shipper || canData[0]?.shipperName || ""}
                   <br />
-                  <span style={{ wordBreak: "break-word" }}>
-                    {data[0]?.consigneeAddress || ""}
-                  </span>
+                  {canData[0]?.shipperAddress || ""}
                 </p>
               </td>
-              <td className="w-1/6 border-t border-b border-l border-black p-1 align-top">
-                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
-                  NOTIFY PARTY :
+
+              <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Consignee
                 </p>
               </td>
-              <td className="w-2/6 border-t border-b border-r border-black p-1">
-                <p className="text-black" style={{ fontSize: "9px" }}>
-                  <span>{data[0]?.notifyPartyText || ""}</span>
+              <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+              </td>
+              <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    lineHeight: "13px",
+                    whiteSpace: "pre-line",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {canData[0]?.consignee || ""}
                   <br />
-                  <span style={{ wordBreak: "break-word" }}>
-                    {data[0]?.notifyPartyAddress || ""}
-                  </span>
+                  {canData[0]?.consigneeAddress || ""}
                 </p>
               </td>
             </tr>
           </tbody>
         </table>
 
-        <table className="w-full mt-2 table-fixed border border-black border-collapse">
-          <thead>
+        <table
+          style={{
+            width: "100%",
+            marginTop: "8px",
+            marginBottom: "8px",
+            borderCollapse: "collapse",
+            tableLayout: "fixed",
+          }}
+        >
+          <colgroup>
+            <col style={{ width: "130px" }} />
+            <col style={{ width: "12px" }} />
+            <col style={{ width: "auto" }} />
+          </colgroup>
+
+          <tbody>
             <tr>
-              <th className="w-1/8 border border-black p-1">
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold", color: "#000" }}>
+                  No.Of Packages
+                </p>
+              </td>
+
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold", color: "#000" }}>
+                  :
+                </p>
+              </td>
+
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", color: "#000" }}>
+                  {canData[0]?.noOfPackages || ""} {canData[0]?.packagesCode || ""}
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold", color: "#000" }}>
+                  Gross Weight
+                </p>
+              </td>
+
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold", color: "#000" }}>
+                  :
+                </p>
+              </td>
+
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", color: "#000" }}>
+                  {canData[0]?.grossWt || ""} {canData[0]?.weightUnit || ""}
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold", color: "#000" }}>
+                  Volume
+                </p>
+              </td>
+
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold", color: "#000" }}>
+                  :
+                </p>
+              </td>
+
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", color: "#000" }}>
+                  {canData[0]?.volume || ""} {canData[0]?.volumeUnitName || ""}
+                </p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table className="w-full mt-2 table-fixed border-t border-black border-collapse">
+          <thead className="border-b border-gray-500">
+            <tr>
+              <th className="w-1/6 p-1 text-left">
                 <p className="text-black font-bold" style={{ fontSize: "9px" }}>
                   Container No.
                 </p>
               </th>
-              <th className="w-1/8 border border-black p-1">
+
+              <th className="w-1/6 p-1 text-left">
                 <p className="text-black font-bold" style={{ fontSize: "9px" }}>
                   Size/Type
                 </p>
               </th>
-              <th className="w-1/8 border border-black p-1">
+
+              <th className="w-1/6 p-1 text-left">
                 <p className="text-black font-bold" style={{ fontSize: "9px" }}>
                   Status
                 </p>
               </th>
-              <th className="w-1/8 border border-black p-1">
+
+              <th className="w-1/6 p-1 text-left">
                 <p className="text-black font-bold" style={{ fontSize: "9px" }}>
                   Gross Wt.
                 </p>
               </th>
-              <th className="w-1/8 border border-black p-1">
+
+              <th className="w-1/6 p-1 text-left">
                 <p className="text-black font-bold" style={{ fontSize: "9px" }}>
                   No. of Packages
                 </p>
               </th>
-              <th className="w-1/8 border border-black p-1">
+
+              <th className="w-1/6 p-1 text-left">
                 <p className="text-black font-bold" style={{ fontSize: "9px" }}>
                   Seal No.
                 </p>
               </th>
             </tr>
           </thead>
+
           <tbody>
             {containers.length > 0 &&
               containers.map((item, index) => (
                 <tr key={index}>
-                  <td className="w-1/8 border border-black p-1">
-                    <p
-                      className="text-black font-normal"
-                      style={{ fontSize: "9px" }}
-                    >
+                  <td className="w-1/6 px-1 py-[1px]">
+                    <p className="text-black font-normal" style={{ fontSize: "9px" }}>
                       {item.containerNo || ""}
                     </p>
                   </td>
-                  <td className="w-1/8 border border-black p-1">
-                    <p
-                      className="text-black font-normal text-left"
-                      style={{ fontSize: "9px" }}
-                    >
-                      {(item.size || "") + "/" + (item.type || "")}
+
+                  <td className="w-1/6 px-1 py-[1px]">
+                    <p className="text-black font-normal" style={{ fontSize: "9px" }}>
+                      {(item.size || "") + " / " + (item.type || "")}
                     </p>
                   </td>
-                  <td className="w-1/8 border font-normal border-black p-1">
-                    <p className="text-black font-normal text-center" style={{ fontSize: "9px" }}>
+
+                  <td className="w-1/6 px-1 py-[1px]">
+                    <p className="text-black font-normal" style={{ fontSize: "9px" }}>
                       {item.containerStatus || ""}
                     </p>
                   </td>
-                  <td className="w-1/8 border border-black p-1">
-                    <p
-                      className="text-black font-normal text-center"
-                      style={{ fontSize: "9px" }}
-                    >
+
+                  <td className="w-1/6 px-1 py-[1px]">
+                    <p className="text-black font-normal" style={{ fontSize: "9px" }}>
                       {(item.grossWt || "") + " " + (item.weightUnitCode || "")}
                     </p>
                   </td>
-                  <td className="w-1/8 border border-black p-1">
-                    <p
-                      className="text-black font-normal text-center"
-                      style={{ fontSize: "9px" }}
-                    >
+
+                  <td className="w-1/6 px-1 py-[1px]">
+                    <p className="text-black font-normal" style={{ fontSize: "9px" }}>
                       {item.noOfPackages || ""} {item.packageCode || ""}
                     </p>
                   </td>
-                  <td className="w-1/8 border border-black p-1">
-                    <p
-                      className="text-black font-normal text-center"
-                      style={{ fontSize: "9px" }}
-                    >
+
+                  <td className="w-1/6 px-1 py-[1px]">
+                    <p className="text-black font-normal" style={{ fontSize: "9px" }}>
                       {item.customSealNo || ""}
                     </p>
                   </td>
@@ -5173,17 +5680,21 @@ export default function rptDoLetter() {
         </table>
         {/* Description  */}
         <div className="flex mt-2" style={{ width: "100%" }}>
-          <div style={{ width: "15%" }}>
-            <p className="text-black font-bold" style={{ fontSize: "10px" }}>
-              Description :
-            </p>
-          </div>
-          <div style={{ width: "85%" }}>
-            <p className="text-black" style={{ fontSize: "10px" }}>
-              {data[0]?.goodsDesc || ""}
-            </p>
-          </div>
+          <p className="text-black" style={{ fontSize: "10px" }}>
+            Dear Sir/ Madam,<br /> <br />
+            The above consignment is scheduled to arrive by above vessel. Kindly approach our office to present original Bills of Lading and obtain
+            delivery order for clearance of the Consignment against payment of Freight & other local charges as applicable.<br /> <br />
+            Please arrange to clear the cargo within 5 days of arrival of vessel to avoid demurrage charges.<br /> <br />
+            Please note that if you fail to comply with the above we shall without prejudice, arrange movement of the container from the JEBEL ALI
+            to NHAVA SHEVA at your cost and risk. No liability of whatsoever shall be admitted by us for such movement.
+          </p>
         </div>
+        <div className="flex mt-2" style={{ width: "100%" }}>
+          <p className="text-black font-bold" style={{ fontSize: "10px" }}>
+            PAYMENTS TERMS : CASH
+          </p>
+        </div>
+
         {/* 
         <footer
           style={{
@@ -5227,22 +5738,28 @@ export default function rptDoLetter() {
 
         {reportIds.map((reportId, index) => {
           switch (reportId) {
-            case "Delivery Order":
+            case "Delivery Order": {
               const deliveryOrder = Array.isArray(chunks)
                 ? chunks.filter(Boolean)
                 : [];
+
+              const deliveryOrderCount =
+                deliveryOrder.length > 0 ? deliveryOrder.length : 1;
+              const startRefIndex = refCursor;
+              refCursor += deliveryOrderCount;
+
               return (
                 <>
                   {(deliveryOrder.length > 0 ? deliveryOrder : [undefined]).map(
                     (container, i) => (
-                      <>
+                      <React.Fragment key={`${reportId}-${i}`}>
                         <div
-                          // key={reportId}
-                          // ref={(el) => (enquiryModuleRefs.current[i] = el)}
-                          key={reportId}
-                          ref={(el) => enquiryModuleRefs.current.push(el)}
+                          ref={(el) => {
+                            if (el)
+                              enquiryModuleRefs.current[startRefIndex + i] = el;
+                          }}
                           id="Delivery Order"
-                          className={`relative bg-white shadow-lg black-text ${i < reportIds.length - 1 ? "report-spacing" : ""
+                          className={`relative bg-white shadow-lg black-text ${i < deliveryOrder.length - 1 ? "report-spacing" : ""
                             }`}
                           style={{
                             width: "210mm",
@@ -5256,21 +5773,17 @@ export default function rptDoLetter() {
                             position: "relative",
                           }}
                         >
-                          {/* Printable Content */}
                           <div
                             className="flex-grow p-4"
-                            style={{ maxHeight: "260mm", minHeight: "260mm" }}
+                            style={{ maxHeight: "250mm", minHeight: "250mm" }}
                           >
-                            {DoLetter(container, i)}{" "}
-                            {/* container may be undefined here */}
-                          </div>
-                          <div className="pl-4">
-                            <div>
-                              <CompanyImgFooterModule />
-                            </div>
+                            {DoLetter(container, i)}
                           </div>
 
-                          {/* Print fix style */}
+                          <div className="pl-4">
+                            <CompanyImgFooterModule />
+                          </div>
+
                           <style jsx>{`
                             .black-text {
                               color: black !important;
@@ -5285,15 +5798,22 @@ export default function rptDoLetter() {
                         </div>
 
                         <div className="bg-gray-300 h-2 no-print" />
-                      </>
+                      </React.Fragment>
                     ),
                   )}
                 </>
               );
-            case "Survey Letter":
+            }
+            case "Survey Letter": {
               const surveyLetter = Array.isArray(chunks)
                 ? chunks.filter(Boolean)
                 : [];
+
+              const surveyLetterCount =
+                surveyLetter.length > 0 ? surveyLetter.length : 1;
+              const startRefIndex = refCursor;
+              refCursor += surveyLetterCount;
+
               return (
                 <>
                   {(surveyLetter.length > 0 ? surveyLetter : [undefined]).map(
@@ -5301,7 +5821,10 @@ export default function rptDoLetter() {
                       <>
                         <div
                           key={reportId}
-                          ref={(el) => enquiryModuleRefs.current.push(el)}
+                          ref={(el) => {
+                            if (el)
+                              enquiryModuleRefs.current[startRefIndex + i] = el;
+                          }}
                           id="Survey Letter"
                           className={`relative bg-white shadow-lg black-text ${i < reportIds.length - 1 ? "report-spacing" : ""
                             }`}
@@ -5318,7 +5841,6 @@ export default function rptDoLetter() {
                               index < reportIds.length - 1 ? "always" : "auto",
                           }}
                         >
-                          {/* Printable Content */}
                           <div
                             className="flex-grow p-4"
                             style={{ maxHeight: "275mm", minHeight: "275mm" }}
@@ -5331,7 +5853,6 @@ export default function rptDoLetter() {
                             </div>
                           </div>
 
-                          {/* Print fix style */}
                           <style jsx>{`
                             .black-text {
                               color: black !important;
@@ -5350,12 +5871,21 @@ export default function rptDoLetter() {
                   )}
                 </>
               );
-            case "EMPTY OFF LOADING LETTER":
+            }
+            case "EMPTY OFF LOADING LETTER": {
               const EmptyOffLoadingLetterData = Array.isArray(
                 EmptyOffLoadingLetterSizeChunks,
               )
                 ? EmptyOffLoadingLetterSizeChunks.filter(Boolean)
                 : [];
+
+              const emptyOffLoadingLetterCount =
+                EmptyOffLoadingLetterData.length > 0
+                  ? EmptyOffLoadingLetterData.length
+                  : 1;
+              const startRefIndex = refCursor;
+              refCursor += emptyOffLoadingLetterCount;
+
               return (
                 <>
                   {(EmptyOffLoadingLetterData.length > 0
@@ -5364,10 +5894,11 @@ export default function rptDoLetter() {
                   ).map((container, i) => (
                     <>
                       <div
-                        // key={reportId}
-                        // ref={(el) => (enquiryModuleRefs.current[index] = el)}
                         key={reportId}
-                        ref={(el) => enquiryModuleRefs.current.push(el)}
+                        ref={(el) => {
+                          if (el)
+                            enquiryModuleRefs.current[startRefIndex + i] = el;
+                        }}
                         id="EMPTY OFF LOADING LETTER"
                         className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
                           }`}
@@ -5385,7 +5916,6 @@ export default function rptDoLetter() {
                             index < reportIds.length - 1 ? "always" : "auto",
                         }}
                       >
-                        {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
                           style={{ maxHeight: "260mm", minHeight: "260mm" }}
@@ -5398,7 +5928,6 @@ export default function rptDoLetter() {
                           </div>
                         </div>
 
-                        {/* Print fix style */}
                         <style jsx>{`
                           .black-text {
                             color: black !important;
@@ -5416,12 +5945,18 @@ export default function rptDoLetter() {
                   ))}
                 </>
               );
-            case "Destuffing letter":
+            }
+            case "Destuffing letter": {
+              const startRefIndex = refCursor;
+              refCursor += 1;
+
               return (
                 <>
                   <div
                     key={reportId}
-                    ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                    ref={(el) => {
+                      if (el) enquiryModuleRefs.current[startRefIndex] = el;
+                    }}
                     id="Destuffing letter"
                     className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
                       }`}
@@ -5438,7 +5973,6 @@ export default function rptDoLetter() {
                         index < reportIds.length - 1 ? "always" : "auto",
                     }}
                   >
-                    {/* Printable Content */}
                     <div
                       className="flex-grow p-4"
                       style={{ paddingBottom: "100px" }}
@@ -5446,7 +5980,6 @@ export default function rptDoLetter() {
                       {GangLetter()}
                     </div>
 
-                    {/* Print fix style */}
                     <style jsx>{`
                       .black-text {
                         color: black !important;
@@ -5462,10 +5995,17 @@ export default function rptDoLetter() {
                   <div className="bg-gray-300 h-2 no-print" />
                 </>
               );
-            case "CMC Letter":
+            }
+            case "CMC Letter": {
               const CMCLetterData = Array.isArray(CMCLetterSizeChunks)
                 ? CMCLetterSizeChunks.filter(Boolean)
                 : [];
+
+              const cMCLetterCount =
+                CMCLetterData.length > 0 ? CMCLetterData.length : 1;
+              const startRefIndex = refCursor;
+              refCursor += cMCLetterCount;
+
               return (
                 <>
                   {(CMCLetterData.length > 0 ? CMCLetterData : [undefined]).map(
@@ -5473,7 +6013,10 @@ export default function rptDoLetter() {
                       <>
                         <div
                           key={reportId}
-                          ref={(el) => enquiryModuleRefs.current.push(el)}
+                          ref={(el) => {
+                            if (el)
+                              enquiryModuleRefs.current[startRefIndex + i] = el;
+                          }}
                           id="CMC Letter"
                           className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
                             }`}
@@ -5491,7 +6034,6 @@ export default function rptDoLetter() {
                               index < reportIds.length - 1 ? "always" : "auto",
                           }}
                         >
-                          {/* Printable Content */}
                           <div
                             className="flex-grow p-4"
                             style={{ maxHeight: "275mm", minHeight: "275mm" }}
@@ -5504,7 +6046,6 @@ export default function rptDoLetter() {
                             </div>
                           </div>
 
-                          {/* Print fix style */}
                           <style jsx>{`
                             .black-text {
                               color: black !important;
@@ -5523,12 +6064,18 @@ export default function rptDoLetter() {
                   )}
                 </>
               );
-            case "Customs Examination Order":
+            }
+            case "Customs Examination Order": {
+              const startRefIndex = refCursor;
+              refCursor += 1;
+
               return (
                 <>
                   <div
                     key={reportId}
-                    ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                    ref={(el) => {
+                      if (el) enquiryModuleRefs.current[startRefIndex] = el;
+                    }}
                     id="Customs Examination Order"
                     className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
                       }`}
@@ -5545,7 +6092,6 @@ export default function rptDoLetter() {
                         index < reportIds.length - 1 ? "always" : "auto",
                     }}
                   >
-                    {/* Printable Content */}
                     <div
                       className="flex-grow p-4"
                       style={{ paddingBottom: "100px" }}
@@ -5553,7 +6099,6 @@ export default function rptDoLetter() {
                       {CustomsExaminationOrder()}
                     </div>
 
-                    {/* Print fix style */}
                     <style jsx>{`
                       .black-text {
                         color: black !important;
@@ -5569,10 +6114,17 @@ export default function rptDoLetter() {
                   <div className="bg-gray-300 h-2 no-print" />
                 </>
               );
-            case "Bond Letter":
+            }
+            case "Bond Letter": {
               const BondLetterData = Array.isArray(BondLetterSizeChunks)
                 ? BondLetterSizeChunks.filter(Boolean)
                 : [];
+
+              const bondLetterCount =
+                BondLetterData.length > 0 ? BondLetterData.length : 1;
+              const startRefIndex = refCursor;
+              refCursor += bondLetterCount;
+
               return (
                 <>
                   {(BondLetterData.length > 0
@@ -5582,7 +6134,10 @@ export default function rptDoLetter() {
                     <>
                       <div
                         key={reportId}
-                        ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                        ref={(el) => {
+                          if (el)
+                            enquiryModuleRefs.current[startRefIndex + i] = el;
+                        }}
                         id="Bond Letter"
                         className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
                           }`}
@@ -5600,7 +6155,6 @@ export default function rptDoLetter() {
                             index < reportIds.length - 1 ? "always" : "auto",
                         }}
                       >
-                        {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
                           style={{ maxHeight: "275mm", minHeight: "275mm" }}
@@ -5613,7 +6167,6 @@ export default function rptDoLetter() {
                           </div>
                         </div>
 
-                        {/* Print fix style */}
                         <style jsx>{`
                           .black-text {
                             color: black !important;
@@ -5631,12 +6184,21 @@ export default function rptDoLetter() {
                   ))}
                 </>
               );
-            case "SEAL CUTTING LETTER":
+            }
+            case "SEAL CUTTING LETTER": {
               const SealCuttingLetterData = Array.isArray(
                 SealCuttingLetterSizeChunks,
               )
                 ? SealCuttingLetterSizeChunks.filter(Boolean)
                 : [];
+
+              const sealCuttingLetterCount =
+                SealCuttingLetterData.length > 0
+                  ? SealCuttingLetterData.length
+                  : 1;
+              const startRefIndex = refCursor;
+              refCursor += sealCuttingLetterCount;
+
               return (
                 <>
                   {(SealCuttingLetterData.length > 0
@@ -5646,7 +6208,10 @@ export default function rptDoLetter() {
                     <>
                       <div
                         key={reportId}
-                        ref={(el) => enquiryModuleRefs.current.push(el)}
+                        ref={(el) => {
+                          if (el)
+                            enquiryModuleRefs.current[startRefIndex + i] = el;
+                        }}
                         id="SEAL CUTTING LETTER"
                         className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
                           }`}
@@ -5663,7 +6228,6 @@ export default function rptDoLetter() {
                             index < reportIds.length - 1 ? "always" : "auto",
                         }}
                       >
-                        {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
                           style={{ maxHeight: "275mm", minHeight: "275mm" }}
@@ -5676,7 +6240,6 @@ export default function rptDoLetter() {
                           </div>
                         </div>
 
-                        {/* Print fix style */}
                         <style jsx>{`
                           .black-text {
                             color: black !important;
@@ -5694,12 +6257,18 @@ export default function rptDoLetter() {
                   ))}
                 </>
               );
-            case "NOC For Console Party":
+            }
+            case "NOC For Console Party": {
+              const startRefIndex = refCursor;
+              refCursor += 1;
+
               return (
                 <>
                   <div
                     key={reportId}
-                    ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                    ref={(el) => {
+                      if (el) enquiryModuleRefs.current[startRefIndex] = el;
+                    }}
                     id="NOC For Console Party"
                     className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
                       }`}
@@ -5716,10 +6285,8 @@ export default function rptDoLetter() {
                         index < reportIds.length - 1 ? "always" : "auto",
                     }}
                   >
-                    {/* Printable Content */}
                     <div className="flex-grow p-4">{NOCForConsoleParty()}</div>
 
-                    {/* Print fix style */}
                     <style jsx>{`
                       .black-text {
                         color: black !important;
@@ -5735,24 +6302,37 @@ export default function rptDoLetter() {
                   <div className="bg-gray-300 h-2 no-print" />
                 </>
               );
-            case "Delivery Order Kenya":
+            }
+            case "Delivery Order Kenya": {
               const area = (data?.[0]?.nominatedArea ?? "")
                 .toString()
                 .trim()
                 .toLowerCase();
               const suppressNote =
                 area === "port clearance" || area.includes("icd");
+
+              const deliveryOrderKenyaCount =
+                Array.isArray(deliveryOrderKenyaChunks) &&
+                  deliveryOrderKenyaChunks.length
+                  ? deliveryOrderKenyaChunks.length
+                  : 1;
+              const startRefIndex = refCursor;
+              refCursor += deliveryOrderKenyaCount;
+
               return (
                 <>
                   {(Array.isArray(deliveryOrderKenyaChunks) &&
                     deliveryOrderKenyaChunks.length
                     ? deliveryOrderKenyaChunks
                     : [undefined]
-                  ).map((container, index) => (
-                    <React.Fragment key={`${reportId}-${index}`}>
+                  ).map((container, i) => (
+                    <React.Fragment key={`${reportId}-${i}`}>
                       <div
                         key={reportId}
-                        ref={(el) => enquiryModuleRefs.current.push(el)}
+                        ref={(el) => {
+                          if (el)
+                            enquiryModuleRefs.current[startRefIndex + i] = el;
+                        }}
                         id="Delivery Order"
                         className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
                           }`}
@@ -5768,7 +6348,6 @@ export default function rptDoLetter() {
                           position: "relative",
                         }}
                       >
-                        {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
                           style={{
@@ -5776,8 +6355,7 @@ export default function rptDoLetter() {
                             minHeight: suppressNote ? "273mm" : "256mm",
                           }}
                         >
-                          {DoLetterKenya(container)}{" "}
-                          {/* container can be undefined; DoLetterKenya should normalize */}
+                          {DoLetterKenya(container)}
                         </div>
                         <div className="pl-4 pr-4">
                           <div>
@@ -5818,7 +6396,6 @@ export default function rptDoLetter() {
                             </div>
                           )}
                         </div>
-                        {/* Print fix style */}
                         <style jsx>{`
                           .black-text {
                             color: black !important;
@@ -5836,12 +6413,21 @@ export default function rptDoLetter() {
                   ))}
                 </>
               );
-            case "EMPTY CONTAINER OFF LOADING LETTER":
+            }
+            case "EMPTY CONTAINER OFF LOADING LETTER": {
               const EmptyContainerOffLoadingLetterData = Array.isArray(
                 EmptyContainerOffLoadingLetterChunks,
               )
                 ? EmptyContainerOffLoadingLetterChunks.filter(Boolean)
                 : [];
+
+              const emptyContainerOffLoadingLetterCount =
+                EmptyContainerOffLoadingLetterData.length > 0
+                  ? EmptyContainerOffLoadingLetterData.length
+                  : 1;
+              const startRefIndex = refCursor;
+              refCursor += emptyContainerOffLoadingLetterCount;
+
               return (
                 <>
                   {(EmptyContainerOffLoadingLetterData.length > 0
@@ -5851,7 +6437,10 @@ export default function rptDoLetter() {
                     <>
                       <div
                         key={reportId}
-                        ref={(el) => enquiryModuleRefs.current.push(el)}
+                        ref={(el) => {
+                          if (el)
+                            enquiryModuleRefs.current[startRefIndex + i] = el;
+                        }}
                         id="EMPTY CONTAINER OFF LOADING LETTER"
                         className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
                           }`}
@@ -5869,7 +6458,6 @@ export default function rptDoLetter() {
                             index < reportIds.length - 1 ? "always" : "auto",
                         }}
                       >
-                        {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
                           style={{ maxHeight: "270mm", minHeight: "270mm" }}
@@ -5899,7 +6487,6 @@ export default function rptDoLetter() {
                           </div>
                         </div>
 
-                        {/* Print fix style */}
                         <style jsx>{`
                           .black-text {
                             color: black !important;
@@ -5917,12 +6504,21 @@ export default function rptDoLetter() {
                   ))}
                 </>
               );
-            case "Empty Container Return Notification":
+            }
+            case "Empty Container Return Notification": {
               const emptyContainerReturnNotificationData = Array.isArray(
                 EmptyContainerReturnNotificationChunks,
               )
                 ? EmptyContainerReturnNotificationChunks.filter(Boolean)
                 : [];
+
+              const emptyContainerReturnNotificationCount =
+                emptyContainerReturnNotificationData.length > 0
+                  ? emptyContainerReturnNotificationData.length
+                  : 1;
+              const startRefIndex = refCursor;
+              refCursor += emptyContainerReturnNotificationCount;
+
               return (
                 <>
                   {(emptyContainerReturnNotificationData.length > 0
@@ -5932,7 +6528,10 @@ export default function rptDoLetter() {
                     <>
                       <div
                         key={reportId}
-                        ref={(el) => enquiryModuleRefs.current.push(el)}
+                        ref={(el) => {
+                          if (el)
+                            enquiryModuleRefs.current[startRefIndex + i] = el;
+                        }}
                         id="Empty Container Return Notification"
                         className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
                           }`}
@@ -5950,7 +6549,6 @@ export default function rptDoLetter() {
                             index < reportIds.length - 1 ? "always" : "auto",
                         }}
                       >
-                        {/* Printable Content */}
                         <div
                           className="flex-grow p-4"
                           style={{ maxHeight: "242mm", minHeight: "242mm" }}
@@ -5998,7 +6596,6 @@ export default function rptDoLetter() {
                               className="w-full flex justify-between items-start"
                               style={{ color: "#0d23b3", fontSize: "9px" }}
                             >
-                              {/* Left Side: Contact Table */}
                               <div className="w-1/2">
                                 <table
                                   className="w-full text-left"
@@ -6018,17 +6615,10 @@ export default function rptDoLetter() {
                                   </tbody>
                                 </table>
                               </div>
-                              {/* Right Side: Logo Placeholder
-                              <div className="w-1/4 flex items-center justify-center">
-                                <div className="border border-dashed border-blue-600 h-24 w-full flex items-center justify-center text-center p-2">
-                                  [Logo / Company Info Placeholder]
-                                </div>
-                              </div> */}
                             </div>
                           </div>
                         </div>
 
-                        {/* Print fix style */}
                         <style jsx>{`
                           .black-text {
                             color: black !important;
@@ -6046,13 +6636,19 @@ export default function rptDoLetter() {
                   ))}
                 </>
               );
-            case "SAUDI DELIVERY ORDER":
+            }
+            case "SAUDI DELIVERY ORDER": {
+              const startRefIndex = refCursor;
+              refCursor += 1;
+
               return (
                 <>
                   <>
                     <div
                       key={reportId}
-                      ref={(el) => enquiryModuleRefs.current.push(el)}
+                      ref={(el) => {
+                        if (el) enquiryModuleRefs.current[startRefIndex] = el;
+                      }}
                       id="SAUDI DELIVERY ORDER"
                       className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
                         }`}
@@ -6070,7 +6666,6 @@ export default function rptDoLetter() {
                           index < reportIds.length - 1 ? "always" : "auto",
                       }}
                     >
-                      {/* Printable Content */}
                       <div
                         className="flex-grow p-4"
                         style={{ maxHeight: "255mm", minHeight: "255mm" }}
@@ -6083,7 +6678,6 @@ export default function rptDoLetter() {
                         </div>
                       </div>
 
-                      {/* Print fix style */}
                       <style jsx>{`
                         .black-text {
                           color: black !important;
@@ -6100,20 +6694,26 @@ export default function rptDoLetter() {
                   </>
                 </>
               );
-            case "Delivery Order verification":
+            }
+            case "Delivery Order verification": {
+              const startRefIndex = refCursor;
+              refCursor += 1;
+
               return (
                 <>
                   <React.Fragment key={`${reportId}-${index}`}>
                     <div
                       key={reportId}
-                      ref={(el) => enquiryModuleRefs.current.push(el)}
+                      ref={(el) => {
+                        if (el) enquiryModuleRefs.current[startRefIndex] = el;
+                      }}
                       id="Delivery Order verification"
                       className={`relative rounded-lg bg-[rgb(255,255,255)] text-black
-                          ring-1 ring-[#787878]/40
-                          shadow-[0_10px_30px_rgba(0,0,0,0.12)]
-                          hover:shadow-[0_16px_45px_rgba(0,0,0,0.18)]
-                          transition-shadow duration-200
-                          ${index < reportIds.length - 1 ? "report-spacing" : ""}`}
+              ring-1 ring-[#787878]/40
+              shadow-[0_10px_30px_rgba(0,0,0,0.12)]
+              hover:shadow-[0_16px_45px_rgba(0,0,0,0.18)]
+              transition-shadow duration-200
+              ${index < reportIds.length - 1 ? "report-spacing" : ""}`}
                       style={{
                         width: "70%",
                         margin: "32px auto",
@@ -6126,7 +6726,6 @@ export default function rptDoLetter() {
                     >
                       <AuthorityLetter />
                       <style jsx>{`
-                        /* Remove visual chrome in print */
                         @media print {
                           #Delivery\\ Order\\ verification {
                             width: 210mm;
@@ -6136,7 +6735,7 @@ export default function rptDoLetter() {
                             box-shadow: none !important;
                             -webkit-box-shadow: none !important;
                             filter: none !important;
-                            border: 1px solid #000 !important; /* optional: keep crisp border in print */
+                            border: 1px solid #000 !important;
                             ring: 0 !important;
                           }
                           .report-spacing {
@@ -6153,88 +6752,110 @@ export default function rptDoLetter() {
                   </React.Fragment>
                 </>
               );
-            case "CAN Report":
+            }
+            case "CAN Report": {
               const canReport = Array.isArray(canReportChunks)
                 ? canReportChunks.filter(Boolean)
                 : [];
+
+              const canReportCount = canReport.length > 0 ? canReport.length : 1;
+              const startRefIndex = refCursor;
+              refCursor += canReportCount;
+
               return (
                 <>
                   {(canReport.length > 0 ? canReport : [undefined]).map(
                     (container, i) => (
-                      <>
-                        <div
-                          key={reportId}
-                          ref={(el) => enquiryModuleRefs.current.push(el)}
-                          id="CAN Report"
-                          className={`relative bg-white shadow-lg black-text ${i < reportIds.length - 1 ? "report-spacing" : ""
-                            }`}
-                          style={{
-                            width: "210mm",
-                            minHeight: "297mm",
-                            maxHeight: "297mm",
-                            margin: "auto",
-                            padding: "24px",
-                            boxSizing: "border-box",
-                            display: "flex",
-                            flexDirection: "column",
-                            position: "relative",
-                          }}
-                        >
-                          {/* Printable Content */}
+                      <React.Fragment key={`${reportId}-${i}`}>
+                        {/* Screen preview wrapper only */}
+                        <div className="w-full flex justify-center no-print-bg">
+                          {/* PDF capture page */}
                           <div
-                            className="flex-grow p-4"
+                            ref={(el) => {
+                              if (el) enquiryModuleRefs.current[startRefIndex + i] = el;
+                            }}
+                            id={`CAN Report-${i}`}
+                            className={`bg-white black-text ${i < canReportCount - 1 ? "report-spacing" : ""
+                              }`}
                             style={{
-                              maxHeight: "260mm",
-                              minHeight: "260mm",
+                              width: "210mm",
+                              minWidth: "210mm",
+                              maxWidth: "210mm",
+                              minHeight: "297mm",
+                              height: "297mm",
+                              margin: "0", // important
+                              padding: "24px",
+                              boxSizing: "border-box",
                               display: "flex",
                               flexDirection: "column",
+                              position: "relative",
+                              backgroundColor: "#ffffff",
+                              color: "#000000",
+                              overflow: "hidden",
+                              fontFamily: "Arial, sans-serif",
                             }}
                           >
-                            {CanReport(container, i)}
-                          </div>
-                          <div className="pl-4 mt-auto">
-                            <div style={{ marginBottom: "6px" }}>
-                              <p
-                                className="text-black font-bold"
-                                style={{ fontSize: "10px" }}
-                              >
-                                For {data[0]?.company} <br />
-                              </p>
-
-                              <p className="text-black" style={{ fontSize: "10px" }}>
-                                Note: This is a computer generated document and does not require a signature.
-                              </p>
-
-                              <p className="text-black mt-10" style={{ fontSize: "10px" }}>
-                                Issued By: admin
-                              </p>
+                            <div
+                              style={{
+                                flex: "1 1 auto",
+                                minHeight: "0",
+                                display: "flex",
+                                flexDirection: "column",
+                                padding: "16px",
+                                boxSizing: "border-box",
+                              }}
+                            >
+                              {CanReport(container, i, canReportCount)}
                             </div>
 
-                            <div>
-                              <CompanyImgFooterModule />
+                            <div
+                              style={{
+                                paddingLeft: "16px",
+                                paddingRight: "16px",
+                                marginTop: "auto",
+                                marginBottom: "0",
+                              }}
+                            >
+                              <div style={{ marginBottom: "6px" }}>
+                                <p
+                                  className="text-black font-bold"
+                                  style={{ fontSize: "10px", margin: 0 }}
+                                >
+                                  For {data[0]?.company} <br />
+                                </p>
+
+                                <p
+                                  className="text-black"
+                                  style={{ fontSize: "10px", margin: 0 }}
+                                >
+                                  Note: This is a computer generated document and does not
+                                  require a signature.
+                                </p>
+                              </div>
                             </div>
+
+                            <style jsx>{`
+                  .black-text {
+                    color: black !important;
+                  }
+
+                  @media print {
+                    .report-spacing {
+                      page-break-after: always;
+                      break-after: page;
+                    }
+                  }
+                `}</style>
                           </div>
-
-                          {/* Print fix style */}
-                          <style jsx>{`
-                            .black-text {
-                              color: black !important;
-                            }
-
-                            @media print {
-                              .report-spacing {
-                                page-break-after: always;
-                              }
-                            }
-                          `}</style>
                         </div>
 
                         <div className="bg-gray-300 h-2 no-print" />
-                      </>
-                    ),
+                      </React.Fragment>
+                    )
                   )}
                 </>
               );
+            }
             default:
               return null;
           }

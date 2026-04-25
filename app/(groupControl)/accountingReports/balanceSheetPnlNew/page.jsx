@@ -23,6 +23,7 @@ import { useSearchParams } from "next/navigation";
 import { balanceSheetReportData } from "@/services/auth/FormControl.services.js";
 
 const BalanceSheetPNL = () => {
+  const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
   const searchParams = useSearchParams();
   const [toggle, setToggle] = useState(false);
   const [companyBranch, setCompanyBranch] = useState(null);
@@ -43,7 +44,7 @@ const BalanceSheetPNL = () => {
   const [typeofModal, setTypeofModal] = useState("onClose");
   const [reportOrientation, setReportOrientation] = useState("H");
   const [menuName, setMenuName] = useState(
-    "Balance Sheet And Profit And Loss Report"
+    "Balance Sheet And Profit And Loss Report",
   );
   const initialFilterState = [
     {
@@ -576,8 +577,8 @@ const BalanceSheetPNL = () => {
         newState?.suppressZero == true
           ? 1
           : newState?.suppressZero == false
-          ? 0
-          : null,
+            ? 0
+            : null,
     };
 
     const data = await balanceSheetReportData(requestBody);

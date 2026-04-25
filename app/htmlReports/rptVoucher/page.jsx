@@ -64,8 +64,8 @@ export default function rptDoLetter() {
             )
               ? data.data[0].tblVoucherLedgerDetails
               : Array.isArray(data.data[0]?.tblVoucherLedger)
-              ? data.data[0].tblVoucherLedger
-              : [];
+                ? data.data[0].tblVoucherLedger
+                : [];
 
             const voucherLedgerDetailsFlat = parentRows.flatMap((row) =>
               Array.isArray(row?.tblVoucherLedgerDetails)
@@ -173,8 +173,8 @@ export default function rptDoLetter() {
     const containers = Array.isArray(input)
       ? input
       : Array.isArray(input?.containers)
-      ? input?.containers
-      : [];
+        ? input?.containers
+        : [];
 
     const toNum = (v) => Number(String(v ?? "").replace(/,/g, "")) || 0;
 
@@ -451,12 +451,11 @@ export default function rptDoLetter() {
                     {item?.blNo}
                   </td>
                   <td
-                    className="text-black text-center  border border-black p-1"
+                    className="text-black text-center border border-black p-1"
                     style={{ fontSize: "9px", width: "15%" }}
                   >
-                    {(
-                      (+String(item?.debitAmount ?? "").replace(/,/g, "") ||
-                        0) -
+                    {Math.abs(
+                      (+String(item?.debitAmount ?? "").replace(/,/g, "") || 0) -
                       (+String(item?.creditAmount ?? "").replace(/,/g, "") || 0)
                     ).toFixed(2)}
                   </td>
@@ -483,10 +482,10 @@ export default function rptDoLetter() {
                   Total Amount
                 </td>
                 <td
-                  className="text-black font-bold text-center  border border-black p-1"
+                  className="text-black font-bold text-center border border-black p-1"
                   style={{ fontSize: "9px", width: "10%" }}
                 >
-                  {(totals.invoiceAmount || 0).toFixed(2)}
+                  {Math.abs(totals.invoiceAmount || 0).toFixed(2)}
                 </td>
                 <td
                   className="text-black font-bold text-center  border border-black p-1"
@@ -538,9 +537,8 @@ export default function rptDoLetter() {
                           key={reportId}
                           ref={(el) => enquiryModuleRefs.current.push(el)}
                           id="Voucher Report"
-                          className={`relative bg-white shadow-lg black-text ${
-                            i < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                          className={`relative bg-white shadow-lg black-text ${i < reportIds.length - 1 ? "report-spacing" : ""
+                            }`}
                           style={{
                             width: "210mm",
                             minHeight: "297mm",

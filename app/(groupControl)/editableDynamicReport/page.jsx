@@ -2623,7 +2623,7 @@ export default function AddEditFormControll({ reportData }) {
       );
       localStorage.setItem("selectedIgmRecordId", selectedReportIds || "");
 
-      const url = `/htmlReports/rptIGM?&reportId=1396`;
+      const url = `/htmlReports/rptIGM?reportId=1396`;
       if (url) {
         window.open(url, "_blank");
       } else {

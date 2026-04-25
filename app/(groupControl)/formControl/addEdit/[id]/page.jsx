@@ -19,6 +19,7 @@ import {
   fetchDataAPI,
   gettingTaxDetailsQuotation,
   validateSubmit,
+  getCopyData,
 } from "@/services/auth/FormControl.services.js";
 import { ButtonPanel } from "@/components/Buttons/customeButton.jsx";
 import CustomeInputFields from "@/components/Inputs/customeInputFields";
@@ -118,11 +119,20 @@ function groupAndSortFields(fields) {
   // Sort each group by 'sectionOrder'
   Object.keys(groupedFields).forEach((section) => {
     groupedFields[section].sort(
-      (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0)
+      (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0),
     );
   });
 
   return groupedFields;
+}
+
+function isConfigFlagEnabled(value) {
+  if (value === true || value === 1 || value === "1") return true;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return ["true", "yes", "y", "t"].includes(normalized);
+  }
+  return false;
 }
 
 async function onSubmitFunctionCall(
@@ -132,7 +142,7 @@ async function onSubmitFunctionCall(
   values,
   setStateVariable,
   submitNewState,
-  setSubmitNewState
+  setSubmitNewState,
 ) {
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
@@ -215,6 +225,8 @@ export default function AddEditFormControll() {
   });
   const [ChildTableName, setAllChildTableName] = useState([]);
   const [labelName, setLabelName] = useState("");
+  const [keysTovalidate, setKeysTovalidate] = useState([]);
+  const formControlRef = useRef(null);
   const prevNewStateRef = useRef({});
   const prevNewStateRefData = useRef({});
   const [openPrintModal, setOpenPrintModal] = useState(false);
@@ -225,8 +237,7 @@ export default function AddEditFormControll() {
   const childTableRow = useSelector((state) => state?.counter?.childRecord);
   const { clientId } = getUserDetails();
   const [clientName, setClientName] = useState(null);
-console.log('newState',newState)
-
+  console.log("newState", newState);
 
   useEffect(() => {
     const fetchClientName = async () => {
@@ -275,9 +286,8 @@ console.log('newState',newState)
                     glId: glId,
                     department: businessSegmentId,
                   };
-                  const fetchTaxDetails = await gettingTaxDetailsQuotation(
-                    requestData
-                  );
+                  const fetchTaxDetails =
+                    await gettingTaxDetailsQuotation(requestData);
                   const taxRate = fetchTaxDetails.taxDetails?.taxRate;
                   if (taxRate && buyRate) {
                     taxAmount = (taxRate * buyRate) / 100;
@@ -294,7 +304,7 @@ console.log('newState',newState)
               } catch (error) {
                 console.error(
                   `Error fetching charge details for chargeId ${chargeId}`,
-                  error
+                  error,
                 );
               }
             }
@@ -308,7 +318,7 @@ console.log('newState',newState)
                 (charge) => {
                   // Use indexValue to identify the specific charge to update
                   const updatedCharge = newState.tblRateRequestCharge.find(
-                    (c) => c.indexValue === charge.indexValue
+                    (c) => c.indexValue === charge.indexValue,
                   );
                   if (updatedCharge) {
                     return {
@@ -317,7 +327,7 @@ console.log('newState',newState)
                     };
                   }
                   return charge; // Return other charges unchanged
-                }
+                },
               ),
             }));
           } else if (newState.calculateTax === false) {
@@ -353,7 +363,7 @@ console.log('newState',newState)
         updateFlag({
           flag: "isRedirection",
           value: isDataMatched,
-        })
+        }),
       );
     } else {
       console.log("Mismatch found. 1", firstState);
@@ -363,7 +373,7 @@ console.log('newState',newState)
         updateFlag({
           flag: "isRedirection",
           value: isDataMatched,
-        })
+        }),
       );
     }
   }, [newState]);
@@ -512,6 +522,156 @@ console.log('newState',newState)
     console.log("formControl totalVolume", totalVolume);
   };
 
+  const isCopyChildFlag = (value) =>
+    value === true || value === "true" || value === 1 || value === "1";
+
+  const getCopyMapFieldName = (item) =>
+    item?.toColmunName || item?.ToColmunName || item?.fieldname || "";
+
+  const getCopyChildTableName = (item) =>
+    item?.toTableName || item?.ToColmunName || item?.toColmunName || "";
+
+  const applyCopyMappingsToGroupedFields = React.useCallback(
+    (groupedFields, mappings = keysTovalidate) => {
+      if (!groupedFields || !mappings?.length) return groupedFields;
+
+      const updated = {};
+
+      Object.keys(groupedFields).forEach((section) => {
+        updated[section] = (groupedFields[section] || []).map((field) => {
+          const keyMapping = mappings.find(
+            (key) => getCopyMapFieldName(key) === field?.fieldname,
+          );
+
+          if (!keyMapping) return field;
+
+          return {
+            ...field,
+            isChild: keyMapping?.isChild,
+            isOnChange: keyMapping?.isOnChage,
+            isEditable: keyMapping?.isEditable,
+            isCopy: keyMapping?.isCopy,
+            isCopyEditable: keyMapping?.isCopyEditable,
+            isSwitchToText: keyMapping?.isSwitchToText,
+            isBreak: keyMapping?.isBreak,
+          };
+        });
+      });
+
+      return updated;
+    },
+    [keysTovalidate],
+  );
+
+  const handleFieldValuesChange2 = async (
+    updatedValues,
+    field,
+    formControlField,
+  ) => {
+    try {
+      const requestData = {
+        id: updatedValues.copyMappingName,
+        filterValue: field?.[field.length - 1],
+        menuID: search.menuName,
+      };
+
+      const copyResponse = await getCopyData(requestData);
+
+      if (!copyResponse?.success) {
+        toast.error(copyResponse?.Message || "Copy mapping failed");
+        return;
+      }
+
+      let dataToCopy = {};
+      const mappings = copyResponse?.keyToValidate?.fieldsMaping || [];
+      const sourceData = copyResponse?.data?.[0] || {};
+
+      mappings
+        .filter((item) => !isCopyChildFlag(item?.isChild))
+        .forEach((item) => {
+          const targetKey = getCopyMapFieldName(item);
+
+          if (
+            Array.isArray(sourceData[targetKey]) &&
+            formControlField?.controlname?.toLowerCase() === "multiselect"
+          ) {
+            dataToCopy[targetKey] = [
+              ...(Array.isArray(newState[targetKey]) ? newState[targetKey] : []),
+              ...sourceData[targetKey],
+            ];
+          } else {
+            dataToCopy[targetKey] = sourceData[targetKey];
+          }
+        });
+
+      mappings
+        .filter((item) => isCopyChildFlag(item?.isChild))
+        .forEach((item) => {
+          const targetTable = getCopyChildTableName(item);
+          const incomingRows = Array.isArray(sourceData[targetTable])
+            ? sourceData[targetTable]
+            : [];
+
+          dataToCopy[targetTable] =
+            formControlField?.controlname?.toLowerCase() === "multiselect"
+              ? [
+                  ...(Array.isArray(newState[targetTable])
+                    ? newState[targetTable]
+                    : []),
+                  ...incomingRows,
+                ]
+              : incomingRows;
+        });
+
+      Object.keys(dataToCopy).forEach((key) => {
+        if (Array.isArray(dataToCopy[key])) {
+          dataToCopy[key] = dataToCopy[key].map((item, index) => ({
+            ...item,
+            indexValue: index + 1,
+          }));
+        }
+      });
+
+      const childMappings = mappings.filter((item) =>
+        isCopyChildFlag(item?.isChild),
+      );
+
+      setChildsFields((prev) => {
+        const updated = [...prev];
+
+        childMappings.forEach((item) => {
+          const tableName = getCopyChildTableName(item);
+          const index = updated.findIndex((row) => row.tableName === tableName);
+
+          if (index !== -1) {
+            updated[index] = {
+              ...updated[index],
+              isAddFunctionality: item?.isAddFunctionality,
+              isDeleteFunctionality: item?.isDeleteFunctionality,
+              isCopyFunctionality: item?.isCopyFunctionality,
+            };
+          }
+        });
+
+        return updated;
+      });
+
+      setNewState((prev) => ({
+        ...prev,
+        ...dataToCopy,
+      }));
+
+      setSubmitNewState((prev) => ({
+        ...prev,
+        ...dataToCopy,
+      }));
+
+      setKeysTovalidate(mappings);
+    } catch (error) {
+      console.error("Copy mapping error:", error);
+    }
+  };
+
   async function fetchData() {
     const { clientId } = getUserDetails();
     try {
@@ -528,7 +688,8 @@ console.log('newState',newState)
         // Process form fields
         setParentFieldDataInArray(apiData.fields);
         let resData = groupAndSortFields(apiData.fields);
-        let updatedFormControlDataParentsFields = { ...resData };
+        let updatedFormControlDataParentsFields =
+          applyCopyMappingsToGroupedFields({ ...resData });
 
         // 🔹 Fetch Disabled Fields Here
         const disabledFieldNames = await fetchDisabledFields();
@@ -546,7 +707,7 @@ console.log('newState',newState)
                 };
               }
               return control;
-            }
+            },
           );
         });
 
@@ -593,7 +754,7 @@ console.log('newState',newState)
               childData[subchildItem.tableName]?.forEach(
                 (subchildData, subIndex) => {
                   subchildData.indexValue = subIndex;
-                }
+                },
               );
             });
           });
@@ -651,6 +812,12 @@ console.log('newState',newState)
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!keysTovalidate?.length) return;
+
+    setParentsFields((prev) => applyCopyMappingsToGroupedFields(prev));
+  }, [keysTovalidate, applyCopyMappingsToGroupedFields]);
 
   useEffect(() => {
     if (Object.keys(parentsFields).length > 0) {
@@ -772,7 +939,7 @@ console.log('newState',newState)
     // Find all matching records in actionFieldNames
     matchedRecordArray =
       actionFieldNames?.filter((record) =>
-        changedFieldNames.includes(record.parentFieldName)
+        changedFieldNames.includes(record.parentFieldName),
       ) || [];
 
     //console.log("Matched Records Array:", matchedRecordArray);
@@ -798,16 +965,16 @@ console.log('newState',newState)
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: true }
-                : field
+                : field,
           );
 
           const hiddenFieldsFormatted = updatedState[sectionsArray[0]]
             .filter((field) => hiddenColumnIds.includes(field.id))
             .map(
               (field, index) =>
-                `${field.controlname}_${field.fieldname}_${field?.id}`
+                `${field.controlname}_${field.fieldname}_${field?.id}`,
             );
 
           //console.log("Formatted Hidden Fields:", hiddenFieldsFormatted);
@@ -819,7 +986,7 @@ console.log('newState',newState)
             updatedState[sectionsArray[0]].some(
               (field) =>
                 hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+                field.isControlShow !== false,
             )
           ) {
             updatedState[sectionsArray[0]] = updatedContainerPlanner;
@@ -838,9 +1005,9 @@ console.log('newState',newState)
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, isEditable: true }
-                : field
+                : field,
           );
 
           if (
@@ -848,7 +1015,7 @@ console.log('newState',newState)
               (field) =>
                 disabledColumnIds.includes(field.id) &&
                 field.isControlShow !== false &&
-                !field.isEditable
+                !field.isEditable,
             )
           ) {
             updatedState[sectionsArray[0]] = updatedContainerPlanner;
@@ -885,7 +1052,7 @@ console.log('newState',newState)
     // Find all matching records in actionFieldNames
     matchedRecordArray =
       actionFieldNames?.filter((record) =>
-        changedFieldNames.includes(record.parentFieldName)
+        changedFieldNames.includes(record.parentFieldName),
       ) || [];
 
     //console.log("Matched Records Array:", matchedRecordArray);
@@ -943,16 +1110,16 @@ console.log('newState',newState)
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: false }
-                : field
+                : field,
           );
 
           const hiddenFieldsFormatted = updatedState[sectionsArray[0]]
             .filter((field) => hiddenColumnIds.includes(field.id))
             .map(
               (field, index) =>
-                `${field.controlname}_${field.fieldname}_${field?.id}`
+                `${field.controlname}_${field.fieldname}_${field?.id}`,
             );
 
           //console.log("Formatted Hidden Fields:", hiddenFieldsFormatted);
@@ -964,7 +1131,7 @@ console.log('newState',newState)
             updatedState[sectionsArray[0]].some(
               (field) =>
                 hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+                field.isControlShow !== false,
             )
           ) {
             updatedState[sectionsArray[0]] = updatedContainerPlanner;
@@ -983,16 +1150,16 @@ console.log('newState',newState)
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, isEditable: false }
-                : field
+                : field,
           );
 
           if (
             updatedState[sectionsArray[0]].some(
               (field) =>
                 disabledColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+                field.isControlShow !== false,
             )
           ) {
             updatedState[sectionsArray[0]] = updatedContainerPlanner;
@@ -1093,7 +1260,7 @@ console.log('newState',newState)
     });
 
     const resData = groupAndSortFields(updatedArray);
-    setParentsFields({ ...resData });
+    setParentsFields(applyCopyMappingsToGroupedFields({ ...resData }));
   }, [
     newState.cargoTypeId,
     newState.routeId,
@@ -1313,7 +1480,7 @@ console.log('newState',newState)
           const updatedCharge = await fetchExchangeRates(
             charge,
             parentCurrencyId,
-            parentExchangeRate
+            parentExchangeRate,
           );
           updatedCharge.buyMargin =
             charge.buyMargin === null || charge.buyMargin === ""
@@ -1342,7 +1509,7 @@ console.log('newState',newState)
           console.error(
             "Failed to fetch exchange rates for charge:",
             charge,
-            error
+            error,
           );
           updatedCharges.push({ ...charge, error: "Failed to update charge" }); // Handle error as needed
         }
@@ -1370,7 +1537,7 @@ console.log('newState',newState)
     functionData,
     formControlData,
     setFormControlData,
-    setStateVariable
+    setStateVariable,
   ) {
     const funcNameMatch = functionData?.match(/^(\w+)/);
     // Check for the presence of parentheses to confirm the argument list, even if it's empty
@@ -1416,7 +1583,7 @@ console.log('newState',newState)
               funcCall,
               formControlData,
               setFormControlData,
-              setNewState
+              setNewState,
             );
           });
         }
@@ -1430,7 +1597,7 @@ console.log('newState',newState)
   const getVendorModalData = (data) => {
     const newData = newState?.tblRateRequestCharge?.map((item) => {
       const newItem = data?.find(
-        (update) => update?.indexValue === item?.indexValue
+        (update) => update?.indexValue === item?.indexValue,
       );
       return newItem ? newItem : item;
       // return newItem
@@ -1527,7 +1694,7 @@ console.log('newState',newState)
       formControlData._onSubmitResults = {};
       if (isFormSaved)
         return toast.error(
-          "This form has already been saved. Please refresh the screen to save one more record"
+          "This form has already been saved. Please refresh the screen to save one more record",
         );
       const isEqual = areObjectsEqual(newState, initialState);
       if (!isEqual) {
@@ -1536,7 +1703,7 @@ console.log('newState',newState)
           const missingField = Object.entries(fields).find(
             // eslint-disable-next-line no-unused-vars
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -1559,14 +1726,14 @@ console.log('newState',newState)
                   newState,
                   setNewState,
                   submitNewState,
-                  setSubmitNewState
+                  setSubmitNewState,
                 ).then((res) => {
                   formControlData._onSubmitResults = {
                     function: e,
                     result: res,
                   };
-                })
-              )
+                }),
+              ),
             );
           }
         } catch (error) {
@@ -1576,7 +1743,7 @@ console.log('newState',newState)
           // return;
           const submitData = formControlData?._onSubmitResults?.result?.values
             ? formControlData?._onSubmitResults?.result?.values
-            : newState //submitNewState;
+            : newState; //submitNewState;
           const cleanData = replaceNullStrings(submitData, ChildTableName);
           setIsFormSaved(true);
           let data = await handleSubmitApi(cleanData);
@@ -1592,7 +1759,8 @@ console.log('newState',newState)
             if (data.success === true) {
               setParaText(data.message);
               setIsError(false);
-              setOpenModal((prev) => !prev);
+              //setOpenModal((prev) => !prev);
+              setOpenModal(false);
             }
           } else {
             toast.error(data.message);
@@ -1680,7 +1848,7 @@ console.log('newState',newState)
 
       const getChargeDropDown = (chargesId) => {
         const chargedGroupData = chargedData?.filter((x) =>
-          x?.charges?.some((y) => y?.id === chargesId)
+          x?.charges?.some((y) => y?.id === chargesId),
         );
         return (
           chargedGroupData?.map((r) => ({
@@ -1693,7 +1861,7 @@ console.log('newState',newState)
 
       const getChargeDropDownId = (chargesId) => {
         const chargedGroupData = chargedData?.filter((x) =>
-          x?.charges?.some((y) => y?.id === chargesId)
+          x?.charges?.some((y) => y?.id === chargesId),
         );
         const id = chargedGroupData?.map((item) => item.id).join(", ");
         //console.log("chargedGroupData", chargedGroupData);
@@ -1706,7 +1874,7 @@ console.log('newState',newState)
       //   megeredIntoTheRateRequestCharge
       // );
       const filterData = megeredIntoTheRateRequestCharge?.filter((x) =>
-        newData.some((y) => y?.chargeId === x?.chargeId)
+        newData.some((y) => y?.chargeId === x?.chargeId),
       );
 
       const formatData = filterData?.flatMap((item) =>
@@ -1739,8 +1907,8 @@ console.log('newState',newState)
             vendorId: null,
             vendorIdDropdown: null,
             vendorIddropdown: [],
-          }))
-        )
+          })),
+        ),
       );
 
       //console.log("formatData", formatData);
@@ -1825,11 +1993,11 @@ console.log('newState',newState)
               };
 
               fetchScopeOfWorkData = await fetchReportData(
-                requestForScopeOfWork
+                requestForScopeOfWork,
               );
 
               filteredScopeOfWork = scopeOfWorkMultiselect?.find(
-                (x) => x?.value === parseInt(work)
+                (x) => x?.value === parseInt(work),
               );
 
               const chargesQuery = {
@@ -1873,7 +2041,7 @@ console.log('newState',newState)
                       },
                     ] || [],
                   chargeGroupIdData: parseInt(
-                    fetchScopeOfWorkData?.data[0]?.id
+                    fetchScopeOfWorkData?.data[0]?.id,
                   ),
                   chargeDescription: item.name,
                 }));
@@ -1992,7 +2160,7 @@ console.log('newState',newState)
                 ],
                 buyCurrencyId:
                   item.buyCurrencyId !== null &&
-                    item.buyCurrencyId !== undefined
+                  item.buyCurrencyId !== undefined
                     ? String(item.buyCurrencyId)
                     : null,
                 buyCurrencyIddropdown: [
@@ -2003,7 +2171,7 @@ console.log('newState',newState)
                 ],
                 sellCurrencyId:
                   item.sellCurrencyId !== null &&
-                    item.sellCurrencyId !== undefined
+                  item.sellCurrencyId !== undefined
                     ? String(item.sellCurrencyId)
                     : null,
                 sellCurrencyIddropdown: [
@@ -2014,12 +2182,12 @@ console.log('newState',newState)
                 ],
                 buyExchangeRate:
                   item.buyExchangeRate !== null &&
-                    item.buyExchangeRate !== undefined
+                  item.buyExchangeRate !== undefined
                     ? String(item.buyExchangeRate)
                     : null,
                 sellExchangeRate:
                   item.sellExchangeRate !== null &&
-                    item.sellExchangeRate !== undefined
+                  item.sellExchangeRate !== undefined
                     ? String(item.sellExchangeRate)
                     : null,
               };
@@ -2034,14 +2202,14 @@ console.log('newState',newState)
                 const updatedCharge = await fetchExchangeRates(
                   charge,
                   parentCurrencyId,
-                  parentExchangeRate
+                  parentExchangeRate,
                 );
                 return updatedCharge;
               } catch (error) {
                 console.error("Failed to fetch exchange rates:", error);
                 return charge;
               }
-            })
+            }),
           );
 
           //console.log(chargesWithExchangeRates, "chargesWithExchangeRates");
@@ -2100,7 +2268,7 @@ console.log('newState',newState)
       setParaText(
         !isView
           ? "Do you want to close this form, all changes will be lost?"
-          : "Do you want to close this form?"
+          : "Do you want to close this form?",
       );
       setIsError(true);
       setOpenModal((prev) => !prev);
@@ -2109,14 +2277,14 @@ console.log('newState',newState)
         updateFlag({
           flag: "isRedirection",
           value: true,
-        })
+        }),
       );
     },
     handleSaveClose: async () => {
       formControlData._onSubmitResults = {};
       if (isFormSaved)
         return toast.error(
-          "This form has already been saved. Please refresh the screen to save one more record"
+          "This form has already been saved. Please refresh the screen to save one more record",
         );
       const isEqual = areObjectsEqual(newState, initialState);
       if (!isEqual) {
@@ -2125,7 +2293,7 @@ console.log('newState',newState)
           const missingField = Object.entries(fields).find(
             // eslint-disable-next-line no-unused-vars
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -2149,14 +2317,14 @@ console.log('newState',newState)
                   newState,
                   setNewState,
                   submitNewState,
-                  setSubmitNewState
+                  setSubmitNewState,
                 ).then((res) => {
                   formControlData._onSubmitResults = {
                     function: e,
                     result: res,
                   };
-                })
-              )
+                }),
+              ),
             );
           }
         } catch (error) {
@@ -2175,7 +2343,7 @@ console.log('newState',newState)
               updateFlag({
                 flag: "isRedirection",
                 value: true,
-              })
+              }),
             );
             toast.success(data.message);
             setTimeout(() => {
@@ -2184,7 +2352,7 @@ console.log('newState',newState)
                   id: search.menuName,
                   menuName: search.menuName,
                   parentMenuId: search.menuName,
-                })}`
+                })}`,
               );
             }, 500);
           } else {
@@ -2210,7 +2378,7 @@ console.log('newState',newState)
           const missingField = Object.entries(fields).find(
             // eslint-disable-next-line no-unused-vars
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -2232,8 +2400,8 @@ console.log('newState',newState)
                   newState,
                   formControlData,
                   newState,
-                  setNewState
-                )
+                  setNewState,
+                ),
               );
           }
         } catch (error) {
@@ -2278,7 +2446,7 @@ console.log('newState',newState)
             id: search.menuName,
             menuName: search.menuName,
             parentMenuId: search.menuName,
-          })}`
+          })}`,
         );
       }
     } else if (conformData.type === "onCheck") {
@@ -2335,6 +2503,7 @@ console.log('newState',newState)
                 parentTableName={tableName}
                 formControlData={formControlData}
                 setFormControlData={setFormControlData}
+                handleFieldValuesChange2={handleFieldValuesChange2}
                 //
                 getLabelValue={getLabelValue}
               />
@@ -2350,6 +2519,7 @@ console.log('newState',newState)
                 indexValue={index}
                 expandAll={expandAll}
                 setExpandAll={setExpandAll}
+                isCopy={isCopy}
                 isView={isView}
                 setOpenModal={setOpenModal}
                 setParaText={setParaText}
@@ -2361,6 +2531,7 @@ console.log('newState',newState)
                 setSubmitNewState={setSubmitNewState}
                 formControlData={formControlData}
                 setFormControlData={setFormControlData}
+                handleFieldValuesChange2={handleFieldValuesChange2}
                 getLabelValue={getLabelValue}
                 childsFields={childsFields}
                 childTableRow={childTableRow}
@@ -2473,6 +2644,7 @@ ParentAccordianComponent.propTypes = {
   indexValue: PropTypes.any,
   newState: PropTypes.any,
   parentsFields: PropTypes.any,
+  handleFieldValuesChange2: PropTypes.any,
   expandAll: PropTypes.any,
   isCopy: PropTypes.any,
   setNewState: PropTypes.any,
@@ -2495,6 +2667,7 @@ function ParentAccordianComponent({
   indexValue,
   newState,
   parentsFields,
+  handleFieldValuesChange2,
   expandAll,
   isCopy,
   setNewState,
@@ -2621,7 +2794,8 @@ function ParentAccordianComponent({
             inputFieldData={parentsFields[section]}
             values={newState}
             onValuesChange={handleFieldValuesChange}
-            inEditMode={{ isEditMode: true, isCopy: isCopy }}
+            handleFieldValuesChange2={handleFieldValuesChange2}
+            inEditMode={{ isEditMode: false, isCopy: true }}
             onChangeHandler={(result) => {
               handleChangeFunction(result);
             }}
@@ -2649,6 +2823,7 @@ ChildAccordianComponent.propTypes = {
   indexValue: PropTypes.any,
   newState: PropTypes.any,
   setNewState: PropTypes.any,
+  handleFieldValuesChange2: PropTypes.any,
   expandAll: PropTypes.any,
   isCopy: PropTypes.any,
   originalData: PropTypes.any,
@@ -2674,6 +2849,7 @@ function ChildAccordianComponent({
   indexValue,
   newState,
   setNewState,
+  handleFieldValuesChange2,
   expandAll,
   isCopy,
   isView,
@@ -2711,11 +2887,13 @@ function ChildAccordianComponent({
   const [columnTotals, setColumnTotals] = useState({ tableName: "" });
   const [containerWidth, setContainerWidth] = useState(0);
   const [inputFieldsVisible, setInputFieldsVisible] = useState(
-    newState[section.tableName] !== null ? false : true
+    newState[section.tableName] !== null ? false : true,
   );
   const params = useParams();
   const { clientId } = getUserDetails();
   const search = JSON.parse(decodeURIComponent(params.id));
+  const isChildAddHidden = isConfigFlagEnabled(section?.isAddHide);
+  const isChildDeleteHidden = isConfigFlagEnabled(section?.isDeleteHide);
   console.log("copyChildValueObj page", copyChildValueObj);
   console.log("childObject", childObject);
   const [clientName, setClientName] = useState(null);
@@ -2744,7 +2922,7 @@ function ChildAccordianComponent({
     // console.log("getGridStatus", getGridStatus);
     if (childsFields.length > 0) {
       const gridEditableCount = childsFields.filter(
-        (item) => item?.gridEditableOnLoad?.toLowerCase() === "true"
+        (item) => item?.gridEditableOnLoad?.toLowerCase() === "true",
       ).length;
       if (gridEditableCount > 0) {
         setIsGridEdit(!isGridEdit);
@@ -2883,6 +3061,7 @@ function ChildAccordianComponent({
   };
 
   const childButtonHandler = async (section, indexValue, islastTab) => {
+    if (isConfigFlagEnabled(section?.isAddHide)) return;
     //console.log("childButtonHandler", section);
     if (isChildAccordionOpen) {
       setClickCount((prevCount) => prevCount + 1);
@@ -2896,7 +3075,7 @@ function ChildAccordianComponent({
           feild.isRequired &&
           (!Object.prototype.hasOwnProperty.call(
             childObject,
-            feild.fieldname
+            feild.fieldname,
           ) ||
             String(childObject[feild.fieldname] || "").trim() === "")
         ) {
@@ -2916,7 +3095,7 @@ function ChildAccordianComponent({
               newState,
               formControlData,
               Data,
-              setChildObject
+              setChildObject,
             );
             if (updatedData?.alertShow == true) {
               // if (updatedData.type == "success") {
@@ -3052,12 +3231,12 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-              const parsedValue =
-                typeof row[item.fieldname] === "number"
-                  ? row[item.fieldname]
-                  : parseFloat(row[item.fieldname] || 0);
-              return isNaN(parsedValue) ? sum : sum + parsedValue;
-            }, 0) // Calculate sum for 's' type
+                const parsedValue =
+                  typeof row[item.fieldname] === "number"
+                    ? row[item.fieldname]
+                    : parseFloat(row[item.fieldname] || 0);
+                return isNaN(parsedValue) ? sum : sum + parsedValue;
+              }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -3096,89 +3275,92 @@ function ChildAccordianComponent({
     calculateTotalVolumeAndWeight();
   }, [newState.tblRateRequestQty]);
 
-  const calculateTotalNoOfPackages = () => {
-    if (!newState || !Array.isArray(newState.tblJobContainer)) {
-      return newState; // Return unchanged state if invalid
-    }
+//   const calculateTotalNoOfPackages = () => {
+//      if (search?.menuName != "1278") {
+//     if (!newState || !Array.isArray(newState.tblJobContainer)) {
+//       return newState; // Return unchanged state if invalid
+//     }
+  
 
-    const toNum = (v) =>
-      v == null || v === "" ? 0 : Number(String(v).replace(/,/g, "")) || 0;
+//     const toNum = (v) =>
+//       v == null || v === "" ? 0 : Number(String(v).replace(/,/g, "")) || 0;
 
-    let totalNoPackages = 0;
+//     let totalNoPackages = 0;
 
-    newState.tblJobContainer.forEach((row) => {
-      totalNoPackages += toNum(row?.noOfPackages);
-    });
+//     newState.tblJobContainer.forEach((row) => {
+//       totalNoPackages += toNum(row?.noOfPackages);
+//     });
 
-    setNewState((prevState) => {
-      // If your state ever had a legacy key, prefer it
-      const targetKey = Object.prototype.hasOwnProperty.call(
-        prevState,
-        "noOfpackages"
-      )
-        ? "noOfpackages"
-        : "noOfPackages";
+//     setNewState((prevState) => {
+//       // If your state ever had a legacy key, prefer it
+//       const targetKey = Object.prototype.hasOwnProperty.call(
+//         prevState,
+//         "noOfpackages",
+//       )
+//         ? "noOfpackages"
+//         : "noOfPackages";
 
-      // Prevent unnecessary re-renders
-      if (toNum(prevState?.[targetKey]) === totalNoPackages) return prevState;
+//       // Prevent unnecessary re-renders
+//       if (toNum(prevState?.[targetKey]) === totalNoPackages) return prevState;
 
-      return {
-        ...prevState,
-        [targetKey]: totalNoPackages,
-      };
-    });
-  };
+//       return {
+//         ...prevState,
+//         [targetKey]: totalNoPackages,
+//       };
+//     });
+//   };
+// }
 
-  useEffect(() => {
-    calculateTotalNoOfPackages();
-  }, [newState.tblJobContainer]);
+  // useEffect(() => {
+  //   calculateTotalNoOfPackages();
+  // }, [newState.tblJobContainer]);
 
-  const calculateTotalGrossWeight = () => {
-    if (search?.menuName != "1279") {
-      if (!newState || !Array.isArray(newState.tblJobContainer)) {
-        return newState;
-      }
+  // const calculateTotalGrossWeight = () => {
+  //   if (search?.menuName != "1279" || search?.menuName != "1259") {
+  //     if (!newState || !Array.isArray(newState.tblJobContainer)) {
+  //       return newState;
+  //     }
 
-      let totalGrossWt = 0;
+  //     let totalGrossWt = 0;
 
-      newState.tblJobContainer.forEach((row) => {
-        const cargoWt = parseFloat(row.grossWt) || 0;
-        totalGrossWt += cargoWt;
-      });
+  //     newState.tblJobContainer.forEach((row) => {
+  //       const cargoWt = parseFloat(row.grossWt) || 0;
+  //       totalGrossWt += cargoWt;
+  //     });
 
-      setNewState((prevState) => ({
-        ...prevState,
-        cargoWt: totalGrossWt,
-      }));
-    }
-  };
+  //     setNewState((prevState) => ({
+  //       ...prevState,
+  //       cargoWt: totalGrossWt,
+  //     }));
+  //   }
+  // };
 
-  useEffect(() => {
-    calculateTotalGrossWeight();
-  }, [newState.tblJobContainer]);
+  // useEffect(() => {
+  //   calculateTotalGrossWeight();
+  // }, [newState.tblJobContainer]);
 
-  const calculateTotalGrossWeightBl = () => {
-    if (!newState || !Array.isArray(newState.tblBlContainer)) {
-      return newState;
-    }
+  // const calculateTotalGrossWeightBl = () => {
+  //   if (!newState || !Array.isArray(newState.tblBlContainer)) {
+  //     return newState;
+  //   }
 
-    let totalGrossWt = 0;
+  //   let totalGrossWt = 0;
 
-    newState.tblBlContainer.forEach((row) => {
-      const grossWts = parseFloat(row.grossWt) || 0;
-      totalGrossWt += grossWts;
-    });
+  //   newState.tblBlContainer.forEach((row) => {
+  //     const grossWts = parseFloat(row.grossWt) || 0;
+  //     totalGrossWt += grossWts;
+  //   });
 
-    setNewState((prevState) => ({
-      ...prevState,
-      grossWt: totalGrossWt,
-    }));
-  };
+  //   setNewState((prevState) => ({
+  //     ...prevState,
+  //     grossWt: totalGrossWt,
+  //   }));
+  // };
 
-  useEffect(() => {
-    if (clientName != "SLS") return;
-    calculateTotalGrossWeightBl();
-  }, [newState.tblBlContainer]);
+  // useEffect(() => {
+  //   if (clientName != "SLS" || clientName != "KJS") return;
+  //   calculateTotalGrossWeightBl();
+  // }, [newState.tblBlContainer]);
 
   useEffect(() => {
     setRenderedData(newState[section.tableName]?.slice(0, 10)); // Initially render 10 items
@@ -3195,17 +3377,18 @@ function ChildAccordianComponent({
     const lastIndex = renderedData.length + 10;
     const newData = newState[section.tableName]?.slice(
       renderedData.length,
-      lastIndex
+      lastIndex,
     );
     setRenderedData((prevData) => [...prevData, ...newData]);
     setDummyData((prevData) => [...prevData, ...newData]);
   };
   const deleteChildRecord = (index) => {
+    if (isChildDeleteHidden) return;
     try {
       if (section.functionOnDelete && section.functionOnDelete !== null) {
         const functonsArray = section.functionOnDelete.trim().split(";");
         const filteredRows = newState[section.tableName].filter(
-          (_, i) => i !== index
+          (_, i) => i !== index,
         );
         const UpdatedNewState = {
           ...newState,
@@ -3224,7 +3407,7 @@ function ChildAccordianComponent({
             UpdatedNewState,
             formControlData,
             {},
-            setChildObject
+            setChildObject,
           );
 
           if (updatedData?.alertShow === true) {
@@ -3245,7 +3428,7 @@ function ChildAccordianComponent({
               // ✅ Recalculate totals with updated rows
               calculateTotalVolumeAndWeight(
                 updated[section.tableName],
-                setNewState
+                setNewState,
               );
               return updated;
             });
@@ -3260,7 +3443,7 @@ function ChildAccordianComponent({
         // ✅ Standard flow (no functionOnDelete)
         setNewState((prevState) => {
           const updatedRows = prevState[section.tableName].filter(
-            (_, idx) => idx !== index
+            (_, idx) => idx !== index,
           );
           const updatedState = {
             ...prevState,
@@ -3272,7 +3455,7 @@ function ChildAccordianComponent({
 
         setSubmitNewState((prevState) => {
           const updatedRows = prevState[section.tableName].filter(
-            (_, idx) => idx !== index
+            (_, idx) => idx !== index,
           );
           return {
             ...prevState,
@@ -3282,7 +3465,7 @@ function ChildAccordianComponent({
 
         setOriginalData((prevState) => {
           const updatedRows = prevState[section?.tableName]?.filter(
-            (_, idx) => idx !== index
+            (_, idx) => idx !== index,
           );
           if (updatedRows?.length === 0) {
             setInputFieldsVisible(true);
@@ -3328,7 +3511,7 @@ function ChildAccordianComponent({
     setSubmitNewState((prevState) => {
       const newStateCopy = { ...prevState };
       let updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx === index
+        (_, idx) => idx === index,
       );
       updatedData = { ...updatedData[0], isChecked: false };
       newStateCopy[section.tableName][index] = updatedData;
@@ -3337,7 +3520,7 @@ function ChildAccordianComponent({
     setNewState((prevState) => {
       const newStateCopy = { ...prevState };
       let updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx === index
+        (_, idx) => idx === index,
       );
       updatedData = { ...updatedData[0], isChecked: false };
       newStateCopy[section.tableName][index] = updatedData;
@@ -3807,8 +3990,8 @@ function ChildAccordianComponent({
       const right = Math.round(
         Math.floor(
           tableRef.current?.getBoundingClientRect()?.width +
-          tableRef.current?.scrollLeft
-        )
+            tableRef.current?.scrollLeft,
+        ),
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
         setTableBodyWidth(`${right - 70}`);
@@ -3831,7 +4014,7 @@ function ChildAccordianComponent({
     formControlData,
     setFormControlData,
     setStateVariable,
-    values
+    values,
   ) {
     const funcNameMatch = functionData?.match(/^(\w+)/);
     const argsMatch = functionData?.match(/\((.*)\)/);
@@ -3880,7 +4063,7 @@ function ChildAccordianComponent({
             formControlData,
             setFormControlData,
             setChildObject,
-            childObject
+            childObject,
           );
         });
       }
@@ -3967,7 +4150,7 @@ function ChildAccordianComponent({
           <div key={indexValue} className={`w-full  ${styles.thinScrollBar}`}>
             {/* Icon Button on the right */}
             <div className="absolute top-1 right-[-3px] flex justify-end ">
-              {!isView && clickCount === 0 && (
+              {!isView && !isChildAddHidden && clickCount === 0 && (
                 //    <IconButton
                 //    aria-label="Add"
                 //    className={`${styles.inputTextColor} `}
@@ -3999,13 +4182,14 @@ function ChildAccordianComponent({
             </div>
 
             {/* Custom Input Fields in the middle */}
-            {inputFieldsVisible && !isGridEdit && (
+            {!isChildAddHidden && inputFieldsVisible && !isGridEdit && (
               <div className={`relative flex pl-[16px] py-[8px] `}>
                 <CustomeInputFields
                   inputFieldData={section.fields}
                   onValuesChange={handleFieldChildrenValuesChange}
+                  handleFieldValuesChange2={handleFieldValuesChange2}
                   values={childObject}
-                  inEditMode={{ isEditMode: true, isCopy: isCopy }}
+                  inEditMode={{ isEditMode: false, isCopy: true }}
                   onChangeHandler={(result) => {
                     handleChangeFunction(result);
                   }}
@@ -4051,7 +4235,7 @@ function ChildAccordianComponent({
                       calculateTotalVolumeAndWeight();
                       calculateTotalGrossWeight();
                       calculateTotalGrossWeightBl();
-                      calculateTotalNoOfPackages();
+                     // calculateTotalNoOfPackages();
                     }}
                   />
                 </div>
@@ -4099,7 +4283,6 @@ function ChildAccordianComponent({
                               .filter((elem) => elem.isGridView)
                               .map((field, index) => (
                                 <React.Fragment key={index}>
-
                                   {(section?.showSrNo === true ||
                                     section?.showSrNo === "true") &&
                                     index === 0 && (
@@ -4114,7 +4297,7 @@ function ChildAccordianComponent({
                                           zIndex: 10,
                                         }}
                                       >
-                                        {!isView && index === 0 && (
+                                        {!isView && !isChildAddHidden && index === 0 && (
                                           <HoverIcon
                                             defaultIcon={addLogo}
                                             hoverIcon={plusIconHover}
@@ -4123,7 +4306,7 @@ function ChildAccordianComponent({
                                             onClick={() => {
                                               inputFieldsVisible == false &&
                                                 setInputFieldsVisible(
-                                                  (prev) => !prev
+                                                  (prev) => !prev,
                                                 );
                                             }}
                                           />
@@ -4141,7 +4324,10 @@ function ChildAccordianComponent({
                                       paddingLeft:
                                         isView && index === 0
                                           ? "29px"
-                                          : section?.showSrNo == true || section?.showSrNo == "true" ? "29px !important" : "0px !important",
+                                          : section?.showSrNo == true ||
+                                              section?.showSrNo == "true"
+                                            ? "29px !important"
+                                            : "0px !important",
                                       zIndex: 10,
                                     }}
                                     onContextMenu={(event) =>
@@ -4149,24 +4335,30 @@ function ChildAccordianComponent({
                                         event,
                                         field.fieldname,
                                         section,
-                                        section.fields
+                                        section.fields,
                                       )
                                     } // Add the right-click handler here
                                   >
-                                    {!isView && index === 0 && !(section?.showSrNo == true || section?.showSrNo == "true") && (
-                                      <HoverIcon
-                                        defaultIcon={addLogo}
-                                        hoverIcon={plusIconHover}
-                                        altText={"Add"}
-                                        title={"Add"}
-                                        onClick={() => {
-                                          inputFieldsVisible == false &&
-                                            setInputFieldsVisible(
-                                              (prev) => !prev
-                                            );
-                                        }}
-                                      />
-                                    )}
+                                    {!isView &&
+                                      !isChildAddHidden &&
+                                      index === 0 &&
+                                      !(
+                                        section?.showSrNo == true ||
+                                        section?.showSrNo == "true"
+                                      ) && (
+                                        <HoverIcon
+                                          defaultIcon={addLogo}
+                                          hoverIcon={plusIconHover}
+                                          altText={"Add"}
+                                          title={"Add"}
+                                          onClick={() => {
+                                            inputFieldsVisible == false &&
+                                              setInputFieldsVisible(
+                                                (prev) => !prev,
+                                              );
+                                          }}
+                                        />
+                                      )}
 
                                     <span
                                       className={`${styles.labelText}`}
@@ -4205,7 +4397,6 @@ function ChildAccordianComponent({
                                       </span>
                                     )}
                                   </TableCell>
-
                                 </React.Fragment>
                               ))}
                           </TableRow>
@@ -4218,14 +4409,18 @@ function ChildAccordianComponent({
                               childIndex={index}
                               childName={section.tableName}
                               subChild={section.subChild}
-                              sectionData={section}
+                              sectionData={{
+                                ...section,
+                                isAddHide: isChildAddHidden,
+                                isDeleteHide: isChildDeleteHidden,
+                              }}
                               key={index}
                               row={row}
                               newState={newState}
                               setNewState={setNewState}
                               setInputFieldsVisible={setInputFieldsVisible}
                               expandAll={expandAll}
-                              inEditMode={{ isEditMode: true, isCopy: isCopy }}
+                              inEditMode={{ isEditMode: false, isCopy: true }}
                               setRenderedData={setRenderedData}
                               deleteChildRecord={deleteChildRecord}
                               calculateData={calculateData}
@@ -4236,7 +4431,7 @@ function ChildAccordianComponent({
                               isGridEdit={
                                 checker
                                   ? section?.gridEditableOnLoad?.toLowerCase() ===
-                                  "true"
+                                    "true"
                                   : isGridEdit
                               }
                               setIsGridEdit={setIsGridEdit}
@@ -4299,10 +4494,10 @@ function ChildAccordianComponent({
                                               {(field.type === "number" ||
                                                 field.type === "decimal" ||
                                                 field.type === "string") &&
-                                                field.gridTotal
+                                              field.gridTotal
                                                 ? columnTotals[
-                                                  field.fieldname
-                                                ].toString()
+                                                    field.fieldname
+                                                  ].toString()
                                                 : ""}
                                             </div>
                                           </div>

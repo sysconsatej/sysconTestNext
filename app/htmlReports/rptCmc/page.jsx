@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable */
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-import {fetchReportData} from "@/services/auth/FormControl.services.js";
+import { fetchReportData } from "@/services/auth/FormControl.services.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./rptCmc.css";
 import Print from "@/components/Print/page";
@@ -105,6 +105,20 @@ export default function RptIGM() {
     measured: false,
   });
 
+  function formatDateToYMD(dateStr) {
+    if (!dateStr) return ""; // Handles null, undefined, empty string
+
+    const date = new Date(dateStr);
+
+    if (isNaN(date)) return ""; // Handles invalid date strings
+
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`; // Returns "dd/mm/yyyy"
+  }
+
   useEffect(() => {
     const storedReportIds = sessionStorage.getItem("selectedReportIds");
     if (storedReportIds) {
@@ -170,7 +184,7 @@ export default function RptIGM() {
             };
             try {
               const cmData = await fetchReportData(requestBodyCompany);
-              
+
               if (cmData && cmData.data && cmData.data.length > 0) {
                 setCompanyName(cmData.data[0].name);
               } else {
@@ -259,7 +273,7 @@ export default function RptIGM() {
             theadHeight -
             pageNoHeight -
             safetyBuffer) /
-            rowHeight,
+          rowHeight,
         ),
       );
 
@@ -272,7 +286,7 @@ export default function RptIGM() {
             footerHeight -
             pageNoHeight -
             safetyBuffer) /
-            rowHeight,
+          rowHeight,
         ),
       );
 
@@ -358,7 +372,7 @@ export default function RptIGM() {
 
     return (
       <div id={`CMC-${page.pageNo}`} className="mx-auto text-black">
-        <CompanyImgModule />
+        {/* <CompanyImgModule /> */}
         {/* <CMCHeaderSpace /> */}
         <CMCSecondaryHeader
           data={data}
@@ -394,6 +408,7 @@ export default function RptIGM() {
   }) => {
     return (
       <>
+        <div style={{ width: "100%", height: "130px" }}></div>
         <div
           className="flex justify-between"
           style={{
@@ -484,17 +499,13 @@ export default function RptIGM() {
               marginLeft: "5px",
             }}
           >
-            DTD. {data?.[0]?.igmDate || ""}
+            DTD. {formatDateToYMD(data?.[0]?.igmDate || "")}
           </p>
         </div>
 
         <div style={{ textAlign: "center", marginTop: "10px" }}>
           <p style={{ color: "black", fontSize: "10px", fontWeight: "bold" }}>
             Bond No. {data?.[0]?.bondNo || ""}
-          </p>
-          <p style={{ color: "black", fontSize: "10px", fontWeight: "bold" }}>
-            DATED : {data?.[0]?.igmDate || ""} VALID UPTO :{" "}
-            {data?.[0]?.igmDate || ""}
           </p>
           <p style={{ color: "black", fontSize: "10px", fontWeight: "bold" }}>
             <u>Movement of Loaded/ICD/Empty</u>

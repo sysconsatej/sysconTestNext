@@ -469,8 +469,8 @@ export default function PrintModal({
         const decryptedData = decrypt(storedUserData);
         const userData = JSON.parse(decryptedData);
         const clientId = userData?.[0]?.clientId;
+        const companyBranchId = userData?.[0]?.defaultBranchId;
 
-        const { companyId } = getUserDetails();
 
         if (!submittedMenuId || !clientId) {
           setReportNames([]);
@@ -496,7 +496,7 @@ export default function PrintModal({
         const croEditerRequestBody = {
           columns: "tbp.id,tbp.name",
           tableName: "tblBlPrintTemplate tbp",
-          whereCondition: `tbp.clientId=${clientId} and tbp.templateType='cro'`,
+          whereCondition: `tbp.clientId=${clientId} and tbp.companyBranchId=${companyBranchId} and tbp.templateType='cro'`,
           clientIdCondition: `tbp.status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
         };
 

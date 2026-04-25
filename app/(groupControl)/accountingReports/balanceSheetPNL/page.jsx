@@ -3,18 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { parentAccordionSection, accordianDetailsStyle } from "@/app/globalCss";
 import {
-  Box,
-  FormControl,
-  InputLabel,
-  OutlinedInput,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  FormLabel,
-  MenuItem,
-  Select,
-  TextField,
-  Button,
   Typography,
   Accordion,
   AccordionSummary,
@@ -62,7 +50,7 @@ const BalanceSheetPNL = () => {
   // --
   const [typeofModal, setTypeofModal] = useState("onClose");
   const [menuName, setMenuName] = useState(
-    "Balance Sheet And Profit And Loss Report"
+    "Balance Sheet And Profit And Loss Report",
   );
   const [newState, setNewState] = useState({
     companybranchIddropdown: [],
@@ -480,7 +468,7 @@ const BalanceSheetPNL = () => {
     if (data) {
       setReportType(selectedRadio);
       setSelectedBalanceAndProfitAndLossRadio(
-        selectedBalanceAndProfitAndLossRadio
+        selectedBalanceAndProfitAndLossRadio,
       );
       setData1(data.data.array1);
       setData2(data.data.array2);

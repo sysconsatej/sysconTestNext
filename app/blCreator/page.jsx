@@ -5516,7 +5516,7 @@ export default function BlCreatorPage() {
                     meta: {
                       ...(toSave1?.meta || {}),
                       blOfId: selectedBlOfId || null,
-                      blOfName: selectedBlOfName || "",
+                      //blOfName: selectedBlOfName || "",
                       blStatus: selectedBlStatus || "",
                     },
                   };
@@ -7457,6 +7457,7 @@ function Inspector({
                 "agentSealNo",
                 "customSealNo",
                 "createdDate",
+                "volumeAndCode",
               ],
               tblBLCharge: [
                 "code",

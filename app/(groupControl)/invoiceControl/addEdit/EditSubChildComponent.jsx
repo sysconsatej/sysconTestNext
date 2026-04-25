@@ -34,6 +34,16 @@ import Checkbox from "@mui/material/Checkbox";
 import { ActionButton } from "@/components/ActionsButtons";
 import * as onSubmitValidation from "@/helper/onSubmitFunction";
 //import {setSameDDValuesBasedOnSecondRow} from "@/helper/onSubmitFunction"
+
+function isConfigFlagEnabled(value) {
+  if (value === true || value === 1 || value === "1") return true;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return ["true", "yes", "y", "t"].includes(normalized);
+  }
+  return false;
+}
+
 function onSubmitFunctionCall(
   functionData,
   newState,
@@ -142,6 +152,8 @@ export default function EditSubChildComponent(props) {
   const [editSubChildObj, setEditSubChildObj] = useState({ ...subChildObject });
   const [openSubChildEdit, setOpenSubChildEdit] = useState(false);
   const [hoveredIcon, setHoveredIcon] = useState(null);
+  const isSubChildDeleteHidden = isConfigFlagEnabled(subChild?.isDeleteHide);
+  const isSubChildCopyHidden = isConfigFlagEnabled(subChild?.isAddHide);
   // const [isChecked, setIsChecked] = useState(true);
 
   useEffect(() => {
@@ -153,7 +165,27 @@ export default function EditSubChildComponent(props) {
     setOpenSubChildEdit((prev) => !prev);
   };
 
-  const isSameEditableRow = (leftRow, rightRow) => {
+  // const isSameEditableRow = (leftRow, rightRow) => {
+  //   if (!leftRow || !rightRow) return false;
+
+  //   if (leftRow?._id != null && rightRow?._id != null) {
+  //     return leftRow._id === rightRow._id;
+  //   }
+
+  //   if (
+  //     leftRow?.voucherOutstandingId != null &&
+  //     rightRow?.voucherOutstandingId != null
+  //   ) {
+  //     return leftRow.voucherOutstandingId === rightRow.voucherOutstandingId;
+  //   }
+
+  //   if (leftRow?.indexValue != null && rightRow?.indexValue != null) {
+  //     return leftRow.indexValue === rightRow.indexValue;
+  //   }
+
+  //   return false;
+  // };
+  const isSameEditableRow = (leftRow, rightRow, leftIndex = null, rightIndex = null) => {
     if (!leftRow || !rightRow) return false;
 
     if (leftRow?._id != null && rightRow?._id != null) {
@@ -171,9 +203,12 @@ export default function EditSubChildComponent(props) {
       return leftRow.indexValue === rightRow.indexValue;
     }
 
+    if (leftIndex != null && rightIndex != null) {
+      return leftIndex === rightIndex;
+    }
+
     return false;
   };
-
   const applyVoucherDetailManualFlags = (nextRow, prevRow = {}) => {
     if (subChild?.tableName !== "tblVoucherLedgerDetails") {
       return nextRow;
@@ -188,13 +223,13 @@ export default function EditSubChildComponent(props) {
     const didHcChange =
       String(prevRow?.debitAmount ?? "") !== String(nextRow?.debitAmount ?? "") ||
       String(prevRow?.creditAmount ?? "") !==
-        String(nextRow?.creditAmount ?? "");
+      String(nextRow?.creditAmount ?? "");
 
     const didFcChange =
       String(prevRow?.debitAmountFc ?? "") !==
-        String(nextRow?.debitAmountFc ?? "") ||
+      String(nextRow?.debitAmountFc ?? "") ||
       String(prevRow?.creditAmountFc ?? "") !==
-        String(nextRow?.creditAmountFc ?? "");
+      String(nextRow?.creditAmountFc ?? "");
 
     const hasManualHc =
       toNum(nextRow?.debitAmount) !== 0 || toNum(nextRow?.creditAmount) !== 0;
@@ -215,6 +250,7 @@ export default function EditSubChildComponent(props) {
   };
 
   function copyDocument(obj) {
+    if (isSubChildCopyHidden) return;
     if (Object.keys(obj).length !== 0) {
       const tmpData = { ...newState };
       tmpData[childName][childIndex][subChild.tableName].push({
@@ -363,140 +399,140 @@ export default function EditSubChildComponent(props) {
     // });
   };
 
-//   const syncLedgerTotalsFromDetails = () => {
-//  //alert("omkarrrrrc");
-//   if (!newState || !Array.isArray(newState.tblVoucherLedger)) {
-//     return newState;
-//   }
+  //   const syncLedgerTotalsFromDetails = () => {
+  //  //alert("omkarrrrrc");
+  //   if (!newState || !Array.isArray(newState.tblVoucherLedger)) {
+  //     return newState;
+  //   }
 
-//   // Helpers
-//   const toNum = (v) => {
-//     if (v === null || v === undefined || v === "") return 0;
-//     const n = Number(String(v).replace(/,/g, "")); // handles "5,000.00"
-//     return Number.isFinite(n) ? n : 0;
-//   };
+  //   // Helpers
+  //   const toNum = (v) => {
+  //     if (v === null || v === undefined || v === "") return 0;
+  //     const n = Number(String(v).replace(/,/g, "")); // handles "5,000.00"
+  //     return Number.isFinite(n) ? n : 0;
+  //   };
 
-//   const getDetails = (ledgerRow) =>
-//     Array.isArray(ledgerRow?.tblVoucherLedgerDetails)
-//       ? ledgerRow.tblVoucherLedgerDetails
-//       : [];
+  //   const getDetails = (ledgerRow) =>
+  //     Array.isArray(ledgerRow?.tblVoucherLedgerDetails)
+  //       ? ledgerRow.tblVoucherLedgerDetails
+  //       : [];
 
-//   // Pass 1: compute totals for each parent ledger row index
-//   const totalsByLedgerIndex = {};
+  //   // Pass 1: compute totals for each parent ledger row index
+  //   const totalsByLedgerIndex = {};
 
-//   newState.tblVoucherLedger.forEach((ledgerRow, idx) => {
-//     const details = getDetails(ledgerRow);
+  //   newState.tblVoucherLedger.forEach((ledgerRow, idx) => {
+  //     const details = getDetails(ledgerRow);
 
-//     let debitHC = 0;
-//     let debitFC = 0;
+  //     let debitHC = 0;
+  //     let debitFC = 0;
 
-//     for (const d of details) {
-//       // ✅ handle both correct key & buggy key with trailing space "debitAmount "
-//       const rawDebitHC = d?.debitAmount ?? d?.["debitAmount "] ?? 0;
-//       const rawDebitFC = d?.debitAmountFc ?? d?.["debitAmountFc "] ?? 0;
+  //     for (const d of details) {
+  //       // ✅ handle both correct key & buggy key with trailing space "debitAmount "
+  //       const rawDebitHC = d?.debitAmount ?? d?.["debitAmount "] ?? 0;
+  //       const rawDebitFC = d?.debitAmountFc ?? d?.["debitAmountFc "] ?? 0;
 
-//       debitHC += toNum(rawDebitHC);
-//       debitFC += toNum(rawDebitFC);
-//     }
+  //       debitHC += toNum(rawDebitHC);
+  //       debitFC += toNum(rawDebitFC);
+  //     }
 
-//     totalsByLedgerIndex[idx] = {
-//       debitAmount: debitHC === 0 ? "" : debitHC.toFixed(2),
-//       debitAmountFc: debitFC === 0 ? "" : debitFC.toFixed(2),
-//     };
-//   });
+  //     totalsByLedgerIndex[idx] = {
+  //       debitAmount: debitHC === 0 ? "" : debitHC.toFixed(2),
+  //       debitAmountFc: debitFC === 0 ? "" : debitFC.toFixed(2),
+  //     };
+  //   });
 
-//   // Nothing to do if no rows
-//   if (Object.keys(totalsByLedgerIndex).length === 0) {
-//     return newState;
-//   }
+  //   // Nothing to do if no rows
+  //   if (Object.keys(totalsByLedgerIndex).length === 0) {
+  //     return newState;
+  //   }
 
-//   // Pass 2: enforce totals into tblVoucherLedger (single state write)
-//   setNewState((prev) => {
-//     const ledgers = Array.isArray(prev.tblVoucherLedger)
-//       ? prev.tblVoucherLedger
-//       : [];
+  //   // Pass 2: enforce totals into tblVoucherLedger (single state write)
+  //   setNewState((prev) => {
+  //     const ledgers = Array.isArray(prev.tblVoucherLedger)
+  //       ? prev.tblVoucherLedger
+  //       : [];
 
-//     const updated = ledgers.map((row, idx) => {
-//       const totals = totalsByLedgerIndex[idx];
-//       if (!totals) return row;
+  //     const updated = ledgers.map((row, idx) => {
+  //       const totals = totalsByLedgerIndex[idx];
+  //       if (!totals) return row;
 
-//       return {
-//         ...row,
-//         debitAmount: totals.debitAmount,
-//         debitAmountFc: totals.debitAmountFc,
-//       };
-//     });
+  //       return {
+  //         ...row,
+  //         debitAmount: totals.debitAmount,
+  //         debitAmountFc: totals.debitAmountFc,
+  //       };
+  //     });
 
-//     return { ...prev, tblVoucherLedger: updated };
-//   });
-// };
+  //     return { ...prev, tblVoucherLedger: updated };
+  //   });
+  // };
 
-const syncLedgerTotalsFromDetails = () => {
-  if (!newState || !Array.isArray(newState.tblVoucherLedger)) {
-    return newState;
-  }
-
-  // Helpers
-  const toNum = (v) => {
-    if (v === null || v === undefined || v === "") return 0;
-    const n = Number(String(v).replace(/,/g, "")); // handles "5,000.00"
-    return Number.isFinite(n) ? n : 0;
-  };
-
-  const getDetails = (ledgerRow) =>
-    Array.isArray(ledgerRow?.tblVoucherLedgerDetails)
-      ? ledgerRow.tblVoucherLedgerDetails
-      : [];
-
-  // Pass 1: compute totals for each parent ledger row index
-  const totalsByLedgerIndex = {};
-
-  newState.tblVoucherLedger.forEach((ledgerRow, idx) => {
-    const details = getDetails(ledgerRow);
-
-    let creditHC = 0;
-    let creditFC = 0;
-
-    for (const d of details) {
-      // ✅ handle both correct key & buggy key with trailing space "debitAmount "
-      const rawHC = d?.debitAmount ?? d?.["debitAmount "] ?? 0;
-      const rawFC = d?.debitAmountFc ?? d?.["debitAmountFc "] ?? 0;
-
-      creditHC += toNum(rawHC);
-      creditFC += toNum(rawFC);
+  const syncLedgerTotalsFromDetails = () => {
+    if (!newState || !Array.isArray(newState.tblVoucherLedger)) {
+      return newState;
     }
 
-    totalsByLedgerIndex[idx] = {
-      creditAmount: creditHC === 0 ? "" : creditHC.toFixed(2),
-      creditAmountFc: creditFC === 0 ? "" : creditFC.toFixed(2),
+    // Helpers
+    const toNum = (v) => {
+      if (v === null || v === undefined || v === "") return 0;
+      const n = Number(String(v).replace(/,/g, "")); // handles "5,000.00"
+      return Number.isFinite(n) ? n : 0;
     };
-  });
 
-  // Nothing to do if no rows
-  if (Object.keys(totalsByLedgerIndex).length === 0) {
-    return newState;
-  }
+    const getDetails = (ledgerRow) =>
+      Array.isArray(ledgerRow?.tblVoucherLedgerDetails)
+        ? ledgerRow.tblVoucherLedgerDetails
+        : [];
 
-  // Pass 2: enforce totals into tblVoucherLedger (single state write)
-  setNewState((prev) => {
-    const ledgers = Array.isArray(prev.tblVoucherLedger)
-      ? prev.tblVoucherLedger
-      : [];
+    // Pass 1: compute totals for each parent ledger row index
+    const totalsByLedgerIndex = {};
 
-    const updated = ledgers.map((row, idx) => {
-      const totals = totalsByLedgerIndex[idx];
-      if (!totals) return row;
+    newState.tblVoucherLedger.forEach((ledgerRow, idx) => {
+      const details = getDetails(ledgerRow);
 
-      return {
-        ...row,
-        creditAmount: totals.creditAmount,
-        creditAmountFc: totals.creditAmountFc,
+      let creditHC = 0;
+      let creditFC = 0;
+
+      for (const d of details) {
+        // ✅ handle both correct key & buggy key with trailing space "debitAmount "
+        const rawHC = d?.debitAmount ?? d?.["debitAmount "] ?? 0;
+        const rawFC = d?.debitAmountFc ?? d?.["debitAmountFc "] ?? 0;
+
+        creditHC += toNum(rawHC);
+        creditFC += toNum(rawFC);
+      }
+
+      totalsByLedgerIndex[idx] = {
+        creditAmount: creditHC === 0 ? "" : creditHC.toFixed(2),
+        creditAmountFc: creditFC === 0 ? "" : creditFC.toFixed(2),
       };
     });
 
-    return { ...prev, tblVoucherLedger: updated };
-  });
-};
+    // Nothing to do if no rows
+    if (Object.keys(totalsByLedgerIndex).length === 0) {
+      return newState;
+    }
+
+    // Pass 2: enforce totals into tblVoucherLedger (single state write)
+    setNewState((prev) => {
+      const ledgers = Array.isArray(prev.tblVoucherLedger)
+        ? prev.tblVoucherLedger
+        : [];
+
+      const updated = ledgers.map((row, idx) => {
+        const totals = totalsByLedgerIndex[idx];
+        if (!totals) return row;
+
+        return {
+          ...row,
+          creditAmount: totals.creditAmount,
+          creditAmountFc: totals.creditAmountFc,
+        };
+      });
+
+      return { ...prev, tblVoucherLedger: updated };
+    });
+  };
 
 
   return (
@@ -562,8 +598,8 @@ const syncLedgerTotalsFromDetails = () => {
                             tabIndex={-1}
                             disableRipple
                             inputProps={{ "aria-labelledby": field.fieldname }}
-                            onChange={(event) =>{
-                             // alert('workimng'),
+                            onChange={(event) => {
+                              // alert('workimng'),
                               handleChange(event, subChildObject, index)
                             }}
                           />
@@ -578,42 +614,46 @@ const syncLedgerTotalsFromDetails = () => {
             {/* icons  */}
             <>
               <div className="absolute right-0 w-fit hh group-hover:bg-[var(--table-hover-bg)]  ">
-                <LightTooltip title="Delete Record ">
-                  <IconButton
-                    aria-label="Delete"
-                    className={styles.icon}
-                    onClick={() => deleteSubChildRecord(index)}
-                    onMouseEnter={() => setHoveredIcon("delete")}
-                    onMouseLeave={() => setHoveredIcon(null)}
-                  >
-                    <Image
-                      src={
-                        hoveredIcon === "delete"
-                          ? DeleteHover
-                          : DeleteIcon2
-                      }
-                      alt="Delete Icon"
-                      priority={false}
-                      className="gridIcons2"
-                    />
-                  </IconButton>
-                </LightTooltip>
-                <LightTooltip title="Copy Document">
-                  <IconButton
-                    aria-label="Document"
-                    className={styles.icon}
-                    onClick={() => copyDocument(editSubChildObj)}
-                    onMouseEnter={() => setHoveredIcon("copy")}
-                    onMouseLeave={() => setHoveredIcon(null)}
-                  >
-                    <Image
-                      src={hoveredIcon === "copy" ? CopyHover : copyDoc}
-                      alt="Document Icon"
-                      className="gridIcons2"
-                      priority={false}
-                    />
-                  </IconButton>
-                </LightTooltip>
+                {!isSubChildDeleteHidden && (
+                  <LightTooltip title="Delete Record ">
+                    <IconButton
+                      aria-label="Delete"
+                      className={styles.icon}
+                      onClick={() => deleteSubChildRecord(index)}
+                      onMouseEnter={() => setHoveredIcon("delete")}
+                      onMouseLeave={() => setHoveredIcon(null)}
+                    >
+                      <Image
+                        src={
+                          hoveredIcon === "delete"
+                            ? DeleteHover
+                            : DeleteIcon2
+                        }
+                        alt="Delete Icon"
+                        priority={false}
+                        className="gridIcons2"
+                      />
+                    </IconButton>
+                  </LightTooltip>
+                )}
+                {!isSubChildCopyHidden && (
+                  <LightTooltip title="Copy Document">
+                    <IconButton
+                      aria-label="Document"
+                      className={styles.icon}
+                      onClick={() => copyDocument(editSubChildObj)}
+                      onMouseEnter={() => setHoveredIcon("copy")}
+                      onMouseLeave={() => setHoveredIcon(null)}
+                    >
+                      <Image
+                        src={hoveredIcon === "copy" ? CopyHover : copyDoc}
+                        alt="Document Icon"
+                        className="gridIcons2"
+                        priority={false}
+                      />
+                    </IconButton>
+                  </LightTooltip>
+                )}
               </div>
               {/* icons ends here  */}
             </>
@@ -650,10 +690,12 @@ const syncLedgerTotalsFromDetails = () => {
                     {index === 0 ?
                       <React.Fragment key={index}>
                         <ActionButton
-                          copyImagepath=""
-                          deleteImagePath=""
+                          copyImagepath={copyDoc}
+                          deleteImagePath={DeleteIcon2}
                           onCopy={() => copyDocument(editSubChildObj)}
                           onDelete={() => deleteSubChildRecord(index)}
+                          showDelete={!isSubChildDeleteHidden}
+                          showCopy={!isSubChildCopyHidden}
                         />
 
                       </React.Fragment>
@@ -827,53 +869,85 @@ const syncLedgerTotalsFromDetails = () => {
                           } catch (error) {
                             return toast.error(error.message);
                           }
+                          //old code 
+                          // setNewState((prev) => {
+                          //   const newState = JSON.parse(JSON.stringify(prev));
+                          //   // Assuming you have the index of the item you want to update
+                          //   // For example, let's say the index is stored in childValuseObj.index
+                          //   const idToUpdate = nextEditedRow.indexValue;
 
+                          //   newState[childName][childIndex][
+                          //     subChild.tableName
+                          //   ] = newState[childName][childIndex][
+                          //     subChild.tableName
+                          //   ].map((record) => {
+                          //     // Check if the record's id matches the idToUpdate
+                          //     console.log(record.indexValue);
+                          //     if (record.indexValue === idToUpdate) {
+                          //       // Update the record
+                          //       return nextEditedRow;
+                          //     }
+                          //     return record;
+                          //   });
+
+                          //   return newState;
+                          // });
+
+                          // setSubmitNewState((prev) => {
+                          //   const newState = JSON.parse(JSON.stringify(prev));
+                          //   // Assuming you have the index of the item you want to update
+                          //   // For example, let's say the index is stored in childValuseObj.index
+                          //   const idToUpdate = nextEditedRow.indexValue;
+
+                          //   newState[childName][childIndex][
+                          //     subChild.tableName
+                          //   ] = newState[childName][childIndex][
+                          //     subChild.tableName
+                          //   ].map((record) => {
+                          //     // Check if the record's id matches the idToUpdate
+                          //     console.log(record.indexValue);
+                          //     if (record.indexValue === idToUpdate) {
+                          //       // Update the record
+                          //       return nextEditedRow;
+                          //     }
+                          //     return record;
+                          //   });
+
+                          //   return newState;
+                          // });
+                          ///new code 14-04-26
                           setNewState((prev) => {
-                            const newState = JSON.parse(JSON.stringify(prev));
-                            // Assuming you have the index of the item you want to update
-                            // For example, let's say the index is stored in childValuseObj.index
-                            const idToUpdate = nextEditedRow.indexValue;
+                            const updatedState = JSON.parse(JSON.stringify(prev));
 
-                            newState[childName][childIndex][
-                              subChild.tableName
-                            ] = newState[childName][childIndex][
-                              subChild.tableName
-                            ].map((record) => {
-                              // Check if the record's id matches the idToUpdate
-                              console.log(record.indexValue);
-                              if (record.indexValue === idToUpdate) {
-                                // Update the record
-                                return nextEditedRow;
-                              }
-                              return record;
-                            });
+                            if (
+                              updatedState?.[childName]?.[childIndex]?.[subChild.tableName] &&
+                              updatedState[childName][childIndex][subChild.tableName][index]
+                            ) {
+                              updatedState[childName][childIndex][subChild.tableName][index] = {
+                                ...updatedState[childName][childIndex][subChild.tableName][index],
+                                ...nextEditedRow,
+                              };
+                            }
 
-                            return newState;
+                            return updatedState;
                           });
 
                           setSubmitNewState((prev) => {
-                            const newState = JSON.parse(JSON.stringify(prev));
-                            // Assuming you have the index of the item you want to update
-                            // For example, let's say the index is stored in childValuseObj.index
-                            const idToUpdate = nextEditedRow.indexValue;
+                            const updatedState = JSON.parse(JSON.stringify(prev));
 
-                            newState[childName][childIndex][
-                              subChild.tableName
-                            ] = newState[childName][childIndex][
-                              subChild.tableName
-                            ].map((record) => {
-                              // Check if the record's id matches the idToUpdate
-                              console.log(record.indexValue);
-                              if (record.indexValue === idToUpdate) {
-                                // Update the record
-                                return nextEditedRow;
-                              }
-                              return record;
-                            });
+                            if (
+                              updatedState?.[childName]?.[childIndex]?.[subChild.tableName] &&
+                              updatedState[childName][childIndex][subChild.tableName][index]
+                            ) {
+                              updatedState[childName][childIndex][subChild.tableName][index] = {
+                                ...updatedState[childName][childIndex][subChild.tableName][index],
+                                ...nextEditedRow,
+                              };
+                            }
 
-                            return newState;
+                            return updatedState;
                           });
-
+                          ///here 
                           toggleSubChildEdit();
                           syncLedgerTotalsFromDetails();
                         }}

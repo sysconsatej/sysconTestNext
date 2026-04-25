@@ -64,16 +64,18 @@ function rptQuotation() {
           const token = localStorage.getItem("token");
           if (!token) throw new Error("No token found");
           const requestBody = {
-            filterCondition: `(rr.id=${Number(id) || 0
-              } or rr.rateRequestNo in (${id
-                .split(",")
-                .map((e) => `'${e}'`)
-                .join(",")}))`,
-            filterCondition: `(rr.id=${Number(id) || 0
-              } or rr.rateRequestNo in (${id
-                .split(",")
-                .map((e) => `'${e}'`)
-                .join(",")}))`,
+            filterCondition: `(rr.id=${
+              Number(id) || 0
+            } or rr.rateRequestNo in (${id
+              .split(",")
+              .map((e) => `'${e}'`)
+              .join(",")}))`,
+            filterCondition: `(rr.id=${
+              Number(id) || 0
+            } or rr.rateRequestNo in (${id
+              .split(",")
+              .map((e) => `'${e}'`)
+              .join(",")}))`,
           };
           const response = await fetch(
             `${baseUrl}/Sql/api/Reports/rateRequest`,
@@ -353,8 +355,9 @@ function rptQuotation() {
       // e.g., 0.34 -> "Thirty-Four Only"
       out = `${sign}${belowHundred(frac)} only`;
     } else {
-      out = `${sign}${intToWords(whole)}${frac > 0 ? ` and ${belowHundred(frac)}` : ""
-        } only`;
+      out = `${sign}${intToWords(whole)}${
+        frac > 0 ? ` and ${belowHundred(frac)}` : ""
+      } only`;
     }
 
     // Title Case the output to match your examples
@@ -416,8 +419,9 @@ function rptQuotation() {
     const RequestDate =
       data && data.length > 0 ? new Date(data[0].rateRequestDate) : null;
     const DatesFormat = RequestDate
-      ? `${RequestDate.getDate()}/${RequestDate.getMonth() + 1
-      }/${RequestDate.getFullYear()}`
+      ? `${RequestDate.getDate()}/${
+          RequestDate.getMonth() + 1
+        }/${RequestDate.getFullYear()}`
       : "";
 
     return (
@@ -544,8 +548,9 @@ function rptQuotation() {
     const RequestDate =
       data && data.length > 0 ? new Date(data[0].rateRequestDate) : null;
     const DatesFormat = RequestDate
-      ? `${RequestDate.getDate()}/${RequestDate.getMonth() + 1
-      }/${RequestDate.getFullYear()}`
+      ? `${RequestDate.getDate()}/${
+          RequestDate.getMonth() + 1
+        }/${RequestDate.getFullYear()}`
       : "";
 
     return (
@@ -876,8 +881,9 @@ function rptQuotation() {
     const FromDate =
       data && data.length > 0 ? new Date(data[0].validityFrom) : null;
     const FromDates = FromDate
-      ? `${FromDate.getDate()}/${FromDate.getMonth() + 1
-      }/${FromDate.getFullYear()}`
+      ? `${FromDate.getDate()}/${
+          FromDate.getMonth() + 1
+        }/${FromDate.getFullYear()}`
       : "";
 
     // const ToDate = data && data.length > 0 ? new Date(data[0].validityTo) : null;
@@ -1278,43 +1284,43 @@ function rptQuotation() {
                           : ""}{" "}
                         /{" "}
                         {item.typeCode &&
-                          item.typeCode !== "" &&
-                          item.typeCode !== "null"
+                        item.typeCode !== "" &&
+                        item.typeCode !== "null"
                           ? item.typeCode
                           : ""}
                       </td>
                       <td className="text-right border-black border-b border-r py-px">
                         {typeof item.qty === "number" &&
-                          item.qty !== null &&
-                          item.qty !== ""
+                        item.qty !== null &&
+                        item.qty !== ""
                           ? item.qty.toFixed(2)
                           : 0.0}
                       </td>
                       <td className="text-left border-black border-b border-r py-px">
                         {item.sellCurrencyName &&
-                          item.sellCurrencyName !== "" &&
-                          item.sellCurrencyName !== "null"
+                        item.sellCurrencyName !== "" &&
+                        item.sellCurrencyName !== "null"
                           ? item.sellCurrencyName
                           : ""}
                       </td>
                       <td className="text-right border-black border-b border-r py-px">
                         {typeof item.sellExchangeRate === "number" &&
-                          item.sellExchangeRate !== null &&
-                          item.sellExchangeRate !== ""
+                        item.sellExchangeRate !== null &&
+                        item.sellExchangeRate !== ""
                           ? item.sellExchangeRate.toFixed(2)
                           : ""}
                       </td>
                       <td className="text-right border-black border-b border-r py-px">
                         {typeof item.sellRate === "number" &&
-                          item.sellRate !== null &&
-                          item.sellRate !== ""
+                        item.sellRate !== null &&
+                        item.sellRate !== ""
                           ? item.sellRate.toFixed(2)
                           : ""}
                       </td>
                       <td className="text-right border-black border-b border-r py-px">
                         {typeof item.sellAmount === "number" &&
-                          item.sellAmount !== null &&
-                          item.sellAmount !== ""
+                        item.sellAmount !== null &&
+                        item.sellAmount !== ""
                           ? item.sellAmount.toFixed(2)
                           : ""}
                       </td>
@@ -1323,8 +1329,8 @@ function rptQuotation() {
                           </td> */}
                       <td className="text-right border-black border-b border-r py-px">
                         {typeof item.sellTotalAmount === "number" &&
-                          item.sellTotalAmount !== null &&
-                          item.sellTotalAmount !== ""
+                        item.sellTotalAmount !== null &&
+                        item.sellTotalAmount !== ""
                           ? item.sellTotalAmount.toFixed(2)
                           : ""}
                       </td>
@@ -1336,8 +1342,8 @@ function rptQuotation() {
                         }}
                       >
                         {item.remarks &&
-                          item.remarks !== "" &&
-                          item.remarks !== "null"
+                        item.remarks !== "" &&
+                        item.remarks !== "null"
                           ? item.remarks
                           : ""}
                       </td>
@@ -1958,7 +1964,7 @@ function rptQuotation() {
         if (
           index === Object.entries(groupedCharges).length - 1 || // If it's the last item
           Object.entries(groupedCharges)[index + 1][1].chargeGroupName !==
-          chargeGroupName // or the next item has a different charge group
+            chargeGroupName // or the next item has a different charge group
         ) {
           const subTotalRow = (
             <tr
@@ -2409,11 +2415,11 @@ function rptQuotation() {
           .toLowerCase()
           .includes("freight")
           ? `${safe(charge.chargeGroupName)}-${safe(charge.chargeName)}-${safe(
-            charge.sizeName,
-          )}-${safe(charge.typeName)}`
+              charge.sizeName,
+            )}-${safe(charge.typeName)}`
           : `${safe(charge.chargeGroupName)}-${safe(charge.chargeName)}-${safe(
-            charge.vendorName,
-          )}-${safe(charge.sizeName)}-${safe(charge.typeName)}`;
+              charge.vendorName,
+            )}-${safe(charge.sizeName)}-${safe(charge.typeName)}`;
 
         if (!acc[key]) {
           acc[key] = {
@@ -2489,32 +2495,32 @@ function rptQuotation() {
             </td>
             {(chargeGroupName?.toLowerCase() || "").includes("freight")
               ? oceanFreightVendors.map((vendor, colIndex) => {
-                const vendorSellRate = vendors[vendor] || 0;
-                grandTotals[vendor] += vendorSellRate;
-                subTotals[vendor] += vendorSellRate;
+                  const vendorSellRate = vendors[vendor] || 0;
+                  grandTotals[vendor] += vendorSellRate;
+                  subTotals[vendor] += vendorSellRate;
 
-                return (
-                  <td
-                    className="border-collapse border border-black p-2 text-right text-xs"
-                    key={colIndex}
-                  >
-                    {vendorSellRate.toFixed(2)}
-                  </td>
-                );
-              })
+                  return (
+                    <td
+                      className="border-collapse border border-black p-2 text-right text-xs"
+                      key={colIndex}
+                    >
+                      {vendorSellRate.toFixed(2)}
+                    </td>
+                  );
+                })
               : oceanFreightVendors.map((vendor, colIndex) => {
-                subTotals[vendor] += sellRate;
-                grandTotals[vendor] += sellRate;
+                  subTotals[vendor] += sellRate;
+                  grandTotals[vendor] += sellRate;
 
-                return (
-                  <td
-                    className="border-collapse border border-black p-2 text-right text-xs"
-                    key={colIndex}
-                  >
-                    {(sellRate ?? 0).toFixed(2)}
-                  </td>
-                );
-              })}
+                  return (
+                    <td
+                      className="border-collapse border border-black p-2 text-right text-xs"
+                      key={colIndex}
+                    >
+                      {(sellRate ?? 0).toFixed(2)}
+                    </td>
+                  );
+                })}
           </tr>
         );
 
@@ -2524,7 +2530,7 @@ function rptQuotation() {
         if (
           index === Object.entries(groupedCharges).length - 1 || // If it's the last item
           Object.entries(groupedCharges)[index + 1][1].chargeGroupName !==
-          chargeGroupName // or the next item has a different charge group
+            chargeGroupName // or the next item has a different charge group
         ) {
           const subTotalRow = (
             <tr
@@ -2640,8 +2646,9 @@ function rptQuotation() {
     const RequestDate =
       data && data.length > 0 ? new Date(data[0].rateRequestDate) : null;
     const DatesFormat = RequestDate
-      ? `${RequestDate.getDate()}/${RequestDate.getMonth() + 1
-      }/${RequestDate.getFullYear()}`
+      ? `${RequestDate.getDate()}/${
+          RequestDate.getMonth() + 1
+        }/${RequestDate.getFullYear()}`
       : "";
 
     return (
@@ -2804,8 +2811,9 @@ function rptQuotation() {
     const RequestDate =
       data && data.length > 0 ? new Date(data[0].rateRequestDate) : null;
     const rateRequestDate = RequestDate
-      ? `${RequestDate.getDate()}/${RequestDate.getMonth() + 1
-      }/${RequestDate.getFullYear()}`
+      ? `${RequestDate.getDate()}/${
+          RequestDate.getMonth() + 1
+        }/${RequestDate.getFullYear()}`
       : "";
     return (
       <main>
@@ -2948,57 +2956,57 @@ function rptQuotation() {
                           : ""}{" "}
                         /{" "}
                         {item.typeCode &&
-                          item.typeCode !== "" &&
-                          item.typeCode !== "null"
+                        item.typeCode !== "" &&
+                        item.typeCode !== "null"
                           ? item.typeCode
                           : ""}
                       </td>
                       <td className="text-right border-black border-b border-r py-px">
                         {typeof item.qty === "number" &&
-                          item.qty !== null &&
-                          item.qty !== ""
+                        item.qty !== null &&
+                        item.qty !== ""
                           ? item.qty.toFixed(2)
                           : 0.0}
                       </td>
                       <td className="text-left border-black border-b border-r py-px">
                         {item.sellCurrencyName &&
-                          item.sellCurrencyName !== "" &&
-                          item.sellCurrencyName !== "null"
+                        item.sellCurrencyName !== "" &&
+                        item.sellCurrencyName !== "null"
                           ? item.sellCurrencyName
                           : ""}
                       </td>
                       <td className="text-right border-black border-b border-r py-px">
                         {typeof item.sellExchangeRate === "number" &&
-                          item.sellExchangeRate !== null &&
-                          item.sellExchangeRate !== ""
+                        item.sellExchangeRate !== null &&
+                        item.sellExchangeRate !== ""
                           ? item.sellExchangeRate.toFixed(2)
                           : ""}
                       </td>
                       <td className="text-right border-black border-b border-r py-px">
                         {typeof item.sellRate === "number" &&
-                          item.sellRate !== null &&
-                          item.sellRate !== ""
+                        item.sellRate !== null &&
+                        item.sellRate !== ""
                           ? item.sellRate.toFixed(2)
                           : ""}
                       </td>
                       <td className="text-right border-black border-b border-r py-px">
                         {typeof item.sellAmount === "number" &&
-                          item.sellAmount !== null &&
-                          item.sellAmount !== ""
+                        item.sellAmount !== null &&
+                        item.sellAmount !== ""
                           ? item.sellAmount.toFixed(2)
                           : ""}
                       </td>
                       <td className="text-right border-black border-b border-r py-px">
                         {typeof item.sellTaxAmount === "number" &&
-                          item.sellTaxAmount !== null &&
-                          item.sellTaxAmount !== ""
+                        item.sellTaxAmount !== null &&
+                        item.sellTaxAmount !== ""
                           ? item.sellTaxAmount.toFixed(2)
                           : ""}
                       </td>
                       <td className="text-right border-black border-b border-r py-px">
                         {typeof item.sellTotalAmount === "number" &&
-                          item.sellTotalAmount !== null &&
-                          item.sellTotalAmount !== ""
+                        item.sellTotalAmount !== null &&
+                        item.sellTotalAmount !== ""
                           ? item.sellTotalAmount.toFixed(2)
                           : ""}
                       </td>
@@ -3010,8 +3018,8 @@ function rptQuotation() {
                         }}
                       >
                         {item.remarks &&
-                          item.remarks !== "" &&
-                          item.remarks !== "null"
+                        item.remarks !== "" &&
+                        item.remarks !== "null"
                           ? item.remarks
                           : ""}
                       </td>
@@ -3176,56 +3184,56 @@ function rptQuotation() {
 
                   <td className="text-left border-black border-b border-r py-px">
                     {item.sizeName &&
-                      item.sizeName !== "" &&
-                      item.sizeName !== "null"
+                    item.sizeName !== "" &&
+                    item.sizeName !== "null"
                       ? item.sizeName
                       : ""}{" "}
                     /{" "}
                     {item.typeCode &&
-                      item.typeCode !== "" &&
-                      item.typeCode !== "null"
+                    item.typeCode !== "" &&
+                    item.typeCode !== "null"
                       ? item.typeCode
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.qty === "number" &&
-                      item.qty !== null &&
-                      item.qty !== ""
+                    item.qty !== null &&
+                    item.qty !== ""
                       ? item.qty.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-left border-black border-b border-r py-px">
                     {item.sellCurrencyName &&
-                      item.sellCurrencyName !== "" &&
-                      item.sellCurrencyName !== "null"
+                    item.sellCurrencyName !== "" &&
+                    item.sellCurrencyName !== "null"
                       ? item.sellCurrencyName
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellExchangeRate === "number" &&
-                      item.sellExchangeRate !== null &&
-                      item.sellExchangeRate !== ""
+                    item.sellExchangeRate !== null &&
+                    item.sellExchangeRate !== ""
                       ? item.sellExchangeRate.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellRate === "number" &&
-                      item.sellRate !== null &&
-                      item.sellRate !== ""
+                    item.sellRate !== null &&
+                    item.sellRate !== ""
                       ? item.sellRate.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellAmount === "number" &&
-                      item.sellAmount !== null &&
-                      item.sellAmount !== ""
+                    item.sellAmount !== null &&
+                    item.sellAmount !== ""
                       ? item.sellAmount.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellTotalAmount === "number" &&
-                      item.sellTotalAmount !== null &&
-                      item.sellTotalAmount !== ""
+                    item.sellTotalAmount !== null &&
+                    item.sellTotalAmount !== ""
                       ? item.sellTotalAmount.toFixed(2)
                       : ""}
                   </td>
@@ -3234,8 +3242,8 @@ function rptQuotation() {
                     style={{ maxWidth: "150px", overflowWrap: "break-word" }}
                   >
                     {item.remarks &&
-                      item.remarks !== "" &&
-                      item.remarks !== "null"
+                    item.remarks !== "" &&
+                    item.remarks !== "null"
                       ? item.remarks
                       : ""}
                   </td>
@@ -3260,7 +3268,8 @@ function rptQuotation() {
                     <td className="text-center border-black border-b border-r"></td>
                     <td className="text-center border-black border-b border-r"></td>
                     <td className="text-center border-black border-b border-r font-bold py-px">
-                      {subtotal?.amount.toFixed(2)}({item.sellCurrencyName}){" "}
+                      {subtotal?.amount.toFixed(2)}({item.sellCurrencyName}
+                      ){" "}
                     </td>
                     <td className="text-center border-black border-b border-r font-bold py-px">
                       {subtotal.totalAmount.toFixed(2)} ({item.sellCurrencyName}
@@ -3428,63 +3437,63 @@ function rptQuotation() {
 
                   <td className="text-left border-black border-b border-r py-px">
                     {item.sizeName &&
-                      item.sizeName !== "" &&
-                      item.sizeName !== "null"
+                    item.sizeName !== "" &&
+                    item.sizeName !== "null"
                       ? item.sizeName
                       : ""}{" "}
                     /{" "}
                     {item.typeCode &&
-                      item.typeCode !== "" &&
-                      item.typeCode !== "null"
+                    item.typeCode !== "" &&
+                    item.typeCode !== "null"
                       ? item.typeCode
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.qty === "number" &&
-                      item.qty !== null &&
-                      item.qty !== ""
+                    item.qty !== null &&
+                    item.qty !== ""
                       ? item.qty.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {item.sellCurrencyName &&
-                      item.sellCurrencyName !== "" &&
-                      item.sellCurrencyName !== "null"
+                    item.sellCurrencyName !== "" &&
+                    item.sellCurrencyName !== "null"
                       ? item.sellCurrencyName
                       : ""}
                   </td>
                   <td className="text-left border-black border-b border-r py-px">
                     {typeof item.sellExchangeRate === "number" &&
-                      item.sellExchangeRate !== null &&
-                      item.sellExchangeRate !== ""
+                    item.sellExchangeRate !== null &&
+                    item.sellExchangeRate !== ""
                       ? item.sellExchangeRate.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellRate === "number" &&
-                      item.sellRate !== null &&
-                      item.sellRate !== ""
+                    item.sellRate !== null &&
+                    item.sellRate !== ""
                       ? item.sellRate.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellAmount === "number" &&
-                      item.sellAmount !== null &&
-                      item.sellAmount !== ""
+                    item.sellAmount !== null &&
+                    item.sellAmount !== ""
                       ? item.sellAmount.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellTaxAmount === "number" &&
-                      item.sellTaxAmount !== null &&
-                      item.sellTaxAmount !== ""
+                    item.sellTaxAmount !== null &&
+                    item.sellTaxAmount !== ""
                       ? item.sellTaxAmount.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellTotalAmount === "number" &&
-                      item.sellTotalAmount !== null &&
-                      item.sellTotalAmount !== ""
+                    item.sellTotalAmount !== null &&
+                    item.sellTotalAmount !== ""
                       ? item.sellTotalAmount.toFixed(2)
                       : ""}
                   </td>
@@ -3493,8 +3502,8 @@ function rptQuotation() {
                     style={{ maxWidth: "150px", overflowWrap: "break-word" }}
                   >
                     {item.remarks &&
-                      item.remarks !== "" &&
-                      item.remarks !== "null"
+                    item.remarks !== "" &&
+                    item.remarks !== "null"
                       ? item.remarks
                       : ""}
                   </td>
@@ -4800,8 +4809,9 @@ Operator/ Airport Authority or any other third party.
     const RequestDate =
       data && data.length > 0 ? new Date(data[0].rateRequestDate) : null;
     const DatesFormat = RequestDate
-      ? `${RequestDate.getDate()}/${RequestDate.getMonth() + 1
-      }/${RequestDate.getFullYear()}`
+      ? `${RequestDate.getDate()}/${
+          RequestDate.getMonth() + 1
+        }/${RequestDate.getFullYear()}`
       : "";
 
     return (
@@ -5032,8 +5042,9 @@ Operator/ Airport Authority or any other third party.
     const RequestDate =
       data && data.length > 0 ? new Date(data[0].rateRequestDate) : null;
     const DatesFormat = RequestDate
-      ? `${RequestDate.getDate()}/${RequestDate.getMonth() + 1
-      }/${RequestDate.getFullYear()}`
+      ? `${RequestDate.getDate()}/${
+          RequestDate.getMonth() + 1
+        }/${RequestDate.getFullYear()}`
       : "";
 
     return (
@@ -5281,56 +5292,56 @@ Operator/ Airport Authority or any other third party.
 
                     <td className="text-center border-black border-b border-r py-px">
                       {item.sizeName &&
-                        item.sizeName !== "" &&
-                        item.sizeName !== "null"
+                      item.sizeName !== "" &&
+                      item.sizeName !== "null"
                         ? item.sizeName
                         : ""}{" "}
                       /{" "}
                       {item.typeCode &&
-                        item.typeCode !== "" &&
-                        item.typeCode !== "null"
+                      item.typeCode !== "" &&
+                      item.typeCode !== "null"
                         ? item.typeCode
                         : ""}
                     </td>
                     <td className="text-right border-black border-b border-r py-px">
                       {typeof item.qty === "number" &&
-                        item.qty !== null &&
-                        item.qty !== ""
+                      item.qty !== null &&
+                      item.qty !== ""
                         ? item.qty.toFixed(2)
                         : ""}
                     </td>
                     <td className="text-center border-black border-b border-r py-px">
                       {item.sellCurrencyName &&
-                        item.sellCurrencyName !== "" &&
-                        item.sellCurrencyName !== "null"
+                      item.sellCurrencyName !== "" &&
+                      item.sellCurrencyName !== "null"
                         ? item.sellCurrencyName
                         : ""}
                     </td>
                     <td className="text-right border-black border-b border-r py-px">
                       {typeof item.sellExchangeRate === "number" &&
-                        item.sellExchangeRate !== null &&
-                        item.sellExchangeRate !== ""
+                      item.sellExchangeRate !== null &&
+                      item.sellExchangeRate !== ""
                         ? item.sellExchangeRate.toFixed(2)
                         : ""}
                     </td>
                     <td className="text-right border-black border-b border-r py-px">
                       {typeof item.sellRate === "number" &&
-                        item.sellRate !== null &&
-                        item.sellRate !== ""
+                      item.sellRate !== null &&
+                      item.sellRate !== ""
                         ? item.sellRate.toFixed(2)
                         : ""}
                     </td>
                     <td className="text-right border-black border-b border-r py-px">
                       {typeof item.sellAmount === "number" &&
-                        item.sellAmount !== null &&
-                        item.sellAmount !== ""
+                      item.sellAmount !== null &&
+                      item.sellAmount !== ""
                         ? item.sellAmount.toFixed(2)
                         : ""}
                     </td>
                     <td className="text-right border-black border-b border-r py-px">
                       {typeof item.sellTotalAmount === "number" &&
-                        item.sellTotalAmount !== null &&
-                        item.sellTotalAmount !== ""
+                      item.sellTotalAmount !== null &&
+                      item.sellTotalAmount !== ""
                         ? item.sellTotalAmount.toFixed(2)
                         : ""}
                     </td>
@@ -5339,8 +5350,8 @@ Operator/ Airport Authority or any other third party.
                       style={{ maxWidth: "150px", overflowWrap: "break-word" }}
                     >
                       {item.remarks &&
-                        item.remarks !== "" &&
-                        item.remarks !== "null"
+                      item.remarks !== "" &&
+                      item.remarks !== "null"
                         ? item.remarks
                         : ""}
                     </td>
@@ -5370,7 +5381,8 @@ Operator/ Airport Authority or any other third party.
                       </td>
                       <td className="text-center border-black border-b border-r font-bold py-px">
                         {subtotal?.totalAmount.toFixed(2)} (
-                        {item?.sellCurrencyName}){/* {totalAmount.toFixed(2)} */}
+                        {item?.sellCurrencyName})
+                        {/* {totalAmount.toFixed(2)} */}
                       </td>
                       <td className="text-center border-black border-b border-r"></td>
                     </tr>,
@@ -5510,8 +5522,9 @@ Operator/ Airport Authority or any other third party.
       "Dec",
     ];
     const DatesFormat = RequestDate
-      ? `${RequestDate.getDate()} ${monthNames[RequestDate.getMonth()]
-      } ${RequestDate.getFullYear()}`
+      ? `${RequestDate.getDate()} ${
+          monthNames[RequestDate.getMonth()]
+        } ${RequestDate.getFullYear()}`
       : "";
 
     return (
@@ -5539,8 +5552,8 @@ Operator/ Airport Authority or any other third party.
                 <th className="pr-8">Sales Person:</th>
                 <td className="pl-5">
                   {data &&
-                    data.length > 0 &&
-                    data[0].salesExecutivePerson !== ""
+                  data.length > 0 &&
+                  data[0].salesExecutivePerson !== ""
                     ? data[0].salesExecutivePerson
                     : ""}
                 </td>
@@ -5633,11 +5646,14 @@ Operator/ Airport Authority or any other third party.
                 <th>Validity From:</th>
                 <td className="pl-5">
                   {data && data.length > 0 && data[0].validityFrom
-                    ? new Date(data[0].validityFrom).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })
+                    ? new Date(data[0].validityFrom).toLocaleDateString(
+                        "en-GB",
+                        {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        },
+                      )
                     : ""}
                 </td>
               </tr>
@@ -5775,8 +5791,8 @@ Operator/ Airport Authority or any other third party.
                     : ""}
                   {" Free Days thereafter"}{" "}
                   {data &&
-                    data.length > 0 &&
-                    data[0].destinationDemurrageRate !== ""
+                  data.length > 0 &&
+                  data[0].destinationDemurrageRate !== ""
                     ? data[0].destinationDemurrageRate
                     : ""}{" "}
                   {data && data.length > 0 && data[0].demurrageCurrency !== ""
@@ -5821,10 +5837,10 @@ Operator/ Airport Authority or any other third party.
                 <td className="pl-5">
                   {data && data.length > 0 && data[0].validityTo
                     ? new Date(data[0].validityTo).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
                     : ""}
                 </td>
               </tr>
@@ -5842,6 +5858,221 @@ Operator/ Airport Authority or any other third party.
       </div>
     );
   };
+
+  const QuotationExportShipperDetailsModuleFSA = ({ data }) => {
+    let expectedSailDate;
+    const formatDate = (date) => {
+      if (!date) return ""; // Return empty string if date is null or undefined
+      const d = new Date(date);
+      const day = d.getDate();
+      const monthNames = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      const month = monthNames[d.getMonth()];
+      const year = d.getFullYear();
+      return `${day} ${month} ${year}`;
+    };
+
+    if (data && data.length > 0 && data[0].expectedSailDate) {
+      expectedSailDate = formatDate(data[0].expectedSailDate);
+      console.log("Formatted Date: ", expectedSailDate);
+    } else {
+      console.log("Date is not available or data is undefined.");
+      expectedSailDate = "";
+    }
+
+    return (
+      <div>
+        <div
+          className="flex flex-wrap bg-gray-300 justify-center items-center mt-5 text-xs w-full tableBg"
+          style={{
+            borderTop: "1px solid black",
+            borderRight: "1px solid black",
+            borderLeft: "1px solid black",
+          }}
+        >
+          <th className="mt-1 mb-3">Shipment Details</th>
+        </div>
+        <div
+          className=" flex flex-wrap "
+          style={{
+            borderTop: "1px solid black",
+            borderRight: "1px solid black",
+            borderLeft: "1px solid black",
+          }}
+        >
+          <div className="w-1/3 px-2 border-r border-black">
+            <table className=" mt-1 text-left text-xs">
+              <tr>
+                <th>POR: </th>
+                <td className="pl-5">
+                  {data && data.length > 0 && data[0].plrName !== ""
+                    ? data[0].plrName
+                    : ""}
+                </td>
+              </tr>
+              <tr>
+                <th>FPD: </th>
+                <td className="pl-5">
+                  {data && data.length > 0 && data[0].fpdName !== ""
+                    ? data[0].fpdName
+                    : ""}
+                </td>
+              </tr>
+
+              <tr>
+                <th>Cargo Type: </th>
+                <td className="pl-5">
+                  {data && data.length > 0 && data[0].cargoType !== ""
+                    ? data[0].cargoType
+                    : ""}
+                </td>
+              </tr>
+              <tr>
+                <th>Origin Rate:</th>
+                <td className="pl-5">
+                  {data && data.length > 0 && data[0].originFreeDays !== ""
+                    ? data[0].originFreeDays
+                    : ""}
+                  {" Free Days thereafter"}{" "}
+                  {data && data.length > 0 && data[0].originDemurrageRate !== ""
+                    ? data[0].originDemurrageRate
+                    : ""}{" "}
+                  {data && data.length > 0 && data[0].demurrageCurrency !== ""
+                    ? data[0].demurrageCurrency
+                    : ""}{" "}
+                  {data && data.length > 0 && data[0].currency !== ""
+                    ? data[0].currency
+                    : ""}{" "}
+                  {"per day"}
+                </td>
+              </tr>
+              <tr>
+                <th>Carrier: </th>
+                <td className="pl-5"></td>
+              </tr>
+            </table>
+          </div>
+          <div className="w-1/3 px-2 border-r border-black">
+            <table className="mt-1 text-left text-xs">
+              <tr>
+                <th>POL:</th>
+                <td className="pl-5">
+                  {data && data.length > 0 && data[0].polName !== ""
+                    ? data[0].polName
+                    : ""}
+                </td>
+              </tr>
+              <tr>
+                <th>EST Date:</th>
+                <td className="pl-5">{expectedSailDate}</td>
+              </tr>
+              <tr>
+                <th>Commodity:</th>
+                <td className="pl-5">
+                  {data && data.length > 0 && data[0].commodity !== ""
+                    ? data[0].commodity
+                    : ""}
+                </td>
+              </tr>
+              <tr>
+                <th>Destination Rate:</th>
+                <td className="pl-5">
+                  {data && data.length > 0 && data[0].destinationFreeDays !== ""
+                    ? data[0].destinationFreeDays
+                    : ""}
+                  {" Free Days thereafter"}{" "}
+                  {data &&
+                  data.length > 0 &&
+                  data[0].destinationDemurrageRate !== ""
+                    ? data[0].destinationDemurrageRate
+                    : ""}{" "}
+                  {data && data.length > 0 && data[0].demurrageCurrency !== ""
+                    ? data[0].demurrageCurrency
+                    : ""}{" "}
+                  {data && data.length > 0 && data[0].currency !== ""
+                    ? data[0].currency
+                    : ""}{" "}
+                  {"per day"}
+                </td>
+              </tr>
+              <tr>
+                <th className="pb-3">Principal: </th>
+                <td className="pl-5 pb-3">
+                  {data && data.length > 0 && data[0].mloName !== ""
+                    ? data[0].mloName
+                    : ""}
+                </td>
+              </tr>
+            </table>
+          </div>
+          <div className="w-1/3 px-2">
+            <table className="mt-1 text-left text-xs">
+              <tr>
+                <th>POD: </th>
+                <td className="pl-5">
+                  {data && data.length > 0 && data[0].podName !== ""
+                    ? data[0].podName
+                    : ""}
+                </td>
+              </tr>
+              <tr>
+                <th>Gross Weight:</th>
+                <td className="pl-5">
+                  {data && data.length > 0 && data[0].cargoWt !== ""
+                    ? data[0].cargoWt
+                    : ""}{" "}
+                  {data && data.length > 0 && data[0].cargoWtUnitNameCode !== ""
+                    ? data[0].cargoWtUnitNameCode
+                    : ""}
+                </td>
+              </tr>
+              <tr>
+                <th>Shipment Type: </th>
+                <td className="pl-5">
+                  {data && data.length > 0 && data[0].natureOfCargoName !== ""
+                    ? data[0].natureOfCargoName
+                    : ""}
+                </td>
+              </tr>
+              <tr>
+                <th>Validity To: </th>
+                <td className="pl-5">
+                  {data && data.length > 0 && data[0].validityTo
+                    ? new Date(data[0].validityTo).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : ""}
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <div className="text-xs w-full" style={{ border: "1px solid black" }}>
+          <th className="pt-2 pb-3">
+            Remarks:{" "}
+            {data && data.length > 0 && data[0].remarks !== ""
+              ? data[0].remarks
+              : ""}{" "}
+          </th>
+        </div>
+      </div>
+    );
+  };
+
   const QuotationExportSizeTypeModule = ({ data }) => {
     const rateRequestQty =
       data && data.length > 0 ? data[0].tblRateRequestQty : [];
@@ -5877,8 +6108,9 @@ Operator/ Airport Authority or any other third party.
                 </td>
                 <td className="text-center border-black border-b border-r pt-2 pb-3">
                   {/* {item.qty && item.wtUnitName !== '' ? item.wtUnitName : ''} */}
-                  {`${item?.cargoWt ? item.cargoWt : ""} ${item?.wtUnitName ? item.wtUnitName : ""
-                    }`}
+                  {`${item?.cargoWt ? item.cargoWt : ""} ${
+                    item?.wtUnitName ? item.wtUnitName : ""
+                  }`}
                 </td>
               </tr>
             ))}
@@ -5989,63 +6221,63 @@ Operator/ Airport Authority or any other third party.
 
                   <td className="text-left border-black border-b border-r py-px">
                     {item.sizeName &&
-                      item.sizeName !== "" &&
-                      item.sizeName !== "null"
+                    item.sizeName !== "" &&
+                    item.sizeName !== "null"
                       ? item.sizeName
                       : ""}{" "}
                     /{" "}
                     {item.typeName &&
-                      item.typeName !== "" &&
-                      item.typeName !== "null"
+                    item.typeName !== "" &&
+                    item.typeName !== "null"
                       ? item.typeName
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.qty === "number" &&
-                      item.qty !== null &&
-                      item.qty !== ""
+                    item.qty !== null &&
+                    item.qty !== ""
                       ? item.qty.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {item.sellCurrency &&
-                      item.sellCurrency !== "" &&
-                      item.sellCurrency !== "null"
+                    item.sellCurrency !== "" &&
+                    item.sellCurrency !== "null"
                       ? item.sellCurrency
                       : ""}
                   </td>
                   <td className="text-left border-black border-b border-r py-px">
                     {typeof item.sellExchangeRate === "number" &&
-                      item.sellExchangeRate !== null &&
-                      item.sellExchangeRate !== ""
+                    item.sellExchangeRate !== null &&
+                    item.sellExchangeRate !== ""
                       ? item.sellExchangeRate.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellRate === "number" &&
-                      item.sellRate !== null &&
-                      item.sellRate !== ""
+                    item.sellRate !== null &&
+                    item.sellRate !== ""
                       ? item.sellRate.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellAmount === "number" &&
-                      item.sellAmount !== null &&
-                      item.sellAmount !== ""
+                    item.sellAmount !== null &&
+                    item.sellAmount !== ""
                       ? item.sellAmount.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellTaxAmount === "number" &&
-                      item.sellTaxAmount !== null &&
-                      item.sellTaxAmount !== ""
+                    item.sellTaxAmount !== null &&
+                    item.sellTaxAmount !== ""
                       ? item.sellTaxAmount.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellTotalAmount === "number" &&
-                      item.sellTotalAmount !== null &&
-                      item.sellTotalAmount !== ""
+                    item.sellTotalAmount !== null &&
+                    item.sellTotalAmount !== ""
                       ? item.sellTotalAmount.toFixed(2)
                       : ""}
                   </td>
@@ -6054,8 +6286,8 @@ Operator/ Airport Authority or any other third party.
                     style={{ maxWidth: "150px", overflowWrap: "break-word" }}
                   >
                     {item.remarks &&
-                      item.remarks !== "" &&
-                      item.remarks !== "null"
+                    item.remarks !== "" &&
+                    item.remarks !== "null"
                       ? item.remarks
                       : ""}
                   </td>
@@ -6238,50 +6470,50 @@ Operator/ Airport Authority or any other third party.
 
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.qty === "number" &&
-                      item.qty !== null &&
-                      item.qty !== ""
+                    item.qty !== null &&
+                    item.qty !== ""
                       ? item.qty.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {item.sellCurrency &&
-                      item.sellCurrency !== "" &&
-                      item.sellCurrency !== "null"
+                    item.sellCurrency !== "" &&
+                    item.sellCurrency !== "null"
                       ? item.sellCurrency
                       : ""}
                   </td>
                   <td className="text-left border-black border-b border-r py-px">
                     {typeof item.sellExchangeRate === "number" &&
-                      item.sellExchangeRate !== null &&
-                      item.sellExchangeRate !== ""
+                    item.sellExchangeRate !== null &&
+                    item.sellExchangeRate !== ""
                       ? item.sellExchangeRate.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellRate === "number" &&
-                      item.sellRate !== null &&
-                      item.sellRate !== ""
+                    item.sellRate !== null &&
+                    item.sellRate !== ""
                       ? item.sellRate.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellAmount === "number" &&
-                      item.sellAmount !== null &&
-                      item.sellAmount !== ""
+                    item.sellAmount !== null &&
+                    item.sellAmount !== ""
                       ? item.sellAmount.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellTaxAmount === "number" &&
-                      item.sellTaxAmount !== null &&
-                      item.sellTaxAmount !== ""
+                    item.sellTaxAmount !== null &&
+                    item.sellTaxAmount !== ""
                       ? item.sellTaxAmount.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellTotalAmount === "number" &&
-                      item.sellTotalAmount !== null &&
-                      item.sellTotalAmount !== ""
+                    item.sellTotalAmount !== null &&
+                    item.sellTotalAmount !== ""
                       ? item.sellTotalAmount.toFixed(2)
                       : ""}
                   </td>
@@ -6290,8 +6522,8 @@ Operator/ Airport Authority or any other third party.
                     style={{ maxWidth: "150px", overflowWrap: "break-word" }}
                   >
                     {item.remarks &&
-                      item.remarks !== "" &&
-                      item.remarks !== "null"
+                    item.remarks !== "" &&
+                    item.remarks !== "null"
                       ? item.remarks
                       : ""}
                   </td>
@@ -6998,8 +7230,9 @@ Operator/ Airport Authority or any other third party.
       "Dec",
     ];
     const FromDates = FromDate
-      ? `${FromDate.getDate()} ${monthNames[FromDate.getMonth()]
-      } ${FromDate.getFullYear()}`
+      ? `${FromDate.getDate()} ${
+          monthNames[FromDate.getMonth()]
+        } ${FromDate.getFullYear()}`
       : "";
 
     // const ToDate = data && data.length > 0 ? new Date(data[0].validityTo) : null;
@@ -7065,13 +7298,13 @@ Operator/ Airport Authority or any other third party.
                 <td className="pl-5">
                   {data && data.length > 0 && data[0].validityFrom
                     ? new Date(data[0].validityFrom).toLocaleDateString(
-                      "en-GB",
-                      {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      },
-                    )
+                        "en-GB",
+                        {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        },
+                      )
                     : ""}
                 </td>
               </tr>
@@ -7116,10 +7349,10 @@ Operator/ Airport Authority or any other third party.
                 <td className="pl-5">
                   {data && data.length > 0 && data[0].validityTo
                     ? new Date(data[0].validityTo).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
                     : ""}
                 </td>
               </tr>
@@ -7208,9 +7441,11 @@ Operator/ Airport Authority or any other third party.
                     : ""}
                 </td>
                 <td className="text-center border-black border-b border-r pt-2 pb-3">
-                  {`${item.length !== "" ? item.length : ""} X ${item.width !== "" ? item.width : ""
-                    } X ${item.height !== "" ? item.height : ""} ${item.dimensionUnit !== "" ? item.dimensionUnit : ""
-                    }`}
+                  {`${item.length !== "" ? item.length : ""} X ${
+                    item.width !== "" ? item.width : ""
+                  } X ${item.height !== "" ? item.height : ""} ${
+                    item.dimensionUnit !== "" ? item.dimensionUnit : ""
+                  }`}
                 </td>
                 <td className="text-center border-black border-b border-r pt-2 pb-3">
                   {item.volume || ""}
@@ -7263,6 +7498,322 @@ Operator/ Airport Authority or any other third party.
           item.sellRate === "0.00" ||
           item.sellRate === 0.0
         ),
+    );
+
+    // If no valid records exist for either category, show a message
+    if (recordsWithVendor.length === 0 && recordsWithoutVendor.length === 0) {
+      return (
+        <div className="mt-4 flex flex-grow w-full justify-center">
+          <p className="text-center text-lg font-semibold text-gray-600">
+            No data available.
+          </p>
+        </div>
+      );
+    }
+
+    let lastVendor = null;
+    let totalAmount = 0.0;
+    let totalTotalAmount = 0.0;
+    const vendorRows = [];
+
+    // Generate table rows for records with vendors
+    recordsWithVendor.forEach((item, index) => {
+      const isNewVendor = item.vendorName !== lastVendor;
+
+      if (isNewVendor && lastVendor !== null) {
+        // Insert Total Row before switching to new vendor
+        vendorRows.push(
+          <tr key={`total-${lastVendor}`} className="bg-gray-300 font-semibold">
+            <td
+              className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
+              colSpan="6"
+            >
+              Total ({currency})
+            </td>
+            <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+              {totalAmount.toFixed(2)}
+            </td>
+            <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+              {totalTotalAmount.toFixed(2)}
+            </td>
+            <td className="border-black border-b border-r pt-2 pb-2"></td>
+          </tr>,
+        );
+
+        // Reset totals for the new vendor
+        totalAmount = 0.0;
+        totalTotalAmount = 0.0;
+      }
+
+      if (isNewVendor) {
+        // Push vendor name row before adding new charges
+        vendorRows.push(
+          <tr key={`vendor-${item.vendorName}`} className="bg-gray-200">
+            <td
+              className="text-left font-semibold border-black border-b border-r pt-2 pb-2 ps-4"
+              colSpan="9"
+            >
+              {item.vendorName}
+            </td>
+          </tr>,
+        );
+
+        lastVendor = item.vendorName;
+      }
+
+      // Accumulate totals
+      totalAmount += parseFloat(item.sellAmountHc) || 0.0;
+      totalTotalAmount += parseFloat(item.sellTotalAmount) || 0.0;
+
+      vendorRows.push(
+        <tr key={`charge-${index}`}>
+          <td className="border-black border-b border-r pt-2 pb-3 ps-4">
+            {item.chargeDescription || ""}
+          </td>
+          <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+            {item.sizeName} / {item.typeName} / {item.tankType}
+          </td>
+          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+            {item.qty && item.qty !== ""
+              ? parseFloat(item.qty).toFixed(2)
+              : 0.0}
+          </td>
+          <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+            {item.sellCurrencyName || ""}
+          </td>
+          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+            {item.sellExchangeRate || 0.0}
+          </td>
+          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+            {item.sellRate || 0.0}
+          </td>
+          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+            {item.sellAmountHc || 0.0}
+          </td>
+          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+            {item.sellTotalAmount || 0.0}
+          </td>
+          <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+            {item.remarks || ""}
+          </td>
+        </tr>,
+      );
+    });
+
+    // Final Total Row for the Last Vendor
+    if (lastVendor) {
+      vendorRows.push(
+        <tr
+          key={`final-total-${lastVendor}`}
+          className="bg-gray-300 font-semibold"
+        >
+          <td
+            className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
+            colSpan="6"
+          >
+            Total ({currency})
+          </td>
+          <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+            {totalAmount.toFixed(2)}
+          </td>
+          <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+            {totalTotalAmount.toFixed(2)}
+          </td>
+          <td className="border-black border-b border-r pt-2 pb-2"></td>
+        </tr>,
+      );
+    }
+
+    // Total calculation for records without vendors
+    let noVendorTotalAmount = 0.0;
+    let noVendorTotalTotalAmount = 0.0;
+
+    recordsWithoutVendor.forEach((item) => {
+      noVendorTotalAmount += parseFloat(item.sellAmountHc) || 0.0;
+      noVendorTotalTotalAmount += parseFloat(item.sellTotalAmount) || 0.0;
+    });
+
+    return (
+      <div className="mt-1 flex flex-col w-full justify-center">
+        {/* Table for records with vendors */}
+        {recordsWithVendor.length > 0 && (
+          <>
+            <table
+              className="mt-0.5 text-left text-xs w-full"
+              style={{ border: "1px solid black" }}
+            >
+              <thead>
+                <tr className="bg-gray-300">
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Charge Description
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Size/Type
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Qty
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Curr
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Ex. Rate
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Rate
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Amount
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Total Amount
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Remarks
+                  </th>
+                </tr>
+              </thead>
+              <tbody>{vendorRows}</tbody>
+            </table>
+          </>
+        )}
+
+        {/* Table for records without vendors */}
+        {recordsWithoutVendor.length > 0 && (
+          <>
+            <table
+              className="mt-2 text-left text-xs w-full"
+              style={{ border: "1px solid black" }}
+            >
+              <thead>
+                <tr className="bg-gray-300">
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Charge Description
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Size/Type
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Qty
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Curr
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Ex. Rate
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Rate
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Amount
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Total Amount
+                  </th>
+                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                    Remarks
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {recordsWithoutVendor.map((item, index) => (
+                  <tr key={`no-vendor-${index}`}>
+                    <td className="border-black border-b border-r pt-2 pb-3 ps-4">
+                      {item.chargeDescription}
+                    </td>
+                    <td className="border-black border-b border-r pt-2 pb-3 ps-4">
+                      {item.sizeName} / {item.typeName} / {item.tankType}
+                    </td>
+                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                      {item.qty && item.qty !== ""
+                        ? parseFloat(item.qty).toFixed(2)
+                        : ""}
+                    </td>
+                    <td className="border-black text-center border-b border-r pt-2 pb-3 ps-2">
+                      {item.sellCurrencyName}
+                    </td>
+                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                      {item.sellExchangeRate || 0.0}
+                    </td>
+                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                      {item.sellRate || 0.0}
+                    </td>
+                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                      {item.sellAmountHc || 0.0}
+                    </td>
+                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                      {item.sellTotalAmount || 0.0}
+                    </td>
+                    <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+                      {item.remarks || ""}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="bg-gray-300 font-semibold">
+                  <td
+                    className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
+                    colSpan="6"
+                  >
+                    Total ({currency})
+                  </td>
+                  <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+                    {noVendorTotalAmount.toFixed(2)}
+                  </td>
+                  <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+                    {noVendorTotalTotalAmount.toFixed(2)}
+                  </td>
+                  <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2"></td>
+                </tr>
+              </tbody>
+            </table>
+          </>
+        )}
+
+        {/* Table for Grand Total */}
+        <table className="mt-2 text-left text-xs w-full">
+          <tr className="bg-gray-300 border border-black">
+            <th className="text-left pt-2 pb-2 ps-4">
+              Grand Total ({currency}){" "}
+            </th>
+            <th className="text-left pt-2 pb-2">{grandTotalAmount}</th>
+          </tr>
+          <tr className="bg-gray-300 border border-black">
+            <th className="text-left pt-2 pb-2 ps-4">Amount in Words </th>
+            <th className="text-left pt-2 pb-2 uppercase">
+              {" "}
+              {currency} {grandTotalInWords}
+            </th>
+          </tr>
+        </table>
+      </div>
+    );
+  };
+
+  const QuotationExportChargeVendorWiseModuleSAR = ({ data }) => {
+    let chargeData =
+      data && data.length > 0 ? data[0].tblRateRequestCharge : [];
+
+    let grandTotalAmount = chargeData.reduce((acc, item) => {
+      return acc + (parseFloat(item.sellAmountHc) || 0);
+    }, 0);
+
+    let grandTotalInWords = toWords(grandTotalAmount);
+
+    const currency = data && data.length > 0 ? data[0].currency : "";
+
+    // Separate records into two groups: with and without vendors
+    const recordsWithVendor = chargeData.filter(
+      (item) => item.vendorName && item.vendorName.trim() !== "",
+    );
+    // const recordsWithoutVendor = chargeData.filter(
+    //   (item) => !item.vendorName || item.vendorName.trim() === ""
+    // );
+
+    const recordsWithoutVendor = chargeData.filter(
+      (item) =>
+        (!item.vendorName || item.vendorName.trim() === "") &&
+        !(item.sellRate == null),
     );
 
     // If no valid records exist for either category, show a message
@@ -7896,8 +8447,10 @@ Operator/ Airport Authority or any other third party.
 
     return (
       <div>
-        {calculateTax === true ? (
+        {calculateTax ? (
           <QuotationExportChargeVendorWiseModuleWithTax data={data} />
+        ) : clientId === 13 ? (
+          <QuotationExportChargeVendorWiseModuleSAR data={data} />
         ) : (
           <QuotationExportChargeVendorWiseModule data={data} />
         )}
@@ -8306,7 +8859,7 @@ Operator/ Airport Authority or any other third party.
                     [item.length, item.width, item.height]
                       .filter((val) => val != null && val !== "") // remove null, undefined, and empty strings :contentReference[oaicite:1]{index=1}
                       .join(" X ") + // join with separator :contentReference[oaicite:2]{index=2}
-                    (item.dimensionUnit ? ` ${item.dimensionUnit}` : "") // append unit if present
+                      (item.dimensionUnit ? ` ${item.dimensionUnit}` : "") // append unit if present
                   }
                 </td>
                 <td className="text-center border-black border-b border-r pt-2 pb-3">
@@ -9228,7 +9781,7 @@ Operator/ Airport Authority or any other third party.
         if (
           index === Object.entries(groupedCharges).length - 1 || // If it's the last item
           Object.entries(groupedCharges)[index + 1][1].chargeGroupName !==
-          chargeGroupName // or the next item has a different charge group
+            chargeGroupName // or the next item has a different charge group
         ) {
           const subTotalRow = (
             <tr
@@ -9517,6 +10070,33 @@ Operator/ Airport Authority or any other third party.
     </div>
   );
 
+  const ExportQuotationSeaModuleFSA = () => (
+    <div>
+      <div className="container mx-auto p-14 bodyColour text-black h-auto bgTheme">
+        <CompanyImgModule />
+        <h1
+          style={{ textAlign: "center", fontWeight: "bold" }}
+          className="mt-2"
+        >
+          Quotation
+        </h1>
+        <QuotationSeaCustomerModule data={data} />
+        <QuotationExportShipperModule data={data} />
+        <QuotationExportShipperDetailsModuleFSA data={data} />
+        <QuotationExportSizeTypeModule data={data} />
+        {/* <QuotationExportChargeVendorWiseModule data={data} />
+        <QuotationExportChargeVendorWiseModuleWithTax data={data} /> */}
+        <QuotationExportWithTaxAndWithoutTax data={data} />
+        {clientId === 3 && <ExportParagrafModule data={data} />}
+        {/* {clientId != 3 && <TermsAndCondition terms={termsAndConditions} />} */}
+        {clientId === 13 && <SarQuotationTermsAndCondition />}
+        {clientId === 9 && (
+          <TermsAndConditionDynamic termsAndConditions={termsAndConditions} />
+        )}
+      </div>
+    </div>
+  );
+
   const TermsAndConditionDynamic = ({ termsAndConditions }) => {
     const renderTerms = (tc) => {
       if (Array.isArray(tc)) {
@@ -9655,8 +10235,9 @@ Operator/ Airport Authority or any other third party.
     const RequestDate =
       data && data.length > 0 ? new Date(data[0].rateRequestDate) : null;
     const DatesFormat = RequestDate
-      ? `${RequestDate.getDate()}/${RequestDate.getMonth() + 1
-      }/${RequestDate.getFullYear()}`
+      ? `${RequestDate.getDate()}/${
+          RequestDate.getMonth() + 1
+        }/${RequestDate.getFullYear()}`
       : "";
     console.log("data", data);
     return (
@@ -9908,29 +10489,29 @@ Operator/ Airport Authority or any other third party.
                   style={{ maxWidth: "250px", overflowWrap: "break-word" }}
                 >
                   {item.zipCode &&
-                    item.zipCode !== "" &&
-                    item.zipCode !== "null"
+                  item.zipCode !== "" &&
+                  item.zipCode !== "null"
                     ? item.zipCode
                     : ""}
                 </td>
                 <td className="text-left border-black border-b border-r py-px">
                   {item.rateMicro &&
-                    item.rateMicro !== "" &&
-                    item.rateMicro !== "null"
+                  item.rateMicro !== "" &&
+                  item.rateMicro !== "null"
                     ? item.rateMicro
                     : ""}
                 </td>
                 <td className="text-left border-black border-b border-r py-px">
                   {item.rateQuater &&
-                    item.rateQuater !== "" &&
-                    item.rateQuater !== "null"
+                  item.rateQuater !== "" &&
+                  item.rateQuater !== "null"
                     ? item.rateQuater
                     : ""}
                 </td>
                 <td className="text-left border-black border-b border-r py-px">
                   {item.rateHalf &&
-                    item.rateHalf !== "" &&
-                    item.rateHalf !== "null"
+                  item.rateHalf !== "" &&
+                  item.rateHalf !== "null"
                     ? item.rateHalf
                     : ""}
                 </td>
@@ -10056,8 +10637,8 @@ Operator/ Airport Authority or any other third party.
                       }}
                     >
                       {item.sizeName &&
-                        item.chargeDescription !== "" &&
-                        item.chargeDescription !== "null"
+                      item.chargeDescription !== "" &&
+                      item.chargeDescription !== "null"
                         ? item.chargeDescription
                         : ""}
                     </td>
@@ -10066,8 +10647,8 @@ Operator/ Airport Authority or any other third party.
                       style={{ backgroundColor: "#FFFF99" }}
                     >
                       {item.sellRate &&
-                        item.sellRate !== "" &&
-                        item.sellRate !== "null"
+                      item.sellRate !== "" &&
+                      item.sellRate !== "null"
                         ? item.sellRate
                         : ""}
                     </td>
@@ -10274,8 +10855,9 @@ Operator/ Airport Authority or any other third party.
       data && data.length > 0 ? new Date(data[0].rateRequestDate) : null;
 
     const DatesFormat = RequestDate
-      ? `${RequestDate.getDate()}/${RequestDate.getMonth() + 1
-      }/${RequestDate.getFullYear()}`
+      ? `${RequestDate.getDate()}/${
+          RequestDate.getMonth() + 1
+        }/${RequestDate.getFullYear()}`
       : "";
 
     return (
@@ -10506,42 +11088,42 @@ Operator/ Airport Authority or any other third party.
 
                   <td className="text-center border-black border-b border-r py-px">
                     {item.sizeName &&
-                      item.sizeName !== "" &&
-                      item.sizeName !== "null"
+                    item.sizeName !== "" &&
+                    item.sizeName !== "null"
                       ? item.sizeName
                       : ""}{" "}
                     /{" "}
                     {item.typeCode &&
-                      item.typeCode !== "" &&
-                      item.typeCode !== "null"
+                    item.typeCode !== "" &&
+                    item.typeCode !== "null"
                       ? item.typeCode
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.qty === "number" &&
-                      item.qty !== null &&
-                      item.qty !== ""
+                    item.qty !== null &&
+                    item.qty !== ""
                       ? item.qty.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-center border-black border-b border-r py-px">
                     {item.sellCurrencyName &&
-                      item.sellCurrencyName !== "" &&
-                      item.sellCurrencyName !== "null"
+                    item.sellCurrencyName !== "" &&
+                    item.sellCurrencyName !== "null"
                       ? item.sellCurrencyName
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellRate === "number" &&
-                      item.sellRate !== null &&
-                      item.sellRate !== ""
+                    item.sellRate !== null &&
+                    item.sellRate !== ""
                       ? item.sellRate.toFixed(2)
                       : ""}
                   </td>
                   <td className="text-right border-black border-b border-r py-px">
                     {typeof item.sellAmount === "number" &&
-                      item.sellAmount !== null &&
-                      item.sellAmount !== ""
+                    item.sellAmount !== null &&
+                    item.sellAmount !== ""
                       ? item.sellAmount.toFixed(2)
                       : ""}
                   </td>
@@ -10550,8 +11132,8 @@ Operator/ Airport Authority or any other third party.
                     style={{ maxWidth: "150px", overflowWrap: "break-word" }}
                   >
                     {item.remarks &&
-                      item.remarks !== "" &&
-                      item.remarks !== "null"
+                    item.remarks !== "" &&
+                    item.remarks !== "null"
                       ? item.remarks
                       : ""}
                   </td>
@@ -11427,6 +12009,22 @@ Operator/ Airport Authority or any other third party.
                     {clientId === 13
                       ? ExportQuotationSeaModuleSAR()
                       : ExportQuotationSeaModule()}
+                  </div>
+                </>
+              );
+            case "Quotation Sea Print FSA":
+              return (
+                <>
+                  <div
+                    key={index}
+                    ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                    className={
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    }
+                  >
+                    {clientId === 13
+                      ? ExportQuotationSeaModuleSAR()
+                      : ExportQuotationSeaModuleFSA()}
                   </div>
                 </>
               );

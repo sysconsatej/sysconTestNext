@@ -78,11 +78,10 @@ export default function RowComponent(props) {
   const [childValuseObj, setChildValuseObj] = useState({ ...row });
   const [openChildEdit, setOpenChildEdit] = useState(false);
   const [subChildComponent, setSubChildComponent] = useState(
-    expandAll ? true : false
+    expandAll ? true : false,
   );
   const [subChildViewData, setSubChildViewData] = useState([]);
   const [childType, setChildType] = useState("");
-
 
   let groupedData = subChild?.reduce((result, obj) => {
     const { tableName } = obj;
@@ -126,8 +125,6 @@ export default function RowComponent(props) {
     setChildValuseObj({ ...row });
   }, [row]);
 
-
-
   function convertDropDownValues(dropDownValues) {
     return dropDownValues.reduce((acc, currentValue) => {
       acc[currentValue.id] = currentValue.value;
@@ -137,7 +134,7 @@ export default function RowComponent(props) {
   function copyDocument(obj) {
     if (Object.keys(obj).length !== 0) {
       const tmpData = { ...newState };
-      delete obj.id
+      delete obj.id;
       tmpData[sectionData.tableName].push({
         ...obj,
         indexValue: tmpData[sectionData.tableName].length,
@@ -148,7 +145,15 @@ export default function RowComponent(props) {
   }
   const [hoveredIcon, setHoveredIcon] = useState(null);
 
-  const stylesIconsHover = tableBodyWidhth === '0' ? { right: tableBodyWidhth + 'px', width: 'auto' } : { left: tableBodyWidhth + 'px', width: 'auto' };
+  const stylesIconsHover =
+    tableBodyWidhth === "0"
+      ? { right: tableBodyWidhth + "px", width: "auto" }
+      : { left: tableBodyWidhth + "px", width: "auto" };
+
+  const parentVisibleColumnCount = Math.max(
+    fields?.filter((field) => field?.isGridView)?.length || 0,
+    1,
+  );
 
   return (
     <React.Fragment>
@@ -177,13 +182,19 @@ export default function RowComponent(props) {
                     <div className={childTableRowStyles}>
                       {Array.isArray(childValuseObj[field.fieldname])
                         ? convertDropDownValues(childValuseObj[field.fieldname])
-                        : Array.isArray(row[`${field.fieldname}dropdown`]) && row[`${field.fieldname}dropdown`].length > 0 ? row[`${field.fieldname}dropdown`][0]?.label : row[field.fieldname]?.toString()}
+                        : Array.isArray(row[`${field.fieldname}dropdown`]) &&
+                            row[`${field.fieldname}dropdown`].length > 0
+                          ? row[`${field.fieldname}dropdown`][0]?.label
+                          : row[field.fieldname]?.toString()}
                     </div>
                   </div>
                 </TableCell>
               ))}
 
-            <div className={`group-hover:visible flex flex-nowrap justify-end invisible absolute`} style={stylesIconsHover} >
+            <div
+              className={`group-hover:visible flex flex-nowrap justify-end invisible absolute`}
+              style={stylesIconsHover}
+            >
               <LightTooltip title="Delete Record">
                 <IconButton
                   aria-label="Delete"
@@ -193,11 +204,7 @@ export default function RowComponent(props) {
                   onMouseLeave={() => setHoveredIcon(null)}
                 >
                   <Image
-                    src={
-                      hoveredIcon === "delete"
-                        ? DeleteHover
-                        : DeleteIcon2
-                    }
+                    src={hoveredIcon === "delete" ? DeleteHover : DeleteIcon2}
                     alt="Delete Icon"
                     priority={false}
                     className="gridIcons2"
@@ -220,27 +227,28 @@ export default function RowComponent(props) {
                   />
                 </IconButton>
               </LightTooltip>
-              {typeof groupedData === "object" && Object?.keys(groupedData).map((key, index) => {
-                return (
-                  <LightTooltip
-                    key={index}
-                    title={groupedData[key].sectionHeader}
-                  >
-                    <IconButton
-                      aria-label="Edit"
-                      className={styles.icon}
-                      onClick={() => toggleSubChildRow(key)}
+              {typeof groupedData === "object" &&
+                Object?.keys(groupedData).map((key, index) => {
+                  return (
+                    <LightTooltip
+                      key={index}
+                      title={groupedData[key].sectionHeader}
                     >
-                      <Image
-                        src={icons[index % icons.length]}
-                        alt={`Play Icon ${index + 1}`}
-                        className="gridIcons2"
-                      />
-                    </IconButton>
-                  </LightTooltip>
-                );
-              })}
-
+                      <IconButton
+                        aria-label="Edit"
+                        className={styles.icon}
+                        onClick={() => toggleSubChildRow(key)}
+                      >
+                        <Image
+                          src={icons[index % icons.length]}
+                          alt={`Play Icon ${index + 1}`}
+                          className="gridIcons2"
+                          priority={false}
+                        />
+                      </IconButton>
+                    </LightTooltip>
+                  );
+                })}
             </div>
           </TableRow>
         </>
@@ -266,16 +274,18 @@ export default function RowComponent(props) {
                   }}
                 >
                   <Box className="flex gap-4">
-                    {index === 0 ?
+                    {index === 0 ? (
                       <>
-                        <ActionButton deleteImagePath={DeleteIcon2} copyImagepath={copyDoc}
+                        <ActionButton
+                          deleteImagePath={DeleteIcon2}
+                          copyImagepath={copyDoc}
                           onDelete={() => deleteChildRecord(childIndex)}
                           onCopy={() => copyDocument(childValuseObj)}
-
                         />
                       </>
-
-                      : <></>}
+                    ) : (
+                      <></>
+                    )}
 
                     <FormCreationGridInputFields
                       fieldData={field}
@@ -301,7 +311,7 @@ export default function RowComponent(props) {
                                 // Return the item unchanged if it's not the one to update
                                 return item;
                               });
-                            }
+                            },
                           );
 
                           // Return the updated state
@@ -315,7 +325,6 @@ export default function RowComponent(props) {
                       onBlurHandler={(e) => {
                         console.log("onBlurHandler", e);
                       }}
-
                     />
                   </Box>
                 </TableCell>
@@ -326,10 +335,13 @@ export default function RowComponent(props) {
 
       {/* EDIT CHILD */}
       {openChildEdit && (
-        <TableRow >
-          <TableCell style={{ padding: 0 }} colSpan={6}>
+        <TableRow>
+          <TableCell
+            sx={{ padding: 0, width: "100%", borderBottom: "unset" }}
+            colSpan={parentVisibleColumnCount}
+          >
             <Collapse in={openChildEdit} timeout="auto" unmountOnExit>
-              <Box sx={{ width: `${containerWidth}px` }}>
+              <Box sx={{ width: `${containerWidth}px`, maxWidth: "100%", minWidth: 0 }}>
                 <div
                   className={`relative pl-[16px] py-[8px] flex justify-between `}
                 >
@@ -414,10 +426,19 @@ export default function RowComponent(props) {
         subChildViewData.map((key, index) => {
           return (
             <TableRow key={index} className={`${styles.pageBackground}`}>
-              <TableCell style={{ padding: 0 }} colSpan={6}>
+              <TableCell
+                sx={{ padding: 0, width: "100%", borderBottom: "unset" }}
+                colSpan={parentVisibleColumnCount}
+              >
                 <Collapse in={subChildComponent} timeout="auto" unmountOnExit>
                   <Box
-                    sx={{ margin: 1, overflow: "auto" }}
+                    sx={{
+                      margin: 1,
+                      overflow: "auto",
+                      width: "100%",
+                      maxWidth: "100%",
+                      minWidth: 0,
+                    }}
                     className={`${styles.hideScrollbar} ${styles.thinScrollBar} ${styles.pageBackground}`}
                   >
                     <SubChildComponent
@@ -430,14 +451,13 @@ export default function RowComponent(props) {
                       childName={childName}
                       childIndex={childIndex}
                       setSubChildComponent={setSubChildComponent}
-
                       childType={childType}
                       expandAll={expandAll}
                       filterData={filterData}
                       containerWidth={containerWidth}
                       deleteChildRecord={() => deleteChildRecord(childIndex)}
                       copyDocument={() => copyDocument(childValuseObj)}
-
+                      parentVisibleColumnCount={parentVisibleColumnCount}
                     />
                   </Box>
                 </Collapse>

@@ -176,7 +176,7 @@ export default function Print({
       >
         Download
       </button>
-      <button
+      {/* <button
         className="ms-2 inline-flex items-center px-8 py-1.5 text-xs font-medium text-center text-white bg-blue-700 rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 hover:bg-blue-800"
         onClick={() => handlePDFEmail()}
       >
@@ -187,7 +187,7 @@ export default function Print({
         onClick={() => handleEmailBody()}
       >
         Email
-      </button>
+      </button> */}
     </div>
   );
 }

@@ -52,7 +52,6 @@ const sortTopLevelPnL = (entries) => {
     "net loss": 3,
   };
 
-  // stable sort
   return entries
     .map((e, idx) => ({ e, idx }))
     .sort((a, b) => {
@@ -131,6 +130,7 @@ const buildTree = (data, showAllLevels) => {
 
     const ledgerRow = {
       name: displayName,
+      glId: row?.glId ?? null,
       OpeningDrAmt: open.dr,
       OpeningCrAmt: open.cr,
       TransactionDrAmt: tran.dr,
@@ -162,7 +162,7 @@ const buildTree = (data, showAllLevels) => {
 
       // capture Direct/Indirect only for Level-1 nodes (tb1GroupName under BS)
       if (idx === 1 && current[level].__grpType == null) {
-        current[level].__grpType = row.tbGrouptype || ""; // "D" or "I"
+        current[level].__grpType = row.tbGrouptype || "";
       }
 
       if (idx === levels.length - 1) {
@@ -273,12 +273,14 @@ const BalanceDetailedGrid = forwardRef(
   (
     {
       balanceSheetData,
-      selectedRadio, // "S" or "D"
-      selectedRadioType, // "E" / "O" / "C"
+      selectedRadio,
+      selectedRadioType,
       netProfit,
       grossProfit,
-      reportType, // "P" or "B"
+      reportType,
       toggle,
+      enableGlNameClick = false,
+      glNameRedirectUrl = "",
     },
     ref,
   ) => {
@@ -286,6 +288,31 @@ const BalanceDetailedGrid = forwardRef(
       return <div>No Data Found</div>;
 
     const isDetailMode = selectedRadio === "D";
+
+    const openGlNameUrl = (glId) => {
+      if (!enableGlNameClick || !glNameRedirectUrl || !glId) return;
+
+      const url = new URL(glNameRedirectUrl, window.location.origin);
+      url.searchParams.set("glId", String(glId));
+
+      window.open(url.toString(), "_blank");
+    };
+
+    const handleGlNameClick = (e, glId) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openGlNameUrl(glId);
+    };
+
+    const handleGlNameKeyDown = (e, glId) => {
+      if (!enableGlNameClick || !glNameRedirectUrl || !glId) return;
+
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        e.stopPropagation();
+        openGlNameUrl(glId);
+      }
+    };
 
     // ==========================================================
     // ✅ CREATE SAFE WORKING COPY WITH NET & GROSS INJECTED
@@ -459,21 +486,17 @@ const BalanceDetailedGrid = forwardRef(
 
     const grandTotal = useMemo(() => computeGrandTotal(), [tree]);
 
-    // ==========================================================
-    // ✅ FIX: UI REPEATING ISSUE
-    // Root cause in your code:
-    // - renderTree() recursed children
-    // - renderNode() ALSO recursed children
-    // That printed the same branches twice.
-    //
-    // ✅ Now: renderNodeRow() renders ONLY the single row.
-    // Recursion happens ONLY in renderTree()/walkAll().
-    // ==========================================================
-
     const renderNodeRow = (key, value, level = 0, parentKey = null) => {
       const totals = sumNodeTotals(value);
 
       if (!isDetailMode && level > 1) return null;
+
+      const matchedLedgerRow = (value.__rows || []).find(
+        (r) =>
+          !r?.isGross && !r?.isNet && norm(r?.name || "") === norm(key || ""),
+      );
+
+      const currentGlId = matchedLedgerRow?.glId ?? null;
 
       const isLeaf =
         !value.__children || Object.keys(value.__children).length === 0;
@@ -482,7 +505,18 @@ const BalanceDetailedGrid = forwardRef(
         (r) => r?.isGross || r?.isNet,
       );
 
+      const hasExactLedgerLeafRow = !!matchedLedgerRow;
+
       const isBold = hasSpecial ? true : isDetailMode ? !isLeaf : level === 0;
+
+      const isClickableGlName =
+        enableGlNameClick &&
+        reportType === "B" &&
+        isDetailMode &&
+        isLeaf &&
+        !hasSpecial &&
+        hasExactLedgerLeafRow &&
+        String(key || "").trim() !== "";
 
       return (
         <TableRow
@@ -491,7 +525,6 @@ const BalanceDetailedGrid = forwardRef(
             transition: "background-color 0.15s ease-in-out",
             "&:hover": {
               backgroundColor: "rgba(126,155,207,0.18)",
-              cursor: "pointer",
             },
           }}
         >
@@ -505,7 +538,34 @@ const BalanceDetailedGrid = forwardRef(
                 fontWeight: isBold ? "bold" : "normal",
               }}
             >
-              {key}
+              {isClickableGlName ? (
+                <Box
+                  component="span"
+                  role="link"
+                  tabIndex={0}
+                  onClick={(e) => handleGlNameClick(e, currentGlId)}
+                  onKeyDown={(e) => handleGlNameKeyDown(e, currentGlId)}
+                  sx={{
+                    color: "inherit",
+                    cursor: "pointer",
+                    textDecoration: "none",
+                    fontWeight: "inherit",
+                    "&:hover": {
+                      color: "#1976d2",
+                      textDecoration: "underline",
+                    },
+                    "&:focus-visible": {
+                      color: "#1976d2",
+                      textDecoration: "underline",
+                      outline: "none",
+                    },
+                  }}
+                >
+                  {key}
+                </Box>
+              ) : (
+                key
+              )}
             </Box>
           </TableCell>
 
@@ -1029,7 +1089,6 @@ const BalanceDetailedGrid = forwardRef(
                 const isPnLDetailOrder =
                   selectedRadio === "D" && reportType === "P";
 
-                // ✅ normal full recursion (single recursion, no double-print)
                 const renderTree = (node, level = 0, parentKey = null) => {
                   return getSortedEntries(node, level, parentKey).flatMap(
                     ([key, value]) => {
@@ -1037,7 +1096,6 @@ const BalanceDetailedGrid = forwardRef(
                       const rowEl = renderNodeRow(key, value, level, parentKey);
                       if (rowEl) rows.push(rowEl);
 
-                      // recurse only here (NOT inside renderNodeRow)
                       if (isDetailMode || level < 2) {
                         rows.push(
                           ...renderTree(value.__children || {}, level + 1, key),
@@ -1048,12 +1106,10 @@ const BalanceDetailedGrid = forwardRef(
                   );
                 };
 
-                // ✅ Default behavior
                 if (!isPnLDetailOrder) {
                   return renderTree(tree, 0, null);
                 }
 
-                // ✅ PnL Detail custom order:
                 const entries0 = Object.entries(tree || {});
                 const exp = entries0.find(([k]) => norm(k) === "expense");
                 const inc = entries0.find(([k]) => norm(k) === "income");

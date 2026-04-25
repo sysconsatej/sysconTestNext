@@ -38,6 +38,14 @@ import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import * as onSubmitValidation from "@/helper/onSubmitFunction";
 import * as onDeleteFunction from "@/helper/onDeleteFunction";
 
+function isConfigFlagEnabled(value) {
+  if (value === true || value === 1 || value === "1") return true;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return ["true", "yes", "y", "t"].includes(normalized);
+  }
+  return false;
+}
 
 function sortJSON(jsonArray, field, sortOrder) {
   return jsonArray.sort((a, b) => {
@@ -199,8 +207,12 @@ export default function SubChildComponent({
   formControlData,
   setFormControlData,
 }) {
+  const isSubChildAddHidden = isConfigFlagEnabled(subChild?.isAddHide);
+  const isSubChildDeleteHidden = isConfigFlagEnabled(subChild?.isDeleteHide);
   const [hideSubChildInputs, setHideSubChildInputs] = useState(
-    expandAll
+    isSubChildAddHidden
+      ? true
+      : expandAll
       ? row[subChild?.tableName] && row[subChild?.tableName]?.length === 0
         ? false
         : true
@@ -226,6 +238,7 @@ export default function SubChildComponent({
   };
 
   const hideSubChildInputComponent = () => {
+    if (isSubChildAddHidden) return;
     setHideSubChildInputs((prev) => !prev);
   };
 
@@ -236,6 +249,7 @@ export default function SubChildComponent({
   };
 
   const subChildButtonDataHandler = (subChildObject, subChild, islastTab) => {
+    if (isSubChildAddHidden) return;
     if (Object.keys(subChildObject).length !== 0) {
       for (const feild of subChild.fields) {
         if (
@@ -397,6 +411,7 @@ export default function SubChildComponent({
   }, [newState]);
 
   const deleteSubChildRecord = (indexValue) => {
+    if (isSubChildDeleteHidden) return;
     try {
       // safer deep clone
       let tmpData = structuredClone(newState);
@@ -833,11 +848,12 @@ export default function SubChildComponent({
   return (
     <>
       {/* Input field integration */}
-      <div
+        <div
         key={index}
         style={{ width: "100%" }}
       >
-        {(row[subChild?.tableName]?.length == 0 || !hideSubChildInputs) && (
+        {!isSubChildAddHidden &&
+          (row[subChild?.tableName]?.length == 0 || !hideSubChildInputs) && (
           <div className=" my-3 flex justify-between ">
             <CustomeInputFields
               key={index}
@@ -930,7 +946,10 @@ export default function SubChildComponent({
                               handleRightClick(event, item.fieldname)
                             } // Add the right-click handler here
                           >
-                            {!isView && index === 0 && (hideSubChildInputs || row[subChild?.tableName].length > 0) && (
+                            {!isView &&
+                              !isSubChildAddHidden &&
+                              index === 0 &&
+                              (hideSubChildInputs || row[subChild?.tableName].length > 0) && (
 
                               <HoverIcon
                                 defaultIcon={addLogo}

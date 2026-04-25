@@ -2113,7 +2113,7 @@ const getJobCharges = async (obj) => {
       ...prev,
       tblInvoiceCharge: updatedCharges,
     }));
-    
+
   }
 };
 const validateContainerNo = (obj) => {
@@ -5017,7 +5017,7 @@ const setGLSacDetails = async (obj) => {
     chargeId: values?.chargeId,
     voucherTypeId: newState?.voucherTypeId,
     companyId: companyId,
-    glId:values?.chargeGlId
+    glId: values?.chargeGlId
   };
 
   const response = await getGLChargeDetails(requestBody);
@@ -10191,6 +10191,8 @@ const getBlCharges = async (obj) => {
     billingPartyId: newState?.billingPartyId || values.billingPartyId || 0,
     companyId: getUserDetails().companyId,
     companyBranchId: getUserDetails().branchId,
+    currencyId: newState?.currencyId,
+    exchangeRate: newState?.exchangeRate
   };
 
   const fetchCharges = await getBlChargeDetails(requestData);
@@ -11006,13 +11008,61 @@ const checkExchangesRate = async (obj) => {
   }
 };
 
+// const setBlData = async (obj) => {
+//   const { args, values, fieldName, newState, setStateVariable } = obj;
+
+//   try {
+//     const argNames = args.split(",").map((arg) => arg.trim());
+//     const containerNo = newState[argNames[0]]; // e.g., "blId"
+//     if (!containerNo) {
+//       return {
+//         type: "warning",
+//         result: false,
+//         message: "containerNo is missing. Please select a BL first.",
+//       };
+//     }
+
+//     const requestObj = {
+//       columns: " isnull(bl.hblNo,bl.mblNo),bl.id as blId ",
+//       tableName: "tblbl bl inner join tblBlContainer blc on bl.id=blc.blid",
+//       whereCondition: ` blc.containerId = ${containerNo}`,
+//       clientIdCondition: "bl.status=1 order by isnull(hblDate,mblDate) desc FOR JSON PATH, INCLUDE_NULL_VALUES",
+//     };
+
+//     const response = await fetchReportData(requestObj);
+//     const jobData = response?.data?.[0];
+//     const { hblNo, blId } = jobData || {};
+//     console.log("jobData", jobData);
+//     setStateVariable((prev) => ({
+//       ...prev,
+//       blNo: hblNo,
+//       blId: blId,
+//     }));
+
+//     return {
+//       type: "success",
+//       result: true,
+//       message: "Billing party set successfully.",
+//       values: { ...values, blNo: hblNo, blId: blId },
+//       newState: { ...newState, blNo: hblNo, blId: blId },
+//     };
+//   } catch (error) {
+//     console.error("Error in setBillingPartyForJob:", error);
+//     return {
+//       type: "error",
+//       result: false,
+//       message: "Error while setting billing party. Please try again.",
+//     };
+//   }
+// };
 const setBlData = async (obj) => {
   const { args, values, fieldName, newState, setStateVariable } = obj;
 
   try {
     const argNames = args.split(",").map((arg) => arg.trim());
-    const containerNo = newState[argNames[0]]; // e.g., "blId"
-    if (!containerNo) {
+    const containerId = newState[argNames[0]];
+
+    if (!containerId) {
       return {
         type: "warning",
         result: false,
@@ -11021,35 +11071,40 @@ const setBlData = async (obj) => {
     }
 
     const requestObj = {
-      columns: " bl.hblNo,bl.id as blId ",
-      tableName: "tblbl bl inner join tblBlContainer blc on bl.id=blc.blid",
-      whereCondition: ` blc.containerId = ${containerNo}`,
-      clientIdCondition: `bl.status=1 order by hblDate desc FOR JSON PATH, INCLUDE_NULL_VALUES`,
+      columns: "isnull(bl.hblNo, bl.mblNo) as blNo, bl.id as blId",
+      tableName: "tblbl bl inner join tblBlContainer blc on bl.id = blc.blid",
+      whereCondition: `blc.containerId = ${containerId}`,
+      clientIdCondition:
+        "bl.status = 1 order by isnull(bl.hblDate, bl.mblDate) desc FOR JSON PATH, INCLUDE_NULL_VALUES",
     };
 
     const response = await fetchReportData(requestObj);
+    console.log("response", response);
+
     const jobData = response?.data?.[0];
-    const { hblNo, blId } = jobData || {};
     console.log("jobData", jobData);
+
+    const { blNo, blId } = jobData || {};
+
     setStateVariable((prev) => ({
       ...prev,
-      blNo: hblNo,
-      blId: blId,
+      blNo: blNo || "",
+      blId: blId || null,
     }));
 
     return {
       type: "success",
       result: true,
-      message: "Billing party set successfully.",
-      values: { ...values, blNo: hblNo, blId: blId },
-      newState: { ...newState, blNo: hblNo, blId: blId },
+      message: "BL data set successfully.",
+      values: { ...values, blNo, blId },
+      newState: { ...newState, blNo, blId },
     };
   } catch (error) {
-    console.error("Error in setBillingPartyForJob:", error);
+    console.error("Error in setBlData:", error);
     return {
       type: "error",
       result: false,
-      message: "Error while setting billing party. Please try again.",
+      message: "Error while setting BL data. Please try again.",
     };
   }
 };
@@ -11512,7 +11567,56 @@ const checkJobAgainstBl = async (obj) => {
   }
 };
 
-const checkDisChargeActivityBl = async (obj) => {
+// const checkDisChargeActivityBl = async (obj) => {
+//   try {
+//     const { args, newState, values, setStateVariable } = obj;
+
+//     const argNames = (args || "").split(",").map((a) => a.trim());
+//     const blId = newState?.[argNames?.[0]];
+
+//     if (!blId) {
+//       toast.error("BL No is missing.");
+//       return false;
+//     }
+
+//     const token = localStorage.getItem("token");
+
+//     // 1️⃣ Fetch BL row
+//     const request = {
+//       columns: "*",
+//       tableName: "tblBl",
+//       whereCondition: `id = ${blId} and status = 1`,
+//       clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+//     };
+
+//     const response = await fetchReportData(request, token);
+
+//     const mblNo = response?.data?.[0]?.mblNo;
+//     const result = await checkDischargeDoneForBLData({ blno: mblNo });
+//     console.log("result", result);
+
+//     const chargers = result?.Chargers ?? result?.data?.Chargers;
+//     const dischargeDone = chargers?.dischargeDone;
+
+//     if (chargers?.message === "BL not found" || dischargeDone === "N") {
+//       toast.error("Against this BL Discharge Activity is not there.");
+//       return false;
+//     }
+
+//     if (dischargeDone === "Y") {
+//       await getBlCharges({ newState, values, setStateVariable });
+//       return true;
+//     }
+//     // toast.error("Unable to validate discharge status.");
+//     //return false;
+//   } catch (err) {
+//     console.error("checkDisChargeActivityBl error:", err);
+//     toast.error("Failed to validate BL discharge activity. Please try again.");
+//     return false;
+//   }
+// };
+
+const checkDisChargeActivityBl11 = async (obj) => {
   try {
     const { args, newState, values, setStateVariable } = obj;
 
@@ -11526,7 +11630,7 @@ const checkDisChargeActivityBl = async (obj) => {
 
     const token = localStorage.getItem("token");
 
-    // 1️⃣ Fetch BL row
+    // Fetch BL row
     const request = {
       columns: "*",
       tableName: "tblBl",
@@ -11544,16 +11648,86 @@ const checkDisChargeActivityBl = async (obj) => {
     const dischargeDone = chargers?.dischargeDone;
 
     if (chargers?.message === "BL not found" || dischargeDone === "N") {
-      toast.error("Against this BL Discharge Activity is not there.");
-      return false;
+      const confirmProceed = window.confirm(
+        "Against this BL Discharge Activity is not there.\n\nDo you want to continue ?"
+      );
+
+      if (!confirmProceed) {
+        return false;
+      }
+
+      await getBlCharges({ newState, values, setStateVariable });
+      return true;
     }
 
     if (dischargeDone === "Y") {
       await getBlCharges({ newState, values, setStateVariable });
       return true;
     }
-    // toast.error("Unable to validate discharge status.");
-    //return false;
+
+    return false;
+  } catch (err) {
+    console.error("checkDisChargeActivityBl error:", err);
+    toast.error("Failed to validate BL discharge activity. Please try again.");
+    return false;
+  }
+};
+
+const checkDisChargeActivityBl = async (obj) => {
+  try {
+    const { args, newState, values, setStateVariable } = obj;
+
+    const argNames = (args || "").split(",").map((a) => a.trim());
+    const blKey = argNames?.[0];
+    const blId = newState?.[blKey];
+
+    if (!blId) {
+      toast.error("BL No is missing.");
+      return false;
+    }
+
+    const token = localStorage.getItem("token");
+
+    const request = {
+      columns: "*",
+      tableName: "tblBl",
+      whereCondition: `id = ${blId} and status = 1`,
+      clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+    };
+
+    const response = await fetchReportData(request, token);
+
+    const mblNo = response?.data?.[0]?.mblNo;
+    const result = await checkDischargeDoneForBLData({ blno: mblNo });
+
+    const chargers = result?.Chargers ?? result?.data?.Chargers;
+    const dischargeDone = chargers?.dischargeDone;
+
+    if (chargers?.message === "BL not found" || dischargeDone === "N") {
+      const confirmProceed = window.confirm(
+        "Against this BL Discharge Activity is not there.\n\nDo you want to continue and flow the charges?"
+      );
+
+      if (!confirmProceed) {
+        setStateVariable((prev) => ({
+          ...prev,
+          blId: "",
+          // blIddropdown: null,
+          blIddropdown: [],
+        }));
+        return false;
+      }
+
+      await getBlCharges({ newState, values, setStateVariable });
+      return true;
+    }
+
+    if (dischargeDone === "Y") {
+      await getBlCharges({ newState, values, setStateVariable });
+      return true;
+    }
+
+    return false;
   } catch (err) {
     console.error("checkDisChargeActivityBl error:", err);
     toast.error("Failed to validate BL discharge activity. Please try again.");
@@ -12231,49 +12405,132 @@ const setPartyLedgerData = async (obj) => {
     };
   }
 }
+// const getChargeForTariff = async (obj) => {
+//   const { args, values, fieldName, newState, setStateVariable } = obj;
+
+//   try {
+//     // const argNames = args.split(",").map((arg) => arg.trim());
+//     //const blId = newState[argNames[0]]; // e.g., "blId"
+//     const {
+//       //labourRate,
+//       //agentId,
+//       depotId
+//     } = newState;
+//     const { repairLocationId, repairTypeId, componentId, dimension } = values;
+//     const requestData = {
+//       //labourRate: labourRate,
+//       // agentId: agentId,
+
+//       repairLocationId: repairLocationId,
+//       repairTypeId: repairTypeId,
+//       componentId: componentId,
+//       dimension: dimension,
+//       depotId: depotId,
+//       //damageId: damageId,
+//       clientId: clientId
+//     };
+//     const res = await getChargeForTariffData(requestData);
+//     const chargers = res?.Chargers ?? res?.data?.Chargers;
+//     const labourHours = res?.Chargers ?? res?.data?.Chargers[0].labourHours
+//     const materialCost = res?.Chargers ?? res?.data?.Chargers[0].materialCost
+//     const quantity = res?.Chargers ?? res?.data?.Chargers[0].quantity
+//     const totalAmoumt = res?.Chargers ?? res?.data?.Chargers[0].totalAmoumt
+//     setStateVariable((prev) => ({
+//       ...prev,
+//       labourHours: labourHours || 0,
+//       materialCost:materialCost,
+//       totalAmoumt:totalAmoumt,
+//       quantity:quantity
+
+//     }));
+
+//     return {
+//       type: "success",
+//       result: true,
+//       message: "Billing party set successfully.",
+//       values: { ...values,  labourHours: labourHours || 0,
+//       materialCost:materialCost,
+//       totalAmoumt:totalAmoumt,
+//       quantity:quantity },
+//       newState: { ...newState,  labourHours: labourHours || 0,
+//       materialCost:materialCost,
+//       totalAmoumt:totalAmoumt,
+//       quantity:quantity },
+//     };
+
+//   } catch (error) {
+//     console.error("Error in setBillingPartyForBl:", error);
+//     return {
+//       type: "error",
+//       result: false,
+//       message: "Error while setting billing party. Please try again.",
+//     };
+//   }
+// };
+
 const getChargeForTariff = async (obj) => {
   const { args, values, fieldName, newState, setStateVariable } = obj;
 
   try {
-    // const argNames = args.split(",").map((arg) => arg.trim());
-    //const blId = newState[argNames[0]]; // e.g., "blId"
-    const {
-      labourRate,
-      agentId,
-      depotId
-    } = newState;
-    const { repairLocationId, repairTypeId, componentId, damageId } = values;
+    const { depotId } = newState;
+    const { repairLocationId, repairTypeId, componentId, dimension } = values;
+
     const requestData = {
-      labourRate: labourRate,
-      agentId:agentId,
-      depotId:depotId,
-      repairLocationId: repairLocationId,
-      repairTypeId: repairTypeId,
-      componentId: componentId,
-      damageId: damageId,
-      clientId: clientId
+      repairLocationId,
+      repairTypeId,
+      componentId,
+      dimension,
+      depotId,
+      clientId,
     };
+
     const res = await getChargeForTariffData(requestData);
-    const chargers = res?.Chargers ?? res?.data?.Chargers;
-    // setStateVariable((prev) => ({
-    //   ...prev,
-    //   billingPartyId: billingPartyId || 0,
-    // }));
 
-    // return {
-    //   type: "success",
-    //   result: true,
-    //   message: "Billing party set successfully.",
-    //   values: { ...values, billingPartyId: billingPartyId || 0 },
-    //   newState: { ...newState, billingPartyId: billingPartyId || 0 },
-    // };
+    // Pick correct charge object
+    const chargeData = Array.isArray(res?.Chargers)
+      ? res.Chargers[0]
+      : Array.isArray(res?.data?.Chargers)
+        ? res.data.Chargers[0]
+        : res?.Chargers || res?.data?.Chargers || {};
 
+    const labourHours = chargeData?.labourHours ?? 0;
+    const materialCost = chargeData?.materialCost ?? 0;
+    const quantity = chargeData?.quantity ?? null;
+    const totalAmoumt = chargeData?.totalAmoumt ?? 0;
+
+    setStateVariable((prev) => ({
+      ...prev,
+      labourHours,
+      materialCost,
+      quantity,
+      totalAmoumt,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "Charge data set successfully.",
+      values: {
+        ...values,
+        labourHours,
+        materialCost,
+        quantity,
+        totalAmoumt,
+      },
+      newState: {
+        ...newState,
+        labourHours,
+        materialCost,
+        quantity,
+        totalAmoumt,
+      },
+    };
   } catch (error) {
-    console.error("Error in setBillingPartyForBl:", error);
+    console.error("Error in getChargeForTariff:", error);
     return {
       type: "error",
       result: false,
-      message: "Error while setting billing party. Please try again.",
+      message: "Error while setting charge data. Please try again.",
     };
   }
 };
@@ -12294,7 +12551,7 @@ const setGLSacDetailsGeneral = async (obj) => {
     chargeId: values?.chargeId,
     voucherTypeId: newState?.voucherTypeId,
     companyId: companyId,
-    glId:values?.chargeGlId
+    glId: values?.chargeGlId
   };
 
   const response = await getGLChargeDetails(requestBody);
@@ -12337,6 +12594,447 @@ const setGLSacDetailsGeneral = async (obj) => {
       isCheck: false,
       newState,
       formControlData,
+    };
+  }
+};
+const getInvoiceDetailsKJS = async (obj) => {
+  let {
+    args,
+    newState,
+    formControlData,
+    setFormControlData,
+    values,
+    fieldName,
+    tableName,
+    setStateVariable,
+  } = obj;
+  let argNames;
+  let splitArgs = [];
+  if (
+    args === undefined ||
+    args === null ||
+    args === "" ||
+    (typeof args === "object" && Object.keys(args).length === 0)
+  ) {
+    argNames = args;
+  } else {
+    argNames = args.split(",").map((arg) => arg.trim());
+    for (const iterator of argNames) {
+      splitArgs.push(iterator.split("."));
+    }
+  }
+  const { billingPartyBranchId } = newState;
+  // const { chargeId, chargeGlId, SelectedParentInvId } = values;
+  const { companyId, clientId, branchId } = getUserDetails();
+  const request = {
+    columns: "stateId,taxRegistrationNo",
+    tableName: `tblGlGst`,
+    whereCondition: `companyBranchId = ${billingPartyBranchId}`,
+    clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+  };
+
+  const fetchInvoice = await fetchReportData(request);
+  try {
+    const response = await fetchReportData(request);
+
+    if (!response || !response.data || response.data.length === 0) {
+      console.warn("No data found for billing party:", request);
+      return {
+        type: "warning",
+        result: false,
+        message: "No address found for the selected billing party.",
+      };
+    }
+
+    const name = response.data[0]?.stateId || ""; // Use optional chaining to prevent undefined error
+    const gstinNo = response.data[0]?.taxRegistrationNo || "";
+
+    const requestGst = {
+      columns: "id",
+      tableName: `tblGlGst`,
+      whereCondition: `taxRegistrationNo = '${gstinNo}' and clientId=${clientId}`,
+      clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+    };
+
+    const gstData = await fetchReportData(requestGst);
+    const taxRegistrationNos = gstData.data[0]?.id || "";
+
+    setStateVariable((prev) => ({
+      ...prev,
+      billingPartyStateId: name,
+      billingPartyGstinNoId: taxRegistrationNos,
+      placeOfSupplyStateId: name,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      newState: {
+        ...newState,
+      },
+      values: values,
+      message: "Data found !",
+    };
+  } catch (error) {
+    console.error("Error fetching branch address:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Error fetching address. Please try again.",
+    };
+  }
+};
+
+const setSizeTypeData = async (obj) => {
+  const { args, values, fieldName, newState, setStateVariable } = obj;
+  const { companyId, branchId } = getUserDetails();
+
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+    const containerId = values[argNames[0]];
+
+    if (!containerId) {
+      return {
+        type: "warning",
+        result: false,
+        message: "containerNo is missing. Please select a BL first.",
+      };
+    }
+
+    const requestObj = {
+      columns: "sizeId,typeId,agentId",
+      tableName: "tblContainer",
+      whereCondition: `id = ${containerId}`,
+      clientIdCondition: "status = 1 FOR JSON PATH, INCLUDE_NULL_VALUES",
+    };
+
+    const response = await fetchReportData(requestObj);
+    console.log("response", response);
+
+    const containerData = response?.data?.[0];
+    const size = response?.data?.[0].sizeId;
+    const type = response?.data?.[0].typeId;
+    console.log("containerData", containerData);
+
+    //const { blNo, blId } = jobData || {};
+
+    setStateVariable((prev) => ({
+      ...prev,
+      sizeId: size || "",
+      typeId: type || null,
+      agentId: companyId,
+      agentBranchId: branchId
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "BL data set successfully.",
+      values: {
+        ...values, sizeId: size || "",
+        typeId: type || null, agentId: companyId, agentBranchId: branchId
+      },
+      newState: {
+        ...newState, sizeId: size || "",
+        typeId: type || null, agentId: companyId, agentBranchId: branchId
+      },
+    };
+  } catch (error) {
+    console.error("Error in setBlData:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Error while setting BL data. Please try again.",
+    };
+  }
+};
+
+const parentCurrency = async (obj) => {
+  const { args, values, fieldName, newState, setStateVariable } = obj;
+  const { companyId, branchId } = getUserDetails();
+
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+    const childCurrencyId = values[argNames[0]];
+    const currencyId = newState.currencyId;
+    const invoiceDate = newState.invoiceDate;
+
+    const requestObj = {
+      columns: "importExchangeRate",
+      tableName: "tblExchangeRate",
+      whereCondition: `fromCurrencyId=${currencyId} and toCurrencyId=${childCurrencyId} and effectiveDate='${invoiceDate}'`,
+      clientIdCondition: "status = 1 FOR JSON PATH, INCLUDE_NULL_VALUES",
+    };
+
+    const response = await fetchReportData(requestObj);
+    const containerData = response?.data?.[0];
+    const exchangeRate = response?.data?.[0].importExchangeRate;
+    console.log("containerData", containerData);
+
+    setStateVariable((prev) => ({
+      ...prev,
+      exchangeRate: exchangeRate || "",
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "BL data set successfully.",
+      values: {
+        ...values
+      },
+      newState: {
+        ...newState,
+      },
+    };
+  } catch (error) {
+    console.error("Error in setBlData:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Error while setting BL data. Please try again.",
+    };
+  }
+};
+// const calculateBaseOnCurrency = async (obj) => {
+//   const { args, values, fieldName, newState, setStateVariable } = obj;
+//   const { companyId } = getUserDetails();
+
+//   try {
+//     const argNames = args.split(",").map((arg) => arg.trim());
+
+//     // currency selected in child row / form values
+//     const childCurrencyId = values[argNames[0]];
+//     const currencyId = newState.currencyId;
+//     const ParentExchangeRate = newState.exchangeRate;
+//     const qty = values[argNames[1]];
+//     const exchangeRate = values[argNames[2]];
+//     const rate = values[argNames[3]];
+//     const request = {
+//       columns: "currencyId",
+//       tableName: "tblCompanyParameter",
+//       whereCondition: `companyId=${companyId}`,
+//       clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+//     };
+
+//     const response = await fetchReportData(request);
+//     const homeCurrencyId = response?.data?.[0]?.currencyId;
+//     if (homeCurrencyId == currencyId) {
+//       if (currencyId != childCurrencyId) {
+//         let totalAmount = 0;
+//         let totalAmountHc = 0;
+//         totalAmount = qty * rate * exchangeRate;
+//         totalAmountHc = qty * rate * exchangeRate;
+//         if (setStateVariable) {
+//           setStateVariable((prev) => ({
+//             ...prev,
+//             totalAmountHc: totalAmountHc,
+//             totalAmountFc: totalAmount
+//           }));
+//         }
+//       }
+//       else if (currencyId == childCurrencyId) {
+//         let totalAmount = 0;
+//         let totalAmountHc = 0;
+//         totalAmount = qty * rate * exchangeRate;
+//         totalAmountHc = qty * rate * exchangeRate;
+//         if (setStateVariable) {
+//           setStateVariable((prev) => ({
+//             ...prev,
+//             totalAmountHc: totalAmountHc,
+//             totalAmountFc: totalAmount
+//           }));
+//         }
+//       }
+//       return {
+//         type: "success",
+//         result: true,
+//         message: "Currency-based amount calculated successfully.",
+//         values: {
+//           ...values,
+//           totalAmountHc: totalAmount,
+//           totalAmountFc: totalAmount,
+//         },
+//         newState: {
+//           ...newState,
+//           totalAmountHc: totalAmount,
+//           totalAmountFc: totalAmount
+//         },
+//       };
+
+//     }
+//     else if (homeCurrencyId != currencyId) {
+//       let totalAmount = 0;
+//       let totalAmountHc = 0;
+//       if (currencyId !== childCurrencyId) {
+//         totalAmount = qty * rate * exchangeRate;
+//         totalAmountHc = qty * rate;
+
+//         if (setStateVariable) {
+//           setStateVariable((prev) => ({
+//             ...prev,
+//             totalAmountHc: totalAmountHc,
+//             totalAmountFc: totalAmount
+//           }));
+//         }
+//       }
+//       else if (currencyId == childCurrencyId) {
+//         totalAmountHc = qty * rate * ParentExchangeRate;
+//         totalAmount = qty * rate * exchangeRate;
+//         if (setStateVariable) {
+//           setStateVariable((prev) => ({
+//             ...prev,
+//             totalAmountHc: totalAmountHc,
+//             totalAmountFc: totalAmount
+//           }));
+//         }
+//       }
+
+//       return {
+//         type: "success",
+//         result: true,
+//         message: "Currency-based amount calculated successfully.",
+//         values: {
+//           ...values,
+//           totalAmountHc: totalAmount,
+//           totalAmountFc: totalAmount,
+//         },
+//         newState: {
+//           ...newState,
+//           totalAmountHc: totalAmount,
+//           totalAmountFc: totalAmount
+//         },
+//       };
+//     }
+
+//   } catch (error) {
+//     console.error("Error in calculateBaseOnCurrency:", error);
+//     return {
+//       type: "error",
+//       result: false,
+//       message: "Error while calculating amount based on currency.",
+//     };
+//   }
+// };
+const calculateBaseOnCurrency = async (obj) => {
+  const { args, values, fieldName, newState, setStateVariable } = obj;
+  const { companyId } = getUserDetails();
+
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+
+    const childCurrencyId = values[argNames[0]];
+    const currencyId = newState.currencyId;
+    const ParentExchangeRate = newState.exchangeRate || 0;
+    const qty = values[argNames[1]] || 0;
+    const exchangeRate = values[argNames[2]] || 0;
+    const rate = values[argNames[3]] || 0;
+
+    const request = {
+      columns: "currencyId",
+      tableName: "tblCompanyParameter",
+      whereCondition: `companyId=${companyId}`,
+      clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+    };
+
+    const response = await fetchReportData(request);
+    const homeCurrencyId = response?.data?.[0]?.currencyId;
+
+    let totalAmount = 0;
+    let totalAmountHc = 0;
+
+    if (homeCurrencyId == currencyId) {
+      if (currencyId != childCurrencyId) {
+        totalAmount = Number(qty * rate * exchangeRate).toFixed(2);
+        totalAmountHc = Number(qty * rate * exchangeRate).toFixed(2);
+      } else if (currencyId == childCurrencyId) {
+        totalAmount = Number(qty * rate * exchangeRate).toFixed(2);
+        totalAmountHc = Number(qty * rate * exchangeRate).toFixed(2);
+      }
+    } else if (homeCurrencyId != currencyId) {
+      if (currencyId != childCurrencyId) {
+        totalAmount = Number(qty * rate * exchangeRate).toFixed(2);
+        totalAmountHc = Number(qty * rate).toFixed(2);
+      } else if (currencyId == childCurrencyId) {
+        totalAmountHc = Number(
+          ParentExchangeRate != 0 ? (qty * rate) / ParentExchangeRate : 0
+        ).toFixed(2);
+        totalAmount = Number(qty * rate * exchangeRate).toFixed(2);
+      }
+    }
+
+    if (setStateVariable) {
+      setStateVariable((prev) => ({
+        ...prev,
+        totalAmountHc: totalAmountHc,
+        totalAmountFc: totalAmount,
+      }));
+    }
+
+    return {
+      type: "success",
+      result: true,
+      message: "Currency-based amount calculated successfully.",
+      values: {
+        ...values,
+        totalAmountHc: totalAmountHc,
+        totalAmountFc: totalAmount,
+      },
+      newState: {
+        ...newState,
+        totalAmountHc: totalAmountHc,
+        totalAmountFc: totalAmount,
+      },
+    };
+  } catch (error) {
+    console.error("Error in calculateBaseOnCurrency:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Error while calculating amount based on currency.",
+    };
+  }
+};
+const labourRate = async (obj) => {
+  const { args, values, fieldName, newState, setStateVariable } = obj;
+  const { companyId, branchId } = getUserDetails();
+
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+    const depotId = values[argNames[0]];
+
+    const requestObj = {
+      columns: "labourRate",
+      tableName: "tblRepairTariff",
+      whereCondition: `depotId=${depotId}`,
+      clientIdCondition: "status = 1 FOR JSON PATH, INCLUDE_NULL_VALUES",
+    };
+
+    const response = await fetchReportData(requestObj);
+    const labourRate = response?.data?.[0].labourRate;
+
+    setStateVariable((prev) => ({
+      ...prev,
+      labourRate: labourRate || "",
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "labourRate data set successfully.",
+      values: {
+        ...values
+      },
+      newState: {
+        ...newState,
+      },
+    };
+  } catch (error) {
+    console.error("Error in labourRate:", error);
+    return {
+      type: "error",
+      result: false,
+      message: "Error while setting BL data. Please try again.",
     };
   }
 };
@@ -12490,5 +13188,10 @@ export {
   activityDateCompare,
   setPartyLedgerData,
   getChargeForTariff,
-  setGLSacDetailsGeneral
+  setGLSacDetailsGeneral,
+  getInvoiceDetailsKJS,
+  setSizeTypeData,
+  parentCurrency,
+  calculateBaseOnCurrency,
+  labourRate
 };

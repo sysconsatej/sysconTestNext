@@ -42,7 +42,7 @@ const PNLGrid = forwardRef(
       selectedRadioType, // B / P
       toggle,
     },
-    ref
+    ref,
   ) => {
     if (!balanceSheetData || balanceSheetData.length === 0)
       return <div>No Data Found</div>;
@@ -81,21 +81,26 @@ const PNLGrid = forwardRef(
         ? rawData.filter(
             (r) =>
               r.BalanceSheetName === "Assets" ||
-              r.BalanceSheetName === "Liability"
+              r.BalanceSheetName === "Liability",
           )
         : rawData.filter(
             (r) =>
               r.BalanceSheetName === "Income" ||
-              r.BalanceSheetName === "Expense"
+              r.BalanceSheetName === "Expense",
           );
 
     // ==========================================================
     // ✅ ✅ ✅ D MODE → SINGLE EXACT BALANCE SHEET TABLE
     // ==========================================================
     if (isDetail) {
+      const appBaseUrl =
+        typeof window !== "undefined"
+          ? window.location.origin.replace(/\/$/, "")
+          : "";
+
       return (
         <BalanceDetailedGrid
-          ref={innerGridRef} // ✅✅✅ CRITICAL FIX
+          ref={innerGridRef}
           balanceSheetData={filteredData}
           netProfit={balanceSheetData[0]?.netProfit}
           selectedRadio="D"
@@ -103,6 +108,8 @@ const PNLGrid = forwardRef(
           reportType={selectedRadioType}
           grossProfit={balanceSheetData[0]?.grossProfit}
           toggle={toggle}
+          enableGlNameClick={selectedRadio === "D" && selectedRadioType === "B"}
+          glNameRedirectUrl={`${appBaseUrl}/accountingReports/TrialBalanceNew`}
         />
       );
     }
@@ -122,7 +129,7 @@ const PNLGrid = forwardRef(
       type,
       selectedRadio,
       eliminateZero,
-      selectedRadioType
+      selectedRadioType,
     ) => {
       const map = {};
 
@@ -178,7 +185,7 @@ const PNLGrid = forwardRef(
       leftType,
       selectedRadio,
       eliminateZero,
-      selectedRadioType
+      selectedRadioType,
     );
 
     const incomeArr = groupByTB1Array(
@@ -186,7 +193,7 @@ const PNLGrid = forwardRef(
       rightType,
       selectedRadio,
       eliminateZero,
-      selectedRadioType
+      selectedRadioType,
     );
 
     // ==========================================================
@@ -208,7 +215,7 @@ const PNLGrid = forwardRef(
         // ✅ Find TB group having tbGrouptype === "D" (INSIDE P&L ONLY)
         const findInsertIndex = (arr, sourceType) => {
           const sourceRow = rawData.find(
-            (r) => r.tbGrouptype === "D" && r.BalanceSheetName === sourceType
+            (r) => r.tbGrouptype === "D" && r.BalanceSheetName === sourceType,
           );
 
           if (!sourceRow) return -1;
@@ -318,12 +325,12 @@ const PNLGrid = forwardRef(
     // ✅ Totals now respect all sign rules (Liability & Income flipped; Expense positive)
     const expenseTotal = expenseArr.reduce(
       (a, b) => a + (b.isGross ? 0 : Number(b.calcAmt ?? b.amt ?? 0)),
-      0
+      0,
     );
 
     const incomeTotal = incomeArr.reduce(
       (a, b) => a + (b.isGross ? 0 : Number(b.calcAmt ?? b.amt ?? 0)),
-      0
+      0,
     );
 
     const exportSModeExcel = async () => {
@@ -496,17 +503,17 @@ const PNLGrid = forwardRef(
           // ✅ EXACT UI SPLIT (same as your frontend)
           // -----------------------------
           const expDirect = expenseArr.filter(
-            (r) => r.grpType === "D" && !r.isGross && !r.isNet
+            (r) => r.grpType === "D" && !r.isGross && !r.isNet,
           );
           const expIndirect = expenseArr.filter(
-            (r) => r.grpType !== "D" && !r.isGross && !r.isNet
+            (r) => r.grpType !== "D" && !r.isGross && !r.isNet,
           );
 
           const incDirect = incomeArr.filter(
-            (r) => r.grpType === "D" && !r.isGross && !r.isNet
+            (r) => r.grpType === "D" && !r.isGross && !r.isNet,
           );
           const incIndirect = incomeArr.filter(
-            (r) => r.grpType !== "D" && !r.isGross && !r.isNet
+            (r) => r.grpType !== "D" && !r.isGross && !r.isNet,
           );
 
           const grossRow =
@@ -659,13 +666,13 @@ const PNLGrid = forwardRef(
           // 4) Expense (Indirect)
           addSectionHeader("Expense");
           expIndirect.forEach((r) =>
-            addItemRow(r.name, Math.abs(r.amt), false)
+            addItemRow(r.name, Math.abs(r.amt), false),
           );
 
           // 5) Income (Indirect)
           addSectionHeader("Income");
           incIndirect.forEach((r) =>
-            addItemRow(r.name, Math.abs(r.amt), false)
+            addItemRow(r.name, Math.abs(r.amt), false),
           );
 
           // 6) Net Profit/Loss (bold)
@@ -866,17 +873,17 @@ const PNLGrid = forwardRef(
 
         // ✅ EXACT UI logic split
         const expDirect = expenseArr.filter(
-          (r) => r.grpType === "D" && !r.isGross && !r.isNet
+          (r) => r.grpType === "D" && !r.isGross && !r.isNet,
         );
         const expIndirect = expenseArr.filter(
-          (r) => r.grpType !== "D" && !r.isGross && !r.isNet
+          (r) => r.grpType !== "D" && !r.isGross && !r.isNet,
         );
 
         const incDirect = incomeArr.filter(
-          (r) => r.grpType === "D" && !r.isGross && !r.isNet
+          (r) => r.grpType === "D" && !r.isGross && !r.isNet,
         );
         const incIndirect = incomeArr.filter(
-          (r) => r.grpType !== "D" && !r.isGross && !r.isNet
+          (r) => r.grpType !== "D" && !r.isGross && !r.isNet,
         );
 
         const grossRow =
@@ -1328,17 +1335,17 @@ const PNLGrid = forwardRef(
                     {selectedRadio === "S" && selectedRadioType === "P" ? (
                       (() => {
                         const expDirect = expenseArr.filter(
-                          (r) => r.grpType === "D" && !r.isGross && !r.isNet
+                          (r) => r.grpType === "D" && !r.isGross && !r.isNet,
                         );
                         const expIndirect = expenseArr.filter(
-                          (r) => r.grpType !== "D" && !r.isGross && !r.isNet
+                          (r) => r.grpType !== "D" && !r.isGross && !r.isNet,
                         );
 
                         const incDirect = incomeArr.filter(
-                          (r) => r.grpType === "D" && !r.isGross && !r.isNet
+                          (r) => r.grpType === "D" && !r.isGross && !r.isNet,
                         );
                         const incIndirect = incomeArr.filter(
-                          (r) => r.grpType !== "D" && !r.isGross && !r.isNet
+                          (r) => r.grpType !== "D" && !r.isGross && !r.isNet,
                         );
 
                         const grossRow =
@@ -1447,13 +1454,13 @@ const PNLGrid = forwardRef(
                             {/* 1) Expense -> Direct */}
                             {sectionHeader("Expense", "SEC-EXP-D")}
                             {expDirect.map((r, i) =>
-                              renderRow(r, `EXP-D-${i}`)
+                              renderRow(r, `EXP-D-${i}`),
                             )}
 
                             {/* 2) Income -> Direct */}
                             {sectionHeader("Income", "SEC-INC-D")}
                             {incDirect.map((r, i) =>
-                              renderRow(r, `INC-D-${i}`)
+                              renderRow(r, `INC-D-${i}`),
                             )}
 
                             {/* 3) Gross Profit */}
@@ -1462,13 +1469,13 @@ const PNLGrid = forwardRef(
                             {/* 4) Expense -> Indirect */}
                             {sectionHeader("Expense", "SEC-EXP-I")}
                             {expIndirect.map((r, i) =>
-                              renderRow(r, `EXP-I-${i}`)
+                              renderRow(r, `EXP-I-${i}`),
                             )}
 
                             {/* 6) Income -> Indirect */}
                             {sectionHeader("Income", "SEC-INC-I")}
                             {incIndirect.map((r, i) =>
-                              renderRow(r, `INC-I-${i}`)
+                              renderRow(r, `INC-I-${i}`),
                             )}
 
                             {/* 7) Net Profit/Loss */}
@@ -1481,7 +1488,7 @@ const PNLGrid = forwardRef(
                             {totalRow(
                               "Total Income",
                               Math.abs(incomeTotal),
-                              "TOT-INC"
+                              "TOT-INC",
                             )}
                           </>
                         );
@@ -1670,7 +1677,7 @@ const PNLGrid = forwardRef(
         </div>
       </Paper>
     );
-  }
+  },
 );
 
 export default PNLGrid;

@@ -1,48 +1,57 @@
 "use client";
-
+/* eslint-disable */
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
 import styles from "@/app/app.module.css";
-import CustomeInputFields from "@/components/Inputs/formCreationCustomeInput";
+import CustomeInputFields from "@/components/Inputs/customeInputFields";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import IconButton from "@mui/material/IconButton";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
-import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
+import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
-import {
-
-  addLogo,
-  
-  plusIconHover,
-} from "@/assets";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
-import { saveIcon, saveIconHover, refreshIcon, revertHover } from "@/assets";
+import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
+import HoverIcon from "@/components/HoveredIcons/HoverIcon";
+import {
+  refreshIcon,
+  revertHover,
+  saveIcon,
+  saveIconHover,
+  addLogo,
+  plusIconHover,
+} from "@/assets";
 import LightTooltip from "@/components/Tooltip/customToolTip";
-import { hasBlackValues } from "@/helper/checkValue";
-import EditSubChildComponent from "@/app/(groupControl)/createFormControl/addEdit/EditSubChildComponent";
-import { dynamicDropDownFieldsData } from "@/services/auth/FormControl.services";
+import EditSubChildComponent from "@/app/(groupControl)/formControl/addEdit/EditSubChildComponent";
 import PropTypes from "prop-types";
 import InputBase from "@mui/material/InputBase";
 import Divider from "@mui/material/Divider";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
-import { toast } from "react-toastify";
+import Accordion from "@mui/material/Accordion";
+import AccordionSummary from "@mui/material/AccordionSummary";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import Typography from "@mui/material/Typography";
+import { toast, ToastContainer } from "react-toastify";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-
 import {
-  childTableHeaderStyle,
+  SummaryStyles,
+  childAccordionSection,
   createAddEditPaperStyles,
-  gridSubChildIconStyles,
   searchInputStyling,
+  childTableHeaderStyle,
+  gridSubChildIconStyles,
+  childTableRowStyles,
+  gridEditIconStyles,
+  totalSumChildStyle,
 } from "@/app/globalCss";
-import HoverIcon from "@/components/HoveredIcons/HoverIcon";
 import EditNoteRoundedIcon from "@mui/icons-material/EditNoteRounded";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
-
+import * as onSubmitValidation from "@/helper/onSubmitFunction";
 function sortJSON(jsonArray, field, sortOrder) {
   return jsonArray.sort((a, b) => {
     const valueA = a[field];
@@ -59,6 +68,50 @@ function sortJSON(jsonArray, field, sortOrder) {
     }
   });
 }
+function onSubmitFunctionCall(
+  functionData,
+  newState,
+  formControlData,
+  values,
+  setStateVariable,
+  childName,
+  childIndex,
+) {
+  debugger;
+  const funcNameMatch = functionData?.match(/^(\w+)/);
+  const argsMatch = functionData?.match(/\((.*)\)/);
+  console.log(functionData, "functionData");
+  // Check if we have a function name match, and we have an argsMatch (even if there are no arguments)
+  if (funcNameMatch && argsMatch !== null) {
+    const funcName = funcNameMatch[1];
+    const argsStr = argsMatch[1] || "";
+
+    // Find the function in formControlValidation by the extracted name
+    const func = onSubmitValidation?.[funcName];
+
+    if (typeof func === "function") {
+      // Prepare arguments: If there are no arguments, argsStr will be an empty string
+      let args;
+      if (argsStr === "") {
+        args = {}; // No arguments, so pass an empty object or as per the function's expected parameters
+      } else {
+        args = argsStr; // Has arguments, pass them as an object
+      }
+      // Call the function with the prepared arguments
+      let result = onSubmitValidation?.[funcName]({
+        args,
+        newState,
+        formControlData,
+        values,
+        setStateVariable,
+        childName,
+        childIndex,
+      });
+      return result;
+      // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
+    }
+  }
+}
 
 SubChildComponent.propTypes = {
   subChild: PropTypes.any,
@@ -69,12 +122,28 @@ SubChildComponent.propTypes = {
   childName: PropTypes.any,
   childIndex: PropTypes.any,
   setSubChildComponent: PropTypes.any,
-  childType: PropTypes.any,
   expandAll: PropTypes.any,
-  filterData: PropTypes.any,
-  containerWidth: PropTypes.any
+  inEditMode: PropTypes.any,
+  originalData: PropTypes.any,
+  isView: PropTypes.any,
+  setOpenModal: PropTypes.any,
+  setParaText: PropTypes.any,
+  setIsError: PropTypes.any,
+  setTypeofModal: PropTypes.any,
+  clearFlag: PropTypes.any,
+  setClearFlag: PropTypes.any,
+  containerWidth: PropTypes.any,
+  submitNewState: PropTypes.any,
+  setSubmitNewState: PropTypes.any,
+  keyValue: PropTypes.any,
+  setSubChildViewData: PropTypes.any,
+  formControlData: PropTypes.any,
+  setFormControlData: PropTypes.any,
 };
+
 export default function SubChildComponent({
+  indexValue,
+  section,
   subChild,
   row,
   index,
@@ -83,19 +152,30 @@ export default function SubChildComponent({
   childName,
   childIndex,
   setSubChildComponent,
-  childType,
   expandAll,
-  filterData,
+  inEditMode,
+  originalData,
+  isView,
+  setOpenModal,
+  setParaText,
+  setIsError,
+  setTypeofModal,
+  clearFlag,
+  setClearFlag,
   containerWidth,
+  submitNewState,
+  setSubmitNewState,
+  keyValue,
+  setSubChildViewData,
+  formControlData,
+  setFormControlData,
 }) {
   const [hideSubChildInputs, setHideSubChildInputs] = useState(
     expandAll
-      ? row[subChild?.tableName] &&
-        row[subChild?.tableName]?.length === 0 &&
-        subChild?.tableName === "fields"
+      ? row[subChild?.tableName] && row[subChild?.tableName]?.length === 0
         ? false
         : true
-      : false
+      : false,
   );
   const [subChildObject, setSubChildObject] = useState({});
   const [renderedData, setRenderedData] = useState([]);
@@ -105,104 +185,16 @@ export default function SubChildComponent({
   const [prevSearchInput, setPrevSearchInput] = useState("");
   const [isAscending, setIsAscending] = useState(true);
   const [sortedColumn, setSortedColumn] = useState(null);
-  const [dummyData, setDummyData] = useState([]);
   const [isGridEdit, setIsGridEdit] = useState(false);
   const [copyChildValueObj, setCopyChildValueObj] = useState([]);
-
-  function handleControlDefaultValue() {
-    let tempnewState = [];
-    subChild?.fields.forEach((element) => {
-      tempnewState = {
-        ...tempnewState,
-        [element.fieldname]: element.controlDefaultValue,
-      };
-
-      if (element.controlname.toLowerCase() === "radio") {
-        if (element.controlDefaultValue != null) {
-          tempnewState = {
-            ...tempnewState,
-            [element.fieldname]: element.controlDefaultValue,
-          };
-        }
-      }
-
-      if (element.controlname.toLowerCase() === "date") {
-        tempnewState = {
-          ...tempnewState,
-          [`${element.fieldname}datetime`]:
-            element.controlDefaultValue == null
-              ? "null"
-              : new Date(element.controlDefaultValue),
-          [element.fieldname]: element.controlDefaultValue,
-        };
-      }
-      if (element.controlname.toLowerCase() === "dropdown") {
-        if (element.controlDefaultValue != null) {
-          tempnewState = {
-            ...tempnewState,
-            [`${element.fieldname}dropdown`]: element.controlDefaultValue,
-            [element.fieldname]: element.controlDefaultValue[0].value || "",
-          };
-        }
-      }
-      if (element.controlname.toLowerCase() === "multiselect") {
-        if (element.controlDefaultValue != null) {
-          tempnewState = {
-            ...tempnewState,
-            [`${element.fieldname}multiselect`]: element.controlDefaultValue,
-            [element.fieldname]: element.controlDefaultValue[0].value || "",
-          };
-        }
-      }
-    });
-
-    setSubChildObject((prev) => {
-      return { ...prev, ...tempnewState };
-    });
-  }
-
-  useEffect(() => {
-    handleControlDefaultValue();
-  }, []);
-
-  useEffect(() => {
-    setRenderedData(
-      newState[childName][childIndex][subChild.tableName]?.slice(0, 10)
-    );
-    setDummyData(
-      newState[childName][childIndex][subChild.tableName]?.slice(0, 10)
-    );
-  }, [newState]);
-
-  useEffect(() => {
-    if (
-      childType === "subChild" &&
-      row[subChild?.tableName] &&
-      row[subChild?.tableName]?.length === 0
-    ) {
-      setHideSubChildInputs(false);
-    }
-  }, [childType]);
-
-  async function getDynamicFieldsData(values) {
-    // console.log("values", values);
-    let refrenceTableObj = {
-      onfilterkey: "child.subChild.tableName",
-      referenceTable: "master_schema.child.subChild.fields",
-      referenceColumn: "$child.subChild.fields.fieldname",
-      onfiltervalue: values.tableName,
-    };
-    // Api call for dynamic fields values
-    const apiResponse = await dynamicDropDownFieldsData(refrenceTableObj);
-    if (apiResponse.success) {
-      subChild["4thchild"][0].fields[0].data = apiResponse.data;
-    } else {
-      console.log("Error : ", apiResponse.message);
-    }
-  }
+  const [columnTotals, setColumnTotals] = useState({ tableName: "" });
+  const [clickCount, setClickCount] = useState(0);
+  const [isChildAccordionOpen, setIschildAccordionOpen] = useState(false);
+  const [inputFieldsVisible, setInputFieldsVisible] = useState(
+    newState[subChild.tableName] !== null ? false : true,
+  );
 
   const handleFieldSubChildrenValuesChange = (updatedValues) => {
-    getDynamicFieldsData(updatedValues);
     setSubChildObject((prev) => ({ ...prev, ...updatedValues }));
   };
 
@@ -210,31 +202,128 @@ export default function SubChildComponent({
     setHideSubChildInputs((prev) => !prev);
   };
 
-  const subChildButtonDataHandler = (subChildObject, subChild) => {
-    if (
-      Object.keys(subChildObject).length === 0 ||
-      hasBlackValues(subChildObject)
-    ) {
-      return;
+  useEffect(() => {
+    setIschildAccordionOpen(expandAll);
+  }, [expandAll]);
+
+  const closeSubChildComponent = () => {
+    setSubChildObject({ ...subChildObject });
+    setSubChildComponent((prev) => !prev);
+    setSubChildViewData((prev) => prev.filter((item) => item !== keyValue));
+  };
+
+  const subChildButtonDataHandler = (
+    subChildObject,
+    indexValue,
+    subChild,
+    islastTab,
+  ) => {
+    if (isChildAccordionOpen) {
+      setClickCount((prevCount) => prevCount + 1);
     }
-    const tmpData = { ...newState };
-    tmpData[childName][childIndex][subChild.tableName].push(subChildObject);
-    setNewState((pre) => {
-      return { ...pre, ...tmpData };
-    });
-    setSubChildObject({});
-    hideSubChildInputComponent();
+
+    inputFieldsVisible == false && setInputFieldsVisible((prev) => !prev);
+    if (inputFieldsVisible) {
+      if (Object.keys(subChildObject).length !== 0) {
+        for (const feild of subChild.fields) {
+          if (
+            feild.isRequired &&
+            (!Object.prototype.hasOwnProperty.call(
+              subChildObject,
+              feild.fieldname,
+            ) ||
+              subChildObject[feild.fieldname].toString().trim() === "")
+          ) {
+            toast.error(`Value for ${feild.yourlabel} is missing or empty.`);
+            return;
+          }
+        }
+        try {
+          if (subChild.functionOnSubmit && subChild.functionOnSubmit !== null) {
+            // subChild?.functionOnSubmit.split(";").forEach((e) => onSubmitFunctionCall(e, subChildObject));
+            for (const fun of subChild?.functionOnSubmit.split(";") || []) {
+              debugger;
+              let updatedData = onSubmitFunctionCall(
+                fun,
+                newState,
+                formControlData,
+                subChildObject,
+                setSubChildObject,
+                childName,
+                childIndex,
+              );
+              if (updatedData.alertShow == true) {
+                // if (updatedData.type == "success") {
+                //   toast.success(updatedData.message);
+
+                // }
+                // else {
+                // toast.error(updatedData.message);
+                setParaText(updatedData.message);
+                setIsError(true);
+                setOpenModal((prev) => !prev);
+                setTypeofModal("onCheck");
+                //   return
+                // }
+              }
+              if (updatedData) {
+                setSubChildObject((pre) => ({
+                  ...pre,
+                  ...updatedData?.values,
+                }));
+                setNewState((pre) => ({ ...pre, ...updatedData?.newState }));
+                setSubmitNewState((pre) => ({
+                  ...pre,
+                  ...updatedData?.newState,
+                }));
+              }
+            }
+          }
+        } catch (error) {
+          return toast.error(error.message);
+        }
+        // const tmpData = { ...newState };
+        const tmpData = JSON.parse(JSON.stringify(newState));
+        tmpData[childName][childIndex][subChild.tableName]?.push({
+          ...subChildObject,
+          isChecked: true,
+          indexValue: Math.floor(Math.random() * 100),
+        });
+
+        //
+        setNewState((pre) => {
+          if (JSON.stringify(pre) === JSON.stringify(tmpData)) return pre;
+          return { ...pre, ...tmpData };
+        });
+
+        setSubmitNewState((pre) => {
+          if (JSON.stringify(pre) === JSON.stringify(tmpData)) return pre;
+          return { ...pre, ...tmpData };
+        });
+        // setNewState((pre) => {
+        //   return { ...pre, ...tmpData };
+        // });
+        // setSubmitNewState((pre) => {
+        //   return { ...pre, ...tmpData };
+        // });
+        setSubChildObject({});
+        if (islastTab == true) {
+          setInputFieldsVisible((prev) => !prev);
+          return;
+        }
+        setInputFieldsVisible((prev) => !prev);
+      } else {
+        console.log("Please fill all the required fields");
+      }
+    }
   };
 
   const handleScroll = () => {
     const container = tableRef.current;
     if (container) {
       const { scrollTop, scrollHeight, clientHeight } = container;
-      // const isAtBottom = scrollTop + clientHeight === scrollHeight;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 2;
-
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
       if (isAtBottom) {
-        // console.log("You have reached the bottom of the scroll.");
         renderMoreData();
       }
     }
@@ -245,21 +334,142 @@ export default function SubChildComponent({
     const lastIndex = renderedData.length + 10;
     const newData = newState[childName][childIndex][subChild.tableName]?.slice(
       renderedData.length,
-      lastIndex
+      lastIndex,
     );
     setRenderedData((prevData) => [...prevData, ...newData]);
-    setDummyData((prevData) => [...prevData, ...newData]);
   };
+
+  const childExpandedAccordion = () => {
+    setIschildAccordionOpen((prev) => !prev);
+  };
+
+  // Function to calculate totals for a single row
+  const calculateTotalForRow = (rowData) => {
+    // Iterate over each field in the fields array
+    subChild.fields.forEach((item) => {
+      // Check if the field requires grid total and is of type 'number' or 'text'
+      if (
+        item.gridTotal &&
+        (item.type === "number" || item.type === "decimal")
+      ) {
+        const newValue =
+          item.gridTypeTotal === "s"
+            ? rowData?.reduce((sum, row) => {
+                const parsedValue =
+                  typeof row[item.fieldname] === "number"
+                    ? row[item.fieldname]
+                    : parseFloat(row[item.fieldname] || 0);
+                return isNaN(parsedValue) ? sum : sum + parsedValue;
+              }, 0) // Calculate sum for 's' type
+            : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
+        setColumnTotals((prevColumnTotals) => ({
+          ...prevColumnTotals,
+          tableName: subChild.tableName,
+          [item.fieldname]: newValue,
+        }));
+      }
+    });
+  };
+
+  useEffect(() => {
+    setRenderedData(
+      newState[childName]?.[childIndex]?.[subChild.tableName]?.slice(0, 10),
+    );
+    calculateTotalForRow(
+      newState[childName]?.[childIndex]?.[subChild.tableName],
+    );
+  }, [newState]);
 
   const deleteSubChildRecord = (indexValue) => {
     let tmpData = { ...newState };
     tmpData[childName][childIndex][subChild.tableName].splice(indexValue, 1);
-    setNewState((prev) => {
-      return { ...prev, ...tmpData };
-    });
+    if (subChild?.functionOnDelete && subChild?.functionOnDelete !== null) {
+      let functonsArray = subChild?.functionOnDelete?.trim().split(";");
+      // let functonsArray = ["setCalculateVolume(volume)"]
+      for (const fun of functonsArray) {
+        if (typeof onSubmitValidation[fun] == "function") {
+        }
+
+        let updatedData = onSubmitFunctionCall(
+          fun,
+          tmpData,
+          formControlData,
+          {},
+          setSubChildObject,
+          childName,
+          childIndex,
+        );
+        if (updatedData?.alertShow == true) {
+          // if (updatedData.type == "success") {
+          //   toast.success(updatedData.message);
+
+          // }
+          // else {
+          // toast.error(updatedData.message);
+          setParaText(updatedData.message);
+          setIsError(true);
+          setOpenModal((prev) => !prev);
+          setTypeofModal("onCheck");
+          // setClearFlag({
+          //   isClear: true,
+          //   fieldName: result.fieldName,
+          // });
+          // }
+        }
+        if (updatedData) {
+          // Data = updatedData.values
+          setNewState((prevState) => {
+            return {
+              ...prevState,
+              ...updatedData?.newState,
+            };
+          });
+          setSubmitNewState((prevState) => {
+            return {
+              ...prevState,
+              ...updatedData?.newState,
+            };
+          });
+        }
+      }
+    } else {
+      setNewState((prev) => {
+        return { ...prev, ...tmpData };
+      });
+      setSubmitNewState((prev) => {
+        return { ...prev, ...tmpData };
+      });
+    }
     if (tmpData[childName][childIndex][subChild.tableName].length === 0) {
       setHideSubChildInputs((prev) => !prev);
     }
+  };
+
+  // eslint-disable-next-line no-unused-vars
+  const removeSubChildRecordFromInsert = (id, index) => {
+    setSubmitNewState((prevState) => {
+      const newStateCopy = { ...newState, ...prevState };
+      // Assume each entry in the array has an 'id' property
+      let updatedData = newStateCopy[childName][childIndex][
+        subChild.tableName
+      ].filter((_, idx) => idx === index);
+
+      updatedData = { ...updatedData[0], isChecked: false };
+      newStateCopy[childName][childIndex][subChild.tableName][index] =
+        updatedData;
+      return newStateCopy;
+    });
+    setNewState((prevState) => {
+      const newStateCopy = { ...newState, ...prevState };
+      // Assume each entry in the array has an 'id' property
+      let updatedData = newStateCopy[childName][childIndex][
+        subChild.tableName
+      ].filter((_, idx) => idx === index);
+      updatedData = { ...updatedData[0], isChecked: false };
+      newStateCopy[childName][childIndex][subChild.tableName][index] =
+        updatedData;
+      return newStateCopy;
+    });
   };
 
   //right click function
@@ -279,31 +489,66 @@ export default function SubChildComponent({
     columnData,
     setPrevSearchInput,
     prevSearchInput,
-    // controlerName,
+    controlerName,
   }) {
-    const inputRef = useRef(null); // Ref to the Paper component
     const [searchInput, setSearchInput] = useState(prevSearchInput || "");
 
     // Custom filter logic
     const filterFunction = (searchValue, columnKey) => {
       if (!searchValue.trim()) {
         setInputVisible(false);
-        return setRenderedData(dummyData);
+        setSubmitNewState(originalData);
+        return setNewState(originalData);
       }
       const lowercasedInput = searchValue.toLowerCase();
       const filtered = newState[childName][childIndex][
         subChild.tableName
       ].filter((item) => {
         // Access the item's property based on columnKey and convert to string for comparison
-
-        const columnValue = String(item[columnKey]).toLowerCase();
-        return columnValue.includes(lowercasedInput);
+        let columnValue = "";
+        if (controlerName.toLowerCase() === "dropdown") {
+          let dropdownColumnValue = columnKey + "Dropdown";
+          let dropdownItem = item[dropdownColumnValue];
+          if (dropdownItem === undefined) {
+            dropdownColumnValue = columnKey + "dropdown";
+            dropdownItem = item[dropdownColumnValue][0].label;
+          }
+          columnValue = dropdownItem
+            ? String(`${dropdownItem}`).toLowerCase()
+            : "";
+          return columnValue.includes(lowercasedInput);
+        } else {
+          columnValue = String(item[columnKey]).toLowerCase();
+          return columnValue.includes(lowercasedInput);
+        }
       });
       if (filtered.length === 0) {
         toast.error("No matching records found.");
         return;
       }
-      setRenderedData(filtered);
+
+      setNewState((prevState) => ({
+        ...prevState,
+        [childName]: [
+          ...prevState[childName].slice(0, childIndex),
+          {
+            ...prevState[childName][childIndex],
+            [subChild.tableName]: filtered,
+          },
+          ...prevState[childName].slice(childIndex + 1),
+        ],
+      }));
+      setSubmitNewState((prevState) => ({
+        ...prevState,
+        [childName]: [
+          ...prevState[childName].slice(0, childIndex),
+          {
+            ...prevState[childName][childIndex],
+            [subChild.tableName]: filtered,
+          },
+          ...prevState[childName].slice(childIndex + 1),
+        ],
+      }));
       setInputVisible(false);
       setPrevSearchInput(searchValue);
     };
@@ -311,28 +556,10 @@ export default function SubChildComponent({
     function handleClose() {
       setSearchInput("");
       setPrevSearchInput("");
-      // setInputVisible(false);
     }
-
-    // Click outside handler
-    useEffect(() => {
-      const handleClickOutside = (event) => {
-        if (inputRef.current && !inputRef.current.contains(event.target)) {
-          setInputVisible(!isInputVisible);
-        }
-      };
-
-      // Bind the event listener
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => {
-        // Unbind the event listener on clean up
-        document.removeEventListener("mousedown", handleClickOutside);
-      };
-    }, [inputRef]);
 
     return (
       <Paper
-        ref={inputRef}
         sx={{
           ...createAddEditPaperStyles,
         }}
@@ -391,13 +618,16 @@ export default function SubChildComponent({
   // Function to handle sorting when a column header is clicked
   const handleSortBy = (columnId) => {
     // If the same column is clicked again, toggle the sorting order
+
+    console.log("handleSortBy", columnId);
     if (sortedColumn === columnId) {
       setIsAscending(!isAscending);
-      sortJSON(renderedData, columnId, isAscending ? "asc" : "desc");
+      sortJSON(renderedData, columnId, !isAscending ? "asc" : "desc");
     } else {
       // If a different column is clicked, update the sortedColumn state and set sorting order to ascending
       setSortedColumn(columnId);
       setIsAscending(true);
+      sortJSON(renderedData, columnId, "asc");
     }
   };
 
@@ -422,7 +652,6 @@ export default function SubChildComponent({
                 fontSize="small"
                 className={`${styles.ArrowDropUpIcon}`}
                 sx={{
-                  // opacity: sortedColumn === columnId ? "1" : "1",
                   opacity: "1",
                   color: "#636363",
                 }}
@@ -479,197 +708,255 @@ export default function SubChildComponent({
       // Return the modified copy
       return newCopy;
     });
-
+    {
+      console.log("subChild", subChild);
+    }
+    {
+      console.log("tableName", tableName);
+    }
     // Toggle the isGridEdit state
     setIsGridEdit((prevState) => !prevState);
   }
 
-  function gridEditSaveFunction(tableName) {
+  // function gridEditSaveFunction(tableName, section) {
+  //   const objectsToValidate = (copyChildValueObj[tableName] && copyChildValueObj[tableName].length > 0)
+  //     ? copyChildValueObj[tableName][0]
+  //     : [];
+
+  //   for (const field of section.fields) {
+  //     // Loop through the fields that need validation
+  //     let isFieldValid = false; // Track if the current field is valid
+
+  //     for (const object of objectsToValidate) {
+  //       // Loop through each object in your array
+  //       if (field.isRequired) {
+  //         // Check if the field exists in the object and it is not empty
+  //         if (
+  //           Object.prototype.hasOwnProperty.call(object, field.fieldname) &&
+  //           object[field.fieldname] &&
+  //           object[field.fieldname].trim() !== ""
+  //         ) {
+  //           isFieldValid = true; // Field is valid, break out of the loop for this field
+  //           break;
+  //         }
+  //       }
+  //     }
+
+  //     if (!isFieldValid && field.isRequired) {
+  //       // If no valid entry was found and the field is required
+  //       toast.error(`Value for ${field.yourlabel} is missing or empty.`);
+  //       return; // Exit the function if a validation fails
+  //     }
+  //   }
+  //   setNewState((prev) => {
+  //     return {
+  //       ...prev,
+  //       [childName]: {
+  //         ...prev[childName],
+  //         [childIndex]: {
+  //           ...prev[childName][childIndex],
+  //           [tableName]: copyChildValueObj[tableName]?.[0],
+  //         },
+  //       },
+  //     };
+  //   });
+  //   setSubmitNewState((prev) => {
+  //     return {
+  //       ...prev,
+  //       [childName]: {
+  //         ...prev[childName],
+  //         [childIndex]: {
+  //           ...prev[childName][childIndex],
+  //           [tableName]: copyChildValueObj[tableName]?.[0],
+  //         },
+  //       },
+  //     };
+  //   });
+  //   setIsGridEdit(!isGridEdit);
+  //   setCopyChildValueObj([]);
+  // }
+
+  function gridEditSaveFunction(tableName, section) {
+    const objectsToValidate =
+      copyChildValueObj[subChild.tableName] &&
+      copyChildValueObj[subChild.tableName].length > 0
+        ? copyChildValueObj[subChild.tableName][0]
+        : [];
+
+    for (const field of section.subChild[0].fields) {
+      // Loop through the fields that need validation
+      let isFieldValid = false; // Track if the current field is valid
+
+      for (const object of objectsToValidate) {
+        // Loop through each object in your array
+        if (field.isRequired) {
+          // Check if the field exists in the object and it is not empty
+          if (
+            Object.prototype.hasOwnProperty.call(object, field.fieldname) &&
+            object[field.fieldname] &&
+            object[field.fieldname].trim() !== ""
+          ) {
+            isFieldValid = true; // Field is valid, break out of the loop for this field
+            break;
+          }
+        }
+      }
+
+      if (!isFieldValid && field.isRequired) {
+        // If no valid entry was found and the field is required
+        toast.error(`Value for ${field.yourlabel} is missing or empty.`);
+        return; // Exit the function if a validation fails
+      }
+    }
+
     setNewState((prev) => {
-      // Compute the new state
-      const updatedState = { ...prev };
-      updatedState[childName][childIndex][tableName] =
-        copyChildValueObj[tableName]?.[0];
-      // Return the updated state
-      return updatedState;
+      let updatedChild = [...prev[childName]];
+      updatedChild[childIndex] = {
+        ...prev[childName][childIndex],
+        [tableName]: copyChildValueObj[tableName]?.[0],
+      };
+      return {
+        ...prev,
+        [childName]: updatedChild,
+      };
     });
+    setSubmitNewState((prev) => {
+      let updatedChild = [...prev[childName]];
+      updatedChild[childIndex] = {
+        ...prev[childName][childIndex],
+        [tableName]: copyChildValueObj[tableName]?.[0],
+      };
+      return {
+        ...prev,
+        [childName]: updatedChild,
+      };
+    });
+
     setIsGridEdit(!isGridEdit);
     setCopyChildValueObj([]);
   }
 
-  function gridEditCloseFunction() {
+  function gridEditCloseFunction(tableName) {
     setCopyChildValueObj([]);
     setIsGridEdit(!isGridEdit);
+  }
+
+  function handleChangeFunction(result) {
+    if (result?.isCheck === false) {
+      if (result?.alertShow) {
+        setParaText(result?.message);
+        setIsError(true);
+        setOpenModal((prev) => !prev);
+        setTypeofModal("onCheck");
+      }
+      return;
+    }
+    let data = { ...result?.values };
+    // let data = { ...result.newState };
+    setSubChildObject((pre) => {
+      return {
+        ...pre,
+        ...data,
+      };
+    });
+  }
+  function handleBlurFunction(result) {
+    if (result?.isCheck === false) {
+      if (result?.alertShow) {
+        setParaText(result?.message);
+        setIsError(true);
+        setOpenModal((prev) => !prev);
+        setTypeofModal("onCheck");
+      }
+      return;
+    }
+    let data = { ...result?.values };
+    // let data = { ...result.newState };
+    setSubChildObject((pre) => {
+      return {
+        ...pre,
+        ...data,
+      };
+    });
   }
 
   return (
     <>
-      {/* Input field integration */}
-      <div
-        key={index}
-        style={{
-          width: `${containerWidth - 50}px`,
+      <Accordion
+        expanded={isChildAccordionOpen}
+        sx={{
+          ...childAccordionSection,
+          height:
+            subChild.isHideGridHeader === true
+              ? "115px"
+              : row[subChild.tableName]?.length === 0 && clickCount === 0
+                ? ""
+                : isChildAccordionOpen === true
+                  ? "140px"
+                  : "25px",
         }}
+        key={indexValue}
       >
-        {/* Child Input Fields */}
-        {!hideSubChildInputs && (
-          <div className="pl-[16px] pt-[2px] pb-[8px] flex justify-between ">
-            <CustomeInputFields
-              key={index}
-              inputFieldData={subChild?.fields}
-              values={subChildObject}
-              onValuesChange={handleFieldSubChildrenValuesChange}
-              filterData={filterData}
-              newState={newState}
-            />
-            <div className="mb-ml-8 relative top-0 right-2 flex justify-start items-baseline ">
-              <>
-                {subChild["4thchild"] && subChild["4thchild"].length > 0 ? (
-                  <>
-                    <HoverIcon
-                      defaultIcon={refreshIcon}
-                      hoverIcon={revertHover}
-                      altText={"Revert"}
-                      title={"Revert"}
-                      onClick={() => {
-                        setSubChildObject({});
-                        setSubChildComponent((prev) => !prev);
-                      }}
-                    />
+        <AccordionSummary
+          className="relative left-[11px]"
+          sx={{
+            ...SummaryStyles,
+            display: subChild.isHideGridHeader ? "none" : "",
+          }}
+          expandIcon={
+            <LightTooltip title={isChildAccordionOpen ? "Collapse" : "Expand"}>
+              <ExpandMoreIcon
+                className={`${styles.txtColor}`}
+                onClick={childExpandedAccordion}
+              />
+            </LightTooltip>
+          }
+          aria-controls={`panel${indexValue + 1}-content`}
+          id={`panel${indexValue + 1}-header`}
+        >
+          <Typography
+            className={`${styles.txtColor} relative right-[11px] text-[12px]`}
+          >
+            {subChild.subChildHeading || subChild.tableName}
+          </Typography>
 
-                    <HoverIcon
-                      defaultIcon={saveIcon}
-                      hoverIcon={saveIconHover}
-                      altText={"Save"}
-                      title={"Save"}
-                      onClick={() => {
-                        subChildButtonDataHandler(subChildObject, subChild);
-                      }}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <HoverIcon
-                      defaultIcon={refreshIcon}
-                      hoverIcon={revertHover}
-                      altText={"Revert"}
-                      title={"Revert"}
-                      onClick={() => {
-                        setSubChildObject({});
-                        hideSubChildInputComponent();
-                      }}
-                    />
+          {renderedData?.length > 0 && isChildAccordionOpen && !isView && (
+            <>
+              <LightTooltip title="Edit Grid">
+                <EditNoteRoundedIcon
+                  sx={{
+                    ...gridEditIconStyles,
+                  }}
+                  onClick={() => {
+                    gridEditHandle();
+                  }}
+                />
+              </LightTooltip>
 
-                    <HoverIcon
-                      defaultIcon={saveIcon}
-                      hoverIcon={saveIconHover}
-                      altText={"Save"}
-                      title={"Save"}
-                      onClick={() => {
-                        subChildButtonDataHandler(subChildObject, subChild);
-                      }}
-                    />
-                  </>
-                )}
-              </>
-            </div>
-          </div>
-        )}
+              {isGridEdit && (
+                <LightTooltip title="Save">
+                  <SaveOutlinedIcon
+                    sx={{
+                      marginLeft: "8px",
+                      ...gridEditIconStyles,
+                    }}
+                    onClick={() => {
+                      if (section && section.tableName) {
+                        gridEditSaveFunction(subChild?.tableName, section);
+                      } else {
+                        console.error("Section data is incomplete:", section);
+                      }
+                    }}
+                  />
+                </LightTooltip>
+              )}
 
-        {/* Child Table headers */}
-        {row[subChild?.tableName] && row[subChild?.tableName]?.length > 0 && (
-          <div className="w-[100%] ">
-            <TableContainer
-              component={Paper}
-              ref={tableRef}
-              onScroll={handleScroll}
-              className={`${styles.hideScrollbar} ${styles.thinScrollBar} ${styles.pageBackground}`}
-              sx={{
-                height:
-                  row[subChild?.tableName]?.length > 10 ? "290px" : "auto",
-                overflowY:
-                  row[subChild.tableName]?.length > 10 ? "auto" : "hidden",
-                width: "calc(100vw - 20px)",
-              }}
-            >
-              <Table
-                aria-label="sticky table"
-                stickyHeader
-                sx={{ overflowY: "auto" , width: "fit-content", minWidth: "100%" }}
-              >
-                <TableHead className="">
-                  <TableRow>
-                    {subChild.fields
-                      .filter((elem) => elem.isGridView)
-                      .map((item, index) => (
-                        <TableCell
-                          key={index}
-                          className={`${styles.cellHeading} cursor-pointer `}
-                          sx={{
-                            ...childTableHeaderStyle,
-                          }}
-                          onContextMenu={(event) =>
-                            handleRightClick(event, item.fieldname)
-                          } // Add the right-click handler here
-                        >
-                          {index === 0 && hideSubChildInputs && (
-                            <HoverIcon
-defaultIcon={addLogo}
-hoverIcon={plusIconHover}
-
-altText={"Add"}
-title={"Add"}
-onClick={() => {
-  hideSubChildInputComponent()
-}}
-/>
-                          )}
-                          <span
-                            className={`${styles.labelText}`}
-                            onClick={() => handleSortBy(item.fieldname)}
-                            style={{
-                              paddingLeft:
-                                index == 0 && !hideSubChildInputs
-                                  ? "29px"
-                                  : "0px",
-                            }}
-                          >
-                            {item.yourlabel}
-                          </span>
-                          {renderedData?.length > 0 &&
-                            index === 0 &&
-                            hideSubChildInputs && (
-                              <>
-                                <LightTooltip title="Edit Grid Options">
-                                  <EditNoteRoundedIcon
-                                    sx={{
-                                      ...gridSubChildIconStyles,
-                                    }}
-                                    onClick={() => {
-                                      gridEditHandle(subChild.tableName);
-                                    }}
-                                  />
-                                </LightTooltip>
-                                {isGridEdit && (
-                                  <LightTooltip title="Save">
-                                    <SaveOutlinedIcon
-                                      sx={{
-                                        ...gridSubChildIconStyles,
-                                      }}
-                                      onClick={() => {
-                                        gridEditSaveFunction(
-                                          subChild.tableName
-                                        );
-                                      }}
-                                    />
-                                  </LightTooltip>
-                                )}
-                                {isGridEdit && (
+              {isGridEdit && (
                 <LightTooltip title="Cancel">
                   <CloseOutlinedIcon
                     sx={{
                       marginLeft: "8px",
-                      ...gridSubChildIconStyles,
+                      ...gridEditIconStyles,
                     }}
                     onClick={() => {
                       gridEditCloseFunction(subChild.tableName);
@@ -677,59 +964,299 @@ onClick={() => {
                   />
                 </LightTooltip>
               )}
-                              </>
-                            )}
-                          <span>
-                            {isInputVisible &&
-                              activeColumn === item.fieldname && ( // Conditionally render the input
-                                <CustomizedInputBase
-                                  columnData={item}
-                                  setPrevSearchInput={setPrevSearchInput}
-                                  prevSearchInput={prevSearchInput}
-                                  controlerName={item.controlname}
-                                />
-                              )}
-                          </span>
-                          <span className="ml-1">
-                            {renderSortIcon(item.fieldname)}
-                          </span>
-                        </TableCell>
-                      ))}
-                  </TableRow>
-                </TableHead>
+            </>
+          )}
+        </AccordionSummary>
 
-                <TableBody className="p-0">
-                  {renderedData?.map((item, index) => (
-                    <React.Fragment key={index}>
-                      <EditSubChildComponent
-                        subChildObject={item}
-                        subChildIndex={index}
-                        setNewState={setNewState}
-                        newState={newState}
-                        subChild={subChild}
-                        index={index}
-                        childName={childName}
-                        childIndex={childIndex}
-                        row={row}
-                        childType={childType}
-                        expandAll={expandAll}
-                        setRenderedData={setRenderedData}
-                        deleteSubChildRecord={deleteSubChildRecord}
-                        isGridEdit={isGridEdit}
-                        setIsGridEdit={setIsGridEdit}
-                        copyChildValueObj={copyChildValueObj}
-                        setCopyChildValueObj={setCopyChildValueObj}
-                        filterData={filterData}
-                        containerWidth={containerWidth}
+        <AccordionDetails
+          className={` ${styles.txtColor} relative flex`}
+          sx={{
+            padding: inputFieldsVisible ? "0" : "0",
+            height: clickCount === 0 ? "3.75rem" : "115px",
+            width: "100%",
+          }}
+        >
+          <div
+            key={indexValue}
+            className={`relative w-full ${styles.thinScrollBar}`}
+          >
+            {/* Right side add icon */}
+            {(!row[subChild.tableName] ||
+              row[subChild.tableName].length === 0) && (
+              <div className="sticky top-1 right-0 z-10 ml-auto flex w-fit justify-end pr-1">
+                {!isView && clickCount === 0 && (
+                  <HoverIcon
+                    defaultIcon={addLogo}
+                    hoverIcon={plusIconHover}
+                    altText={"Add A"}
+                    title={"Add A"}
+                    onClick={() => {
+                      subChildButtonDataHandler(
+                        subChildObject,
+                        indexValue,
+                        subChild,
+                      );
+                    }}
+                  />
+                )}
+              </div>
+            )}
+
+            {inputFieldsVisible && (
+              <div className="my-3 flex justify-between items-start">
+                <CustomeInputFields
+                  key={index}
+                  inputFieldData={subChild.fields}
+                  values={subChildObject}
+                  onValuesChange={handleFieldSubChildrenValuesChange}
+                  inEditMode={inEditMode}
+                  onChangeHandler={(result) => {
+                    handleChangeFunction(result);
+                  }}
+                  onBlurHandler={(result) => {
+                    handleBlurFunction(result);
+                  }}
+                  isView={isView}
+                  clearFlag={clearFlag}
+                  newState={newState}
+                  formControlData={formControlData}
+                  setFormControlData={setFormControlData}
+                  setStateVariable={setSubChildObject}
+                  callSaveFunctionOnLastTab={() => {
+                    subChildButtonDataHandler(
+                      subChildObject,
+                      indexValue,
+                      subChild,
+                      true,
+                    );
+                  }}
+                />
+
+                {!isView && (
+                  <div className="sticky top-0 right-0 z-10 ml-2 flex w-fit items-baseline justify-end pr-2">
+                    <>
+                      <HoverIcon
+                        defaultIcon={refreshIcon}
+                        hoverIcon={revertHover}
+                        altText={"Revert"}
+                        title={"Revert"}
+                        onClick={() => {
+                          setSubChildObject({});
+                          setInputFieldsVisible((prev) => !prev);
+                        }}
                       />
-                    </React.Fragment>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+
+                      <HoverIcon
+                        defaultIcon={saveIcon}
+                        hoverIcon={saveIconHover}
+                        altText={"Save"}
+                        title={"Save"}
+                        onClick={() => {
+                          subChildButtonDataHandler(
+                            subChildObject,
+                            indexValue,
+                            subChild,
+                          );
+                        }}
+                      />
+                    </>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {row[subChild.tableName] && row[subChild.tableName]?.length > 0 && (
+              <div className="">
+                <TableContainer
+                  component={Paper}
+                  ref={tableRef}
+                  onScroll={handleScroll}
+                  className={`${styles.pageBackground} ${styles.thinScrollBar}`}
+                  sx={{
+                    height:
+                      row[subChild.tableName]?.length > 10 ? "115px" : "115px",
+                    overflowY: "auto",
+                  }}
+                >
+                  <Table
+                    aria-label="sticky table"
+                    stickyHeader
+                    sx={{ overflowY: "auto" }}
+                  >
+                    <TableHead>
+                      {subChild.isHideGridHeader === true ? (
+                        ""
+                      ) : (
+                        <TableRow>
+                          {subChild.fields
+                            .filter((elem) => elem.isGridView)
+                            .map((item, index) => (
+                              <TableCell
+                                key={index}
+                                className={`${styles.cellHeading} cursor-pointer overflow-hidden`}
+                                sx={{
+                                  ...childTableHeaderStyle,
+                                  paddingLeft: index === 0 ? "29px" : "",
+                                }}
+                                onContextMenu={(event) =>
+                                  handleRightClick(event, item.fieldname)
+                                }
+                              >
+                                {!isView &&
+                                  index === 0 &&
+                                  !inputFieldsVisible && (
+                                    <IconButton
+                                      aria-label="Add"
+                                      className={`${styles.inputTextColor}`}
+                                      sx={{
+                                        ...styles.transparentBg,
+                                        "&:hover": {
+                                          ...styles.transparentBgHover,
+                                        },
+                                      }}
+                                    >
+                                      <LightTooltip title="Add">
+                                        <AddOutlinedIcon
+                                          onClick={() => {
+                                            inputFieldsVisible == false &&
+                                              setInputFieldsVisible(
+                                                (prev) => !prev,
+                                              );
+                                          }}
+                                        />
+                                      </LightTooltip>
+                                    </IconButton>
+                                  )}
+
+                                <span
+                                  className={`${styles.labelText}`}
+                                  style={{
+                                    paddingLeft: isGridEdit ? "0px" : "0px",
+                                  }}
+                                  onClick={() =>
+                                    handleSortBy(
+                                      item.controlname == "dropdown"
+                                        ? `${item.fieldname}Dropdown`
+                                        : item.fieldname,
+                                    )
+                                  }
+                                >
+                                  {item.yourlabel}
+                                  {console.log("item", item)}
+                                  {console.log(
+                                    "item.yourlabel",
+                                    item.yourlabel,
+                                  )}
+                                </span>
+
+                                <span>
+                                  {isInputVisible &&
+                                    activeColumn === item.fieldname && (
+                                      <CustomizedInputBase
+                                        columnData={item}
+                                        setPrevSearchInput={setPrevSearchInput}
+                                        prevSearchInput={prevSearchInput}
+                                        controlerName={item.controlname}
+                                      />
+                                    )}
+                                </span>
+
+                                <span className="ml-1">
+                                  {renderSortIcon(item.fieldname)}
+                                </span>
+                              </TableCell>
+                            ))}
+                        </TableRow>
+                      )}
+                    </TableHead>
+
+                    <TableBody className="relative">
+                      {renderedData?.map((item, index) => (
+                        <React.Fragment key={index}>
+                          <EditSubChildComponent
+                            subChildObject={item}
+                            subChildIndex={index}
+                            setNewState={setNewState}
+                            newState={newState}
+                            subChild={subChild}
+                            index={index}
+                            childName={childName}
+                            childIndex={childIndex}
+                            expandAll={expandAll}
+                            inEditMode={inEditMode}
+                            setRenderedData={setRenderedData}
+                            setHideSubChildInputs={setHideSubChildInputs}
+                            deleteSubChildRecord={deleteSubChildRecord}
+                            originalData={originalData}
+                            isView={isView}
+                            isGridEdit={isGridEdit}
+                            setIsGridEdit={setIsGridEdit}
+                            copyChildValueObj={copyChildValueObj}
+                            setCopyChildValueObj={setCopyChildValueObj}
+                            setOpenModal={setOpenModal}
+                            setParaText={setParaText}
+                            setIsError={setIsError}
+                            setTypeofModal={setTypeofModal}
+                            clearFlag={clearFlag}
+                            setClearFlag={setClearFlag}
+                            containerWidth={containerWidth}
+                            submitNewState={submitNewState}
+                            setSubmitNewState={setSubmitNewState}
+                            removeSubChildRecordFromInsert={
+                              removeSubChildRecordFromInsert
+                            }
+                            formControlData={formControlData}
+                            setFormControlData={setFormControlData}
+                          />
+                        </React.Fragment>
+                      ))}
+
+                      <>
+                        {Object.keys(columnTotals).length > 0 &&
+                          columnTotals.tableName === subChild.tableName && (
+                            <TableRow
+                              className={
+                                isView
+                                  ? ""
+                                  : `${styles.tableCellHoverEffect} ${styles.hh}`
+                              }
+                              sx={{
+                                "& > *": { borderBottom: "unset" },
+                              }}
+                            >
+                              {subChild.fields
+                                .filter((elem) => elem.isGridView)
+                                .map((field, index) => (
+                                  <TableCell
+                                    align="left"
+                                    key={index}
+                                    sx={{
+                                      ...totalSumChildStyle,
+                                      paddingLeft: index === 0 ? "29px" : "0px",
+                                    }}
+                                  >
+                                    <div className="relative">
+                                      <div className={`${childTableRowStyles}`}>
+                                        {(field.type === "number" ||
+                                          field.type === "decimal") &&
+                                        field.gridTotal
+                                          ? columnTotals[field.fieldname]
+                                          : ""}
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                ))}
+                            </TableRow>
+                          )}
+                      </>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </AccordionDetails>
+      </Accordion>
     </>
   );
 }

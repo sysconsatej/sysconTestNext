@@ -122,7 +122,7 @@ export default function RptIGM() {
           className="flex mt-2"
           style={{ width: "100%", color: "black", fontSize: "9px" }}
         >
-          <div style={{ width: "32%" }}>
+          <div style={{ width: "36%" }}>
             <div className="flex mb-2">
               <div style={{ width: "40%" }}>
                 <p className="text-black font-bold ">
@@ -150,12 +150,14 @@ export default function RptIGM() {
               <div className="text-[9px]" style={{ width: "60%" }}></div>
             </div>
           </div>
-          <div style={{ width: "32%" }}>
+          <div style={{ width: "34%" }}>
             <div className="flex mb-2">
               <div style={{ width: "40%" }}>
                 <p className="text-black font-bold ">Name of the Agent :</p>
               </div>
-              <div style={{ width: "60%" }}>{companyName || ""}</div>
+              <div style={{ width: "60%", fontSize: "8px" }}>
+                {data[0]?.shippingAgent || ""}
+              </div>
             </div>
             <div className="flex mb-2">
               <div style={{ width: "40%" }}>
@@ -169,7 +171,7 @@ export default function RptIGM() {
               <div style={{ width: "40%" }}>
                 <p className="text-black font-bold">4. Name of the Master :</p>
               </div>
-              <div style={{ width: "60%" }}></div>
+              <div style={{ width: "60%" }}>{data[0]?.masterName || ""}</div>
             </div>
           </div>
           <div style={{ width: "19%" }}>
@@ -182,7 +184,7 @@ export default function RptIGM() {
               </div>
             </div>
           </div>
-          <div style={{ width: "17%" }}>
+          <div style={{ width: "11%" }}>
             <div className="flex mb-2">
               <div style={{ width: "40%" }}>
                 <p className="text-black font-bold">IGM No.:</p>
@@ -330,21 +332,23 @@ export default function RptIGM() {
                     {item.goodsDesc || ""}
                   </p>
                 </div>
-                <div className="p-1" style={{ width: "35%" }}>
+                <div className="p-1" style={{ width: "20%" }}>
                   <div className="wordBreak">
                     <p className="wordBreak" style={{ fontSize: "8px" }}>
                       {item.consigneeText || ""}
+                      <br />
                       {item.consigneeAddress || ""}
                     </p>
                   </div>
                   <div className="mt-2 wordBreak">
                     <p className="wordBreak" style={{ fontSize: "8px" }}>
                       {item.notifyPartyName || ""}
+                      <br />
                       {item.notifyPartyAddress || ""}
                     </p>
                   </div>
                 </div>
-                <div className="p-1" style={{ width: "5%" }}>
+                <div className="p-1" style={{ width: "20%" }}>
                   <p className="wordBreak" style={{ fontSize: "8px" }}>
                     {item.remarks || ""}
                   </p>
@@ -370,7 +374,7 @@ export default function RptIGM() {
                   <div style={{ width: "20%" }}>
                     {containerItem.containerSealNo || ""}
                   </div>
-                  <div style={{ width: "10%" }}>
+                  <div style={{ width: "15%" }}>
                     {containerItem.noOfPackagesAndPackageType || ""}
                   </div>
                 </div>
