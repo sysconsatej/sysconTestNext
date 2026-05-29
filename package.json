@@ -5,11 +5,10 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0 --port 3001",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 --port 3001",
+    "start": "next start -H 0.0.0.0 --port 3101",
     "lint": "next lint"
   },
   "dependencies": {
-    "-": "^0.0.1",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
     "@heroicons/react": "^2.1.1",
@@ -19,7 +18,10 @@
     "@mui/material": "^5.15.4",
     "@mui/x-date-pickers": "^6.19.0",
     "@react-pdf/renderer": "^3.4.4",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
     "@reduxjs/toolkit": "^2.8.2",
+    "@types/three": "^0.183.1",
     "browser-image-compression": "^2.0.2",
     "chart.js": "^4.4.3",
     "crypto-js": "^4.2.0",
@@ -77,6 +79,7 @@
     "suneditor": "^2.46.3",
     "suneditor-react": "^3.6.1",
     "tailwind-merge": "^2.2.1",
+    "three": "^0.183.2",
     "uuid": "^9.0.1",
     "xlsx": "^0.18.5",
     "xlsx-style": "^0.8.13"

@@ -66,8 +66,38 @@ const A4_H_MM = 297;
 
 // ✅ safety guards for preview / pdf memory usage
 const MAX_SAFE_RENDER_PAGES = 100;
-const MAX_SAFE_HTML_CHARS = 8_000_000;
+const MAX_SAFE_HTML_CHARS = 8_000_000; // legacy full-html guard; streamed preview does not keep this in React state
 const MAX_SAFE_PDF_PAGES = 50;
+
+// ✅ large-template handling
+// Do not use iframe srcDoc for big reports. Render pages into iframe in small chunks.
+const PREVIEW_RENDER_CHUNK_PAGES = 1;
+const PRINT_RENDER_CHUNK_PAGES = 3;
+const PDF_RENDER_CHUNK_PAGES = 1;
+const MAX_SAFE_TEMPLATE_JSON_CHARS = 25_000_000;
+
+// ✅ OOM fix with continuous preview:
+// Keep pages visually one-after-another, but lazily mount page DOM only near
+// the viewport. This gives normal scrolling preview without loading every page
+// into Chrome memory at once. Print/PDF still render all pages on demand.
+const PREVIEW_WINDOW_PAGES = 1; // legacy fallback
+const PREVIEW_LAZY_BUFFER_PAGES = 1;
+const MAX_SINGLE_PAGE_RENDER_HEIGHT_MM = 2500;
+
+// ✅ print/pdf page-break safety
+// Chrome can create an extra blank sheet if a page is only a fraction of a mm
+// taller than A4. Treat tiny overflow as normal A4 height.
+const PAGE_HEIGHT_EPSILON_MM = 0.75;
+const PRINT_SLICE_EPSILON_MM = 0.75;
+
+// ✅ Physical A4 split margins
+// When one logical/template page becomes taller than A4, we slice it into real
+// A4 pages. These margins keep continuation pages from starting/ending exactly
+// on the page edge, which fixes the hard cut visible between attachment pages.
+// First slice keeps top at 0mm so designed templates/front pages stay aligned.
+const PHYSICAL_SPLIT_TOP_MARGIN_MM = 8;
+const PHYSICAL_SPLIT_BOTTOM_MARGIN_MM = 8;
+const PREVIEW_PAGE_GAP_MM = 14;
 
 /* =========================================================
    DEBUG TOGGLES
@@ -137,6 +167,128 @@ function dbgGroupEnd(enabled) {
   console.groupEnd();
 }
 
+function nextBrowserFrame() {
+  return new Promise((resolve) => {
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => resolve());
+      return;
+    }
+    setTimeout(resolve, 0);
+  });
+}
+
+async function safeTemplateJsonParse(value) {
+  if (value == null || value === "") return null;
+
+  if (typeof value !== "string") return value;
+
+  // Do not block large templates only because of character length.
+  // The previous size guard caused tpl to stay null and showed
+  // "Template is not loaded yet" for large but valid templates.
+  let text = String(value).trim().replace(/^﻿/, "");
+  if (!text) return null;
+
+  await nextBrowserFrame();
+
+  let parsed = JSON.parse(text);
+
+  // Sometimes APIs return JSON as a quoted JSON string. Handle that safely.
+  if (typeof parsed === "string") {
+    const inner = parsed.trim().replace(/^﻿/, "");
+    if (inner.startsWith("{") || inner.startsWith("[")) {
+      await nextBrowserFrame();
+      parsed = JSON.parse(inner);
+    }
+  }
+
+  return parsed;
+}
+
+function normalizeApiRows(payload) {
+  const raw = payload?.data ?? payload?.recordset ?? payload?.result ?? payload;
+
+  if (Array.isArray(raw)) {
+    if (raw.length === 1 && Array.isArray(raw[0])) return raw[0];
+    return raw;
+  }
+
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === "object") return [parsed];
+    } catch {}
+    return [];
+  }
+
+  if (raw && typeof raw === "object") return [raw];
+  return [];
+}
+
+function pickTemplateJson(row) {
+  if (!row || typeof row !== "object") return null;
+
+  const directKeys = [
+    "blPrintTemplateJson",
+    "BlPrintTemplateJson",
+    "BLPrintTemplateJson",
+    "blprinttemplatejson",
+    "templateJson",
+    "TemplateJson",
+    "json",
+  ];
+
+  for (const key of directKeys) {
+    if (row[key] !== undefined && row[key] !== null && row[key] !== "") {
+      return row[key];
+    }
+  }
+
+  const foundKey = Object.keys(row).find(
+    (k) => String(k).toLowerCase() === "blprinttemplatejson",
+  );
+  return foundKey ? row[foundKey] : null;
+}
+
+function getSearchParamAny(searchParams, names) {
+  for (const name of names) {
+    const v = searchParams?.get?.(name);
+    if (v !== null && v !== undefined && String(v).trim() !== "") {
+      return String(v).trim();
+    }
+  }
+  return null;
+}
+
+function getTemplateStats(tpl) {
+  const pages = normalizePages(tpl || {});
+  let elementCount = 0;
+  let tableCount = 0;
+  let imageCount = 0;
+  let repeatTableCount = 0;
+
+  pages.forEach((p) => {
+    const els = Array.isArray(p?.elements) ? p.elements : [];
+    elementCount += els.length;
+    els.forEach((el) => {
+      if (el?.type === "table") {
+        tableCount += 1;
+        if (isRepeatTableElement(el) || isRepeatTableEl(el))
+          repeatTableCount += 1;
+      }
+      if (el?.type === "image") imageCount += 1;
+    });
+  });
+
+  return {
+    pageCount: pages.length,
+    elementCount,
+    tableCount,
+    imageCount,
+    repeatTableCount,
+  };
+}
+
 /* =========================================================
    TEMPLATE CONFIG HELPERS (paper/margin/attachment bands)
 ========================================================= */
@@ -145,7 +297,11 @@ function collectPageOverflowMessages(tpl) {
   const pages = normalizePages(tpl);
 
   pages.forEach((pg, pageIndex) => {
-    const pageH = Number(pg?.hMm || A4_H_MM);
+    const paperH = Number(pg?.hMm || A4_H_MM);
+    const pageH = getPageRenderHeightMm(pg, {
+      h: paperH,
+      w: pg?.wMm || A4_W_MM,
+    });
     const els = Array.isArray(pg?.elements) ? pg.elements : [];
 
     els.forEach((el, elIndex) => {
@@ -156,7 +312,7 @@ function collectPageOverflowMessages(tpl) {
         warnings.push(
           `${pg?.name || `Page ${pageIndex + 1}`} - element ${
             el?.id || `#${elIndex + 1}`
-          } overflows page height (${bottom.toFixed(2)}mm > ${pageH.toFixed(2)}mm)`,
+          } overflows extended page height (${bottom.toFixed(2)}mm > ${pageH.toFixed(2)}mm)`,
         );
       }
     });
@@ -1319,15 +1475,26 @@ function buildRepeatPrintChunk({
   return { ...el, id: chunkId, __repeatBaseId: baseId, h, table: nextTable };
 }
 
-function ensurePageObject(pages, idx, basePage) {
+function ensurePageObject(
+  pages,
+  idx,
+  basePage,
+  maxPages = MAX_SAFE_RENDER_PAGES,
+) {
+  if (idx >= maxPages) return false;
+
   while (pages.length <= idx) {
+    if (pages.length >= maxPages) return false;
+
     pages.push({
       ...basePage,
-      id: `${basePage?.id || "page"}_auto_${idx}`,
-      name: `${basePage?.name || "Page"} ${idx + 1}`,
+      id: `${basePage?.id || "page"}_auto_${pages.length}`,
+      name: `${basePage?.name || "Page"} ${pages.length + 1}`,
       elements: [],
     });
   }
+
+  return true;
 }
 
 function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
@@ -1336,6 +1503,9 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
 
   const paperMm = opts.paperMm || { w: A4_W_MM, h: A4_H_MM };
   const marginMm = opts.marginMm || { top: 0, bottom: 0 };
+  const maxPages = Math.max(1, Number(opts.maxPages || MAX_SAFE_RENDER_PAGES));
+  const flowWarnings = [];
+  const flowErrors = [];
 
   const getBodyBand = (page) => {
     const attachHeaderMm = Number(page?.attachHeaderMm || 0);
@@ -1350,7 +1520,7 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
   };
 
   const paginateOverflowElementsOnPageBody = (page) => {
-    const { bodyTop, bodyBottom } = getBodyBand(page);
+    const { bodyTop, bodyBottom, bodyHeight } = getBodyBand(page);
 
     const els = Array.isArray(page.elements) ? page.elements : [];
     const stay = [];
@@ -1369,6 +1539,25 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
       const h = Number(el.h || 0);
       const bottom = y + h;
 
+      // Important OOM guard:
+      // If one element is taller than the printable body area, moving it to the
+      // next page will never make it fit. The old loop kept creating pages until
+      // Chrome crashed. Pin it on the current page and warn instead.
+      if (el.__overflowPinned || h > bodyHeight + 0.001) {
+        const pinned = {
+          ...el,
+          y: Math.max(bodyTop, y),
+          __overflowPinned: true,
+        };
+        stay.push(pinned);
+        if (bottom > bodyBottom + 0.001 || h > bodyHeight + 0.001) {
+          // flowWarnings.push(
+          //   `${page?.name || page?.id || "Page"}: element ${el?.id || ""} is taller than available page body; it was pinned and will be rendered/printed as an extended page to prevent endless pagination.`,
+          // );
+        }
+        continue;
+      }
+
       if (bottom > bodyBottom + 0.001) overflow.push(el);
       else stay.push(el);
     }
@@ -1377,18 +1566,30 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
 
     let cursorY = bodyTop;
     const gap = 0.2;
-    const moved = overflow.map((el) => {
-      const ne = { ...el, y: cursorY };
-      cursorY += Number(ne.h || 0) + gap;
-      return ne;
-    });
+    const moved = [];
+    for (const el of overflow) {
+      const h = Number(el.h || 0);
+      const tooTall = h > bodyHeight + 0.001;
+      const ne = {
+        ...el,
+        y: cursorY,
+        __overflowPinned: tooTall || el.__overflowPinned,
+      };
+      cursorY += h + gap;
+      moved.push(ne);
+    }
 
     if (debug && overflow.length) {
       dbgLog(debug, "[FLOW][OVERFLOW->NEXT]", {
         pageId: page.id,
         bodyTop,
         bodyBottom,
-        moved: moved.map((m) => ({ id: m.id, y: m.y, h: m.h })),
+        moved: moved.map((m) => ({
+          id: m.id,
+          y: m.y,
+          h: m.h,
+          pinned: !!m.__overflowPinned,
+        })),
       });
     }
 
@@ -1460,7 +1661,14 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
       }
 
       if (maxBodyRowsHere <= 0) {
-        ensurePageObject(pages, pIndex + 1, page);
+        if (!ensurePageObject(pages, pIndex + 1, page, maxPages)) {
+          flowErrors.push(
+            `Repeat table ${el?.id || ""} cannot be moved because generated pages exceeded safe limit (${maxPages}).`,
+          );
+          rebuilt.push({ ...el, __overflowPinned: true });
+          continue;
+        }
+
         const nb = getBodyBand(pages[pIndex + 1]);
         pages[pIndex + 1].elements.push({ ...el, y: nb.bodyTop });
 
@@ -1477,7 +1685,15 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
 
       const chunks = [];
       let start = 0;
+      const maxMorePagesForThisTable = Math.max(1, maxPages - pIndex);
       while (start < arr.length) {
+        if (chunks.length >= maxMorePagesForThisTable) {
+          flowErrors.push(
+            `Repeat table ${el?.id || ""} has too many rows (${arr.length}) and was stopped at safe page limit (${maxPages}).`,
+          );
+          break;
+        }
+
         const cap =
           chunks.length === 0
             ? maxBodyRowsHere
@@ -1527,7 +1743,12 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
 
       for (let c = 1; c < chunks.length; c++) {
         const targetIdx = pIndex + c;
-        ensurePageObject(pages, targetIdx, page);
+        if (!ensurePageObject(pages, targetIdx, page, maxPages)) {
+          flowErrors.push(
+            `Repeat table ${el?.id || ""} stopped because generated pages exceeded safe limit (${maxPages}).`,
+          );
+          break;
+        }
         const nb = getBodyBand(pages[targetIdx]);
 
         const chunkEl = buildRepeatPrintChunk({
@@ -1558,16 +1779,218 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
     let overflow = paginateOverflowElementsOnPageBody(page);
     let nextPageIdx = pIndex + 1;
 
+    let overflowSafetyCounter = 0;
     while (overflow.length) {
-      ensurePageObject(pages, nextPageIdx, page);
+      overflowSafetyCounter += 1;
+
+      if (nextPageIdx >= maxPages || overflowSafetyCounter > maxPages) {
+        flowErrors.push(
+          `Pagination stopped because overflow elements exceeded safe page limit (${maxPages}). Please reduce element height or check repeat table settings.`,
+        );
+        break;
+      }
+
+      if (!ensurePageObject(pages, nextPageIdx, page, maxPages)) {
+        flowErrors.push(
+          `Pagination stopped because generated pages exceeded safe limit (${maxPages}).`,
+        );
+        break;
+      }
+
       pages[nextPageIdx].elements = [
         ...(pages[nextPageIdx].elements || []),
         ...overflow,
       ];
+
+      const beforeIds = overflow
+        .map(
+          (x) =>
+            `${x?.id || ""}:${Number(x?.y || 0)}:${Number(x?.h || 0)}:${!!x?.__overflowPinned}`,
+        )
+        .join("|");
       overflow = paginateOverflowElementsOnPageBody(pages[nextPageIdx]);
+      const afterIds = overflow
+        .map(
+          (x) =>
+            `${x?.id || ""}:${Number(x?.y || 0)}:${Number(x?.h || 0)}:${!!x?.__overflowPinned}`,
+        )
+        .join("|");
+
+      if (beforeIds && beforeIds === afterIds) {
+        flowErrors.push(
+          `Pagination stopped because overflow elements are not changing between pages. This prevents browser out-of-memory crash.`,
+        );
+        break;
+      }
+
       nextPageIdx += 1;
     }
   }
+
+  return {
+    ...tpl,
+    pages,
+    __layoutWarnings: [
+      ...toStringArray(tpl?.__layoutWarnings),
+      ...Array.from(new Set(flowWarnings)),
+    ],
+    __layoutErrors: [
+      ...toStringArray(tpl?.__layoutErrors),
+      ...Array.from(new Set(flowErrors)),
+    ],
+  };
+}
+
+
+/* =========================================================
+   POST FLOW FIX: repeat table must follow its TOP neighbor
+   ---------------------------------------------------------
+   Why this exists:
+   - layoutTemplateForData / auto-grow / repeat-flow can convert a repeat table
+     id from "abc" to "abc__chunk_0" and sometimes the repeat table keeps an
+     older shifted Y.
+   - In Creator JSON, the container repeat table has topId = the title text.
+     Therefore after the goods table grows, the container table must be placed
+     exactly after the title using the original JSON gap.
+========================================================= */
+
+function stripGeneratedSuffix(id) {
+  return String(id || "")
+    .replace(/__chunk_\d+$/i, "")
+    .replace(/__flow_\d+$/i, "")
+    .replace(/__auto_\d+$/i, "");
+}
+
+function collectOriginalElementsFromTemplate(sourceTpl) {
+  const map = new Map();
+
+  const addEls = (els) => {
+    (Array.isArray(els) ? els : []).forEach((el) => {
+      if (!el || !el.id) return;
+      if (!map.has(el.id)) map.set(el.id, el);
+    });
+  };
+
+  addEls(sourceTpl?.elements);
+
+  if (Array.isArray(sourceTpl?.pages)) {
+    sourceTpl.pages.forEach((p) => addEls(p?.elements));
+  }
+
+  return map;
+}
+
+function getOriginalIdForElement(el) {
+  return (
+    el?.__repeatBaseId ||
+    el?.__flowBaseId ||
+    el?.__baseId ||
+    el?.table?.__repeatBaseId ||
+    stripGeneratedSuffix(el?.id)
+  );
+}
+
+function findCurrentElementByOriginalId(elements, originalId) {
+  if (!originalId) return null;
+
+  const els = Array.isArray(elements) ? elements : [];
+
+  const exact = els.find((el) => el?.id === originalId);
+  if (exact) return exact;
+
+  return (
+    els.find((el) => getOriginalIdForElement(el) === originalId) ||
+    els.find((el) => String(el?.id || "").startsWith(`${originalId}__`)) ||
+    null
+  );
+}
+
+function isFirstRepeatChunkElement(el) {
+  const id = String(el?.id || "");
+  if (!el) return false;
+
+  const hasRepeatBase = !!(
+    el.__repeatBaseId ||
+    el.table?.__repeatBaseId ||
+    /__chunk_\d+$/i.test(id)
+  );
+
+  if (!hasRepeatBase) return false;
+
+  const m = id.match(/__chunk_(\d+)$/i);
+  if (m && Number(m[1]) !== 0) return false;
+
+  return true;
+}
+
+function enforceRepeatTablesFollowTopNeighbor(tpl, sourceTpl, opts = {}) {
+  if (!tpl || !Array.isArray(tpl?.pages)) return tpl;
+
+  const debug = !!opts.debug;
+  const originalMap = collectOriginalElementsFromTemplate(sourceTpl || {});
+
+  const pages = tpl.pages.map((page) => {
+    const elements = (Array.isArray(page?.elements) ? page.elements : []).map(
+      (el) => ({ ...el }),
+    );
+
+    let changed = false;
+
+    for (let i = 0; i < elements.length; i++) {
+      const el = elements[i];
+      if (!isFirstRepeatChunkElement(el)) continue;
+
+      const originalId = getOriginalIdForElement(el);
+      const originalEl = originalMap.get(originalId);
+      if (!originalEl) continue;
+
+      const originalRepeat = originalEl?.table?.repeat || originalEl?.tbl?.repeat || originalEl?.meta?.repeat || {};
+      if (!originalRepeat?.enabled) continue;
+
+      const topId =
+        originalEl?.neighbors?.topId ||
+        originalEl?.neighbors?.aboveId ||
+        originalEl?.neighbors?.top ||
+        originalEl?.neighbors?.above;
+
+      if (!topId) continue;
+
+      const originalTopEl = originalMap.get(topId);
+      const currentTopEl = findCurrentElementByOriginalId(elements, topId);
+      if (!originalTopEl || !currentTopEl) continue;
+
+      const originalGap =
+        Number(originalEl.y || 0) -
+        (Number(originalTopEl.y || 0) + Number(originalTopEl.h || 0));
+
+      // If Creator had touching elements, keep them touching. Never create a
+      // negative overlap unless the Creator JSON itself had one.
+      const safeGap = Number.isFinite(originalGap) ? Math.max(0, originalGap) : 0;
+      const nextY =
+        Number(currentTopEl.y || 0) + Number(currentTopEl.h || 0) + safeGap;
+
+      if (Number.isFinite(nextY) && Math.abs(Number(el.y || 0) - nextY) > 0.01) {
+        if (debug) {
+          dbgLog(debug, "[ATTACHMENT/FOLLOW-TOP] repeat table Y corrected", {
+            pageId: page?.id,
+            tableId: el.id,
+            originalId,
+            topId,
+            oldY: el.y,
+            newY: nextY,
+            originalGap: safeGap,
+            currentTopY: currentTopEl.y,
+            currentTopH: currentTopEl.h,
+          });
+        }
+
+        elements[i] = { ...el, y: nextY };
+        changed = true;
+      }
+    }
+
+    return changed ? { ...page, elements } : page;
+  });
 
   return { ...tpl, pages };
 }
@@ -2472,37 +2895,354 @@ function renderElement(el, data) {
    TEMPLATE -> FULL HTML DOCUMENT (MULTI PAGE)
 ========================================================= */
 
-export function renderTemplateHtml(tpl, data) {
+function getPageRenderHeightMm(pg, paperMm) {
+  const baseH = Number(paperMm?.h || A4_H_MM) || A4_H_MM;
+  const els = Array.isArray(pg?.elements) ? pg.elements : [];
+
+  const maxBottom = els.reduce((mx, el) => {
+    if (!el || el.hidden) return mx;
+    const y = Number(el?.y || 0) || 0;
+    const h = Number(el?.h || 0) || 0;
+    return Math.max(mx, y + h);
+  }, baseH);
+
+  // ✅ Important PDF/print fix:
+  // Previously we added +0.5mm even when the content ended exactly at A4 height.
+  // Chrome can treat 297.5mm as "page 1 + tiny page 2", which generates a blank
+  // PDF page. Keep normal A4 pages exactly A4 unless there is real overflow.
+  if (maxBottom <= baseH + PAGE_HEIGHT_EPSILON_MM) return baseH;
+
+  // If one fixed element grows beyond A4 (for example, a long description table),
+  // preview it as an extended page. Print/PDF uses physical A4 slices below.
+  return Math.min(
+    MAX_SINGLE_PAGE_RENDER_HEIGHT_MM,
+    Math.ceil((maxBottom + 0.5) * 100) / 100,
+  );
+}
+
+function renderPageBodyHtml(pg, data) {
+  const elements = Array.isArray(pg?.elements) ? pg.elements : [];
+  return elements
+    .filter((e) => !e?.hidden)
+    .sort((a, b) => (a?.z || 0) - (b?.z || 0))
+    .map((el) => renderElement(el, data))
+    .join("");
+}
+
+function renderPageHtml(pg, pageIndex, paperMm, data) {
+  const body = renderPageBodyHtml(pg, data);
+  const pageHeightMm = getPageRenderHeightMm(pg, paperMm);
+  const baseH = Number(paperMm.h || A4_H_MM) || A4_H_MM;
+  const isExtended = pageHeightMm > baseH + PAGE_HEIGHT_EPSILON_MM;
+
+  return `
+    <div
+      class="page"
+      data-pageindex="${pageIndex}"
+      data-extended-page="${isExtended ? "1" : "0"}"
+      id="__report_page__${pageIndex}"
+      style="
+        width:${paperMm.w}mm;
+        height:${pageHeightMm}mm;
+        overflow:${isExtended ? "visible" : "hidden"};
+      "
+    >
+      ${body}
+    </div>
+  `;
+}
+
+function getPhysicalSliceMetrics(pg, paperMm) {
+  const fullH = getPageRenderHeightMm(pg, paperMm);
+  const paperH = Number(paperMm?.h || A4_H_MM) || A4_H_MM;
+
+  if (fullH <= paperH + PRINT_SLICE_EPSILON_MM) {
+    return {
+      fullH,
+      paperH,
+      isSplit: false,
+      slices: [
+        {
+          sliceIndex: 0,
+          offsetMm: 0,
+          topMarginMm: 0,
+          bottomMarginMm: 0,
+          visibleHeightMm: paperH,
+        },
+      ],
+    };
+  }
+
+  const topMargin = Math.max(0, Number(PHYSICAL_SPLIT_TOP_MARGIN_MM) || 0);
+  const bottomMargin = Math.max(
+    0,
+    Number(PHYSICAL_SPLIT_BOTTOM_MARGIN_MM) || 0,
+  );
+
+  // Keep enough printable height even if somebody increases margins later.
+  const firstVisible = Math.max(20, paperH - bottomMargin);
+  const nextVisible = Math.max(20, paperH - topMargin - bottomMargin);
+
+  const slices = [];
+  let offset = 0;
+  let sliceIndex = 0;
+  const maxSlices = MAX_SAFE_RENDER_PAGES;
+
+  while (offset < fullH - PRINT_SLICE_EPSILON_MM && sliceIndex < maxSlices) {
+    const isFirst = sliceIndex === 0;
+    const topMarginMm = isFirst ? 0 : topMargin;
+    const visibleHeightMm = isFirst ? firstVisible : nextVisible;
+
+    slices.push({
+      sliceIndex,
+      offsetMm: offset,
+      topMarginMm,
+      bottomMarginMm: bottomMargin,
+      visibleHeightMm,
+    });
+
+    offset += visibleHeightMm;
+    sliceIndex += 1;
+  }
+
+  return {
+    fullH,
+    paperH,
+    isSplit: true,
+    slices: slices.length
+      ? slices
+      : [
+          {
+            sliceIndex: 0,
+            offsetMm: 0,
+            topMarginMm: 0,
+            bottomMarginMm: 0,
+            visibleHeightMm: paperH,
+          },
+        ],
+  };
+}
+
+function getPhysicalSliceCount(pg, paperMm) {
+  return getPhysicalSliceMetrics(pg, paperMm).slices.length;
+}
+
+function getPhysicalPageCount(tpl) {
   const paperMm = getPaperMmFromTpl(tpl);
   const pages = normalizePages(tpl);
+  return pages.reduce((sum, pg) => sum + getPhysicalSliceCount(pg, paperMm), 0);
+}
 
-  const pagesHtml = pages
-    .map((pg, pageIndex) => {
-      const elements = Array.isArray(pg.elements) ? pg.elements : [];
-      const body = elements
-        .filter((e) => !e?.hidden)
-        .sort((a, b) => (a?.z || 0) - (b?.z || 0))
-        .map((el) => renderElement(el, data))
-        .join("");
+// ✅ Build the real printable A4 page list.
+// Important: a template can have 2 logical pages, but one logical page may be
+// taller than A4 after auto-grow. Preview, print and PDF must all use this same
+// physical A4 plan so the UI count matches the generated PDF count.
+function buildPhysicalPagePlan(tpl) {
+  const paperMm = getPaperMmFromTpl(tpl);
+  const pages = normalizePages(tpl);
+  const plan = [];
 
-      return `
-        <div class="page" data-pageindex="${pageIndex}" id="__report_page__${pageIndex}" style="
+  pages.forEach((pg, pageIndex) => {
+    const metrics = getPhysicalSliceMetrics(pg, paperMm);
+    metrics.slices.forEach((slice) => {
+      plan.push({
+        pg,
+        pageIndex,
+        sliceIndex: slice.sliceIndex,
+        sliceCount: metrics.slices.length,
+        physicalIndex: plan.length,
+        slice,
+      });
+    });
+  });
+
+  return { paperMm, pages, plan };
+}
+
+// ✅ When a logical page/table is sliced into multiple physical A4 pages,
+// Chrome only crops the DOM. That means a table continued on the next page can
+// show vertical borders but no closing horizontal border at the cut point.
+// Add only table cut-boundary lines (not a full A4 page border).
+function renderSplitTableBoundaryLinesHtml(pg, slice, paperMm) {
+  const elements = Array.isArray(pg?.elements) ? pg.elements : [];
+  const paperW = Number(paperMm?.w || A4_W_MM) || A4_W_MM;
+  const paperH = Number(paperMm?.h || A4_H_MM) || A4_H_MM;
+
+  const offsetMm = Math.max(0, Number(slice?.offsetMm || 0));
+  const topMarginMm = Math.max(0, Number(slice?.topMarginMm || 0));
+  const visibleHeightMm = Math.max(1, Number(slice?.visibleHeightMm || paperH));
+
+  const contentTopMm = offsetMm;
+  const contentBottomMm = offsetMm + visibleHeightMm;
+  const viewportTopMm = topMarginMm;
+  const viewportBottomMm = Math.min(paperH, topMarginMm + visibleHeightMm);
+
+  const lineHtml = [];
+
+  elements.forEach((el) => {
+    if (!el || el.hidden) return;
+    if (String(el?.type || "").toLowerCase() !== "table") return;
+
+    const x = Math.max(0, Number(el.x || 0) || 0);
+    const wRaw = Math.max(0, Number(el.w || 0) || 0);
+    const w = Math.max(0, Math.min(wRaw, paperW - x));
+    if (w <= 0) return;
+
+    const y = Number(el.y || 0) || 0;
+    const h = Number(el.h || 0) || 0;
+    const bottom = y + h;
+    if (h <= 0) return;
+
+    const tmeta = el.table || el.tbl || el.meta || {};
+    const bw = Math.max(
+      1,
+      Number(
+        tmeta.borderWidth ?? tmeta.gridWidth ?? el?.style?.borderWidth ?? 1,
+      ) || 1,
+    );
+    const bc =
+      tmeta.borderColor ||
+      tmeta.gridColor ||
+      el?.style?.borderColor ||
+      "#111827";
+
+    const common = `
+      position:absolute;
+      left:${x}mm;
+      width:${w}mm;
+      height:0;
+      border-top:${bw}px solid ${bc};
+      pointer-events:none;
+      z-index:2147483646;
+      box-sizing:border-box;
+    `;
+
+    // Close the table at the bottom of this A4 slice if it continues below.
+    if (y < contentBottomMm - 0.01 && bottom > contentBottomMm + 0.01) {
+      lineHtml.push(
+        `<div class="tableCutBorder tableCutBorderBottom" style="${common} top:${viewportBottomMm}mm;"></div>`,
+      );
+    }
+
+    // Restart/close the table at the top of continuation A4 slices.
+    if (y < contentTopMm - 0.01 && bottom > contentTopMm + 0.01) {
+      lineHtml.push(
+        `<div class="tableCutBorder tableCutBorderTop" style="${common} top:${viewportTopMm}mm;"></div>`,
+      );
+    }
+  });
+
+  return lineHtml.join("");
+}
+
+function renderPhysicalPageHtml(
+  pg,
+  pageIndex,
+  sliceIndex,
+  physicalIndex,
+  paperMm,
+  data,
+  sliceInfo = null,
+) {
+  const body = renderPageBodyHtml(pg, data);
+  const metrics = getPhysicalSliceMetrics(pg, paperMm);
+  const fallbackSlice = metrics.slices[sliceIndex] ||
+    metrics.slices[0] || {
+      offsetMm: 0,
+      topMarginMm: 0,
+      bottomMarginMm: 0,
+      visibleHeightMm: Number(paperMm.h || A4_H_MM) || A4_H_MM,
+    };
+  const slice = sliceInfo || fallbackSlice;
+  const fullHeightMm = metrics.fullH;
+  const paperH = Number(paperMm.h || A4_H_MM) || A4_H_MM;
+  const topMarginMm = Math.max(0, Number(slice.topMarginMm || 0));
+  const bottomMarginMm = Math.max(0, Number(slice.bottomMarginMm || 0));
+  const visibleHeightMm = Math.max(
+    1,
+    Math.min(paperH, Number(slice.visibleHeightMm || paperH)),
+  );
+  const offsetMm = Math.max(0, Number(slice.offsetMm || 0));
+  const sliceCount = metrics.slices.length;
+  const boundaryLinesHtml = renderSplitTableBoundaryLinesHtml(
+    pg,
+    slice,
+    paperMm,
+  );
+
+  return `
+    <div
+      class="page physicalPage"
+      data-pageindex="${pageIndex}"
+      data-sliceindex="${sliceIndex}"
+      data-slicecount="${sliceCount}"
+      data-physicalindex="${physicalIndex}"
+      data-extended-page="0"
+      id="__report_page__${physicalIndex}"
+      style="
+        width:${paperMm.w}mm;
+        height:${paperH}mm;
+        overflow:hidden;
+      "
+    >
+      <div
+        class="pageSliceViewport"
+        style="
+          position:absolute;
+          left:0;
+          top:${topMarginMm}mm;
           width:${paperMm.w}mm;
-          height:${paperMm.h}mm;
-        ">
+          height:${visibleHeightMm}mm;
+          overflow:hidden;
+        "
+      >
+        <div
+          class="pageSliceInner"
+          style="
+            position:absolute;
+            left:0;
+            top:-${offsetMm}mm;
+            width:${paperMm.w}mm;
+            height:${fullHeightMm}mm;
+          "
+        >
           ${body}
         </div>
-      `;
-    })
-    .join("");
+      </div>
+      ${boundaryLinesHtml}
+      ${bottomMarginMm > 0 ? `<div class="pageSliceBottomMargin" style="position:absolute;left:0;right:0;bottom:0;height:${bottomMarginMm}mm;background:#fff;z-index:1;"></div>` : ""}
+    </div>
+  `;
+}
 
+function renderPrintablePagesHtml(tpl, data) {
+  const { paperMm, plan } = buildPhysicalPagePlan(tpl);
+
+  return plan
+    .map((item) =>
+      renderPhysicalPageHtml(
+        item.pg,
+        item.pageIndex,
+        item.sliceIndex,
+        item.physicalIndex,
+        paperMm,
+        data,
+        item.slice,
+      ),
+    )
+    .join("");
+}
+
+function renderTemplateHtmlStart(tpl, title = "BL Report") {
+  const paperMm = getPaperMmFromTpl(tpl);
   return `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>BL Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(title)}</title>
   <style>
-    @page { size: A4; margin: 0; }
+    @page { size: ${paperMm.w}mm ${paperMm.h}mm; margin: 0; }
 
     *{
       box-sizing:border-box;
@@ -2525,11 +3265,53 @@ export function renderTemplateHtml(tpl, data) {
       background:#fff;
       overflow:hidden;
       box-shadow: 0 0 0 rgba(0,0,0,0);
+      contain: layout paint style;
+    }
+
+    /* ✅ Do not draw a full A4 page border here.
+       Only table-cut closing borders are drawn when a table is split across
+       physical A4 pages. */
+
+    .pageSlot{
+      position:relative;
+      margin:0 auto ${PREVIEW_PAGE_GAP_MM}mm auto;
+      background:#fff;
+      box-shadow:0 8px 22px rgba(0,0,0,0.10);
+      overflow:hidden;
+    }
+    .pageSlot > .page{
+      margin:0 !important;
+      box-shadow:none !important;
+    }
+    .pageSliceViewport{
+      background:#fff;
+    }
+    .tableCutBorder{
+      background:transparent;
+    }
+    .physicalPreviewSlot{
+      page-break-after: always;
+      break-after: page;
+    }
+    .page[data-extended-page="1"]{
+      overflow:visible !important;
+    }
+    .pagePlaceholder{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#64748b;
+      font-family:Arial,Helvetica,sans-serif;
+      font-size:12px;
+      background:linear-gradient(135deg,#ffffff,#f8fafc);
+      border:1px dashed rgba(100,116,139,.35);
     }
 
     @media screen {
       body { background:#f2f2f2; }
-      .pagesRoot{ padding: 8mm 0; }
+      .pagesRoot{ padding: 8mm 0 ${PREVIEW_PAGE_GAP_MM}mm 0; }
       .page{
         margin: 0 auto 10mm auto;
         box-shadow: 0 8px 22px rgba(0,0,0,0.10);
@@ -2537,23 +3319,389 @@ export function renderTemplateHtml(tpl, data) {
     }
 
     @media print {
-      body { background:#fff; }
-      .pagesRoot{ padding:0; }
-      .page{
-        margin:0;
-        box-shadow:none;
-        page-break-after: always;
+      html, body {
+        width:${paperMm.w}mm;
+        min-height:${paperMm.h}mm;
+        background:#fff;
+        overflow:visible;
       }
-      .page:last-child{ page-break-after: auto; }
+      .pagesRoot{
+        display:block !important;
+        padding:0 !important;
+        margin:0 !important;
+        gap:0 !important;
+      }
+      .page{
+        margin:0 !important;
+        box-shadow:none !important;
+        break-after: page;
+        page-break-after: always;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .page:last-child{
+        break-after: auto;
+        page-break-after: auto;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="pagesRoot" id="__pages_root__">
-    ${pagesHtml}
+  <div class="pagesRoot" id="__pages_root__">`;
+}
+
+function renderTemplateHtmlEnd() {
+  return `
   </div>
 </body>
 </html>`;
+}
+
+export function renderTemplateHtml(tpl, data) {
+  const paperMm = getPaperMmFromTpl(tpl);
+  const pages = normalizePages(tpl);
+
+  const pagesHtml = pages
+    .map((pg, pageIndex) => renderPageHtml(pg, pageIndex, paperMm, data))
+    .join("");
+
+  return `${renderTemplateHtmlStart(tpl)}${pagesHtml}${renderTemplateHtmlEnd()}`;
+}
+
+function writeIframeMessage(iframeEl, title = "BL Report", message = "") {
+  try {
+    if (!iframeEl?.contentWindow) return;
+    const doc = iframeEl.contentWindow.document;
+    doc.open();
+    doc.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    html,body{margin:0;padding:0;background:#f2f2f2;font-family:Arial,Helvetica,sans-serif;color:#334155;}
+    .box{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;}
+    .card{background:#fff;border:1px solid rgba(15,23,42,.12);border-radius:10px;padding:18px 20px;box-shadow:0 8px 24px rgba(15,23,42,.08);max-width:560px;}
+    .title{font-size:14px;font-weight:700;margin-bottom:6px;color:#0f172a;}
+    .msg{font-size:12px;line-height:1.55;white-space:pre-wrap;}
+  </style>
+</head>
+<body>
+  <div class="box"><div class="card"><div class="title">${escapeHtml(title)}</div><div class="msg">${escapeHtml(message)}</div></div></div>
+</body>
+</html>`);
+    doc.close();
+  } catch {}
+}
+
+async function renderTemplateToIframe(tpl, data, iframeEl, opts = {}) {
+  if (!iframeEl?.contentWindow) throw new Error("Iframe is not ready");
+
+  const pages = normalizePages(tpl);
+  const paperMm = getPaperMmFromTpl(tpl);
+  const usePhysicalPages = !!opts.physicalPages;
+  const total = usePhysicalPages ? getPhysicalPageCount(tpl) : pages.length;
+  const chunkPages = Math.max(
+    1,
+    Number(opts.chunkPages || PREVIEW_RENDER_CHUNK_PAGES),
+  );
+  const isCancelled =
+    typeof opts.isCancelled === "function" ? opts.isCancelled : () => false;
+
+  if (total > MAX_SAFE_RENDER_PAGES) {
+    throw new Error(
+      `Render blocked because ${total} physical page(s) were generated, which exceeds the safe limit of ${MAX_SAFE_RENDER_PAGES}.`,
+    );
+  }
+
+  const doc = iframeEl.contentWindow.document;
+
+  // Write only the shell first. Pages are appended in batches so the browser does not
+  // allocate one huge HTML string through React state/srcDoc.
+  doc.open();
+  doc.write(`${renderTemplateHtmlStart(tpl)}${renderTemplateHtmlEnd()}`);
+  doc.close();
+
+  const root = doc.getElementById("__pages_root__");
+  if (!root) throw new Error("Preview root not found");
+
+  if (usePhysicalPages) {
+    const { plan } = buildPhysicalPagePlan(tpl);
+
+    for (let physicalIndex = 0; physicalIndex < plan.length; physicalIndex++) {
+      if (isCancelled()) {
+        return { cancelled: true, pageCount: physicalIndex, total };
+      }
+
+      const item = plan[physicalIndex];
+      const pageHtml = renderPhysicalPageHtml(
+        item.pg,
+        item.pageIndex,
+        item.sliceIndex,
+        item.physicalIndex,
+        paperMm,
+        data,
+        item.slice,
+      );
+      root.insertAdjacentHTML("beforeend", pageHtml);
+
+      if (typeof opts.onProgress === "function") {
+        opts.onProgress({ done: physicalIndex + 1, total });
+      }
+
+      if ((physicalIndex + 1) % chunkPages === 0) {
+        await nextBrowserFrame();
+      }
+    }
+
+    if (isCancelled()) return { cancelled: true, pageCount: total, total };
+
+    await waitForAssets(doc);
+    return { cancelled: false, pageCount: total, total };
+  }
+
+  for (let i = 0; i < pages.length; i++) {
+    if (isCancelled()) return { cancelled: true, pageCount: i, total };
+
+    const pageHtml = renderPageHtml(pages[i], i, paperMm, data);
+    root.insertAdjacentHTML("beforeend", pageHtml);
+
+    if (typeof opts.onProgress === "function") {
+      opts.onProgress({ done: i + 1, total });
+    }
+
+    if ((i + 1) % chunkPages === 0) {
+      await nextBrowserFrame();
+    }
+  }
+
+  if (isCancelled()) return { cancelled: true, pageCount: total, total };
+
+  await waitForAssets(doc);
+  return { cancelled: false, pageCount: total, total };
+}
+
+async function renderPreviewWindowToIframe(tpl, data, iframeEl, opts = {}) {
+  if (!iframeEl?.contentWindow) throw new Error("Iframe is not ready");
+
+  const pages = normalizePages(tpl);
+  const paperMm = getPaperMmFromTpl(tpl);
+  const total = pages.length;
+  const windowPages = Math.max(
+    1,
+    Number(opts.windowPages || PREVIEW_WINDOW_PAGES),
+  );
+  const requestedIndex = Number(opts.pageIndex || 0);
+  const safeIndex = Math.max(0, Math.min(total - 1, requestedIndex));
+  const start = safeIndex;
+  const end = Math.min(total, start + windowPages);
+  const isCancelled =
+    typeof opts.isCancelled === "function" ? opts.isCancelled : () => false;
+
+  const doc = iframeEl.contentWindow.document;
+
+  // Full reset releases previous preview page DOM/images from memory.
+  doc.open();
+  doc.write(`${renderTemplateHtmlStart(tpl)}${renderTemplateHtmlEnd()}`);
+  doc.close();
+
+  const root = doc.getElementById("__pages_root__");
+  if (!root) throw new Error("Preview root not found");
+
+  for (let i = start; i < end; i++) {
+    if (isCancelled()) return { cancelled: true, pageCount: i - start, total };
+
+    const pageHtml = renderPageHtml(pages[i], i, paperMm, data);
+    root.insertAdjacentHTML("beforeend", pageHtml);
+
+    if (typeof opts.onProgress === "function") {
+      opts.onProgress({ done: i + 1, total, pageIndex: i });
+    }
+
+    await nextBrowserFrame();
+  }
+
+  if (isCancelled()) return { cancelled: true, pageCount: end - start, total };
+
+  await waitForAssets(doc);
+  return {
+    cancelled: false,
+    pageCount: end - start,
+    total,
+    pageIndex: safeIndex,
+  };
+}
+
+async function renderContinuousLazyPreviewToIframe(
+  tpl,
+  data,
+  iframeEl,
+  opts = {},
+) {
+  if (!iframeEl?.contentWindow) throw new Error("Iframe is not ready");
+
+  const { paperMm, plan } = buildPhysicalPagePlan(tpl);
+  const total = plan.length;
+  const bufferPages = Math.max(
+    0,
+    Number(opts.bufferPages ?? PREVIEW_LAZY_BUFFER_PAGES),
+  );
+  const isCancelled =
+    typeof opts.isCancelled === "function" ? opts.isCancelled : () => false;
+
+  if (total > MAX_SAFE_RENDER_PAGES) {
+    throw new Error(
+      `Preview blocked because ${total} physical A4 page(s) were generated, which exceeds the safe limit of ${MAX_SAFE_RENDER_PAGES}.`,
+    );
+  }
+
+  const win = iframeEl.contentWindow;
+  const doc = win.document;
+
+  // Clean previous same-origin listeners before replacing the iframe document.
+  try {
+    if (typeof iframeEl.__blPreviewCleanup === "function") {
+      iframeEl.__blPreviewCleanup();
+    }
+  } catch {}
+  iframeEl.__blPreviewCleanup = null;
+
+  doc.open();
+  doc.write(`${renderTemplateHtmlStart(tpl)}${renderTemplateHtmlEnd()}`);
+  doc.close();
+
+  const root = doc.getElementById("__pages_root__");
+  if (!root) throw new Error("Preview root not found");
+
+  // ✅ Preview uses the same physical A4 pages used by print/PDF.
+  // This fixes the old mismatch where UI showed only 2 logical pages while
+  // PDF generated 3 A4 pages because an attachment page was taller than A4.
+  const slotsHtml = plan
+    .map((item) => {
+      const logicalLabel =
+        item.sliceCount > 1
+          ? `Template page ${item.pageIndex + 1}, slice ${item.sliceIndex + 1}/${item.sliceCount}`
+          : `Template page ${item.pageIndex + 1}`;
+
+      return `
+        <div
+          class="pageSlot physicalPreviewSlot"
+          data-lazy-page-index="${item.physicalIndex}"
+          style="width:${paperMm.w}mm;height:${paperMm.h}mm;"
+        >
+          <div class="pagePlaceholder">
+            A4 Page ${item.physicalIndex + 1} / ${total}<br />
+            <span style="font-size:11px;color:#94a3b8;">${escapeHtml(logicalLabel)}</span>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  root.insertAdjacentHTML("beforeend", slotsHtml);
+
+  const slots = Array.from(root.querySelectorAll("[data-lazy-page-index]"));
+  const rendered = new Set();
+  let raf = 0;
+  let disposed = false;
+
+  const placeholderHtml = (physicalIndex) => {
+    const item = plan[physicalIndex];
+    const logicalLabel = item
+      ? item.sliceCount > 1
+        ? `Template page ${item.pageIndex + 1}, slice ${item.sliceIndex + 1}/${item.sliceCount}`
+        : `Template page ${item.pageIndex + 1}`
+      : "";
+
+    return `<div class="pagePlaceholder">A4 Page ${physicalIndex + 1} / ${total}<br /><span style="font-size:11px;color:#94a3b8;">${escapeHtml(logicalLabel)}</span></div>`;
+  };
+
+  const renderPageIntoSlot = (physicalIndex) => {
+    if (disposed || isCancelled()) return;
+    if (physicalIndex < 0 || physicalIndex >= total) return;
+    if (rendered.has(physicalIndex)) return;
+
+    const item = plan[physicalIndex];
+    const slot = slots[physicalIndex];
+    if (!item || !slot) return;
+
+    slot.innerHTML = renderPhysicalPageHtml(
+      item.pg,
+      item.pageIndex,
+      item.sliceIndex,
+      item.physicalIndex,
+      paperMm,
+      data,
+      item.slice,
+    );
+    rendered.add(physicalIndex);
+
+    if (typeof opts.onProgress === "function") {
+      opts.onProgress({ done: rendered.size, total, pageIndex: physicalIndex });
+    }
+  };
+
+  const unloadPageFromSlot = (physicalIndex) => {
+    if (disposed || isCancelled()) return;
+    if (!rendered.has(physicalIndex)) return;
+
+    const slot = slots[physicalIndex];
+    if (!slot) return;
+
+    slot.innerHTML = placeholderHtml(physicalIndex);
+    rendered.delete(physicalIndex);
+  };
+
+  const updateVisiblePages = () => {
+    raf = 0;
+    if (disposed || isCancelled()) return;
+
+    const viewportH = Math.max(
+      1,
+      Number(win.innerHeight || doc.documentElement.clientHeight || 800),
+    );
+    const renderTop = -viewportH * bufferPages;
+    const renderBottom = viewportH * (1 + bufferPages);
+    const unloadTop = -viewportH * (bufferPages + 1.5);
+    const unloadBottom = viewportH * (bufferPages + 2.5);
+
+    slots.forEach((slot, idx) => {
+      const rect = slot.getBoundingClientRect();
+      const near = rect.bottom >= renderTop && rect.top <= renderBottom;
+      const far = rect.bottom < unloadTop || rect.top > unloadBottom;
+
+      if (near) renderPageIntoSlot(idx);
+      else if (far) unloadPageFromSlot(idx);
+    });
+  };
+
+  const scheduleUpdate = () => {
+    if (raf || disposed || isCancelled()) return;
+    raf = win.requestAnimationFrame(updateVisiblePages);
+  };
+
+  win.addEventListener("scroll", scheduleUpdate, { passive: true });
+  win.addEventListener("resize", scheduleUpdate, { passive: true });
+
+  iframeEl.__blPreviewCleanup = () => {
+    disposed = true;
+    try {
+      if (raf) win.cancelAnimationFrame(raf);
+    } catch {}
+    try {
+      win.removeEventListener("scroll", scheduleUpdate);
+      win.removeEventListener("resize", scheduleUpdate);
+    } catch {}
+  };
+
+  await nextBrowserFrame();
+  updateVisiblePages();
+  await nextBrowserFrame();
+
+  // Wait only for the currently mounted page assets. More pages load lazily as
+  // the user scrolls, but every preview slot already has exact A4 height.
+  await waitForAssets(doc);
+
+  return { cancelled: false, pageCount: rendered.size, total };
 }
 
 /* =========================================================
@@ -2579,14 +3727,16 @@ async function waitForAssets(doc) {
   } catch {}
 }
 
-async function printViaHiddenIframe(html, iframeEl) {
+async function printViaHiddenIframe(tpl, data, iframeEl, opts = {}) {
   if (!iframeEl?.contentWindow) return;
 
-  const doc = iframeEl.contentWindow.document;
-  doc.open();
-  doc.write(html);
-  doc.close();
+  await renderTemplateToIframe(tpl, data, iframeEl, {
+    chunkPages: PRINT_RENDER_CHUNK_PAGES,
+    physicalPages: true,
+    onProgress: opts.onProgress,
+  });
 
+  const doc = iframeEl.contentWindow.document;
   await waitForAssets(doc);
   await new Promise((r) => setTimeout(r, 200));
 
@@ -2595,9 +3745,11 @@ async function printViaHiddenIframe(html, iframeEl) {
 }
 
 async function downloadPdfViaCanvas(
-  html,
+  tpl,
+  data,
   iframeEl,
   filename = "BL_Report.pdf",
+  opts = {},
 ) {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
     import("html2canvas"),
@@ -2606,11 +3758,13 @@ async function downloadPdfViaCanvas(
 
   if (!iframeEl?.contentWindow) throw new Error("Hidden iframe not ready");
 
-  const doc = iframeEl.contentWindow.document;
-  doc.open();
-  doc.write(html);
-  doc.close();
+  await renderTemplateToIframe(tpl, data, iframeEl, {
+    chunkPages: PDF_RENDER_CHUNK_PAGES,
+    physicalPages: true,
+    onProgress: opts.onProgress,
+  });
 
+  const doc = iframeEl.contentWindow.document;
   await waitForAssets(doc);
   await new Promise((r) => setTimeout(r, 250));
 
@@ -2623,7 +3777,13 @@ async function downloadPdfViaCanvas(
   if (!pageEls.length) throw new Error("No pages found to export");
 
   const pageCount = pageEls.length;
-  const scale = pageCount > 20 ? 1.5 : 2;
+  if (pageCount > MAX_SAFE_PDF_PAGES) {
+    throw new Error(
+      `PDF export blocked because ${pageCount} physical pages were generated. Please reduce content or export in smaller batches.`,
+    );
+  }
+
+  const scale = pageCount > 20 ? 1.25 : 1.75;
 
   const pdf = new jsPDF("p", "pt", "a4", true);
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -2636,15 +3796,20 @@ async function downloadPdfViaCanvas(
       pageEl.scrollIntoView({ block: "start" });
     } catch {}
 
+    if (typeof opts.onProgress === "function") {
+      opts.onProgress({ done: i + 1, total: pageEls.length, phase: "pdf" });
+    }
+
     const canvas = await html2canvas(pageEl, {
       scale,
       backgroundColor: "#ffffff",
       useCORS: true,
       allowTaint: true,
       logging: false,
+      removeContainer: true,
     });
 
-    const imgData = canvas.toDataURL("image/png", 1.0);
+    const imgData = canvas.toDataURL("image/jpeg", 0.92);
 
     const imgW = canvas.width;
     const imgH = canvas.height;
@@ -2657,10 +3822,11 @@ async function downloadPdfViaCanvas(
     const y = (pageHeight - drawH) / 2;
 
     if (i > 0) pdf.addPage("a4", "p");
-    pdf.addImage(imgData, "PNG", x, y, drawW, drawH, undefined, "FAST");
+    pdf.addImage(imgData, "JPEG", x, y, drawW, drawH, undefined, "FAST");
 
     canvas.width = 1;
     canvas.height = 1;
+    await nextBrowserFrame();
   }
 
   pdf.save(filename);
@@ -2672,8 +3838,26 @@ async function downloadPdfViaCanvas(
 
 export default function BlReportPage() {
   const searchParams = useSearchParams();
-  const templateId = searchParams.get("templateId");
-  const blId = searchParams.get("blId");
+  const templateId = getSearchParamAny(searchParams, [
+    "templateId",
+    "templateID",
+    "template",
+  ]);
+  const blId = getSearchParamAny(searchParams, [
+    "blId",
+    "blID",
+    "recordId",
+    "recordID",
+    "jobId",
+  ]);
+  const originalTypeParam = searchParams.get("originalType");
+
+  const originalType =
+    originalTypeParam &&
+    originalTypeParam !== "null" &&
+    originalTypeParam !== "undefined"
+      ? originalTypeParam
+      : null;
 
   const DEBUG = useMemo(() => getDebugFlag(searchParams), [searchParams]);
 
@@ -2682,14 +3866,35 @@ export default function BlReportPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [previewError, setPreviewError] = useState("");
+  const [previewProgress, setPreviewProgress] = useState({ done: 0, total: 0 });
+  const [previewPageIndex, setPreviewPageIndex] = useState(0);
+  const [actionBusy, setActionBusy] = useState("");
 
+  const previewFrameRef = useRef(null);
   const hiddenFrameRef = useRef(null);
   const measureRef = useRef(null);
+  const previewJobRef = useRef(0);
 
   useEffect(() => {
-    const fetchTemplate = async () => {
+    let active = true;
+
+    const loadReport = async () => {
+      setLoading(true);
+      setError("");
+      setPreviewError("");
+      setPreviewProgress({ done: 0, total: 0 });
+      setPreviewPageIndex(0);
+      setTpl(null);
+      setData(null);
+
       try {
-        if (!templateId) return;
+        if (!templateId || !blId) {
+          throw new Error(
+            `Missing ${!templateId ? "templateId" : ""}${!templateId && !blId ? " and " : ""}${!blId ? "blId" : ""} in URL`,
+          );
+        }
 
         const reqTpl = {
           columns: "id,name,blPrintTemplateJson",
@@ -2698,57 +3903,109 @@ export default function BlReportPage() {
           clientIdCondition: `status=1 FOR JSON PATH`,
         };
 
-        const tplRes = await fetchReportData(reqTpl);
-        const row = tplRes?.data?.[0];
-        if (!row) throw new Error("Template not found");
+        const [tplResult, blResult] = await Promise.allSettled([
+          fetchReportData(reqTpl),
+          fetchBlPrintReportData({ recordId: blId }),
+        ]);
 
-        const parsed =
-          typeof row.blPrintTemplateJson === "string"
-            ? JSON.parse(row.blPrintTemplateJson)
-            : row.blPrintTemplateJson;
+        if (!active) return;
 
-        dbgLog(DEBUG, "[DEBUG] Template fetched:", parsed);
-        setTpl(parsed);
-      } catch (e) {
-        setError(e?.message || "Failed to load template");
-      }
-    };
-
-    fetchTemplate();
-  }, [templateId, DEBUG]);
-
-  useEffect(() => {
-    const fetchBlData = async () => {
-      try {
-        setLoading(true);
-        setError("");
-
-        if (!templateId || !blId) {
-          setError("Missing templateId or blId in URL");
-          return;
+        if (tplResult.status === "rejected") {
+          throw new Error(
+            tplResult.reason?.message || "Failed to fetch template",
+          );
         }
 
-        const req = { recordId: blId };
-        const blRes = await fetchBlPrintReportData(req);
+        if (blResult.status === "rejected") {
+          throw new Error(
+            blResult.reason?.message || "Failed to fetch BL data",
+          );
+        }
 
-        const blRow = blRes?.data?.[0];
-        if (!blRow) throw new Error("BL not found");
+        const tplRows = normalizeApiRows(tplResult.value);
+        const tplRow = tplRows?.[0];
+        if (!tplRow) throw new Error("Template not found");
 
-        setData({ ...blRow, bl: blRow, bldata: blRow, tblBl: blRow });
+        const templateJson = pickTemplateJson(tplRow);
+        if (!templateJson) {
+          throw new Error(
+            "Template JSON not found in tblBlPrintTemplate.blPrintTemplateJson",
+          );
+        }
+
+        const parsedTpl = await safeTemplateJsonParse(templateJson);
+        if (!parsedTpl || typeof parsedTpl !== "object") {
+          throw new Error("Template JSON is empty or invalid");
+        }
+
+        const blRows = normalizeApiRows(blResult.value);
+        const blRowBase =
+          Number(blResult.value?.count || 0) > 0 ? blRows?.[0] : blRows?.[0];
+
+        if (!blRowBase) throw new Error("BL not found");
+
+        const blRow = {
+          ...blRowBase,
+          blOriginalType: getOriginalType(originalType, blRowBase),
+        };
+
+        if (!active) return;
+
+        dbgLog(
+          DEBUG,
+          "[DEBUG] Template fetched summary:",
+          getTemplateStats(parsedTpl),
+        );
         dbgLog(
           DEBUG,
           "[DEBUG] BL data fetched keys:",
           Object.keys(blRow || {}),
         );
+
+        setTpl(parsedTpl);
+        setData({ ...blRow, bl: blRow, bldata: blRow, tblBl: blRow });
       } catch (e) {
-        setError(e?.message || "Failed to load BL data");
+        if (!active) return;
+        console.error("BL report load failed:", e);
+        setError(e?.message || "Failed to load BL report");
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
-    fetchBlData();
-  }, [templateId, blId, DEBUG]);
+    loadReport();
+
+    return () => {
+      active = false;
+    };
+  }, [templateId, blId, DEBUG, originalType]);
+
+  function getOriginalType(originalType, data) {
+    if (data?.blStatus === "DRAFT") {
+      return data?.blStatus || null;
+    }
+
+    if (
+      originalType === null ||
+      originalType === undefined ||
+      originalType === "" ||
+      originalType === "null" ||
+      originalType === "undefined"
+    ) {
+      return data?.blType || null;
+    }
+
+    const originalTypeOptions = [
+      { label: "NON NEGOTIABLE", value: "nonNegotiable" },
+      { label: "FIRST ORIGINAL", value: "firstOriginal" },
+      { label: "SECOND ORIGINAL", value: "secondOriginal" },
+      { label: "Third ORIGINAL", value: "thirdOriginal" },
+    ];
+
+    return (
+      originalTypeOptions.find((x) => x.value === originalType)?.label || null
+    );
+  }
 
   function buildBlPagesDetails(tpl) {
     const pages = normalizePages(tpl);
@@ -2926,13 +4183,19 @@ export default function BlReportPage() {
         );
       }
 
-      const flowed = applyRepeatTablesFlowToTemplate(reflowed, data, {
+      const flowedRaw = applyRepeatTablesFlowToTemplate(reflowed, data, {
         paperMm,
         marginMm: { top: 0, bottom: 0 },
         debug: DEBUG,
       });
 
-      debugDumpPages(DEBUG, flowed, "After applyRepeatTablesFlowToTemplate");
+      debugDumpPages(DEBUG, flowedRaw, "After applyRepeatTablesFlowToTemplate");
+
+      const flowed = enforceRepeatTablesFollowTopNeighbor(flowedRaw, tpl, {
+        debug: DEBUG,
+      });
+
+      debugDumpPages(DEBUG, flowed, "After enforceRepeatTablesFollowTopNeighbor");
       debugNeighborGraph(DEBUG, flowed);
       debugAnalyzeTableSnapping(DEBUG, flowed, 3);
 
@@ -2984,47 +4247,121 @@ export default function BlReportPage() {
     [laidTpl],
   );
 
-  const html = useMemo(() => {
-    if (!laidTpl || !data) return "";
+  const templateStats = useMemo(
+    () => (tpl ? getTemplateStats(tpl) : null),
+    [tpl],
+  );
 
-    const pagesCount = Array.isArray(laidTpl?.pages) ? laidTpl.pages.length : 0;
-    if (pagesCount > MAX_SAFE_RENDER_PAGES) return "";
+  const logicalPageCount = useMemo(
+    () => (Array.isArray(laidTpl?.pages) ? laidTpl.pages.length : 0),
+    [laidTpl],
+  );
 
-    const built = renderTemplateHtml(laidTpl, data);
-    if (built.length > MAX_SAFE_HTML_CHARS) {
-      console.error("BL Report HTML too large:", built.length);
-      return "";
-    }
+  const physicalPageCount = useMemo(
+    () => (laidTpl ? getPhysicalPageCount(laidTpl) : 0),
+    [laidTpl],
+  );
 
-    return built;
-  }, [laidTpl, data]);
+  useEffect(() => {
+    setPreviewPageIndex(0);
+  }, [templateId, blId, physicalPageCount]);
+
+  const canGoPrevPreview = previewPageIndex > 0;
+  const canGoNextPreview =
+    physicalPageCount > 0 && previewPageIndex < physicalPageCount - 1;
 
   const renderBlockReason = useMemo(() => {
-    if (loading) return "";
+    if (loading || error) return "";
 
     if (!tpl) return "Template is not loaded yet.";
     if (!data) return "BL data is not loaded yet.";
     if (!laidTpl) return "Layout is not ready yet.";
-
-    const pagesCount = Array.isArray(laidTpl?.pages) ? laidTpl.pages.length : 0;
-    if (pagesCount > MAX_SAFE_RENDER_PAGES) {
-      return `Preview blocked because ${pagesCount} pages were generated, which exceeds the safe limit of ${MAX_SAFE_RENDER_PAGES}.`;
-    }
-
-    if (!html && !error) {
-      return "Preview blocked because rendered HTML is empty or exceeded the safe memory limit.";
+    if (physicalPageCount > MAX_SAFE_RENDER_PAGES) {
+      return `Preview blocked because ${physicalPageCount} A4 page(s) were generated, which exceeds the safe limit of ${MAX_SAFE_RENDER_PAGES}.`;
     }
 
     return "";
-  }, [tpl, data, laidTpl, html, loading, error]);
+  }, [tpl, data, laidTpl, loading, error, physicalPageCount]);
+
+  useEffect(() => {
+    const iframe = previewFrameRef.current;
+    const jobId = previewJobRef.current + 1;
+    previewJobRef.current = jobId;
+
+    setPreviewError("");
+
+    if (!iframe) return;
+
+    if (loading) {
+      writeIframeMessage(iframe, "BL Report", "Loading template and BL data…");
+      return;
+    }
+
+    if (error) {
+      writeIframeMessage(iframe, "BL Report", error);
+      return;
+    }
+
+    if (renderBlockReason) {
+      writeIframeMessage(iframe, "Preview blocked", renderBlockReason);
+      return;
+    }
+
+    if (!laidTpl || !data) {
+      writeIframeMessage(iframe, "BL Report", "Preview is not ready yet.");
+      return;
+    }
+
+    let cancelled = false;
+    setPreviewBusy(true);
+    setPreviewProgress({ done: 0, total: physicalPageCount || 0 });
+    writeIframeMessage(iframe, "BL Report", "Preparing preview…");
+
+    const run = async () => {
+      try {
+        await renderContinuousLazyPreviewToIframe(laidTpl, data, iframe, {
+          bufferPages: PREVIEW_LAZY_BUFFER_PAGES,
+          isCancelled: () => cancelled || previewJobRef.current !== jobId,
+          onProgress: ({ done, total }) => {
+            if (cancelled || previewJobRef.current !== jobId) return;
+            setPreviewProgress({ done, total });
+          },
+        });
+      } catch (e) {
+        if (!cancelled && previewJobRef.current === jobId) {
+          console.error("Preview render failed:", e);
+          const msg = e?.message || "Preview render failed";
+          setPreviewError(msg);
+          writeIframeMessage(iframe, "Preview failed", msg);
+        }
+      } finally {
+        if (!cancelled && previewJobRef.current === jobId) {
+          setPreviewBusy(false);
+        }
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [laidTpl, data, loading, error, renderBlockReason, physicalPageCount]);
 
   const onPrint = async () => {
     try {
-      if (!html || !hiddenFrameRef.current || renderBlockReason) return;
-      await printViaHiddenIframe(html, hiddenFrameRef.current);
+      if (!laidTpl || !data || !hiddenFrameRef.current || renderBlockReason)
+        return;
+      setError("");
+      setActionBusy("print");
+      await printViaHiddenIframe(laidTpl, data, hiddenFrameRef.current, {
+        onProgress: ({ done, total }) => setPreviewProgress({ done, total }),
+      });
     } catch (e) {
       console.error(e);
       setError(e?.message || "Print failed");
+    } finally {
+      setActionBusy("");
     }
   };
 
@@ -3044,21 +4381,32 @@ export default function BlReportPage() {
 
   const onDownloadPdf = async () => {
     try {
-      const pageCount = Array.isArray(laidTpl?.pages)
-        ? laidTpl.pages.length
-        : 0;
+      const pageCount = laidTpl ? getPhysicalPageCount(laidTpl) : 0;
       if (pageCount > MAX_SAFE_PDF_PAGES) {
         setError(
-          `PDF export blocked because ${pageCount} pages were generated. Please reduce content or fix flow configuration.`,
+          `PDF export blocked because ${pageCount} physical pages were generated. Please reduce content or fix flow configuration.`,
         );
         return;
       }
 
-      if (!html || !hiddenFrameRef.current || renderBlockReason) return;
-      await downloadPdfViaCanvas(html, hiddenFrameRef.current, "BL_Report.pdf");
+      if (!laidTpl || !data || !hiddenFrameRef.current || renderBlockReason)
+        return;
+      setError("");
+      setActionBusy("pdf");
+      await downloadPdfViaCanvas(
+        laidTpl,
+        data,
+        hiddenFrameRef.current,
+        "BL_Report.pdf",
+        {
+          onProgress: ({ done, total }) => setPreviewProgress({ done, total }),
+        },
+      );
     } catch (e) {
       console.error(e);
       setError(e?.message || "PDF download failed");
+    } finally {
+      setActionBusy("");
     }
   };
 
@@ -3083,37 +4431,75 @@ export default function BlReportPage() {
         title="hidden-render"
         style={{
           position: "fixed",
-          right: 0,
-          bottom: 0,
-          width: 0,
-          height: 0,
+          left: "-10000px",
+          top: 0,
+          width: "210mm",
+          height: "297mm",
           border: 0,
           opacity: 0,
           pointerEvents: "none",
         }}
       />
 
-      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mb: 1 }}>
-        <Button
-          variant="contained"
-          startIcon={<PrintRoundedIcon />}
-          onClick={onPrint}
-          disabled={!html || loading || !!renderBlockReason}
-          sx={{ height: 32, fontSize: 12, borderRadius: 1 }}
-        >
-          PRINT
-        </Button>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          gap: 1,
+          mb: 1,
+          flexWrap: "wrap",
+          width: "100%",
+        }}
+      >
+        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+          <Button
+            variant="contained"
+            startIcon={<PrintRoundedIcon />}
+            onClick={onPrint}
+            disabled={
+              !laidTpl ||
+              !data ||
+              loading ||
+              !!renderBlockReason ||
+              !!actionBusy
+            }
+            sx={{ height: 32, fontSize: 12, borderRadius: 1 }}
+          >
+            PRINT
+          </Button>
 
-        {/* <Button
-          variant="outlined"
-          startIcon={<DownloadRoundedIcon />}
-          onClick={onDownloadPdf}
-          disabled={!html || loading || !!renderBlockReason}
-          sx={{ height: 32, fontSize: 12, borderRadius: 1 }}
-        >
-          DOWNLOAD PDF
-        </Button> */}
+          {/* <Button
+      variant="outlined"
+      startIcon={<DownloadRoundedIcon />}
+      onClick={onDownloadPdf}
+      disabled={!laidTpl || !data || loading || !!renderBlockReason || !!actionBusy}
+      sx={{ height: 32, fontSize: 12, borderRadius: 1 }}
+    >
+      DOWNLOAD PDF
+    </Button> */}
+        </Box>
       </Box>
+      {/* DEBUG */}
+      {/* {(previewBusy || actionBusy || templateStats) && !loading && (
+        <Alert severity={previewError ? "error" : "info"} sx={{ mb: 1 }}>
+          {previewError
+            ? previewError
+            : actionBusy === "print"
+              ? `Preparing print${previewProgress.total ? ` (${previewProgress.done}/${previewProgress.total})` : ""}…`
+              : actionBusy === "pdf"
+                ? `Preparing PDF${previewProgress.total ? ` (${previewProgress.done}/${previewProgress.total})` : ""}…`
+                : previewBusy
+                  ? `Rendering preview${previewProgress.total ? ` (${previewProgress.done}/${previewProgress.total})` : "…"}…`
+                  : `Template loaded: ${logicalPageCount || 0} logical page(s), ${physicalPageCount || 0} A4 page(s), ${templateStats?.elementCount || 0} element(s), ${templateStats?.tableCount || 0} table(s). Preview uses the same A4 page division as Print/PDF, with safe split margins, table-cut closing borders, and renders lazily while scrolling.`}
+        </Alert>
+      )} */}
+
+      {!!error && !loading && (
+        <Alert severity="error" sx={{ mb: 1 }}>
+          {error}
+        </Alert>
+      )}
 
       {!!renderBlockReason && !loading && (
         <Alert severity="error" sx={{ mb: 1 }}>
@@ -3177,18 +4563,45 @@ export default function BlReportPage() {
             sx={{
               width: "100%",
               height: "86vh",
-              overflow: "auto",
+              overflow: "hidden",
               display: "flex",
               justifyContent: "center",
-              alignItems: "flex-start",
-              py: 2,
+              alignItems: "stretch",
+              py: 0,
+              position: "relative",
             }}
           >
+            {previewBusy && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 8,
+                  right: 8,
+                  zIndex: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  px: 1.5,
+                  py: 0.75,
+                  borderRadius: 1,
+                  bgcolor: "rgba(255,255,255,0.92)",
+                  boxShadow: "0 6px 18px rgba(15,23,42,0.14)",
+                  fontSize: 12,
+                }}
+              >
+                <CircularProgress size={14} />
+                Rendering preview{" "}
+                {previewProgress.total
+                  ? `${previewProgress.done}/${previewProgress.total}`
+                  : "…"}
+              </Box>
+            )}
+
             <iframe
+              ref={previewFrameRef}
               title="BL Report"
-              srcDoc={html}
               style={{
-                width: "min(980px, 100%)",
+                width: "100%",
                 height: "100%",
                 border: 0,
                 background: "#f2f2f2",

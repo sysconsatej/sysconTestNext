@@ -39,112 +39,109 @@
   /* default accordion text color */
   --accordion-summary-text-color: #efefef;
 
-
-
   /* New Format */
   /* Common Background Color */
-  --commonBg:#f9f9f9;
+  --commonBg: #f9f9f9;
   /* Common Font Family */
-  --commonFontFamily:"Roboto", "Helvetica", "Arial", sans-serif;
+  --commonFontFamily: "Roboto", "Helvetica", "Arial", sans-serif;
   /* Common Text Color */
-  --commonTextColor:'#000000';
+  --commonTextColor: "#000000";
   /* Common Text Size */
-  --commonFontSize:10px;
+  --commonFontSize: 10px;
   /* Common Font Weight */
-  --commonFontWeight:400;
+  --commonFontWeight: 400;
   /* Navbar Background Color */
-  --navbarBg:#ffffff;
+  --navbarBg: #ffffff;
   /* Navbar Text Color */
-  --navbarTextColor:#000000;
+  --navbarTextColor: #000000;
   /* Navbar Text Size */
-  --navbarFontSize:10px;
+  --navbarFontSize: 10px;
   /* Navbar Text Weight */
-  --navbarFontWeight:500;
+  --navbarFontWeight: 500;
   /* Sidebar Background Color */
-  --sidebarBg:blue;
+  --sidebarBg: blue;
   /* Sidebar Text Color */
-  --sidebarTextColor:white;
+  --sidebarTextColor: white;
   /* Sidebar Text Size */
-  --sidebarFontSize:12px;
+  --sidebarFontSize: 12px;
   /* Sidebar Font Size */
-  --sidebarFontWeight:500;
+  --sidebarFontWeight: 500;
   /* Sidebar Background Hover Color */
-  --sidebarBgHover:white;
+  --sidebarBgHover: white;
   /* Sidebar Text Hover Color */
   --sidebarTextColorHover: blue;
   /* Table Header Background Color */
-  --tableHeaderBg:blue;
+  --tableHeaderBg: blue;
   /* Table Header Text Color */
-  --tableHeaderTextColor:white;
+  --tableHeaderTextColor: white;
   /* Table Header Text Size */
-  --tableHeaderFontSize:12px;
+  --tableHeaderFontSize: 12px;
   /* Table Header Font Weight */
-  --tableHeaderFontWeight:500;
+  --tableHeaderFontWeight: 500;
   /* Table Row Background Color */
-  --tableRowBg:white;
+  --tableRowBg: white;
   /* Table Row Text Color */
-  --tableRowTextColor:blue;
+  --tableRowTextColor: blue;
   /* Table Row Font Size */
-  --tableRowFontSize:12px;
+  --tableRowFontSize: 12px;
   /* Table Row Font Size */
-  --tableRowFontWeight:500;
+  --tableRowFontWeight: 500;
   /* Table Row Background Hover Color */
-  --tableRowBgHover:blue;
+  --tableRowBgHover: blue;
   /* Table Row Text Hover Color */
-  --tableRowTextColorHover:white;
+  --tableRowTextColorHover: white;
   /* Table Child Header Background Color */
-  --tableChildHeaderBg:white;
+  --tableChildHeaderBg: white;
   /* Table Child Text Color */
-  --tableChildHeaderTextColor:white;
+  --tableChildHeaderTextColor: white;
   /* Table Sub Child Background Color */
-  --tableSubChildHeaderBg:white;
+  --tableSubChildHeaderBg: white;
   /* Table Sub Child Text Color */
-  --tableSubChildHeaderTextColor:white;
+  --tableSubChildHeaderTextColor: white;
   /* Accordion Parent Header Background Color */
-  --accordionParentHeaderBg:white;
+  --accordionParentHeaderBg: white;
   /* Accordion Parent Header Text Color */
-  --accordionParentHeaderTextColor:white;
+  --accordionParentHeaderTextColor: white;
   /* Accordion Parent Header Font Size */
-  --accordionParentHeaderFontSize:12px;
+  --accordionParentHeaderFontSize: 12px;
   /* Accordion Parent Header Font Weight */
-  --accordionParentHeaderFontWeight:500;
+  --accordionParentHeaderFontWeight: 500;
   /* Accordion Child Header Background Color */
-  --accordionChildHeaderBg:white;
+  --accordionChildHeaderBg: white;
   /* Accordion Child Header Text Color */
-  --accordionChildHeaderTextColor:white;
+  --accordionChildHeaderTextColor: white;
   /* Accordion Child Header Font Size */
-  --accordionChildHeaderFontSize:12px;
+  --accordionChildHeaderFontSize: 12px;
   /* Accordion Child Header Font Weight */
-  --accordionChildHeaderFontWeight:500;
+  --accordionChildHeaderFontWeight: 500;
   /* Accordion Body Background Color */
-  --accordionBodyBg:white;
+  --accordionBodyBg: white;
   /* Input Background Color */
-  --inputBg:white;
-    /* Input Label Text Color */
-  --inputLabelTextColor:white;
+  --inputBg: white;
+  /* Input Label Text Color */
+  --inputLabelTextColor: white;
   /* Input Text Color */
-  --inputTextColor:white;
+  --inputTextColor: white;
   /* Input Border Color */
-  --inputBorderColor:white;
+  --inputBorderColor: white;
   /* Input Font Size */
-  --inputFontSize:12px;
+  --inputFontSize: 12px;
   /* Input Font Weight */
-  --inputFontWeight:500;
+  --inputFontWeight: 500;
   /* Input Border Hover Color */
-  --inputBorderHoverColor:white;
+  --inputBorderHoverColor: white;
   /* Button Background Color */
-  --buttonBg:white;
+  --buttonBg: white;
   /* Button Text Color */
-  --buttonTextColor:white;
+  --buttonTextColor: white;
   /* Button Font Size */
-  --buttonFontSize:12px;
+  --buttonFontSize: 12px;
   /* Button Font Weight */
-  --buttonFontWeight:500;
+  --buttonFontWeight: 500;
   /* Button Background Hover Color */
-  --buttonHoverBg:white;
+  --buttonHoverBg: white;
   /* Button Text Hover Color */
-  --buttonTextHoverColor:white;
-
+  --buttonTextHoverColor: white;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -174,7 +171,8 @@ span,
 input,
 th,
 td {
-  font-family: var(--commonFontFamily), "Helvetica", "Arial", sans-serif !important;
+  font-family:
+    var(--commonFontFamily), "Helvetica", "Arial", sans-serif !important;
 }
 
 svg {
@@ -291,7 +289,12 @@ svg {
   font-weight: 400 !important;
 }
 
-.chart > svg{
+.chart > svg {
   height: 100% !important;
   width: 650px !important;
+}
+
+.chat-message > svg {
+  height: 1.5em !important;
+  width: 1.5em !important;
 }

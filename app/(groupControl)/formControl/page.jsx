@@ -72,6 +72,10 @@ import {
 import LightTooltip from "@/components/Tooltip/customToolTip";
 import CustomeBreadCrumb from "@/components/BreadCrumbs/breadCrumb.jsx";
 import IconButton from "@mui/material/IconButton";
+import Backdrop from "@mui/material/Backdrop";
+import Modal from "@mui/material/Modal";
+import Fade from "@mui/material/Fade";
+import commonModalStyles from "@/components/common.module.css";
 import CustomeModal from "@/components/Modal/customModal.jsx";
 import { toast, ToastContainer } from "react-toastify";
 import { useSearchParams } from "next/navigation";
@@ -179,6 +183,55 @@ function onEditAndDeleteFunctionCall(
       // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
     }
   }
+}
+
+/** Form control can supply deleteReasonDropdownConfig (JSON or object) or a fields[] entry (deleteReason / isDeleteReasonSource). */
+function getDeleteReasonFieldConfig(formControlData) {
+  if (!formControlData || Array.isArray(formControlData)) return null;
+  const raw = formControlData.deleteReasonDropdownConfig;
+  if (raw) {
+    try {
+      const cfg = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (cfg?.referenceTable && cfg?.referenceColumn) {
+        return {
+          referenceTable: cfg.referenceTable,
+          referenceColumn: cfg.referenceColumn,
+          dropdownFilter: cfg.dropdownFilter ?? "",
+        };
+      }
+    } catch {
+      /* invalid JSON */
+    }
+  }
+  const fields = formControlData.fields;
+  if (!Array.isArray(fields)) return null;
+  const field =
+    fields.find((f) => f.fieldname === "deleteReason") ||
+    fields.find((f) => f.isDeleteReasonSource === true);
+  if (!field?.referenceTable || !field?.referenceColumn) return null;
+  return {
+    referenceTable: field.referenceTable,
+    referenceColumn: field.referenceColumn,
+    dropdownFilter: field.dropdownFilter ?? "",
+  };
+}
+
+function mapDropDownRowsToSelectOptions(data) {
+  if (!Array.isArray(data) || data.length === 0) return [];
+  return data.map((row) => {
+    if (row && typeof row === "object" && "value" in row && "label" in row) {
+      return { value: row.value, label: String(row.label ?? "") };
+    }
+    const id = row.id ?? row.value;
+    const label =
+      row.label ??
+      row.name ??
+      row.Name ??
+      row.description ??
+      row.Description ??
+      (id != null ? String(id) : "");
+    return { value: id, label };
+  });
 }
 
 export default function StickyHeadTable() {
@@ -477,6 +530,11 @@ export default function StickyHeadTable() {
   const [objectId, setObjectId] = useState("");
 
   const [formControlData, setFormControlData] = useState([]);
+  const [openDeleteReasonModal, setOpenDeleteReasonModal] = useState(false);
+  const [deleteReasonOptions, setDeleteReasonOptions] = useState([]);
+  const [selectedDeleteReason, setSelectedDeleteReason] = useState(null);
+  const [deleteRemark, setDeleteRemark] = useState("");
+  const [deleteReasonLoading, setDeleteReasonLoading] = useState(false);
 
   // ref part
 
@@ -608,7 +666,11 @@ export default function StickyHeadTable() {
         const croEditerResponse = await fetchReportData(croEditerRequestBody);
         const croEditerData = croEditerResponse?.data || croEditerResponse;
 
-        if (data.length > 0 || blEditerData.length > 0 || croEditerData.length > 0) {
+        if (
+          data.length > 0 ||
+          blEditerData.length > 0 ||
+          croEditerData.length > 0
+        ) {
           setisReportPresent(true);
         } else {
           setisReportPresent(false);
@@ -694,6 +756,7 @@ export default function StickyHeadTable() {
           order: sortData.order,
           search: advanceSearch,
           searchQuery: searchInput,
+          sortingCondition: tableHeadingsData?.data[0]?.sortingCondition,
         };
         const apiResponse = await masterTableList(requestData);
         if (apiResponse.success === true && apiResponse.data?.length > 0) {
@@ -760,6 +823,7 @@ export default function StickyHeadTable() {
           order: sortData.order,
           search: advanceSearch,
           searchQuery: searchInput,
+          sortingCondition: tableHeadingsData?.data[0]?.sortingCondition,
         };
         const apiResponse = await masterTableList(requestData);
         if (apiResponse.data?.length > 0) {
@@ -783,6 +847,13 @@ export default function StickyHeadTable() {
           setLoader(false);
         }
       } else {
+        const tableHeadingsData = await formControlMenuList(search);
+        if (tableHeadingsData.success === false) {
+          setHeaderFields([]);
+          setGridData([]);
+          setLoader(false);
+          return;
+        }
         let apiResponse = [];
         let requestData = {
           tableName: tableName,
@@ -795,6 +866,7 @@ export default function StickyHeadTable() {
           searchQuery: searchInput,
           keyName: columnSearchKeyName,
           keyValue: columnSearchKeyValue,
+          sortingCondition: tableHeadingsData?.data[0]?.sortingCondition,
         };
 
         apiResponse = await masterTableList(requestData);
@@ -812,6 +884,13 @@ export default function StickyHeadTable() {
           );
           pageSelected(requestData.pageNo);
         } else {
+          const tableHeadingsData = await formControlMenuList(search);
+          if (tableHeadingsData.success === false) {
+            setHeaderFields([]);
+            setGridData([]);
+            setLoader(false);
+            return;
+          }
           let requestData = {
             tableName: tableName,
             pageNo: 1,
@@ -823,6 +902,7 @@ export default function StickyHeadTable() {
             searchQuery: searchInput,
             keyName: columnSearchKeyName,
             keyValue: columnSearchKeyValue,
+            sortingCondition: tableHeadingsData?.data[0]?.sortingCondition,
           };
           apiResponse = await masterTableList(requestData);
           const { data, Count } = apiResponse;
@@ -1021,7 +1101,7 @@ export default function StickyHeadTable() {
     }
   };
 
-  const deleteController = (data) => {
+  const deleteController = async (data) => {
     try {
       if (
         formControlData.functionOnDelete &&
@@ -1043,11 +1123,80 @@ export default function StickyHeadTable() {
       clientId: parseInt(clientId),
       updateBy: parseInt(userId),
       deletedNo: data.id,
-      //updateDate:Date.now()
     });
+
+    if (formControlData?.isReasonForDeleteRequired === true) {
+      setParaText("");
+      setIsError(false);
+      setSelectedDeleteReason(null);
+      setDeleteRemark("");
+      setDeleteReasonOptions([]);
+      setOpenDeleteReasonModal(true);
+      setDeleteReasonLoading(true);
+      try {
+        const field = {
+          referenceTable: "tblMasterData",
+          referenceColumn: "name",
+          dropdownFilter: "and masterListName = 'tblReason'",
+        };
+        const raw = await fetchDropDownData(field, "");
+        setDeleteReasonOptions(
+          mapDropDownRowsToSelectOptions(
+            Array.isArray(raw) ? raw : raw === false ? [] : [],
+          ),
+        );
+      } catch (error) {
+        console.error(error);
+        toast.error("Could not load delete reasons.");
+      } finally {
+        setDeleteReasonLoading(false);
+      }
+      return;
+    }
+
     setParaText("Do you want to delete this record?");
     setIsError(false);
     setOpenModal((prev) => !prev);
+  };
+
+  const closeDeleteReasonModal = () => {
+    setOpenDeleteReasonModal(false);
+    setDeleteData(null);
+    setSelectedDeleteReason(null);
+    setDeleteRemark("");
+    setDeleteReasonOptions([]);
+    setDeleteReasonLoading(false);
+  };
+
+  const submitDeleteWithReason = async () => {
+    const remarkTrim = (deleteRemark || "").trim();
+    if (!selectedDeleteReason) {
+      toast.warning("Please select a reason for delete.");
+      return;
+    }
+    if (!remarkTrim) {
+      toast.warning("Please enter a remark.");
+      return;
+    }
+    if (!deleteData) return;
+    const payloadData = {
+      ...deleteData,
+      reason: selectedDeleteReason.value,
+      remark: remarkTrim,
+    };
+    try {
+      const responseData = await deleteMasterRecord(payloadData);
+      if (responseData && responseData.success) {
+        toast.success(responseData.message);
+        closeDeleteReasonModal();
+        fetchData();
+      } else {
+        toast.error(responseData?.message || "Delete failed.");
+      }
+    } catch (error) {
+      console.error("Error in API call:", error);
+      toast.error("An error occurred while processing the request");
+    }
   };
 
   const onConfirm = async (conformData) => {
@@ -1745,6 +1894,14 @@ export default function StickyHeadTable() {
     input: (base) => ({
       ...base,
       color: "var(--table-text-color)", // Set color of typed text to "var(--table-text-color)"
+    }),
+  };
+  const deleteReasonModalSelectStyles = {
+    ...customStyles,
+    control: (base, props) => ({
+      ...customStyles.control(base, props),
+      width: "100%",
+      minWidth: "100%",
     }),
   };
 
@@ -3298,6 +3455,105 @@ export default function StickyHeadTable() {
       {/* my models  */}
 
       {/* <CustomeModal /> */}
+      <Modal
+        aria-labelledby="delete-reason-modal-title"
+        aria-describedby="delete-reason-modal-description"
+        open={openDeleteReasonModal}
+        onClose={closeDeleteReasonModal}
+        closeAfterTransition
+        slots={{ backdrop: Backdrop }}
+        slotProps={{
+          backdrop: {
+            timeout: 500,
+          },
+        }}
+      >
+        <Fade in={openDeleteReasonModal}>
+          <div className="relative inset-0 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center px-4">
+            <div
+              className={`${commonModalStyles.modalTextColor} ${commonModalStyles.modalBg} p-[30px] rounded-lg shadow-xl w-full sm:max-w-[520px] flex flex-col gap-4 mx-auto max-w-full`}
+            >
+              <h3
+                id="delete-reason-modal-title"
+                className={`${commonModalStyles.modalTextColor} text-[12px]`}
+              >
+                Confirm delete
+              </h3>
+              <p
+                id="delete-reason-modal-description"
+                className={`${commonModalStyles.modalTextColor} text-[12px]`}
+              >
+                Select a reason and enter a remark before deleting this record.
+              </p>
+              <div className="flex flex-col gap-1">
+                <label
+                  className={`${commonModalStyles.modalTextColor} text-[11px]`}
+                  htmlFor="delete-reason-select-formcontrol"
+                >
+                  Reason for Delete
+                </label>
+                <Select
+                  inputId="delete-reason-select-formcontrol"
+                  menuPortalTarget={
+                    typeof document !== "undefined" ? document.body : null
+                  }
+                  styles={deleteReasonModalSelectStyles}
+                  isClearable
+                  isLoading={deleteReasonLoading}
+                  options={deleteReasonOptions}
+                  value={selectedDeleteReason}
+                  placeholder="Select reason"
+                  noOptionsMessage={() =>
+                    deleteReasonLoading ? "Loading…" : "No records found"
+                  }
+                  onChange={(opt) => setSelectedDeleteReason(opt)}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label
+                  className={`${commonModalStyles.modalTextColor} text-[11px]`}
+                  htmlFor="delete-remark-input-formcontrol"
+                >
+                  Remark
+                </label>
+                <TextField
+                  id="delete-remark-input-formcontrol"
+                  size="small"
+                  fullWidth
+                  multiline
+                  minRows={2}
+                  value={deleteRemark}
+                  onChange={(e) => setDeleteRemark(e.target.value)}
+                  placeholder="Enter remark"
+                  inputProps={{ style: { fontSize: "12px" } }}
+                />
+              </div>
+              <div className="flex justify-end space-x-4 pt-2">
+                <button
+                  type="button"
+                  disabled={
+                    deleteReasonLoading ||
+                    !selectedDeleteReason ||
+                    !(deleteRemark || "").trim()
+                  }
+                  onClick={() => submitDeleteWithReason()}
+                  className={`px-4 text-[12px] py-2 ${commonModalStyles.bgPrimaryColorBtn} flex items-center justify-center rounded-[5px] shadow-custom w-24 h-[27px] disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  Submit
+                </button>
+                <button
+                  type="button"
+                  onClick={closeDeleteReasonModal}
+                  className={`px-4 py-2 text-[12px] ${commonModalStyles.bgPrimaryColorBtn} flex items-center justify-center rounded-[5px] shadow-custom w-24 h-[27px] border-[0.1px]`}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </Fade>
+      </Modal>
+
       {openModal && (
         <CustomeModal
           setOpenModal={setOpenModal}

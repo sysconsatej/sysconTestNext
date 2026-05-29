@@ -43,8 +43,15 @@ function isConfigFlagEnabled(value) {
   return false;
 }
 
-function onSubmitFunctionCall(functionData, newState, formControlData, values, setStateVariable, childName, childIndex) {
-
+function onSubmitFunctionCall(
+  functionData,
+  newState,
+  formControlData,
+  values,
+  setStateVariable,
+  childName,
+  childIndex,
+) {
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
   console.log(functionData, "functionData");
@@ -79,9 +86,9 @@ function onSubmitFunctionCall(functionData, newState, formControlData, values, s
         values,
         setStateVariable,
         childName,
-        childIndex
-      })
-      return result
+        childIndex,
+      });
+      return result;
       // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
     }
   }
@@ -90,13 +97,16 @@ function onSubmitFunctionCall(functionData, newState, formControlData, values, s
 function transformBooleanValues(obj) {
   if (Array.isArray(obj)) {
     return obj.map(transformBooleanValues);
-  } else if (typeof obj === 'object' && obj !== null) {
+  } else if (typeof obj === "object" && obj !== null) {
     return Object.keys(obj).reduce((acc, key) => {
       const value = obj[key];
-      if (typeof value === 'boolean') {
-        acc[key] = value ? 'True' : 'False';
-      } else if (typeof value === 'string' && (value === 'true' || value === 'false')) {
-        acc[key] = value === 'true' ? 'True' : 'False';
+      if (typeof value === "boolean") {
+        acc[key] = value ? "True" : "False";
+      } else if (
+        typeof value === "string" &&
+        (value === "true" || value === "false")
+      ) {
+        acc[key] = value === "true" ? "True" : "False";
       } else {
         acc[key] = transformBooleanValues(value);
       }
@@ -177,7 +187,6 @@ export default function EditSubChildComponent(props) {
     setTransformedState(transformedNewState);
   }, [newState]);
 
-
   const toggleSubChildEdit = () => {
     setOpenSubChildEdit((prev) => !prev);
   };
@@ -238,17 +247,23 @@ export default function EditSubChildComponent(props) {
     if (Object.keys(obj).length !== 0) {
       setSubmitNewState((prevState) => {
         const newStateCopy = { ...newState, ...prevState };
-        let updatedData = newStateCopy[childName][childIndex][subChild.tableName].filter((_, idx) => idx === index);
+        let updatedData = newStateCopy[childName][childIndex][
+          subChild.tableName
+        ].filter((_, idx) => idx === index);
         updatedData = { ...updatedData[0], isChecked: true };
-        newStateCopy[childName][childIndex][subChild.tableName][index] = updatedData;
+        newStateCopy[childName][childIndex][subChild.tableName][index] =
+          updatedData;
         return newStateCopy;
       });
 
       setNewState((prevState) => {
         const newStateCopy = { ...newState, ...prevState };
-        let updatedData = newStateCopy[childName][childIndex][subChild.tableName].filter((_, idx) => idx === index);
+        let updatedData = newStateCopy[childName][childIndex][
+          subChild.tableName
+        ].filter((_, idx) => idx === index);
         updatedData = { ...updatedData[0], isChecked: true };
-        newStateCopy[childName][childIndex][subChild.tableName][index] = updatedData;
+        newStateCopy[childName][childIndex][subChild.tableName][index] =
+          updatedData;
         return newStateCopy;
       });
     }
@@ -267,7 +282,9 @@ export default function EditSubChildComponent(props) {
 
     if (!newState || !Array.isArray(newState[tableName])) return;
 
-    const filteredRows = newState[tableName].filter((_, index) => index !== childIndex);
+    const filteredRows = newState[tableName].filter(
+      (_, index) => index !== childIndex,
+    );
 
     let totalVolume = 0;
     let totalVolumeWt = 0;
@@ -295,7 +312,6 @@ export default function EditSubChildComponent(props) {
     }));
   };
 
-
   return (
     <React.Fragment>
       {!isGridEdit ? (
@@ -306,7 +322,11 @@ export default function EditSubChildComponent(props) {
             }}
             key={index}
             sx={{ "& > *": { borderBottom: "unset" } }}
-            className={!isView ? `${styles.tableCellHoverEffect} ${styles.hh} ${styles.hoverOnSubChildRow}` : ''}
+            className={
+              !isView
+                ? `${styles.tableCellHoverEffect} ${styles.hh} ${styles.hoverOnSubChildRow}`
+                : ""
+            }
           >
             {subChild.fields
               .filter((elem) => elem.isGridView)
@@ -322,21 +342,58 @@ export default function EditSubChildComponent(props) {
                   <div className="relative">
                     <div
                       className={`${childTableRowStyles} overflow-hidden whitespace-nowrap`}
-                      style={{ maxWidth: "200px" }}
+                      style={{
+                        maxWidth: "200px",
+                      }}
                     >
-                      {field.controlname === "dropdown" || field.controlname === "multiselect"
-                        ? (
-                          transformedState?.[`${field.fieldname}dropdown`]?.[0]?.label ||
-                          transformedState?.[`${field.fieldname}Dropdown`]
-                        )?.length > 15
-                          ? (
-                            transformedState?.[`${field.fieldname}dropdown`]?.[0]?.label ||
-                            transformedState?.[`${field.fieldname}Dropdown`]
-                          )?.slice(0, 15) + "..."
-                          : transformedState?.[`${field.fieldname}dropdown`]?.[0]?.label ||
-                          transformedState?.[`${field.fieldname}Dropdown`] ||
-                          ""
-                        : transformedState?.[childName]?.[childIndex]?.[subChild.tableName]?.[index]?.[`${field.fieldname}`]?.toString() || ""}
+                      <LightTooltip
+                        title={
+                          field.controlname === "dropdown" ||
+                          field.controlname === "multiselect"
+                            ? transformedState?.[
+                                `${field.fieldname}dropdown`
+                              ]?.[0]?.label ||
+                              transformedState?.[
+                                `${field.fieldname}Dropdown`
+                              ] ||
+                              ""
+                            : transformedState?.[childName]?.[childIndex]?.[
+                                subChild.tableName
+                              ]?.[index]?.[`${field.fieldname}`]?.toString() ||
+                              ""
+                        }
+                        arrow
+                      >
+                        <span>
+                          {field.controlname === "dropdown" ||
+                          field.controlname === "multiselect"
+                            ? (
+                                transformedState?.[
+                                  `${field.fieldname}dropdown`
+                                ]?.[0]?.label ||
+                                transformedState?.[`${field.fieldname}Dropdown`]
+                              )?.length > 15
+                              ? (
+                                  transformedState?.[
+                                    `${field.fieldname}dropdown`
+                                  ]?.[0]?.label ||
+                                  transformedState?.[
+                                    `${field.fieldname}Dropdown`
+                                  ]
+                                )?.slice(0, 15) + "..."
+                              : transformedState?.[
+                                  `${field.fieldname}dropdown`
+                                ]?.[0]?.label ||
+                                transformedState?.[
+                                  `${field.fieldname}Dropdown`
+                                ] ||
+                                ""
+                            : transformedState?.[childName]?.[childIndex]?.[
+                                subChild.tableName
+                              ]?.[index]?.[`${field.fieldname}`]?.toString() ||
+                              ""}
+                        </span>
+                      </LightTooltip>
                     </div>
 
                     {subIndex === 0 && (
@@ -348,7 +405,9 @@ export default function EditSubChildComponent(props) {
                               checked={subChildObject?.isChecked === "True"}
                               tabIndex={-1}
                               disableRipple
-                              inputProps={{ "aria-labelledby": field.fieldname }}
+                              inputProps={{
+                                "aria-labelledby": field.fieldname,
+                              }}
                               onChange={(event) =>
                                 handleChange(event, subChildObject, index)
                               }
@@ -359,8 +418,6 @@ export default function EditSubChildComponent(props) {
                     )}
                   </div>
                 </TableCell>
-
-
               ))}
             <div className="absolute right-0 w-fit">
               {!isSubChildDeleteHidden && (
@@ -368,16 +425,15 @@ export default function EditSubChildComponent(props) {
                   <IconButton
                     aria-label="Delete"
                     className={styles.icon}
-                    onClick={() => { deleteSubChildRecord(index), reCalculate(childIndex, childName); }}
+                    onClick={() => {
+                      (deleteSubChildRecord(index),
+                        reCalculate(childIndex, childName));
+                    }}
                     onMouseEnter={() => setHoveredIcon("delete")}
                     onMouseLeave={() => setHoveredIcon(null)}
                   >
                     <Image
-                      src={
-                        hoveredIcon === "delete"
-                          ? DeleteHover
-                          : DeleteIcon2
-                      }
+                      src={hoveredIcon === "delete" ? DeleteHover : DeleteIcon2}
                       alt="Delete Icon"
                       priority={false}
                       className="gridIcons2"
@@ -461,7 +517,7 @@ export default function EditSubChildComponent(props) {
                                 }
                                 return item;
                               });
-                            }
+                            },
                           );
 
                           return newCopy;
@@ -534,14 +590,14 @@ export default function EditSubChildComponent(props) {
                               field.isRequired &&
                               (!Object.prototype.hasOwnProperty.call(
                                 editSubChildObj,
-                                field.fieldname
+                                field.fieldname,
                               ) ||
                                 editSubChildObj[field.fieldname]
                                   .toString()
                                   .trim() === "")
                             ) {
                               toast.error(
-                                `Value for ${field.yourlabel} is missing or empty.`
+                                `Value for ${field.yourlabel} is missing or empty.`,
                               );
                               return;
                             }
@@ -556,8 +612,18 @@ export default function EditSubChildComponent(props) {
                               //   .forEach((e) =>
                               //     onSubmitFunctionCall(e, editSubChildObj)
                               //   );
-                              for (const fun of subChild?.functionOnSubmit.split(";") || []) {
-                                let updatedData = onSubmitFunctionCall(fun, newState, formControlData, editSubChildObj, setEditSubChildObj, childName, childIndex);
+                              for (const fun of subChild?.functionOnSubmit.split(
+                                ";",
+                              ) || []) {
+                                let updatedData = onSubmitFunctionCall(
+                                  fun,
+                                  newState,
+                                  formControlData,
+                                  editSubChildObj,
+                                  setEditSubChildObj,
+                                  childName,
+                                  childIndex,
+                                );
                                 if (updatedData.alertShow == true) {
                                   // if (updatedData.type == "success") {
                                   //   toast.success(updatedData.message);
@@ -572,9 +638,15 @@ export default function EditSubChildComponent(props) {
                                   // }
                                 }
                                 if (updatedData) {
-                                  setEditSubChildObj((prev) => { return { ...prev, ...updatedData.values } });
-                                  setNewState((prev) => { return { ...prev, ...updatedData.newState } });
-                                  setSubmitNewState((prev) => { return { ...prev, ...updatedData.newState } });
+                                  setEditSubChildObj((prev) => {
+                                    return { ...prev, ...updatedData.values };
+                                  });
+                                  setNewState((prev) => {
+                                    return { ...prev, ...updatedData.newState };
+                                  });
+                                  setSubmitNewState((prev) => {
+                                    return { ...prev, ...updatedData.newState };
+                                  });
                                 }
                               }
                             }

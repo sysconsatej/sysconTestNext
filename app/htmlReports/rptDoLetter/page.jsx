@@ -46,10 +46,11 @@ export default function rptDoLetter() {
   const chunkSize = 6;
   const deliveryOrderKenya = 12;
   const EmptyOffLoadingLetterSize = 6;
+  const EmptyOffLoadingLetterSizeSls = 4;
   const SealCuttingLetterSize = 14;
   const BondLetterSize = 12;
   const CMCLetterSize = 7;
-  const EmptyContainerOffLoadingLetterSize = 22;
+  const EmptyContainerOffLoadingLetterSize = 12;
   const EmptyContainerReturnNotification = 20;
   const SaudiDeliveryOrderSize = 6;
   const canReportContainerChunkSize = 15;
@@ -555,6 +556,11 @@ export default function rptDoLetter() {
   const EmptyOffLoadingLetterSizeChunks =
     EmptyOffLoadingLetterSize > 0
       ? chunkArray(containers, EmptyOffLoadingLetterSize)
+      : [containers];
+
+  const EmptyOffLoadingLetterSizeChunksSls =
+    EmptyOffLoadingLetterSize > 0
+      ? chunkArray(containers, EmptyOffLoadingLetterSizeSls)
       : [containers];
 
   const SealCuttingLetterSizeChunks =
@@ -1574,6 +1580,7 @@ export default function rptDoLetter() {
         </div>
       </div>
       {/* main Grid */}
+      {/* grid removed as discused with himanshu */}
       {/* <table className="w-full table-fixed border border-black border-collapse mt-4">
         <tbody>
           <tr>
@@ -1765,6 +1772,363 @@ export default function rptDoLetter() {
           </p>
         </div>
       </div>
+      {/* Container Details Grid */}
+      <table className="w-full mt-2 table-fixed border border-black border-collapse">
+        <thead>
+          <tr>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                Container No.
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                Size/Type
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                Status
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                Off Hire Reference
+              </p>
+            </th>
+            <th className="w-1/8 border border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                Valid Date
+              </p>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {containers?.length > 0 &&
+            containers?.map((item, index) => (
+              <tr key={index}>
+                <th className="w-1/8 border border-black p-1">
+                  <p
+                    className="text-black font-normal"
+                    style={{ fontSize: "9px" }}
+                  >
+                    {item.containerNo || ""}
+                  </p>
+                </th>
+                <th className="w-1/8 border border-black p-1">
+                  <p
+                    className="text-black font-normal text-left"
+                    style={{ fontSize: "9px" }}
+                  >
+                    {(item.size || "") + "/" + (item.type || "")}
+                  </p>
+                </th>
+                <th className="w-1/8 border font-normal border-black p-1">
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    {item.containerStatus || ""}
+                  </p>
+                </th>
+                <th className="w-1/8 border font-normal border-black p-1">
+                  <p className="text-black" style={{ fontSize: "9px" }}>
+                    N/A
+                  </p>
+                </th>
+                <th className="w-1/8 border border-black p-1">
+                  <p
+                    className="text-black font-normal"
+                    style={{ fontSize: "9px" }}
+                  >
+                    {formatDateToYMD(data?.[0]?.doValidDate)}
+                  </p>
+                </th>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+
+      <div className="flex mt-2" style={{ width: "100%" }}>
+        <div style={{ width: "10%" }}>
+          <p className="text-black" style={{ fontSize: "10px" }}>
+            Note :
+          </p>
+        </div>
+        <div style={{ width: "98%" }}>
+          <p className="text-black" style={{ fontSize: "10px" }}>
+            Please do not offload the Container(s) if it comes after the
+            Validity date mentioned against each Container and inform us of its
+            arrival
+          </p>
+        </div>
+      </div>
+
+      <div className="flex mt-2" style={{ width: "100%" }}>
+        <div style={{ width: "15%" }}>
+          <p className="text-black" style={{ fontSize: "10px" }}>
+            Description :
+          </p>
+        </div>
+        <div style={{ width: "85%" }}>
+          <p className="text-black" style={{ fontSize: "10px" }}>
+            {data[0]?.goodsDesc || ""}
+          </p>
+        </div>
+      </div>
+
+      {/* Sticky Footer */}
+      <footer
+        style={{
+          bottom: "10px",
+          width: "100%",
+        }}
+      >
+        <div>
+          <p className="text-black font-bold mt-2" style={{ fontSize: "10px" }}>
+            Thanking You, <br />
+            For {data[0]?.company} <br />
+          </p>
+          <p style={{ width: "80%", height: "100%" }}>
+            <ImgSign />
+          </p>
+          {/* <p className="text-black mt-14" style={{ fontSize: "10px" }}>
+            Issued By: admin
+          </p> */}
+          <p className="text-black" style={{ fontSize: "10px" }}>
+            Please note this is a computer-generated document, hence no
+            signature and stamp required.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+
+  const EmptyOffLoadingLetterSls = (containers) => (
+    <div>
+      <div className="mx-auto">
+        <CompanyImgModule />
+      </div>
+      {/* Header */}
+      <div className="mx-auto text-black">
+        <h1 className="text-black font-bold text-sm text-center underline">
+          <u>EMPTY OFF LOADING LETTER</u>
+        </h1>
+        <div className="flex items-end justify-end">
+          <p
+            className="text-black"
+            style={{ fontSize: "10px", minWidth: "100px" }}
+          ></p>
+        </div>
+        <div className="flex justify-between w-full">
+          <div className="flex items-end justify-start w-[40%]">
+            <p
+              className="text-black font-bold mr-2"
+              style={{ fontSize: "10px" }}
+            >
+              To, <br />
+              The Manager, <br />
+              {data[0]?.emptyDepot || ""}
+              <br />
+              {data[0]?.emptyDepotAddress || ""}
+            </p>
+          </div>
+          <div className="flex items-start justify-end">
+            <p
+              className="text-black font-bold mr-2"
+              style={{ fontSize: "10px" }}
+            >
+              Date :
+            </p>
+            <p
+              className="text-black"
+              style={{ fontSize: "10px", minWidth: "100px" }}
+            >
+              {formatDateToYMDMonths(data[0]?.doDate)}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className="flex mt-2" style={{ width: "100%" }}>
+        <div style={{ width: "12%" }}>
+          <p className="text-black font-bold" style={{ fontSize: "10px" }}>
+            Dear Sir,
+          </p>
+        </div>
+      </div>
+      <div className="flex mt-1" style={{ width: "100%" }}>
+        <div>
+          <p className="text-black" style={{ fontSize: "10px" }}>
+            Please Accept the below mentioned Empty container(s).On account of{" "}
+            <span className="text-black uppercase">{data[0]?.mlo || ""}</span>
+          </p>
+        </div>
+      </div>
+      {/* main Grid */}
+      <table className="w-full table-fixed border border-black border-collapse mt-4">
+        <tbody>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                VESSEL/VOY :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.podVessel || ""} {data[0]?.podVoyage || ""}
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                PORT/ICD ARR DATE :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {formatDateToYMDMonths(data[0]?.arrivalDate)}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                PLACE OF ORIGIN :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.plr || ""}
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                LOAD PORT :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.pol || ""}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                DISCH PORT :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.pod || ""}
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                FINAL DEST :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.fpd || ""}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                B/L NO. :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.blNo || ""}
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                B/L DATE :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {formatDateToYMDMonths(data[0]?.blDate)}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                IGM NO. :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.igmNo || ""}
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                IGM DATE :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {formatDateToYMDMonths(data[0]?.igmDate)}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                ITEM NO. :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.lineNo || ""}
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                DESTUFFING TYPE :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                {data[0]?.destuffName || ""}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td className="w-1/6 border-t border-b border-l border-black p-1 align-top">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                CONSIGNEE :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                <span>{data[0]?.consigneeText || ""}</span>
+                <br />
+                <span style={{ wordBreak: "break-word" }}>
+                  {data[0]?.consigneeAddress || ""}
+                </span>
+              </p>
+            </td>
+            <td className="w-1/6 border-t border-b border-l border-black p-1 align-top">
+              <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                NOTIFY PARTY :
+              </p>
+            </td>
+            <td className="w-2/6 border-t border-b border-r border-black p-1">
+              <p className="text-black" style={{ fontSize: "9px" }}>
+                <span>{data[0]?.notifyPartyText || ""}</span>
+                <br />
+                <span style={{ wordBreak: "break-word" }}>
+                  {data[0]?.notifyPartyAddress || ""}
+                </span>
+              </p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      {/* main Grid */}
       {/* Container Details Grid */}
       <table className="w-full mt-2 table-fixed border border-black border-collapse">
         <thead>
@@ -5148,13 +5512,29 @@ export default function rptDoLetter() {
 
                     <tbody>
                       <tr>
-                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
-                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
                             Date
                           </p>
                         </td>
-                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
-                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
                             :
                           </p>
                         </td>
@@ -5172,13 +5552,29 @@ export default function rptDoLetter() {
                       </tr>
 
                       <tr>
-                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
-                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
                             Our Reference
                           </p>
                         </td>
-                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
-                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
                             :
                           </p>
                         </td>
@@ -5196,13 +5592,29 @@ export default function rptDoLetter() {
                       </tr>
 
                       <tr>
-                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
-                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
                             From
                           </p>
                         </td>
-                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
-                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
                             :
                           </p>
                         </td>
@@ -5213,20 +5625,34 @@ export default function rptDoLetter() {
                             textAlign: "right",
                           }}
                         >
-                          <p style={{ margin: 0, fontSize: "9px" }}>
-                            IMPORT
-                          </p>
+                          <p style={{ margin: 0, fontSize: "9px" }}>IMPORT</p>
                         </td>
                       </tr>
 
                       <tr>
-                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
-                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
                             Email
                           </p>
                         </td>
-                        <td style={{ padding: "0 0 2px 0", verticalAlign: "top" }}>
-                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
                             :
                           </p>
                         </td>
@@ -5245,12 +5671,24 @@ export default function rptDoLetter() {
 
                       <tr>
                         <td style={{ padding: "0", verticalAlign: "top" }}>
-                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
                             Page
                           </p>
                         </td>
                         <td style={{ padding: "0", verticalAlign: "top" }}>
-                          <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
                             :
                           </p>
                         </td>
@@ -5275,7 +5713,6 @@ export default function rptDoLetter() {
 
           {/* Gap before details table */}
           <div style={{ height: "18px" }} />
-
         </div>
 
         {/* BL / Shipper / Consignee Details */}
@@ -5307,7 +5744,9 @@ export default function rptDoLetter() {
                 </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
                 <p style={{ margin: 0, fontSize: "9px" }}>
@@ -5321,7 +5760,9 @@ export default function rptDoLetter() {
                 </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
                 <p style={{ margin: 0, fontSize: "9px" }}>
@@ -5337,7 +5778,9 @@ export default function rptDoLetter() {
                 </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
                 <p style={{ margin: 0, fontSize: "9px" }}>
@@ -5351,7 +5794,9 @@ export default function rptDoLetter() {
                 </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
                 <p style={{ margin: 0, fontSize: "9px" }}>
@@ -5367,7 +5812,9 @@ export default function rptDoLetter() {
                 </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
                 <p style={{ margin: 0, fontSize: "9px" }}>
@@ -5381,7 +5828,9 @@ export default function rptDoLetter() {
                 </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
                 <p style={{ margin: 0, fontSize: "9px" }}>
@@ -5397,7 +5846,9 @@ export default function rptDoLetter() {
                 </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
                 <p style={{ margin: 0, fontSize: "9px" }}>
@@ -5411,7 +5862,9 @@ export default function rptDoLetter() {
                 </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
                 <p style={{ margin: 0, fontSize: "9px" }}>
@@ -5427,7 +5880,9 @@ export default function rptDoLetter() {
                 </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
                 <p style={{ margin: 0, fontSize: "9px" }}>
@@ -5441,11 +5896,113 @@ export default function rptDoLetter() {
                 </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
               </td>
               <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
                 <p style={{ margin: 0, fontSize: "9px" }}>
                   {formatDateToYMDMonths(canData[0]?.hblDate || "")}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Vessel Id
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.podVesselImoCode || ""}
+                </p>
+              </td>
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  SCN No.
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.podCustomVcnNo || ""}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  BS Code.
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.podBsCode || ""}
+                </p>
+              </td>
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Arrival Date
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {formatDateToYMDMonths(canData[0]?.arrivalDate || "")}
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  IGM No.
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.igmNo || ""}
+                </p>
+              </td>
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  IGM Date
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {formatDateToYMDMonths(canData[0]?.igmDate || "")}
                 </p>
               </td>
             </tr>
@@ -5471,7 +6028,9 @@ export default function rptDoLetter() {
                 </p>
               </td>
               <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
               </td>
               <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
                 <p
@@ -5495,7 +6054,9 @@ export default function rptDoLetter() {
                 </p>
               </td>
               <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>:</p>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
               </td>
               <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
                 <p
@@ -5507,7 +6068,7 @@ export default function rptDoLetter() {
                     wordBreak: "break-word",
                   }}
                 >
-                  {canData[0]?.consignee || ""}
+                  {canData[0]?.consignee || canData[0]?.consigneeName || ""}
                   <br />
                   {canData[0]?.consigneeAddress || ""}
                 </p>
@@ -5534,33 +6095,62 @@ export default function rptDoLetter() {
           <tbody>
             <tr>
               <td style={{ padding: "0 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold", color: "#000" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    color: "#000",
+                  }}
+                >
                   No.Of Packages
                 </p>
               </td>
 
               <td style={{ padding: "0 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold", color: "#000" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    color: "#000",
+                  }}
+                >
                   :
                 </p>
               </td>
 
               <td style={{ padding: "0 4px", verticalAlign: "top" }}>
                 <p style={{ margin: 0, fontSize: "9px", color: "#000" }}>
-                  {canData[0]?.noOfPackages || ""} {canData[0]?.packagesCode || ""}
+                  {canData[0]?.noOfPackages || ""}{" "}
+                  {canData[0]?.packagesCode || ""}
                 </p>
               </td>
             </tr>
 
             <tr>
               <td style={{ padding: "0 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold", color: "#000" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    color: "#000",
+                  }}
+                >
                   Gross Weight
                 </p>
               </td>
 
               <td style={{ padding: "0 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold", color: "#000" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    color: "#000",
+                  }}
+                >
                   :
                 </p>
               </td>
@@ -5574,13 +6164,27 @@ export default function rptDoLetter() {
 
             <tr>
               <td style={{ padding: "0 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold", color: "#000" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    color: "#000",
+                  }}
+                >
                   Volume
                 </p>
               </td>
 
               <td style={{ padding: "0 4px", verticalAlign: "top" }}>
-                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold", color: "#000" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    color: "#000",
+                  }}
+                >
                   :
                 </p>
               </td>
@@ -5640,37 +6244,55 @@ export default function rptDoLetter() {
               containers.map((item, index) => (
                 <tr key={index}>
                   <td className="w-1/6 px-1 py-[1px]">
-                    <p className="text-black font-normal" style={{ fontSize: "9px" }}>
+                    <p
+                      className="text-black font-normal"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.containerNo || ""}
                     </p>
                   </td>
 
                   <td className="w-1/6 px-1 py-[1px]">
-                    <p className="text-black font-normal" style={{ fontSize: "9px" }}>
+                    <p
+                      className="text-black font-normal"
+                      style={{ fontSize: "9px" }}
+                    >
                       {(item.size || "") + " / " + (item.type || "")}
                     </p>
                   </td>
 
                   <td className="w-1/6 px-1 py-[1px]">
-                    <p className="text-black font-normal" style={{ fontSize: "9px" }}>
+                    <p
+                      className="text-black font-normal"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.containerStatus || ""}
                     </p>
                   </td>
 
                   <td className="w-1/6 px-1 py-[1px]">
-                    <p className="text-black font-normal" style={{ fontSize: "9px" }}>
+                    <p
+                      className="text-black font-normal"
+                      style={{ fontSize: "9px" }}
+                    >
                       {(item.grossWt || "") + " " + (item.weightUnitCode || "")}
                     </p>
                   </td>
 
                   <td className="w-1/6 px-1 py-[1px]">
-                    <p className="text-black font-normal" style={{ fontSize: "9px" }}>
+                    <p
+                      className="text-black font-normal"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.noOfPackages || ""} {item.packageCode || ""}
                     </p>
                   </td>
 
                   <td className="w-1/6 px-1 py-[1px]">
-                    <p className="text-black font-normal" style={{ fontSize: "9px" }}>
+                    <p
+                      className="text-black font-normal"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.customSealNo || ""}
                     </p>
                   </td>
@@ -5681,17 +6303,887 @@ export default function rptDoLetter() {
         {/* Description  */}
         <div className="flex mt-2" style={{ width: "100%" }}>
           <p className="text-black" style={{ fontSize: "10px" }}>
-            Dear Sir/ Madam,<br /> <br />
-            The above consignment is scheduled to arrive by above vessel. Kindly approach our office to present original Bills of Lading and obtain
-            delivery order for clearance of the Consignment against payment of Freight & other local charges as applicable.<br /> <br />
-            Please arrange to clear the cargo within 5 days of arrival of vessel to avoid demurrage charges.<br /> <br />
-            Please note that if you fail to comply with the above we shall without prejudice, arrange movement of the container from the JEBEL ALI
-            to NHAVA SHEVA at your cost and risk. No liability of whatsoever shall be admitted by us for such movement.
+            Dear Sir/ Madam,
+            <br /> <br />
+            The above consignment is scheduled to arrive by above vessel. Kindly
+            approach our office to present original Bills of Lading and obtain
+            delivery order for clearance of the Consignment against payment of
+            Freight & other local charges as applicable.
+            <br /> <br />
+            Please arrange to clear the cargo within 5 days of arrival of vessel
+            to avoid demurrage charges.
+            <br /> <br />
+            Please note that if you fail to comply with the above we shall
+            without prejudice, arrange movement of the container from the JEBEL
+            ALI to NHAVA SHEVA at your cost and risk. No liability of whatsoever
+            shall be admitted by us for such movement.
           </p>
         </div>
         <div className="flex mt-2" style={{ width: "100%" }}>
           <p className="text-black font-bold" style={{ fontSize: "10px" }}>
             PAYMENTS TERMS : CASH
+          </p>
+        </div>
+
+        {/* 
+        <footer
+          style={{
+            bottom: "10px",
+            width: "100%",
+          }}
+        >
+          <div>
+            <p
+              className="text-black font-bold mt-2"
+              style={{ fontSize: "10px" }}
+            >
+              For {data[0]?.company} <br />
+            </p>
+
+            <p className="text-black" style={{ fontSize: "10px" }}>
+              Note: This is a computer generated document and does not require a signature.
+            </p>
+
+            <p className="text-black mt-14" style={{ fontSize: "10px" }}>
+              Issued By: admin
+            </p>
+
+          </div>
+        </footer> */}
+      </div>
+    );
+  };
+
+  const CanReportFsa = (input, i = 0, totalPages = 1) => {
+    const containers = Array.isArray(input)
+      ? input
+      : Array.isArray(input?.containers)
+        ? input.containers
+        : [];
+
+    const pageIndex = i;
+
+    return (
+      <div>
+        <div className="mx-auto">
+          <CompanyImgModule />
+        </div>
+        <div
+          style={{
+            width: "100%",
+            color: "#000",
+            fontFamily: "Arial, sans-serif",
+          }}
+        >
+          {/* Header Section */}
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              tableLayout: "fixed",
+            }}
+          >
+            <colgroup>
+              <col style={{ width: "30%" }} />
+              <col style={{ width: "35%" }} />
+              <col style={{ width: "35%" }} />
+            </colgroup>
+
+            <tbody>
+              {/* Title + Company Block */}
+              <tr>
+                <td style={{ verticalAlign: "top" }}></td>
+
+                <td
+                  style={{
+                    verticalAlign: "top",
+                    textAlign: "center",
+                    paddingTop: "0px",
+                  }}
+                >
+                  <h1
+                    style={{
+                      margin: 0,
+                      fontSize: "14px",
+                      fontWeight: "bold",
+                      textDecoration: "underline",
+                      lineHeight: "18px",
+                      color: "#000",
+                    }}
+                  >
+                    Cargo Arrival Notice
+                  </h1>
+                </td>
+                {/* 
+                <td
+                  style={{
+                    verticalAlign: "top",
+                    textAlign: "right",
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "9px",
+                      fontWeight: "bold",
+                      lineHeight: "12px",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {canData?.[0]?.company || ""}
+                  </p>
+                </td> */}
+              </tr>
+
+              {/* Right-side meta details */}
+              <tr>
+                <td></td>
+                <td></td>
+
+                <td style={{ verticalAlign: "top", paddingTop: "2px" }}>
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      tableLayout: "fixed",
+                    }}
+                  >
+                    <colgroup>
+                      <col style={{ width: "34%" }} />
+                      <col style={{ width: "6%" }} />
+                      <col style={{ width: "60%" }} />
+                    </colgroup>
+
+                    <tbody>
+                      <tr>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            Date
+                          </p>
+                        </td>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            :
+                          </p>
+                        </td>
+                        <td
+                          style={{
+                            padding: "0 0 2px 0",
+                            verticalAlign: "top",
+                            textAlign: "right",
+                          }}
+                        >
+                          <p style={{ margin: 0, fontSize: "9px" }}>
+                            {formatDateToYMDMonths(new Date())}
+                          </p>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            From
+                          </p>
+                        </td>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            :
+                          </p>
+                        </td>
+                        <td
+                          style={{
+                            padding: "0 0 2px 0",
+                            verticalAlign: "top",
+                            textAlign: "right",
+                          }}
+                        >
+                          <p style={{ margin: 0, fontSize: "9px" }}>IMPORT</p>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            Email
+                          </p>
+                        </td>
+                        <td
+                          style={{ padding: "0 0 2px 0", verticalAlign: "top" }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            :
+                          </p>
+                        </td>
+                        <td
+                          style={{
+                            padding: "0 0 2px 0",
+                            verticalAlign: "top",
+                            textAlign: "right",
+                          }}
+                        >
+                          <p style={{ margin: 0, fontSize: "9px" }}>
+                            {canData?.[0]?.companyEmail || ""}
+                          </p>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td style={{ padding: "0", verticalAlign: "top" }}>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            Page
+                          </p>
+                        </td>
+                        <td style={{ padding: "0", verticalAlign: "top" }}>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "9px",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            :
+                          </p>
+                        </td>
+                        <td
+                          style={{
+                            padding: "0",
+                            verticalAlign: "top",
+                            textAlign: "right",
+                          }}
+                        >
+                          <p style={{ margin: 0, fontSize: "9px" }}>
+                            {pageIndex + 1} of {totalPages}
+                          </p>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Gap before details table */}
+          <div style={{ height: "18px" }} />
+        </div>
+
+        {/* BL / Shipper / Consignee Details */}
+        <table
+          style={{
+            width: "100%",
+            borderTop: "1px solid #000",
+            borderBottom: "1px solid #000",
+            borderCollapse: "collapse",
+            tableLayout: "fixed",
+            color: "#000",
+            fontFamily: "Arial, sans-serif",
+          }}
+        >
+          <colgroup>
+            <col style={{ width: "15%" }} />
+            <col style={{ width: "2%" }} />
+            <col style={{ width: "33%" }} />
+            <col style={{ width: "15%" }} />
+            <col style={{ width: "2%" }} />
+            <col style={{ width: "33%" }} />
+          </colgroup>
+
+          <tbody>
+            <tr>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Vessel
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.podVessel || ""}
+                </p>
+              </td>
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Voyage
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.podVoyage || ""}
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Place of Receipt
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.plr || ""}
+                </p>
+              </td>
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Port of Loading
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.pol || ""}
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Port of Discharge
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.pod || ""}
+                </p>
+              </td>
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Final Destination
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.fpd || ""}
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  MBL No.
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.mblNo || ""}
+                </p>
+              </td>
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  MBL Date
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {formatDateToYMDMonths(canData[0]?.mblDate || "")}
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  HBL No.
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.hblNo || ""}
+                </p>
+              </td>
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  HBL Date
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {formatDateToYMDMonths(canData[0]?.hblDate || "")}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Vessel Id
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.podVesselImoCode || ""}
+                </p>
+              </td>
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Arrival Date
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {formatDateToYMDMonths(canData[0]?.arrivalDate || "")}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  IGM No.
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {canData[0]?.igmNo || ""}
+                </p>
+              </td>
+
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  IGM Date
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "2px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px" }}>
+                  {formatDateToYMDMonths(canData[0]?.igmDate || "")}
+                </p>
+              </td>
+            </tr>
+
+            {/* Separator */}
+            <tr>
+              <td
+                colSpan={6}
+                style={{
+                  borderTop: "1px solid #000",
+                  padding: 0,
+                  height: "0px",
+                  lineHeight: 0,
+                }}
+              />
+            </tr>
+
+            {/* Shipper / Consignee */}
+            <tr>
+              <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Consignee
+                </p>
+              </td>
+              <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    lineHeight: "13px",
+                    whiteSpace: "pre-line",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {canData[0]?.consignee || canData[0]?.consigneeName || ""}
+                  <br />
+                  {canData[0]?.consigneeAddress || ""}
+                </p>
+              </td>
+              <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  Notify Party
+                </p>
+              </td>
+              <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", fontWeight: "bold" }}>
+                  :
+                </p>
+              </td>
+              <td style={{ padding: "3px 4px", verticalAlign: "top" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    lineHeight: "13px",
+                    whiteSpace: "pre-line",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {canData[0]?.notifyParty1 ||
+                    canData[0]?.notifyPartyName ||
+                    ""}
+                  <br />
+                  {canData[0]?.notifyPartyAddress || ""}
+                </p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table
+          style={{
+            width: "100%",
+            marginTop: "8px",
+            marginBottom: "8px",
+            borderCollapse: "collapse",
+            tableLayout: "fixed",
+          }}
+        >
+          <colgroup>
+            <col style={{ width: "130px" }} />
+            <col style={{ width: "12px" }} />
+            <col style={{ width: "auto" }} />
+          </colgroup>
+
+          <tbody>
+            <tr>
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    color: "#000",
+                  }}
+                >
+                  No.Of Packages
+                </p>
+              </td>
+
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    color: "#000",
+                  }}
+                >
+                  :
+                </p>
+              </td>
+
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", color: "#000" }}>
+                  {canData[0]?.noOfPackages || ""}{" "}
+                  {canData[0]?.packagesCode || ""}
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    color: "#000",
+                  }}
+                >
+                  Gross Weight
+                </p>
+              </td>
+
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    color: "#000",
+                  }}
+                >
+                  :
+                </p>
+              </td>
+
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", color: "#000" }}>
+                  {canData[0]?.grossWt || ""} {canData[0]?.weightUnit || ""}
+                </p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    color: "#000",
+                  }}
+                >
+                  Volume
+                </p>
+              </td>
+
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    color: "#000",
+                  }}
+                >
+                  :
+                </p>
+              </td>
+
+              <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                <p style={{ margin: 0, fontSize: "9px", color: "#000" }}>
+                  {canData[0]?.volume || ""} {canData[0]?.volumeUnitName || ""}
+                </p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table className="w-full mt-2 table-fixed border-t border-black border-collapse">
+          <thead className="border-b border-gray-500">
+            <tr>
+              <th className="w-1/6 p-1 text-left">
+                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                  Container No.
+                </p>
+              </th>
+
+              <th className="w-1/6 p-1 text-left">
+                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                  Size/Type
+                </p>
+              </th>
+
+              <th className="w-1/6 p-1 text-left">
+                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                  Status
+                </p>
+              </th>
+
+              <th className="w-1/6 p-1 text-left">
+                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                  Gross Wt.
+                </p>
+              </th>
+
+              <th className="w-1/6 p-1 text-left">
+                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                  No. of Packages
+                </p>
+              </th>
+
+              <th className="w-1/6 p-1 text-left">
+                <p className="text-black font-bold" style={{ fontSize: "9px" }}>
+                  Seal No.
+                </p>
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {containers.length > 0 &&
+              containers.map((item, index) => (
+                <tr key={index}>
+                  <td className="w-1/6 px-1 py-[1px]">
+                    <p
+                      className="text-black font-normal"
+                      style={{ fontSize: "9px" }}
+                    >
+                      {item.containerNo || ""}
+                    </p>
+                  </td>
+
+                  <td className="w-1/6 px-1 py-[1px]">
+                    <p
+                      className="text-black font-normal"
+                      style={{ fontSize: "9px" }}
+                    >
+                      {(item.size || "") + " / " + (item.type || "")}
+                    </p>
+                  </td>
+
+                  <td className="w-1/6 px-1 py-[1px]">
+                    <p
+                      className="text-black font-normal"
+                      style={{ fontSize: "9px" }}
+                    >
+                      {item.containerStatus || ""}
+                    </p>
+                  </td>
+
+                  <td className="w-1/6 px-1 py-[1px]">
+                    <p
+                      className="text-black font-normal"
+                      style={{ fontSize: "9px" }}
+                    >
+                      {(item.grossWt || "") + " " + (item.weightUnitCode || "")}
+                    </p>
+                  </td>
+
+                  <td className="w-1/6 px-1 py-[1px]">
+                    <p
+                      className="text-black font-normal"
+                      style={{ fontSize: "9px" }}
+                    >
+                      {item.noOfPackages || ""} {item.packageCode || ""}
+                    </p>
+                  </td>
+
+                  <td className="w-1/6 px-1 py-[1px]">
+                    <p
+                      className="text-black font-normal"
+                      style={{ fontSize: "9px" }}
+                    >
+                      {item.customSealNo || ""}
+                    </p>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+        {/* Description  */}
+        <div className="flex mt-2" style={{ width: "100%" }}>
+          <p className="text-black" style={{ fontSize: "10px" }}>
+            Dear Sir/ Madam,
+            <br /> <br />
+            The above consignment is scheduled to arrive by above vessel. Kindly
+            approach our office to present original Bills of Lading and obtain
+            delivery order for clearance of the Consignment against payment of
+            Freight & other local charges as applicable.
+            <br /> <br />
+            Please arrange to clear the cargo within Free time of arrival of
+            vessel to avoid demurrage charges.
+            <br /> <br />
           </p>
         </div>
 
@@ -5775,7 +7267,7 @@ export default function rptDoLetter() {
                         >
                           <div
                             className="flex-grow p-4"
-                            style={{ maxHeight: "250mm", minHeight: "250mm" }}
+                            style={{ maxHeight: "275mm", minHeight: "275mm" }}
                           >
                             {DoLetter(container, i)}
                           </div>
@@ -6758,7 +8250,8 @@ export default function rptDoLetter() {
                 ? canReportChunks.filter(Boolean)
                 : [];
 
-              const canReportCount = canReport.length > 0 ? canReport.length : 1;
+              const canReportCount =
+                canReport.length > 0 ? canReport.length : 1;
               const startRefIndex = refCursor;
               refCursor += canReportCount;
 
@@ -6772,7 +8265,9 @@ export default function rptDoLetter() {
                           {/* PDF capture page */}
                           <div
                             ref={(el) => {
-                              if (el) enquiryModuleRefs.current[startRefIndex + i] = el;
+                              if (el)
+                                enquiryModuleRefs.current[startRefIndex + i] =
+                                  el;
                             }}
                             id={`CAN Report-${i}`}
                             className={`bg-white black-text ${i < canReportCount - 1 ? "report-spacing" : ""
@@ -6828,31 +8323,212 @@ export default function rptDoLetter() {
                                   className="text-black"
                                   style={{ fontSize: "10px", margin: 0 }}
                                 >
-                                  Note: This is a computer generated document and does not
-                                  require a signature.
+                                  Note: This is a computer generated document
+                                  and does not require a signature.
                                 </p>
                               </div>
                             </div>
 
                             <style jsx>{`
-                  .black-text {
-                    color: black !important;
-                  }
+                              .black-text {
+                                color: black !important;
+                              }
 
-                  @media print {
-                    .report-spacing {
-                      page-break-after: always;
-                      break-after: page;
-                    }
-                  }
-                `}</style>
+                              @media print {
+                                .report-spacing {
+                                  page-break-after: always;
+                                  break-after: page;
+                                }
+                              }
+                            `}</style>
                           </div>
                         </div>
 
                         <div className="bg-gray-300 h-2 no-print" />
                       </React.Fragment>
-                    )
+                    ),
                   )}
+                </>
+              );
+            }
+            case "CAN ReportFSA": {
+              const canReport = Array.isArray(canReportChunks)
+                ? canReportChunks.filter(Boolean)
+                : [];
+
+              const canReportCount =
+                canReport.length > 0 ? canReport.length : 1;
+              const startRefIndex = refCursor;
+              refCursor += canReportCount;
+
+              return (
+                <>
+                  {(canReport.length > 0 ? canReport : [undefined]).map(
+                    (container, i) => (
+                      <React.Fragment key={`${reportId}-${i}`}>
+                        {/* Screen preview wrapper only */}
+                        <div className="w-full flex justify-center no-print-bg">
+                          {/* PDF capture page */}
+                          <div
+                            ref={(el) => {
+                              if (el)
+                                enquiryModuleRefs.current[startRefIndex + i] =
+                                  el;
+                            }}
+                            id={`CAN Report-${i}`}
+                            className={`bg-white black-text ${i < canReportCount - 1 ? "report-spacing" : ""
+                              }`}
+                            style={{
+                              width: "210mm",
+                              minWidth: "210mm",
+                              maxWidth: "210mm",
+                              minHeight: "297mm",
+                              height: "297mm",
+                              margin: "0", // important
+                              padding: "24px",
+                              boxSizing: "border-box",
+                              display: "flex",
+                              flexDirection: "column",
+                              position: "relative",
+                              backgroundColor: "#ffffff",
+                              color: "#000000",
+                              overflow: "hidden",
+                              fontFamily: "Arial, sans-serif",
+                            }}
+                          >
+                            <div
+                              style={{
+                                flex: "1 1 auto",
+                                minHeight: "0",
+                                display: "flex",
+                                flexDirection: "column",
+                                padding: "16px",
+                                boxSizing: "border-box",
+                              }}
+                            >
+                              {CanReportFsa(container, i, canReportCount)}
+                            </div>
+
+                            <div
+                              style={{
+                                paddingLeft: "16px",
+                                paddingRight: "16px",
+                                marginTop: "auto",
+                                marginBottom: "0",
+                              }}
+                            >
+                              <div style={{ marginBottom: "6px" }}>
+                                <p
+                                  className="text-black font-bold"
+                                  style={{ fontSize: "10px", margin: 0 }}
+                                >
+                                  For {data[0]?.company} <br />
+                                </p>
+
+                                <p
+                                  className="text-black"
+                                  style={{ fontSize: "10px", margin: 0 }}
+                                >
+                                  Note: This is a computer generated document
+                                  and does not require a signature.
+                                </p>
+                              </div>
+                            </div>
+
+                            <style jsx>{`
+                              .black-text {
+                                color: black !important;
+                              }
+
+                              @media print {
+                                .report-spacing {
+                                  page-break-after: always;
+                                  break-after: page;
+                                }
+                              }
+                            `}</style>
+                          </div>
+                        </div>
+
+                        <div className="bg-gray-300 h-2 no-print" />
+                      </React.Fragment>
+                    ),
+                  )}
+                </>
+              );
+            }
+            case "EMPTY OFF LOADING LETTER TANK OPERATOR": {
+              const EmptyOffLoadingLetterData = Array.isArray(
+                EmptyOffLoadingLetterSizeChunksSls,
+              )
+                ? EmptyOffLoadingLetterSizeChunksSls.filter(Boolean)
+                : [];
+
+              const emptyOffLoadingLetterCount =
+                EmptyOffLoadingLetterData.length > 0
+                  ? EmptyOffLoadingLetterData.length
+                  : 1;
+              const startRefIndex = refCursor;
+              refCursor += emptyOffLoadingLetterCount;
+
+              return (
+                <>
+                  {(EmptyOffLoadingLetterData.length > 0
+                    ? EmptyOffLoadingLetterData
+                    : [undefined]
+                  ).map((container, i) => (
+                    <>
+                      <div
+                        key={reportId}
+                        ref={(el) => {
+                          if (el)
+                            enquiryModuleRefs.current[startRefIndex + i] = el;
+                        }}
+                        id="EMPTY OFF LOADING LETTER SLS"
+                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
+                        style={{
+                          width: "210mm",
+                          minHeight: "297mm",
+                          maxHeight: "297mm",
+                          margin: "auto",
+                          padding: "24px",
+                          boxSizing: "border-box",
+                          display: "flex",
+                          flexDirection: "column",
+                          position: "relative",
+                          pageBreakAfter:
+                            index < reportIds.length - 1 ? "always" : "auto",
+                        }}
+                      >
+                        <div
+                          className="flex-grow p-4"
+                          style={{ maxHeight: "260mm", minHeight: "260mm" }}
+                        >
+                          {/* Create As discused my shanaze to create new report and the data is 21-05-2026 */}
+                          {EmptyOffLoadingLetterSls(container)}
+                        </div>
+                        <div className="pl-4">
+                          <div>
+                            <CompanyImgFooterModule />
+                          </div>
+                        </div>
+
+                        <style jsx>{`
+                          .black-text {
+                            color: black !important;
+                          }
+
+                          @media print {
+                            .report-spacing {
+                              page-break-after: always;
+                            }
+                          }
+                        `}</style>
+                      </div>
+                      <div className="bg-gray-300 h-2 no-print" />
+                    </>
+                  ))}
                 </>
               );
             }

@@ -39,13 +39,18 @@ export default function PrintModal({
   const searchParams = useParams();
   const [redirectedPageType, setRedirectedPageType] = useState(null);
   const id = searchParams.id;
+  const [originalType, setOriginalType] = useState(null);
+  const [finalBLCount, setFinalBLCount] = useState(0);
+  const [finalBLData, setFinalBLData] = useState([]);
+  const [finalBLDataForModal, setFinalBLDataForModal] = useState([]);
+  const [selectedFinalBLId, setSelectedFinalBLId] = useState(null);
 
-  // console.log("PrintModal instance =>", {
-  //   submittedMenuId,
-  //   submittedRecordId,
-  //   tableName,
-  //   pageType,
-  // });
+  const originalTypeOptions = [
+    { label: "Non Negotiable", value: "nonNegotiable" },
+    { label: "First Original", value: "firstOriginal" },
+    { label: "Second Original", value: "secondOriginal" },
+    { label: "Third Original", value: "thirdOriginal" },
+  ];
 
   useEffect(() => {
     setRedirectedPageType(pageType);
@@ -61,6 +66,7 @@ export default function PrintModal({
 
   const handlePrint = async (reportData) => {
     const storedUserData = localStorage.getItem("userData");
+
     if (storedUserData) {
       const decryptedData = decrypt(storedUserData);
       const userData = JSON.parse(decryptedData);
@@ -170,7 +176,7 @@ export default function PrintModal({
               const report = groupedData[index];
 
               const templateId = report?.reportTemplateId || null;
-              const url = `/blReport?templateId=${templateId}&blId=${submittedRecordId}`;
+              const url = `/blReport?templateId=${templateId}&blId=${submittedRecordId}&originalType=${originalType}`;
 
               window.open(url, "_blank");
             }
@@ -471,7 +477,6 @@ export default function PrintModal({
         const clientId = userData?.[0]?.clientId;
         const companyBranchId = userData?.[0]?.defaultBranchId;
 
-
         if (!submittedMenuId || !clientId) {
           setReportNames([]);
           return;
@@ -487,7 +492,7 @@ export default function PrintModal({
         };
 
         const blEditerRequestBody = {
-          columns: "tbp.id,tbp.name",
+          columns: "tbp.id,tbp.name,tbp.draftFinal",
           tableName: "tblBlPrintTemplate tbp",
           whereCondition: `tbp.clientId=${clientId} and tbp.blOfId=${blOfId} and tbp.templateType='bl'`,
           clientIdCondition: `tbp.draftFinal='${blStatus}' and tbp.status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
@@ -507,6 +512,7 @@ export default function PrintModal({
         ]);
 
         const data = response?.data || response || [];
+
         const blData =
           tableName === "tblBl" ? blResponse?.data || blResponse || [] : [];
         const croData =
@@ -514,52 +520,85 @@ export default function PrintModal({
 
         const fetchedMenuNames = Array.isArray(data)
           ? data.map((item) => ({
-              ReportId: item?.reportTemplateId,
-              ReportName: item?.menuName,
-              ReportMenuLink: item?.menuLink,
-              menuType: item?.menuType,
-              reportMenuId: item?.reportMenuId,
-              reportTemplateId: item?.reportTemplateId,
-              redirectionPath: item?.redirectionPath,
-              displayName: item?.displayName,
-            }))
+            ReportId: item?.reportTemplateId,
+            ReportName: item?.menuName,
+            ReportMenuLink: item?.menuLink,
+            menuType: item?.menuType,
+            reportMenuId: item?.reportMenuId,
+            reportTemplateId: item?.reportTemplateId,
+            redirectionPath: item?.redirectionPath,
+            displayName: item?.displayName,
+            draftFinal: null,
+          }))
           : [];
 
         const blPrintTemplate = Array.isArray(blData)
           ? blData.map((item) => ({
-              ReportId: item?.id,
-              ReportName: item?.name,
-              ReportMenuLink: "/blReport",
-              menuType: "bl",
-              reportMenuId: null,
-              reportTemplateId: item?.id,
-              redirectionPath: null,
-              displayName: "BL Report",
-            }))
+            ReportId: item?.id,
+            ReportName: item?.name,
+            ReportMenuLink: "/blReport",
+            menuType: "bl",
+            reportMenuId: null,
+            reportTemplateId: item?.id,
+            redirectionPath: null,
+            displayName: "BL Report",
+            draftFinal: item?.draftFinal,
+          }))
           : [];
+
+        let finalBLCount =
+          blPrintTemplate?.filter(
+            (item) => item?.draftFinal.toLowerCase() === "f",
+          )?.length || 0;
+
+        setFinalBLCount(finalBLCount);
+
+        setFinalBLData(
+          blPrintTemplate?.filter(
+            (item) => item?.draftFinal.toLowerCase() === "f",
+          ) || [],
+        );
 
         const croPrintTemplate = Array.isArray(croData)
           ? croData.map((item) => ({
-              ReportId: item?.id,
-              ReportName: item?.name,
-              ReportMenuLink: "/croReport",
-              menuType: "cro",
-              reportMenuId: null,
-              reportTemplateId: item?.id,
-              redirectionPath: null,
-              displayName: item?.name,
-            }))
+            ReportId: item?.id,
+            ReportName: item?.name,
+            ReportMenuLink: "/croReport",
+            menuType: "cro",
+            reportMenuId: null,
+            reportTemplateId: item?.id,
+            redirectionPath: null,
+            displayName: item?.name,
+            draftFinal: null,
+          }))
           : [];
-
-        console.log("blPrintTemplate =>", blPrintTemplate);
-        console.log("fetchedMenuNames =>", fetchedMenuNames);
-        console.log("croPrintTemplate =>", croPrintTemplate);
         const combinedReportNames = [
           ...fetchedMenuNames,
           ...blPrintTemplate,
           ...croPrintTemplate,
         ];
-        setReportNames(combinedReportNames);
+        if (
+          tableName === "tblBl" &&
+          blStatus?.toLowerCase() === "f" &&
+          finalBLCount > 1
+        ) {
+          let data = [
+            {
+              ReportId: null,
+              ReportName: "BL Report",
+              ReportMenuLink: "/blReport",
+              menuType: "bl",
+              reportMenuId: null,
+              reportTemplateId: null,
+              redirectionPath: null,
+              displayName: "BL Report",
+              draftFinal: "F",
+            },
+          ];
+          setFinalBLDataForModal(data);
+        } else {
+          setReportNames(combinedReportNames);
+        }
       } catch (error) {
         console.error("Error fetching initial data:", error);
         setReportNames([]);
@@ -603,138 +642,371 @@ export default function PrintModal({
 
   return (
     <div>
-      <Modal
-        aria-labelledby="transition-modal-title"
-        aria-describedby="transition-modal-description"
-        open={openPrintModal}
-        onClose={handleClose}
-        slots={{ backdrop: Backdrop }}
-        slotProps={{
-          backdrop: {
-            timeout: 500,
-          },
-        }}
-      >
-        <Fade in={openPrintModal}>
-          <div
-            className={`relative inset-0 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center px-4 `}
-          >
+      {tableName === "tblBl" &&
+        blStatus?.toLowerCase() === "f" &&
+        finalBLCount > 1 ? (
+        <Modal
+          aria-labelledby="transition-modal-title"
+          aria-describedby="transition-modal-description"
+          open={openPrintModal}
+          onClose={handleClose}
+          slots={{ backdrop: Backdrop }}
+          slotProps={{
+            backdrop: {
+              timeout: 500,
+            },
+          }}
+        >
+          <Fade in={openPrintModal}>
             <div
-              className={`bg-[var(--commonBg)] 
-              } p-[30px] rounded-lg shadow-xl  w-full sm:w-[460px] h-auto flex flex-col justify-between mx-auto max-w-full sm:max-w-[520px]`}
+              className={`relative inset-0 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center px-4 `}
             >
-              <div className="flex-grow">
-                <div className="flex justify-between items-center">
-                  <p className="text-[var(--commonTextColor)] text-[14px] font-bold">
-                    Reports
-                  </p>
-                  <div className="flex gap-2">
-                    <label className="flex items-center space-x-1 text-[12px] text-[var(--commonTextColor)]">
-                      <input
-                        type="radio"
-                        name="reportType"
-                        value="combined"
-                        className="mr-1"
-                        checked={reportType === "combined"}
-                        onChange={(e) => setReportType(e.target.value)}
-                      />
-                      <span>Combined</span>
-                    </label>
-                    <label className="flex items-center space-x-1 text-[12px] text-[var(--commonTextColor)]">
-                      <input
-                        type="radio"
-                        name="reportType"
-                        value="separate"
-                        className="mr-1"
-                        checked={reportType === "separate"}
-                        onChange={(e) => setReportType(e.target.value)}
-                      />
-                      <span>Separate</span>
-                    </label>
+              <div
+                className={`bg-[var(--commonBg)] 
+              } p-[30px] rounded-lg shadow-xl  w-full sm:w-[460px] h-auto flex flex-col justify-between mx-auto max-w-full sm:max-w-[520px]`}
+              >
+                <div className="flex-grow">
+                  <div className="flex justify-between items-center">
+                    <p className="text-[var(--commonTextColor)] text-[14px] font-bold">
+                      Reports
+                    </p>
+                    <div className="flex gap-2">
+                      <label className="flex items-center space-x-1 text-[12px] text-[var(--commonTextColor)]">
+                        <input
+                          type="radio"
+                          name="reportType"
+                          value="combined"
+                          className="mr-1"
+                          checked={reportType === "combined"}
+                          onChange={(e) => setReportType(e.target.value)}
+                        />
+                        <span>Combined</span>
+                      </label>
+                      <label className="flex items-center space-x-1 text-[12px] text-[var(--commonTextColor)]">
+                        <input
+                          type="radio"
+                          name="reportType"
+                          value="separate"
+                          className="mr-1"
+                          checked={reportType === "separate"}
+                          onChange={(e) => setReportType(e.target.value)}
+                        />
+                        <span>Separate</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex flex-col mt-6 mb-6">
-                <div className="flex items-center space-x-2 text-[12px] text-[var(--commonTextColor)] mb-4">
-                  <input
-                    type="checkbox"
-                    name="selectAll"
-                    className="mr-1"
-                    checked={
-                      reportNames.length > 0 &&
-                      selectedReportNames.length === reportNames.length
-                    }
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedReportNames(reportNames);
-                      } else {
-                        setSelectedReportNames([]);
-                      }
-                    }}
-                  />
-                  <span>Select All</span>
-                </div>
+                {String(tableName || "").toLowerCase() === "tblbl" &&
+                  String(blStatus || "").toLowerCase() === "f" && (
+                    <div className="flex-grow">
+                      <div className="flex justify-between items-center mt-1">
+                        <div className="inline-flex items-center justify-center gap-3 px-2 py-1">
+                          {originalTypeOptions.map((item) => (
+                            <label
+                              key={item.value}
+                              className="text-[10px] leading-[12px] text-[var(--commonTextColor)] cursor-pointer select-none"
+                            >
+                              <input
+                                type="radio"
+                                name="originalType"
+                                value={item.value}
+                                checked={originalType === item.value}
+                                onChange={(e) =>
+                                  setOriginalType(e.target.value)
+                                }
+                                className="mb-[1px] h-3 w-3 cursor-pointer accent-green-600"
+                              />
 
-                <div className="grid grid-cols-2 gap-x-4">
-                  {reportNames.map((reportName, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center space-x-2 text-[12px] text-[var(--commonTextColor)] mb-2"
-                    >
-                      <input
-                        type="checkbox"
-                        name="reportName"
-                        value={reportName?.ReportId}
-                        className="mr-1"
-                        checked={
-                          !!selectedReportNames.find(
-                            (item) =>
-                              item?.ReportName === reportName?.ReportName,
-                          )
-                        }
-                        onChange={(e) => {
-                          const value = reportName;
-                          if (e.target.checked) {
-                            setSelectedReportNames((prev) => [...prev, value]);
-                          } else {
-                            setSelectedReportNames((selectedReportNames) =>
-                              selectedReportNames.filter(
-                                (item) =>
-                                  item?.ReportName !== value?.ReportName,
-                              ),
-                            );
-                          }
-                        }}
-                      />
-                      <span>
-                        {reportName?.displayName ?? reportName?.ReportName}
-                      </span>
+                              <span className="text-center whitespace-pre-line ms-1">
+                                {item.label}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  )}
 
-              <div className="flex justify-end space-x-4 ">
-                <button
-                  onClick={() => {
-                    handlePrint(selectedReportNames);
-                  }}
-                  className={`px-4 text-[12px] py-2 ${styles.bgPrimaryColorBtn} flex items-center justify-center  rounded-[5px] shadow-custom  w-24 h-[27px]`}
-                >
-                  Print
-                </button>
-                <button
-                  onClick={handleClose}
-                  className={`px-4 py-2 text-[12px] ${styles.bgPrimaryColorBtn}  flex items-center justify-center rounded-[5px] shadow-custom w-24 h-[27px] border-[0.1px]`}
-                >
-                  Cancel
-                </button>
+                {String(tableName || "").toLowerCase() === "tblbl" &&
+                  String(blStatus || "").toLowerCase() === "f" &&
+                  Number(finalBLCount || 0) > 1 && (
+                    <div>
+                      <div>
+                        <p className="text-[var(--commonTextColor)] text-[14px] font-bold">
+                          Final BL Format
+                        </p>
+                        <div className="flex-grow">
+                          <div className="flex justify-between items-center mt-1">
+                            <div className="inline-flex items-center justify-center gap-3 px-2 py-1">
+                              {finalBLData?.map((item) => (
+                                <label
+                                  key={item?.ReportId}
+                                  className="text-[10px] leading-[12px] text-[var(--commonTextColor)] cursor-pointer select-none"
+                                >
+                                  <input
+                                    type="radio"
+                                    name="finalBLData"
+                                    value={item?.ReportId}
+                                    checked={
+                                      selectedFinalBLId === item?.ReportId
+                                    }
+                                    onChange={() =>
+                                      setSelectedFinalBLId(item?.ReportId)
+                                    }
+                                    className="mb-[1px] h-3 w-3 cursor-pointer accent-green-600"
+                                  />
+
+                                  <span className="text-center whitespace-pre-line ms-1">
+                                    {item?.ReportName}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                <div className="flex flex-col mt-6 mb-6">
+                  <div className="flex items-center space-x-2 text-[12px] text-[var(--commonTextColor)] mb-4">
+                    <span>Select All a</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-4">
+                    {finalBLDataForModal.map((reportName, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center space-x-2 text-[12px] text-[var(--commonTextColor)] mb-2"
+                      >
+                        <input
+                          type="checkbox"
+                          name="reportName"
+                          value={reportName?.ReportId}
+                          className="mr-1"
+                          checked={
+                            !!selectedReportNames.find(
+                              (item) =>
+                                item?.ReportName === reportName?.ReportName,
+                            )
+                          }
+                          onChange={(e) => {
+                            const value = reportName;
+                            if (e.target.checked) {
+                              setSelectedReportNames((prev) => [
+                                ...prev,
+                                value,
+                              ]);
+                            } else {
+                              setSelectedReportNames((selectedReportNames) =>
+                                selectedReportNames.filter(
+                                  (item) =>
+                                    item?.ReportName !== value?.ReportName,
+                                ),
+                              );
+                            }
+                          }}
+                        />
+                        <span>
+                          {reportName?.displayName ?? reportName?.ReportName}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-4 ">
+                  <button
+                    onClick={() => {
+                      const selectedFinalBLReport = finalBLData.find(
+                        (item) => item?.ReportId === selectedFinalBLId,
+                      );
+                      handlePrint([selectedFinalBLReport]);
+                    }}
+                    className={`px-4 text-[12px] py-2 ${styles.bgPrimaryColorBtn} flex items-center justify-center  rounded-[5px] shadow-custom  w-24 h-[27px]`}
+                  >
+                    Print
+                  </button>
+                  <button
+                    onClick={handleClose}
+                    className={`px-4 py-2 text-[12px] ${styles.bgPrimaryColorBtn}  flex items-center justify-center rounded-[5px] shadow-custom w-24 h-[27px] border-[0.1px]`}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </Fade>
-      </Modal>
+          </Fade>
+        </Modal>
+      ) : (
+        <Modal
+          aria-labelledby="transition-modal-title"
+          aria-describedby="transition-modal-description"
+          open={openPrintModal}
+          onClose={handleClose}
+          slots={{ backdrop: Backdrop }}
+          slotProps={{
+            backdrop: {
+              timeout: 500,
+            },
+          }}
+        >
+          <Fade in={openPrintModal}>
+            <div
+              className={`relative inset-0 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center px-4 `}
+            >
+              <div
+                className={`bg-[var(--commonBg)] 
+              } p-[30px] rounded-lg shadow-xl  w-full sm:w-[460px] h-auto flex flex-col justify-between mx-auto max-w-full sm:max-w-[520px]`}
+              >
+                <div className="flex-grow">
+                  <div className="flex justify-between items-center">
+                    <p className="text-[var(--commonTextColor)] text-[14px] font-bold">
+                      Reports
+                    </p>
+                    <div className="flex gap-2">
+                      <label className="flex items-center space-x-1 text-[12px] text-[var(--commonTextColor)]">
+                        <input
+                          type="radio"
+                          name="reportType"
+                          value="combined"
+                          className="mr-1"
+                          checked={reportType === "combined"}
+                          onChange={(e) => setReportType(e.target.value)}
+                        />
+                        <span>Combined</span>
+                      </label>
+                      <label className="flex items-center space-x-1 text-[12px] text-[var(--commonTextColor)]">
+                        <input
+                          type="radio"
+                          name="reportType"
+                          value="separate"
+                          className="mr-1"
+                          checked={reportType === "separate"}
+                          onChange={(e) => setReportType(e.target.value)}
+                        />
+                        <span>Separate</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {String(tableName || "").toLowerCase() === "tblbl" &&
+                  String(blStatus || "").toLowerCase() === "f" && (
+                    <div className="flex-grow">
+                      <div className="flex justify-between items-center mt-1">
+                        <div className="inline-flex items-center justify-center gap-3 px-2 py-1">
+                          {originalTypeOptions.map((item) => (
+                            <label
+                              key={item.value}
+                              className="text-[10px] leading-[12px] text-[var(--commonTextColor)] cursor-pointer select-none"
+                            >
+                              <input
+                                type="radio"
+                                name="originalType"
+                                value={item.value}
+                                checked={originalType === item.value}
+                                onChange={(e) =>
+                                  setOriginalType(e.target.value)
+                                }
+                                className="mb-[1px] h-3 w-3 cursor-pointer accent-green-600"
+                              />
+
+                              <span className="text-center whitespace-pre-line ms-1">
+                                {item.label}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                <div className="flex flex-col mt-6 mb-6">
+                  <div className="flex items-center space-x-2 text-[12px] text-[var(--commonTextColor)] mb-4">
+                    <input
+                      type="checkbox"
+                      name="selectAll"
+                      className="mr-1"
+                      checked={
+                        reportNames.length > 0 &&
+                        selectedReportNames.length === reportNames.length
+                      }
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedReportNames(reportNames);
+                        } else {
+                          setSelectedReportNames([]);
+                        }
+                      }}
+                    />
+                    <span>Select All</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-4">
+                    {reportNames.map((reportName, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center space-x-2 text-[12px] text-[var(--commonTextColor)] mb-2"
+                      >
+                        <input
+                          type="checkbox"
+                          name="reportName"
+                          value={reportName?.ReportId}
+                          className="mr-1"
+                          checked={
+                            !!selectedReportNames.find(
+                              (item) =>
+                                item?.ReportName === reportName?.ReportName,
+                            )
+                          }
+                          onChange={(e) => {
+                            const value = reportName;
+                            if (e.target.checked) {
+                              setSelectedReportNames((prev) => [
+                                ...prev,
+                                value,
+                              ]);
+                            } else {
+                              setSelectedReportNames((selectedReportNames) =>
+                                selectedReportNames.filter(
+                                  (item) =>
+                                    item?.ReportName !== value?.ReportName,
+                                ),
+                              );
+                            }
+                          }}
+                        />
+                        <span>
+                          {reportName?.displayName ?? reportName?.ReportName}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-4 ">
+                  <button
+                    onClick={() => {
+                      handlePrint(selectedReportNames);
+                    }}
+                    className={`px-4 text-[12px] py-2 ${styles.bgPrimaryColorBtn} flex items-center justify-center  rounded-[5px] shadow-custom  w-24 h-[27px]`}
+                  >
+                    Print
+                  </button>
+                  <button
+                    onClick={handleClose}
+                    className={`px-4 py-2 text-[12px] ${styles.bgPrimaryColorBtn}  flex items-center justify-center rounded-[5px] shadow-custom w-24 h-[27px] border-[0.1px]`}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Fade>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -174,7 +174,56 @@ export default function RowComponent({
 
   const toggleRow = () => {
     setOpenChildEdit((prev) => !prev);
+    console.log("tableName", childName);
+    console.log("row?.indexValue", row?.indexValue);
+    if (childName.toLowerCase() == "tblvoucherledger") {
+      getVoucherGridFieldEditable();
+    }
   };
+
+  const VOUCHER_LEDGER_PARENT_AMOUNT_FIELDS = new Set([
+    "debitAmount",
+    "creditAmount",
+    "debitAmountFc",
+    "creditAmountFc",
+  ]);
+
+  const isTrueValue = (value) => {
+    return value === true || value === "true" || value === 1 || value === "1";
+  };
+
+  function getVoucherGridFieldEditable() {
+    const details =
+      newState?.[childName]?.[childIndex]?.tblVoucherLedgerDetails;
+
+
+    if (!Array.isArray(details) || details.length === 0) {
+      return false;
+    }
+
+    const hasChecked = details.some((item) => {
+      return isTrueValue(item?.isChecked);
+    });
+    return hasChecked;
+  }
+
+  const shouldDisableVoucherLedgerAmountFields =
+    childName === "tblVoucherLedger" && getVoucherGridFieldEditable();
+
+  const updatedFields = (fields || []).map((field) => {
+    if (
+      shouldDisableVoucherLedgerAmountFields &&
+      VOUCHER_LEDGER_PARENT_AMOUNT_FIELDS.has(field?.fieldname)
+    ) {
+      return {
+        ...field,
+        isEditable: false,
+        isEditableMode: "b",
+      };
+    }
+
+    return field;
+  });
 
   const isSameEditableRow = (leftRow, rightRow) => {
     if (!leftRow || !rightRow) return false;
@@ -209,7 +258,8 @@ export default function RowComponent({
     };
 
     const didHcChange =
-      String(prevRow?.debitAmount ?? "") !== String(nextRow?.debitAmount ?? "") ||
+      String(prevRow?.debitAmount ?? "") !==
+        String(nextRow?.debitAmount ?? "") ||
       String(prevRow?.creditAmount ?? "") !==
         String(nextRow?.creditAmount ?? "");
 
@@ -228,12 +278,8 @@ export default function RowComponent({
 
     return {
       ...nextRow,
-      __manualAllocHC: didHcChange
-        ? hasManualHc
-        : !!prevRow?.__manualAllocHC,
-      __manualAllocFC: didFcChange
-        ? hasManualFc
-        : !!prevRow?.__manualAllocFC,
+      __manualAllocHC: didHcChange ? hasManualHc : !!prevRow?.__manualAllocHC,
+      __manualAllocFC: didFcChange ? hasManualFc : !!prevRow?.__manualAllocFC,
     };
   };
 
@@ -477,22 +523,45 @@ export default function RowComponent({
                     <div className="relative">
                       <div
                         className={`${childTableRowStyles} overflow-hidden whitespace-nowrap`}
-                        style={{ maxWidth: "200px" }}
+                        style={{
+                          maxWidth: "200px",
+                          overflow: "hidden",
+                          whiteSpace: "nowrap",
+                          textOverflow: "ellipsis",
+                        }}
                       >
-                        {field.controlname === "dropdown" ||
-                        field.controlname === "multiselect"
-                          ? (
-                              row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                              row[`${field.fieldname}Dropdown`]
-                            )?.length > 15
-                            ? (
-                                row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                                row[`${field.fieldname}Dropdown`]
-                              )?.slice(0, 15) + "..."
-                            : row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                              row[`${field.fieldname}Dropdown`] ||
-                              ""
-                          : isDateFormat(row[`${field.fieldname}`]) || ""}
+                        <LightTooltip
+                          title={
+                            field.controlname === "dropdown" ||
+                            field.controlname === "multiselect"
+                              ? row[`${field.fieldname}dropdown`]?.[0]?.label ||
+                                row[`${field.fieldname}Dropdown`] ||
+                                ""
+                              : (
+                                  isDateFormat(row[`${field.fieldname}`]) || ""
+                                ).toString()
+                          }
+                          arrow
+                        >
+                          <span>
+                            {field.controlname === "dropdown" ||
+                            field.controlname === "multiselect"
+                              ? (
+                                  row[`${field.fieldname}dropdown`]?.[0]
+                                    ?.label || row[`${field.fieldname}Dropdown`]
+                                )?.length > 15
+                                ? (
+                                    row[`${field.fieldname}dropdown`]?.[0]
+                                      ?.label ||
+                                    row[`${field.fieldname}Dropdown`]
+                                  )?.slice(0, 15) + "..."
+                                : row[`${field.fieldname}dropdown`]?.[0]
+                                    ?.label ||
+                                  row[`${field.fieldname}Dropdown`] ||
+                                  ""
+                              : isDateFormat(row[`${field.fieldname}`]) || ""}
+                          </span>
+                        </LightTooltip>
                       </div>
 
                       {!showSrNo && index == 0 && (
@@ -526,7 +595,7 @@ export default function RowComponent({
               style={stylesIconsHover}
             >
               {!isChildDeleteHidden && (
-                <LightTooltip title="Delete Record">
+                <LightTooltip title="Delete Record1">
                   <IconButton
                     disabled={
                       typeof sectionData.isDeleteFunctionality !== "undefined"
@@ -631,39 +700,39 @@ export default function RowComponent({
                       ) : (
                         <></>
                       )}
-                    <GridInputFields
-                      fieldData={field}
-                      indexValue={index}
-                      onValuesChange={(e) => {
-                        setChildValuseObj((prev) => {
-                          return applyVoucherDetailManualFlags(
-                            { ...prev, ...e },
-                            prev
-                          );
-                        });
-                        setCopyChildValueObj((prev) => {
-                          // Clone the previous state to avoid direct mutation
-                          const newCopy = { ...prev };
-                          let tableName = Object.keys(newCopy)[0];
-                          // Loop through the outer array of 'tblJobQty'
-                          newCopy[tableName] = newCopy[tableName]?.map(
-                            (nestedArray) => {
-                              // Loop through the objects in the nested array
-                              return nestedArray.map((item) => {
-                                if (isSameEditableRow(item, childValuseObj)) {
-                                  return applyVoucherDetailManualFlags(
-                                    { ...item, ...e },
-                                    item
-                                  );
-                                }
-                                return item;
-                              });
-                            },
-                          );
+                      <GridInputFields
+                        fieldData={field}
+                        indexValue={index}
+                        onValuesChange={(e) => {
+                          setChildValuseObj((prev) => {
+                            return applyVoucherDetailManualFlags(
+                              { ...prev, ...e },
+                              prev,
+                            );
+                          });
+                          setCopyChildValueObj((prev) => {
+                            // Clone the previous state to avoid direct mutation
+                            const newCopy = { ...prev };
+                            let tableName = Object.keys(newCopy)[0];
+                            // Loop through the outer array of 'tblJobQty'
+                            newCopy[tableName] = newCopy[tableName]?.map(
+                              (nestedArray) => {
+                                // Loop through the objects in the nested array
+                                return nestedArray.map((item) => {
+                                  if (isSameEditableRow(item, childValuseObj)) {
+                                    return applyVoucherDetailManualFlags(
+                                      { ...item, ...e },
+                                      item,
+                                    );
+                                  }
+                                  return item;
+                                });
+                              },
+                            );
 
-                          // Return the updated state
-                          return newCopy;
-                        });
+                            // Return the updated state
+                            return newCopy;
+                          });
                         }}
                         values={childValuseObj}
                         inEditMode={inEditMode}
@@ -716,7 +785,10 @@ export default function RowComponent({
                   {/* Custom Input Fields in the middle */}
                   <CustomeInputFields
                     isView={isView}
-                    inputFieldData={fields}
+                    inputFieldData={
+                      childName === "tblVoucherLedger" ? updatedFields : fields
+                    }
+                    valuesObj={childValuseObj}
                     onValuesChange={(e) => {
                       setChildValuseObj((prev) => {
                         return { ...prev, ...e };
@@ -758,7 +830,7 @@ export default function RowComponent({
                         onClick={() => {
                           const nextChildRow = applyVoucherDetailManualFlags(
                             childValuseObj,
-                            row
+                            row,
                           );
 
                           for (const feild of fields) {

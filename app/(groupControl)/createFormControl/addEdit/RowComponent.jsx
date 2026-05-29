@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable */
 import React, { useState, useEffect } from "react";
 import TableCell from "@mui/material/TableCell";
 import LightTooltip from "@/components/Tooltip/customToolTip";
@@ -55,26 +56,41 @@ RowComponent.propTypes = {
   editMode: PropTypes.any,
   tableBodyWidhth: PropTypes.string,
 };
-export default function RowComponent(props) {
-  const {
-    row,
-    fields,
-    subChild,
-    childName,
-    childIndex,
-    sectionData,
-    newState,
-    setNewState,
-    expandAll,
-    setRenderedData,
-    deleteChildRecord,
-    isGridEdit,
-    setCopyChildValueObj,
-    containerWidth,
-    filterData,
-    editMode,
-    tableBodyWidhth,
-  } = props;
+export default function RowComponent({
+  row,
+  fields,
+  subChild,
+  childName,
+  childIndex,
+  sectionData,
+  newState,
+  setNewState,
+  expandAll,
+  inEditMode,
+  setRenderedData,
+  deleteChildRecord,
+  originalData,
+  calculateData,
+  setCalculateData,
+  setDummyFieldArray,
+  isGridEdit,
+  setCopyChildValueObj,
+  isView,
+  setOpenModal,
+  setParaText,
+  setIsError,
+  setTypeofModal,
+  clearFlag,
+  setClearFlag,
+  containerWidth,
+  submitNewState,
+  setSubmitNewState,
+  removeChildRecordFromInsert,
+  formControlData,
+  setFormControlData,
+  tableBodyWidhth,
+  showSrNo = false,
+}) {
   const [childValuseObj, setChildValuseObj] = useState({ ...row });
   const [openChildEdit, setOpenChildEdit] = useState(false);
   const [subChildComponent, setSubChildComponent] = useState(
@@ -111,15 +127,65 @@ export default function RowComponent(props) {
     }
   };
 
-  useEffect(() => {
-    if (expandAll && editMode) {
-      // Object.keys(groupedData).forEach((key) => {
-      //   if (!subChildViewData.includes(key)) {
-      //     setSubChildViewData((prev) => [...prev, key]);
-      //   }
-      // });
+  const copyFormFieldsFireRow = (newState, key, childIndex) => {
+    try {
+      if (!newState || !Array.isArray(newState.tblFormFields)) return;
+
+      if (childIndex < 0 || childIndex >= newState.tblFormFields.length) {
+        return;
+      }
+
+      const cloneDeep = (obj) => {
+        if (typeof structuredClone === "function") return structuredClone(obj);
+        return JSON.parse(JSON.stringify(obj));
+      };
+
+      const sourceRow = newState.tblFormFields[childIndex];
+      if (!sourceRow) return;
+
+      const updatedTblFormFields = newState.tblFormFields.map(
+        (field, fieldIdx) => {
+          if (fieldIdx !== childIndex) return field;
+
+          const existingSubChild = Array.isArray(field?.[key])
+            ? field[key]
+            : [];
+
+          const rawCopiedRow = cloneDeep(sourceRow);
+          const { [key]: removedKey, ...copiedRow } = rawCopiedRow;
+
+          const maxIndexValue = existingSubChild.reduce((max, item) => {
+            const val = Number(item?.indexValue);
+            return Number.isFinite(val) ? Math.max(max, val) : max;
+          }, -1);
+
+          copiedRow.indexValue = maxIndexValue + 1;
+
+          return {
+            ...field,
+            [key]: [...existingSubChild, copiedRow],
+          };
+        },
+      );
+
+      setNewState({
+        ...newState,
+        tblFormFields: updatedTblFormFields,
+      });
+    } catch (error) {
+      console.error("copyFormFieldsFireRow error:", error);
     }
-  }, [expandAll]);
+  };
+
+  // useEffect(() => {
+  //   if (expandAll && editMode) {
+  //     // Object.keys(groupedData).forEach((key) => {
+  //     //   if (!subChildViewData.includes(key)) {
+  //     //     setSubChildViewData((prev) => [...prev, key]);
+  //     //   }
+  //     // });
+  //   }
+  // }, [expandAll]);
 
   useEffect(() => {
     setChildValuseObj({ ...row });
@@ -232,12 +298,17 @@ export default function RowComponent(props) {
                   return (
                     <LightTooltip
                       key={index}
-                      title={groupedData[key].sectionHeader}
+                      title={groupedData[key]?.sectionHeader}
                     >
                       <IconButton
                         aria-label="Edit"
                         className={styles.icon}
-                        onClick={() => toggleSubChildRow(key)}
+                        onClick={() => {
+                          toggleSubChildRow(key);
+                          if (key === "tblFormFieldsFireEvents") {
+                            copyFormFieldsFireRow(newState, key, childIndex);
+                          }
+                        }}
                       >
                         <Image
                           src={icons[index % icons.length]}
@@ -341,7 +412,7 @@ export default function RowComponent(props) {
             colSpan={parentVisibleColumnCount}
           >
             <Collapse in={openChildEdit} timeout="auto" unmountOnExit>
-              <Box sx={{ width: `${containerWidth}px`, maxWidth: "100%", minWidth: 0 }}>
+              <Box sx={{ width: "100%", maxWidth: "100%", minWidth: 0 }}>
                 <div
                   className={`relative pl-[16px] py-[8px] flex justify-between `}
                 >
@@ -355,7 +426,7 @@ export default function RowComponent(props) {
                         });
                       }}
                       values={childValuseObj}
-                      filterData={filterData}
+                      // filterData={filterData}
                       newState={newState}
                     />
                   </div>
@@ -379,7 +450,7 @@ export default function RowComponent(props) {
                       defaultIcon={saveIcon}
                       hoverIcon={saveIconHover}
                       altText={"Save"}
-                      title={"Save"}
+                      title={"Save A"}
                       onClick={() => {
                         setNewState((prev) => {
                           const newState = { ...prev };
@@ -441,7 +512,7 @@ export default function RowComponent(props) {
                     }}
                     className={`${styles.hideScrollbar} ${styles.thinScrollBar} ${styles.pageBackground}`}
                   >
-                    <SubChildComponent
+                    {/* <SubChildComponent
                       key={childIndex}
                       subChild={groupedData[key]}
                       row={row}
@@ -458,6 +529,35 @@ export default function RowComponent(props) {
                       deleteChildRecord={() => deleteChildRecord(childIndex)}
                       copyDocument={() => copyDocument(childValuseObj)}
                       parentVisibleColumnCount={parentVisibleColumnCount}
+                    /> */}
+                    <SubChildComponent
+                      key={index}
+                      subChild={groupedData[key]}
+                      section={sectionData}
+                      row={childValuseObj}
+                      index={childIndex}
+                      newState={newState}
+                      setNewState={setNewState}
+                      childName={childName}
+                      childIndex={childIndex}
+                      setSubChildComponent={setSubChildComponent}
+                      expandAll={expandAll}
+                      inEditMode={inEditMode}
+                      originalData={originalData}
+                      isView={isView}
+                      setOpenModal={setOpenModal}
+                      setParaText={setParaText}
+                      setIsError={setIsError}
+                      setTypeofModal={setTypeofModal}
+                      clearFlag={clearFlag}
+                      setClearFlag={setClearFlag}
+                      containerWidth={containerWidth}
+                      submitNewState={submitNewState}
+                      setSubmitNewState={setSubmitNewState}
+                      keyValue={key}
+                      setSubChildViewData={setSubChildViewData}
+                      formControlData={formControlData}
+                      setFormControlData={setFormControlData}
                     />
                   </Box>
                 </Collapse>

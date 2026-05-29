@@ -32,7 +32,7 @@ import {
   checkDischargeDoneForBLData,
   checkJobCreatedAgainstBLData,
   getBillingPartyOnBlData,
-  getChargeForTariffData
+  getChargeForTariffData,
 } from "@/services/auth/FormControl.services";
 import { getUserDetails } from "@/helper/userDetails";
 import moment from "moment";
@@ -383,7 +383,7 @@ const validateDate = (obj) => {
 
   const fieldValue = newState[fieldToCompare] ?? values[fieldToCompare];
   const fieldToCompareLabel = formControlData?.fields?.find(
-    (f) => f.fieldname === fieldToCompare
+    (f) => f.fieldname === fieldToCompare,
   );
   const labelToCompare = fieldToCompareLabel
     ? fieldToCompareLabel.yourlabel
@@ -408,7 +408,7 @@ const validateDate = (obj) => {
   const trimmedCurrentDate = new Date(
     currentDate.getFullYear(),
     currentDate.getMonth(),
-    currentDate.getDate()
+    currentDate.getDate(),
   ).getTime();
 
   let alertMessages = [];
@@ -427,11 +427,11 @@ const validateDate = (obj) => {
     const dateValue = new Date(
       newState[field]
         ? newState[field].split(" ")[0]
-        : values[field].split(" ")[0]
+        : values[field].split(" ")[0],
     ).getTime();
 
     const fieldlabel = formControlData?.fields?.find(
-      (f) => f.fieldname === field
+      (f) => f.fieldname === field,
     );
     const yourlabel = fieldlabel ? fieldlabel.yourlabel : field;
 
@@ -441,7 +441,7 @@ const validateDate = (obj) => {
         case "<":
           if (trimmedCurrentDate <= trimmedFieldValueDate) {
             alertMessages.push(
-              `${labelToCompare} is ${operatorWords[operator]} Current Date`
+              `${labelToCompare} is ${operatorWords[operator]} Current Date`,
             );
           }
           break;
@@ -451,14 +451,14 @@ const validateDate = (obj) => {
             trimmedCurrentDate !== trimmedFieldValueDate
           ) {
             alertMessages.push(
-              `${labelToCompare} is ${operatorWords[operator]} Current Date`
+              `${labelToCompare} is ${operatorWords[operator]} Current Date`,
             );
           }
           break;
         case ">":
           if (trimmedCurrentDate >= trimmedFieldValueDate) {
             alertMessages.push(
-              `${labelToCompare} is ${operatorWords[operator]} Current Date`
+              `${labelToCompare} is ${operatorWords[operator]} Current Date`,
             );
           }
           break;
@@ -468,7 +468,7 @@ const validateDate = (obj) => {
             trimmedCurrentDate !== trimmedFieldValueDate
           ) {
             alertMessages.push(
-              `${labelToCompare} is ${operatorWords[operator]} Current Date`
+              `${labelToCompare} is ${operatorWords[operator]} Current Date`,
             );
           }
           break;
@@ -481,7 +481,7 @@ const validateDate = (obj) => {
         case "<":
           if (dateValue <= trimmedFieldValueDate) {
             alertMessages.push(
-              `${labelToCompare} is ${operatorWords[operator]} ${yourlabel}`
+              `${labelToCompare} is ${operatorWords[operator]} ${yourlabel}`,
             );
           }
           break;
@@ -491,14 +491,14 @@ const validateDate = (obj) => {
             dateValue !== trimmedFieldValueDate
           ) {
             alertMessages.push(
-              `${labelToCompare} is ${operatorWords[operator]} ${yourlabel}`
+              `${labelToCompare} is ${operatorWords[operator]} ${yourlabel}`,
             );
           }
           break;
         case ">":
           if (dateValue >= trimmedFieldValueDate) {
             alertMessages.push(
-              `${labelToCompare} is ${operatorWords[operator]} ${yourlabel}`
+              `${labelToCompare} is ${operatorWords[operator]} ${yourlabel}`,
             );
           }
           break;
@@ -508,7 +508,7 @@ const validateDate = (obj) => {
             dateValue !== trimmedFieldValueDate
           ) {
             alertMessages.push(
-              `${labelToCompare} is ${operatorWords[operator]} ${yourlabel}`
+              `${labelToCompare} is ${operatorWords[operator]} ${yourlabel}`,
             );
           }
           break;
@@ -567,13 +567,13 @@ const validateSameValues = (obj) => {
   const originColValue = String(originCol);
 
   const originField = formControlData?.fields?.find(
-    (f) => f.fieldname === originKey
+    (f) => f.fieldname === originKey,
   );
   let field = null;
   const originlabel = originField ? originField.yourlabel : field;
 
   const destinationField = formControlData?.fields?.find(
-    (f) => f.fieldname === destinationKey
+    (f) => f.fieldname === destinationKey,
   );
 
   const destinationlabel = destinationField
@@ -827,15 +827,15 @@ const setNoOfContainer = (obj) => {
   console.log("container name", gridName);
 
   let parentCommonItem = newState[argsArray[1]].filter(
-    (item) => item.sizeId === sizeId && item.typeId === typeId
+    (item) => item.sizeId === sizeId && item.typeId === typeId,
   );
 
   let childItemQty = newState[argsArray[0]].filter(
-    (item) => item.sizeId === sizeId && item.typeId === typeId
+    (item) => item.sizeId === sizeId && item.typeId === typeId,
   ).length;
 
   let childCommonItem = newState[argsArray[0]].filter(
-    (item) => item.sizeId === sizeId && item.typeId === typeId
+    (item) => item.sizeId === sizeId && item.typeId === typeId,
   );
 
   if (values?.qty) {
@@ -894,7 +894,7 @@ const setNoOfContainer = (obj) => {
               item.sizeIddropdown[0]?.label === sizeIdDropdown)) &&
           (item.typeIdDropdown === typeIdDropdown ||
             (item.typeIddropdown &&
-              item.typeIddropdown[0]?.label === typeIdDropdown))
+              item.typeIddropdown[0]?.label === typeIdDropdown)),
       );
 
       let childCommonItem = newState[argsArray[0]].filter(
@@ -904,11 +904,11 @@ const setNoOfContainer = (obj) => {
               item.sizeIddropdown[0]?.label === sizeIdDropdown)) &&
           (item.typeIdDropdown === typeIdDropdown ||
             (item.typeIddropdown &&
-              item.typeIddropdown[0]?.label === typeIdDropdown))
+              item.typeIddropdown[0]?.label === typeIdDropdown)),
       );
 
       let currentItem = newState[argsArray[1]].filter(
-        (item) => item.indexValue === values.indexValue
+        (item) => item.indexValue === values.indexValue,
       );
 
       let size = currentItem.length
@@ -1027,6 +1027,158 @@ const setNoOfContainer = (obj) => {
     }
   }
 };
+// const calculateAndUpdateValues = (obj) => {
+//   const {
+//     args,
+//     values,
+//     fieldName,
+//     newState,
+//     formControlData,
+//     setStateVariable,
+//   } = obj;
+//   let argNames, operator;
+//   console.log("calculateAndUpdateValues", values);
+
+//   // debugger
+
+//   // Check if args is provided and not empty
+//   if (!args) {
+//     argNames = [];
+//     operator = "+"; // Default to addition if no operator is provided
+//   } else {
+//     let parts = args.split(",");
+//     operator = parts.pop().trim().toLowerCase(); // Normalize and extract the operator
+//     argNames = parts.map((arg) => arg.trim());
+//   }
+
+//   // Helper function to get the value based on whether it comes from a specific table or from the values object
+//   const getValue = (arg) => {
+//     const [tableName, field] = arg.split(".");
+//     if (tableName === formControlData?.tableName) {
+//       const value = parseFloat(newState[field]);
+//       if (isNaN(value)) {
+//         console.warn(
+//           `Value for ${field} in table ${tableName} is invalid or not provided, skipping.`,
+//         );
+//         return null;
+//       }
+//       return value;
+//     } else {
+//       const value = parseFloat(values[arg]);
+//       if (isNaN(value)) {
+//         console.warn(`Value for ${arg} is invalid or not provided, skipping.`);
+//         return {
+//           isCheck: false,
+//           type: "success",
+//           message: "Error",
+//           alertShow: false,
+//           fieldName: fieldName,
+//           values: values,
+//           newState: newState,
+//           formControlData: formControlData,
+//         };
+//       }
+//       return value;
+//     }
+//   };
+
+//   // Fetch and parse values dynamically, filtering out undefined or invalid ones
+//   const params = argNames
+//     .slice(0, -1)
+//     .map((arg) => getValue(arg))
+//     .filter((value) => value !== null);
+
+//   if (params.length === 0) {
+//     console.warn("No valid values provided for calculation.");
+//     return;
+//   }
+
+//   const resultField = argNames[argNames.length - 1];
+//   console.log("Params before calculation:", params); // Log params before any calculations
+
+//   let result;
+//   let isSuccess = true; // Flag to indicate if the calculation is successful
+
+//   // Calculate based on the operator provided
+//   switch (operator) {
+//     case "add":
+//     case "+":
+//       result = params.reduce((acc, curr) => acc + curr, 0);
+//       break;
+//     case "subtract":
+//     case "-":
+//       result = params.reduce((acc, curr) => acc - curr, params.shift() || 0);
+//       break;
+//     case "multiply":
+//     case "*":
+//       result = params.reduce((acc, curr) => acc * curr, 1);
+//       break;
+//     case "divide":
+//     case "/":
+//       if (params.slice(1).some((param) => param === 0)) {
+//         console.warn("Division by zero encountered.");
+//         result = 0;
+//         isSuccess = false;
+//       } else {
+//         result = params.reduce((acc, curr) => acc / curr, params.shift());
+//       }
+//       break;
+//     case "max":
+//     case ">":
+//       result = Math.max(...params);
+//       break;
+//     case "min":
+//     case "<":
+//       result = Math.min(...params);
+//       break;
+
+//     default:
+//       console.warn("Unrecognized operator. Defaulting to addition.");
+//       result = params.reduce((acc, curr) => acc + curr, 0);
+//       break;
+//   }
+
+//   // Check if result is NaN and handle it
+//   if (isNaN(result)) {
+//     console.warn("Calculation resulted in NaN, setting result to 0.");
+//     result = 0;
+//     isSuccess = false;
+//   }
+
+//   // Update the state and log the changes
+//   setStateVariable((prev) => {
+//     const updatedState = { ...prev, [resultField]: result.toFixed(2) };
+//     return updatedState;
+//   });
+
+//   const updatedValues = {
+//     ...values,
+//     [resultField]: result.toFixed(2),
+//   };
+
+//   if (isSuccess) {
+//     return {
+//       isCheck: true,
+//       type: "success",
+//       message: "Calculation completed successfully",
+//       values: updatedValues,
+//       alertShow: false,
+//       fieldName: fieldName,
+//       newState: newState,
+//     };
+//   } else {
+//     return {
+//       isCheck: false,
+//       type: "error",
+//       message: "Calculation failed due to missing or invalid parameters",
+//       values: updatedValues,
+//       alertShow: false,
+//       fieldName: fieldName,
+//       newState: newState,
+//       formControlData: formControlData,
+//     };
+//   }
+// };
 const calculateAndUpdateValues = (obj) => {
   const {
     args,
@@ -1036,10 +1188,9 @@ const calculateAndUpdateValues = (obj) => {
     formControlData,
     setStateVariable,
   } = obj;
+
   let argNames, operator;
   console.log("calculateAndUpdateValues", values);
-
-  // debugger
 
   // Check if args is provided and not empty
   if (!args) {
@@ -1054,30 +1205,26 @@ const calculateAndUpdateValues = (obj) => {
   // Helper function to get the value based on whether it comes from a specific table or from the values object
   const getValue = (arg) => {
     const [tableName, field] = arg.split(".");
+
     if (tableName === formControlData?.tableName) {
       const value = parseFloat(newState[field]);
+
       if (isNaN(value)) {
         console.warn(
-          `Value for ${field} in table ${tableName} is invalid or not provided, skipping.`
+          `Value for ${field} in table ${tableName} is invalid or not provided, skipping.`,
         );
         return null;
       }
+
       return value;
     } else {
       const value = parseFloat(values[arg]);
+
       if (isNaN(value)) {
         console.warn(`Value for ${arg} is invalid or not provided, skipping.`);
-        return {
-          isCheck: false,
-          type: "success",
-          message: "Error",
-          alertShow: false,
-          fieldName: fieldName,
-          values: values,
-          newState: newState,
-          formControlData: formControlData,
-        };
+        return null;
       }
+
       return value;
     }
   };
@@ -1090,11 +1237,22 @@ const calculateAndUpdateValues = (obj) => {
 
   if (params.length === 0) {
     console.warn("No valid values provided for calculation.");
-    return;
+
+    return {
+      isCheck: false,
+      type: "error",
+      message: "No valid values provided for calculation.",
+      alertShow: false,
+      fieldName: fieldName,
+      values: values,
+      newState: newState,
+      formControlData: formControlData,
+    };
   }
 
   const resultField = argNames[argNames.length - 1];
-  console.log("Params before calculation:", params); // Log params before any calculations
+
+  console.log("Params before calculation:", params);
 
   let result;
   let isSuccess = true; // Flag to indicate if the calculation is successful
@@ -1105,28 +1263,39 @@ const calculateAndUpdateValues = (obj) => {
     case "+":
       result = params.reduce((acc, curr) => acc + curr, 0);
       break;
+
     case "subtract":
-    case "-":
-      result = params.reduce((acc, curr) => acc - curr, params.shift() || 0);
+    case "-": {
+      const firstValue = params[0] || 0;
+      result = params.slice(1).reduce((acc, curr) => acc - curr, firstValue);
       break;
+    }
+
     case "multiply":
     case "*":
       result = params.reduce((acc, curr) => acc * curr, 1);
       break;
+
     case "divide":
-    case "/":
+    case "/": {
+      const firstValue = params[0];
+
       if (params.slice(1).some((param) => param === 0)) {
         console.warn("Division by zero encountered.");
         result = 0;
         isSuccess = false;
       } else {
-        result = params.reduce((acc, curr) => acc / curr, params.shift());
+        result = params.slice(1).reduce((acc, curr) => acc / curr, firstValue);
       }
+
       break;
+    }
+
     case "max":
     case ">":
       result = Math.max(...params);
       break;
+
     case "min":
     case "<":
       result = Math.min(...params);
@@ -1145,15 +1314,21 @@ const calculateAndUpdateValues = (obj) => {
     isSuccess = false;
   }
 
+  const finalValue = result.toFixed(2);
+
   // Update the state and log the changes
   setStateVariable((prev) => {
-    const updatedState = { ...prev, [resultField]: result.toFixed(2) };
+    const updatedState = {
+      ...prev,
+      [resultField]: finalValue,
+    };
+
     return updatedState;
   });
 
   const updatedValues = {
     ...values,
-    [resultField]: result.toFixed(2),
+    [resultField]: finalValue,
   };
 
   if (isSuccess) {
@@ -1164,7 +1339,11 @@ const calculateAndUpdateValues = (obj) => {
       values: updatedValues,
       alertShow: false,
       fieldName: fieldName,
-      newState: newState,
+      newState: {
+        ...newState,
+        [resultField]: finalValue,
+      },
+      formControlData: formControlData,
     };
   } else {
     return {
@@ -1174,7 +1353,10 @@ const calculateAndUpdateValues = (obj) => {
       values: updatedValues,
       alertShow: false,
       fieldName: fieldName,
-      newState: newState,
+      newState: {
+        ...newState,
+        [resultField]: finalValue,
+      },
       formControlData: formControlData,
     };
   }
@@ -1259,7 +1441,7 @@ const emptyTargetField = (obj) => {
     splitArgs,
     formControlData,
     values,
-    fieldName
+    fieldName,
   );
   // });
 
@@ -1544,12 +1726,12 @@ const setExchangeRate = async (obj) => {
           "x-access-token": JSON.parse(token),
         },
         body: JSON.stringify(companyRequestBody),
-      }
+      },
     );
 
     if (!companyResponse.ok) {
       throw new Error(
-        `Error fetching company parameters: ${companyResponse.statusText}`
+        `Error fetching company parameters: ${companyResponse.statusText}`,
       );
     }
 
@@ -1580,7 +1762,7 @@ const setExchangeRate = async (obj) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
-      }
+      },
     );
 
     if (!response.ok) {
@@ -1773,24 +1955,10 @@ const setTaxDetails = async (obj) => {
     onChangeHandler,
   } = obj;
 
+
   const { companyId, clientId, branchId, userId, financialYear } =
     getUserDetails();
 
-  let argNames;
-  let splitArgs = [];
-  if (
-    args === undefined ||
-    args === null ||
-    args === "" ||
-    (typeof args === "object" && Object.keys(args).length === 0)
-  ) {
-    argNames = args;
-  } else {
-    argNames = args.split(",").map((arg) => arg.trim());
-    for (const iterator of argNames) {
-      splitArgs.push(iterator.split("."));
-    }
-  }
   const {
     invoiceDate,
     businessSegmentId,
@@ -1802,10 +1970,10 @@ const setTaxDetails = async (obj) => {
     billingPartyBranchId,
     billingPartyStateId,
     totalInvoiceAmountFc,
-    voucherTypeId
+    voucherTypeId,
   } = newState;
-  //const chargeGlId =
-  const { chargeId, chargeGlId, SelectedParentInvId } = values;
+
+  const { chargeId, chargeGlId, taxApplicable, SelectedParentInvId } = values;
   const requestData = {
     chargeId: chargeId,
     invoiceDate: moment(invoiceDate).format("YYYY-MM-DD"),
@@ -1830,9 +1998,9 @@ const setTaxDetails = async (obj) => {
     totalAmtInvoiceCurr: totalInvoiceAmountFc,
     billingPartyBranch: billingPartyBranchId,
     billingPartyState: billingPartyStateId,
-    voucherTypeId: voucherTypeId
+    voucherTypeId: voucherTypeId,
+    isTaxApplicable: taxApplicable,
   };
-  console.log("RequestData", requestData);
 
   const fetchTaxDetails = await getTaxDetails(requestData);
   if (fetchTaxDetails) {
@@ -1843,7 +2011,25 @@ const setTaxDetails = async (obj) => {
       tempData.tblInvoiceChargeTax = tblTax;
       return tempData;
     });
+
+    return {
+      type: "success",
+      result: true,
+      values: { ...values, tblInvoiceChargeTax: tblTax },
+      newState: { ...newState, tblInvoiceChargeTax: tblTax },
+      formControlData,
+      message: "TDS details fetched successfully",
+    };
   }
+
+  return {
+    type: "warning",
+    result: false,
+    values,
+    newState,
+    formControlData,
+    message: "No TDS details found",
+  };
 };
 // const setTDSDetails = async (obj) => {
 //   let {
@@ -1926,15 +2112,11 @@ const setTDSDetails = async (obj) => {
     tableName,
     setStateVariable,
   } = obj;
-  const argNames = args.split(",").map((arg) => arg.trim());
-  //const chargeGlId = values[argNames[0]];
+
   const { clientId } = getUserDetails();
   const { chargeGlId } = values;
 
-  const {
-    invoiceDate,
-    billingPartyId,
-  } = newState || {};
+  const { invoiceDate, billingPartyId } = newState || {};
 
   if (!invoiceDate || !billingPartyId || !chargeGlId) {
     return {
@@ -1952,7 +2134,7 @@ const setTDSDetails = async (obj) => {
     partyId: billingPartyId,
     formControlId: newState?.menuID,
     totalAmount: values?.totalAmountHc || 0,
-    exchangeRateGrid: values?.exchangeRate || 1,
+    exchangeRateGrid: newState?.exchangeRate || 1,
     clientId: clientId,
   };
 
@@ -1975,7 +2157,7 @@ const setTDSDetails = async (obj) => {
       type: "success",
       result: true,
       values: updatedValues,
-      newState,
+      newState: { ...newState, tblInvoiceChargeTds: tdsData },
       formControlData,
       message: "TDS details fetched successfully",
     };
@@ -1990,6 +2172,255 @@ const setTDSDetails = async (obj) => {
     message: "No TDS details found",
   };
 };
+// const getJobCharges = async (obj) => {
+//   let {
+//     args,
+//     newState,
+//     formControlData,
+//     setFormControlData,
+//     values,
+//     fieldName,
+//     tableName,
+//     setStateVariable,
+//   } = obj;
+
+//   console.log("getJobCharges obj", obj);
+
+//   let argNames;
+//   let splitArgs = [];
+
+//   if (
+//     args === undefined ||
+//     args === null ||
+//     args === "" ||
+//     (typeof args === "object" && Object.keys(args).length === 0)
+//   ) {
+//     argNames = args;
+//   } else {
+//     argNames = args.split(",").map((arg) => arg.trim());
+
+//     for (const iterator of argNames) {
+//       splitArgs.push(iterator.split("."));
+//     }
+//   }
+
+//   const {
+//     invoiceDate,
+//     businessSegmentId,
+//     placeOfSupplyStateId,
+//     sez,
+//     billingPartyId,
+//     ownStateId,
+//     jobId,
+//   } = values || {};
+
+//   const {
+//     taxType,
+//     billingPartyBranchId,
+//     billingPartyStateId,
+//     totalInvoiceAmountFc,
+//     voucherTypeId,
+//   } = newState || {};
+
+//   const { companyId, clientId, branchId, financialYear, userId } =
+//     getUserDetails();
+
+//   const normalizeArray = (data) => {
+//     if (Array.isArray(data)) return data;
+
+//     if (typeof data === "string") {
+//       try {
+//         const parsed = JSON.parse(data);
+//         return Array.isArray(parsed) ? parsed : [];
+//       } catch (err) {
+//         return [];
+//       }
+//     }
+
+//     return [];
+//   };
+
+//   const finalInvoiceDate = newState?.invoiceDate || invoiceDate;
+//   const finalBusinessSegmentId =
+//     newState?.businessSegmentId || businessSegmentId || 0;
+//   const finalBillingPartyId =
+//     newState?.billingPartyId || billingPartyId || 0;
+//   const finalJobId = newState?.jobId || jobId || 0;
+//   const finalPlaceOfSupplyStateId =
+//     newState?.placeOfSupplyStateId || placeOfSupplyStateId || 0;
+//   const finalOwnStateId = newState?.ownStateId || ownStateId || 0;
+//   const finalSez = newState?.sez ?? sez ?? false;
+
+//   const requestData = {
+//     clientId: clientId,
+//     voucherType: newState?.voucherTypeId || voucherTypeId || 0,
+//     DepartmentId: finalBusinessSegmentId,
+//     jobIds: finalJobId,
+//     billingPartyId: finalBillingPartyId,
+//     companyId: companyId,
+//     companyBranchId: branchId,
+//   };
+
+//   const fetchTaxDetails = await getJobChargeDetails(requestData);
+
+//   if (fetchTaxDetails) {
+//     console.log("Job charge response", fetchTaxDetails);
+
+//     const { Chargers } = fetchTaxDetails;
+
+//     const updatedCharges = Array.isArray(Chargers) ? Chargers : [];
+
+//     for (let index = 0; index < updatedCharges.length; index++) {
+//       updatedCharges[index].idx = index;
+//       updatedCharges[index].index = index;
+//       updatedCharges[index].indexValue = index;
+
+//       const chargeValues = updatedCharges[index];
+
+//       const safeTotalAmount = Number(chargeValues?.totalAmount) || 0;
+//       const safeTotalAmountFc = Number(chargeValues?.totalAmountFc) || 0;
+//       const safeTotalAmountHc =
+//         Number(chargeValues?.totalAmountHc) ||
+//         Number(chargeValues?.totalAmount) ||
+//         0;
+
+//       const safeChargeGlId =
+//         chargeValues?.chargeGlId ||
+//         chargeValues?.glId ||
+//         chargeValues?.ledgerId ||
+//         0;
+
+//       const safeSacId =
+//         chargeValues?.sacId ||
+//         chargeValues?.sacCodeId ||
+//         0;
+
+//       /**
+//        * GST / TAX CALCULATION
+//        */
+//       const taxReq = {
+//         chargeId: chargeValues?.chargeId || 0,
+//         invoiceDate: finalInvoiceDate
+//           ? moment(finalInvoiceDate).format("YYYY-MM-DD")
+//           : null,
+//         departmentId: finalBusinessSegmentId,
+//         glId: safeChargeGlId,
+//         placeOfSupply_state: finalPlaceOfSupplyStateId,
+//         SelectedParentInvId: null,
+//         sez: finalSez,
+//         customerId: finalBillingPartyId,
+//         ownStateId: finalOwnStateId,
+//         formControlId: newState?.menuID || 0,
+//         totalAmount: safeTotalAmount,
+//         totalAmountFc: safeTotalAmountFc,
+//         sacCodeId: safeSacId,
+//         totalAmountHc: safeTotalAmountHc,
+//         taxType: taxType || "G",
+//         companyId: companyId,
+//         branchId: branchId,
+//         finYearId: financialYear,
+//         userId: userId,
+//         clientId: clientId,
+//         totalAmtInvoiceCurr: Number(totalInvoiceAmountFc) || 0,
+//         billingPartyBranch: billingPartyBranchId || 0,
+//         billingPartyState: billingPartyStateId || 0,
+//         voucherTypeId: voucherTypeId || newState?.voucherTypeId || 0,
+//         isTaxApplicable: chargeValues.taxApplicable,
+
+//       };
+
+//       try {
+//         const fetchGST = await getTaxDetails(taxReq);
+
+//         if (fetchGST) {
+//           updatedCharges[index].tblInvoiceChargeTax = normalizeArray(
+//             fetchGST?.tblTax,
+//           );
+//         } else {
+//           updatedCharges[index].tblInvoiceChargeTax =
+//             normalizeArray(chargeValues?.tblInvoiceChargeTax);
+//         }
+//       } catch (error) {
+//         console.error("GST calculation error", error);
+
+//         updatedCharges[index].tblInvoiceChargeTax =
+//           normalizeArray(chargeValues?.tblInvoiceChargeTax);
+//       }
+
+//       /**
+//        * TDS CALCULATION
+//        * Same as tax calculation, but using getTDSDetails()
+//        */
+//       const tdsReq = {
+//         invoiceDate: finalInvoiceDate
+//           ? moment(finalInvoiceDate).format("YYYY-MM-DD")
+//           : null,
+//         glId: safeChargeGlId,
+//         partyId: finalBillingPartyId,
+//         formControlId: newState?.menuID || 0,
+//         totalAmount: safeTotalAmountHc,
+//         exchangeRateGrid:
+//           Number(chargeValues?.exchangeRate) ||
+//           Number(values?.exchangeRate) ||
+//           1,
+//         clientId: clientId,
+//         invoiceCurrencyId: newState?.currencyId,
+
+//       };
+
+//       try {
+//         if (finalInvoiceDate && finalBillingPartyId && safeChargeGlId) {
+//           const fetchTDSDetails = await getTDSDetails(tdsReq);
+
+//           const tdsData = normalizeArray(
+//             fetchTDSDetails?.data ||
+//             fetchTDSDetails?.tblTds ||
+//             fetchTDSDetails?.tblInvoiceChargeTds,
+//           );
+
+//           updatedCharges[index].tblInvoiceChargeTds = tdsData;
+//         } else {
+//           updatedCharges[index].tblInvoiceChargeTds =
+//             normalizeArray(chargeValues?.tblInvoiceChargeTds);
+//         }
+//       } catch (error) {
+//         console.error("TDS calculation error", error);
+
+//         updatedCharges[index].tblInvoiceChargeTds =
+//           normalizeArray(chargeValues?.tblInvoiceChargeTds);
+//       }
+//     }
+
+//     setStateVariable((prev) => ({
+//       ...prev,
+//       tblInvoiceCharge: updatedCharges,
+//     }));
+
+//     return {
+//       type: "success",
+//       result: true,
+//       values: {
+//         ...values,
+//         tblInvoiceCharge: updatedCharges,
+//       },
+//       newState: {
+//         ...newState,
+//         tblInvoiceCharge: updatedCharges,
+//       },
+//       formControlData,
+//       message: "Job charges, tax and TDS calculated successfully.",
+//     };
+//   }
+
+//   return {
+//     type: "warning",
+//     result: false,
+//     values,
+//     newState,
+//     formControlData,
+//     message: "No job charges found.",
+//   };
+// };
 const getJobCharges = async (obj) => {
   let {
     args,
@@ -2001,10 +2432,12 @@ const getJobCharges = async (obj) => {
     tableName,
     setStateVariable,
   } = obj;
-  console.log("newState", obj);
+
+  console.log("getJobCharges obj", obj);
 
   let argNames;
   let splitArgs = [];
+
   if (
     args === undefined ||
     args === null ||
@@ -2014,6 +2447,7 @@ const getJobCharges = async (obj) => {
     argNames = args;
   } else {
     argNames = args.split(",").map((arg) => arg.trim());
+
     for (const iterator of argNames) {
       splitArgs.push(iterator.split("."));
     }
@@ -2027,27 +2461,50 @@ const getJobCharges = async (obj) => {
     billingPartyId,
     ownStateId,
     jobId,
-  } = values;
+  } = values || {};
 
   const {
     taxType,
     billingPartyBranchId,
     billingPartyStateId,
     totalInvoiceAmountFc,
-    voucherTypeId
-  } = newState;
+    voucherTypeId,
+  } = newState || {};
 
   const { companyId, clientId, branchId, financialYear, userId } =
     getUserDetails();
 
-  console.log("values", values);
+  const normalizeArray = (data) => {
+    if (Array.isArray(data)) return data;
+
+    if (typeof data === "string") {
+      try {
+        const parsed = JSON.parse(data);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        return [];
+      }
+    }
+
+    return [];
+  };
+
+  const finalInvoiceDate = newState?.invoiceDate || invoiceDate;
+  const finalBusinessSegmentId =
+    newState?.businessSegmentId || businessSegmentId || 0;
+  const finalBillingPartyId = newState?.billingPartyId || billingPartyId || 0;
+  const finalJobId = newState?.jobId || jobId || 0;
+  const finalPlaceOfSupplyStateId =
+    newState?.placeOfSupplyStateId || placeOfSupplyStateId || 0;
+  const finalOwnStateId = newState?.ownStateId || ownStateId || 0;
+  const finalSez = newState?.sez ?? sez ?? false;
 
   const requestData = {
     clientId: clientId,
-    voucherType: newState?.voucherTypeId, // "E_F_BL",
-    DepartmentId: newState?.businessSegmentId || businessSegmentId || 0,
-    jobIds: newState?.jobId || jobId || 0,
-    billingPartyId: newState?.billingPartyId || billingPartyId || 0,
+    voucherType: newState?.voucherTypeId || voucherTypeId || 0,
+    DepartmentId: finalBusinessSegmentId,
+    jobIds: finalJobId,
+    billingPartyId: finalBillingPartyId,
     companyId: companyId,
     companyBranchId: branchId,
   };
@@ -2055,39 +2512,54 @@ const getJobCharges = async (obj) => {
   const fetchTaxDetails = await getJobChargeDetails(requestData);
 
   if (fetchTaxDetails) {
-    console.log(fetchTaxDetails);
+    console.log("Job charge response", fetchTaxDetails);
+
     const { Chargers } = fetchTaxDetails;
 
-    for (let index = 0; index < (Chargers?.length || 0); index++) {
-      Chargers[index].idx = index;
-      Chargers[index].index = index;
-      Chargers[index].indexValue = index;
+    const updatedCharges = Array.isArray(Chargers) ? Chargers : [];
 
-      const chargeValues = Chargers[index];
+    for (let index = 0; index < updatedCharges.length; index++) {
+      updatedCharges[index].idx = index;
+      updatedCharges[index].index = index;
+      updatedCharges[index].indexValue = index;
 
-      // default numeric fields
-      const safeTotalAmount = Number(chargeValues.totalAmount) || 0;
-      const safeTotalAmountFc = Number(chargeValues.totalAmountFc) || 0;
-      const safeChargeGlId = chargeValues.chargeGlId || 0;
-      const safeSacId = chargeValues.sacId || 0;
+      const chargeValues = updatedCharges[index];
 
+      const safeTotalAmount = Number(chargeValues?.totalAmount) || 0;
+      const safeTotalAmountFc = Number(chargeValues?.totalAmountFc) || 0;
+      const safeTotalAmountHc =
+        Number(chargeValues?.totalAmountHc) ||
+        Number(chargeValues?.totalAmount) ||
+        0;
+
+      const safeChargeGlId =
+        chargeValues?.chargeGlId ||
+        chargeValues?.glId ||
+        chargeValues?.ledgerId ||
+        0;
+
+      const safeSacId = chargeValues?.sacId || chargeValues?.sacCodeId || 0;
+
+      /**
+       * GST / TAX CALCULATION
+       */
       const taxReq = {
-        chargeId: chargeValues.chargeId || 0,
-        invoiceDate: invoiceDate
-          ? moment(invoiceDate).format("YYYY-MM-DD")
+        chargeId: chargeValues?.chargeId || 0,
+        invoiceDate: finalInvoiceDate
+          ? moment(finalInvoiceDate).format("YYYY-MM-DD")
           : null,
-        departmentId: businessSegmentId || 0,
+        departmentId: finalBusinessSegmentId,
         glId: safeChargeGlId,
-        placeOfSupply_state: placeOfSupplyStateId || 0,
+        placeOfSupply_state: finalPlaceOfSupplyStateId,
         SelectedParentInvId: null,
-        sez: sez || false,
-        customerId: newState?.billingPartyId || billingPartyId || 0,
-        ownStateId: ownStateId || 0,
+        sez: finalSez,
+        customerId: finalBillingPartyId,
+        ownStateId: finalOwnStateId,
         formControlId: newState?.menuID || 0,
         totalAmount: safeTotalAmount,
         totalAmountFc: safeTotalAmountFc,
         sacCodeId: safeSacId,
-        totalAmountHc: safeTotalAmount,
+        totalAmountHc: safeTotalAmountHc,
         taxType: taxType || "G",
         companyId: companyId,
         branchId: branchId,
@@ -2097,24 +2569,101 @@ const getJobCharges = async (obj) => {
         totalAmtInvoiceCurr: Number(totalInvoiceAmountFc) || 0,
         billingPartyBranch: billingPartyBranchId || 0,
         billingPartyState: billingPartyStateId || 0,
-        voucherTypeId: voucherTypeId || 0
+        voucherTypeId: voucherTypeId || newState?.voucherTypeId || 0,
+        isTaxApplicable: chargeValues.taxApplicable,
       };
 
-      let fetchGST = await getTaxDetails(taxReq);
+      try {
+        const fetchGST = await getTaxDetails(taxReq);
 
-      if (fetchGST) {
-        const { tblTax } = fetchGST;
-        Chargers[index].tblInvoiceChargeTax =
-          tblTax || chargeValues.tblInvoiceChargeTax || [];
+        if (fetchGST) {
+          updatedCharges[index].tblInvoiceChargeTax = normalizeArray(
+            fetchGST?.tblTax,
+          );
+        } else {
+          updatedCharges[index].tblInvoiceChargeTax = normalizeArray(
+            chargeValues?.tblInvoiceChargeTax,
+          );
+        }
+      } catch (error) {
+        console.error("GST calculation error", error);
+
+        updatedCharges[index].tblInvoiceChargeTax = normalizeArray(
+          chargeValues?.tblInvoiceChargeTax,
+        );
+      }
+
+      /**
+       * TDS CALCULATION
+       * Same as tax calculation, but using getTDSDetails()
+       */
+      const tdsReq = {
+        invoiceDate: finalInvoiceDate
+          ? moment(finalInvoiceDate).format("YYYY-MM-DD")
+          : null,
+        glId: safeChargeGlId,
+        partyId: finalBillingPartyId,
+        formControlId: newState?.menuID || 0,
+        totalAmount: safeTotalAmountHc,
+        exchangeRateGrid:
+          Number(newState?.exchangeRate),
+        clientId: clientId,
+      };
+
+      try {
+        if (finalInvoiceDate && finalBillingPartyId && safeChargeGlId) {
+          const fetchTDSDetails = await getTDSDetails(tdsReq);
+
+          const tdsData = normalizeArray(
+            fetchTDSDetails?.data ||
+            fetchTDSDetails?.tblTds ||
+            fetchTDSDetails?.tblInvoiceChargeTds,
+          );
+
+          updatedCharges[index].tblInvoiceChargeTds = tdsData;
+        } else {
+          updatedCharges[index].tblInvoiceChargeTds = normalizeArray(
+            chargeValues?.tblInvoiceChargeTds,
+          );
+        }
+      } catch (error) {
+        console.error("TDS calculation error", error);
+
+        updatedCharges[index].tblInvoiceChargeTds = normalizeArray(
+          chargeValues?.tblInvoiceChargeTds,
+        );
       }
     }
-    const updatedCharges = Array.isArray(Chargers) ? Chargers : [];
+
     setStateVariable((prev) => ({
       ...prev,
       tblInvoiceCharge: updatedCharges,
     }));
 
+    return {
+      type: "success",
+      result: true,
+      values: {
+        ...values,
+        tblInvoiceCharge: updatedCharges,
+      },
+      newState: {
+        ...newState,
+        tblInvoiceCharge: updatedCharges,
+      },
+      formControlData,
+      message: "Job charges, tax and TDS calculated successfully.",
+    };
   }
+
+  return {
+    type: "warning",
+    result: false,
+    values,
+    newState,
+    formControlData,
+    message: "No job charges found.",
+  };
 };
 const validateContainerNo = (obj) => {
   const {
@@ -2624,7 +3173,7 @@ const removeFilterCondition = (obj) => {
 
   // Find the target field in formControlData
   let targetField = formControlData.fields.find(
-    (field) => field.fieldname === fieldName
+    (field) => field.fieldname === fieldName,
   );
 
   if (targetField) {
@@ -2640,7 +3189,7 @@ const removeFilterCondition = (obj) => {
           ? prev.formControlData.fields.map((field) =>
             field.fieldname === fieldName
               ? { ...field, dropdownFilter: null }
-              : field
+              : field,
           )
           : [],
       },
@@ -2689,7 +3238,7 @@ const validateTotalGrossWeight = (obj) => {
   if (containerUnit) {
     const firstUnit = values[argNames[3]];
     const isUnitInconsistent = tblJobContainer.some(
-      (container) => container[argNames[3]] !== firstUnit
+      (container) => container[argNames[3]] !== firstUnit,
     );
     if (isUnitInconsistent) {
       const updatedValues = {
@@ -2738,7 +3287,7 @@ const validateTotalGrossWeight = (obj) => {
 
   const containerGrossWeight = tblJobContainer.reduce(
     (total, container) => total + parseFloat(container[argNames[1]]),
-    0
+    0,
   );
 
   if (!cargoGrossWeight || !containerGrossWeight) {
@@ -2839,7 +3388,7 @@ const setUniqueCopyTableName = async (obj) => {
   // Check for duplicate mapping names
   const isDuplicate = data.some(
     (item) =>
-      item.clientCode === userClientCode && item.mappingName === currentName
+      item.clientCode === userClientCode && item.mappingName === currentName,
   );
 
   // If duplicate found
@@ -2920,7 +3469,7 @@ const calculateMultipleValues = (obj) => {
 
           if (isNaN(operand1) || isNaN(operand2)) {
             console.warn(
-              `Invalid operand encountered: operand1=${operand1}, operand2=${operand2}`
+              `Invalid operand encountered: operand1=${operand1}, operand2=${operand2}`,
             );
             return NaN; // Return NaN if any operand is not a number
           }
@@ -3057,7 +3606,7 @@ const setNewBranch = (obj) => {
     // Find the index of the existing branch with the same name or address
     const branchIndex = newState[args].findIndex(
       (branch) =>
-        branch.name === companyName || branch.address === companyAddress
+        branch.name === companyName || branch.address === companyAddress,
     );
 
     let updatedBranches;
@@ -3067,7 +3616,7 @@ const setNewBranch = (obj) => {
       updatedBranches = newState[args].map((branch, index) =>
         index === branchIndex
           ? { ...branch, name: companyName, address: companyAddress }
-          : branch
+          : branch,
       );
     } else {
       // If the branch does not exist, add a new branch entry
@@ -3167,7 +3716,7 @@ const checkParentDuplications = async (obj) => {
 
   // Check for duplicate company name
   const isDuplicate = toCheckFrom.some(
-    (existingField) => existingField === fieldToCheck.toLowerCase()
+    (existingField) => existingField === fieldToCheck.toLowerCase(),
   );
 
   if (isDuplicate) {
@@ -3367,14 +3916,14 @@ const qtyCheck = (obj) => {
   // let gridName = parts[parts.length - 1];
   // console.log("container name", gridName);
   let parentCommonItem = newState[argsArray[0]].filter(
-    (item) => item.sizeId === sizeId && item.typeId === typeId
+    (item) => item.sizeId === sizeId && item.typeId === typeId,
   );
 
   let childItemQty = newState[argsArray[1]].filter(
-    (item) => item.sizeId === sizeId && item.typeId === typeId
+    (item) => item.sizeId === sizeId && item.typeId === typeId,
   ).length;
   let childCommonItem = newState[argsArray[1]].filter(
-    (item) => item.sizeId === sizeId && item.typeId === typeId
+    (item) => item.sizeId === sizeId && item.typeId === typeId,
   );
   if (parentCommonItem) {
     if (values.qty > parentCommonItem[0].qty) {
@@ -3460,7 +4009,7 @@ const checkGridsDuplication = (obj) => {
   }
 
   const sanitizedFields = listOfFields.map((field) =>
-    field.replace(/[\[\]]/g, "")
+    field.replace(/[\[\]]/g, ""),
   );
   const labels = sanitizedFields.map((field) => {
     let label = field;
@@ -3859,7 +4408,7 @@ const checkNoDecimals = ({
   console.log("fieldValue", fieldValue);
   if (fieldValue && !Number.isInteger(Number(fieldValue))) {
     toast.error(
-      `The value "${fieldValue}" cannot contain decimals. Please enter a whole number.`
+      `The value "${fieldValue}" cannot contain decimals. Please enter a whole number.`,
     );
 
     const updatedValues = {
@@ -3904,14 +4453,14 @@ const salesExecutiveFilter = async (obj) => {
   const salesExecutive = argNames[0];
 
   let formData = formControlData.fields.find(
-    (field) => field.fieldname === salesExecutive
+    (field) => field.fieldname === salesExecutive,
   );
   if (!formData.dropdownFilter) {
     formData.dropdownFilter = `and companyBranchId=${branchId}`;
   } else {
     formData.dropdownFilter = formData.dropdownFilter.replace(
       "${branchId}",
-      branchId
+      branchId,
     );
   }
 };
@@ -4334,7 +4883,7 @@ const invoiceChargeGrid = async (obj) => {
       const updateInvoiceCharges = (currentCharges, newCharges) => {
         return newCharges.reduce((valuess, newCharge) => {
           const existingChargeIndex = valuess.findIndex(
-            (charge) => charge.chargeId === newCharge.chargeId
+            (charge) => charge.chargeId === newCharge.chargeId,
           );
 
           if (existingChargeIndex !== -1) {
@@ -4342,7 +4891,7 @@ const invoiceChargeGrid = async (obj) => {
             valuess = valuess.map((charge, index) =>
               index === existingChargeIndex
                 ? { ...charge, ...newCharge }
-                : charge
+                : charge,
             );
           } else {
             // Add a new charge
@@ -4356,7 +4905,7 @@ const invoiceChargeGrid = async (obj) => {
       // Update or add the new charges immutably
       const updatedInvoiceCharge = updateInvoiceCharges(
         newState.tblInvoiceCharge,
-        newInvoiceCharges
+        newInvoiceCharges,
       );
 
       // Update newState with the updated tblInvoiceCharge array
@@ -4885,7 +5434,7 @@ const balanceUpdate = async (obj) => {
   const newNoOfPackages = parseInt(values[argNames[0]]);
 
   const currentRowIndex = newState.tblVehicleOrderDetails.findIndex(
-    (detail) => detail.indexValue === values.indexValue
+    (detail) => detail.indexValue === values.indexValue,
   );
 
   if (currentRowIndex === -1) {
@@ -5017,7 +5566,9 @@ const setGLSacDetails = async (obj) => {
     chargeId: values?.chargeId,
     voucherTypeId: newState?.voucherTypeId,
     companyId: companyId,
-    glId: values?.chargeGlId
+    glId: values?.chargeGlId,
+    businessSegmentId:newState.businessSegmentId,
+    principalId:newState.principalId,
   };
 
   const response = await getGLChargeDetails(requestBody);
@@ -5266,10 +5817,10 @@ const quotationDateValidation = async (obj) => {
 
   // Get yourlabel for both field names from formControlData.fields
   const label1Info = formControlData.fields.find(
-    (field) => field.fieldname === argNames[0]
+    (field) => field.fieldname === argNames[0],
   );
   const label2Info = formControlData.fields.find(
-    (field) => field.fieldname === argNames[1]
+    (field) => field.fieldname === argNames[1],
   );
 
   const label1 = label1Info ? label1Info.yourlabel : argNames[0];
@@ -5711,7 +6262,7 @@ const setSameSizeValues = (obj) => {
       const sizeIds = getterSize;
 
       const getterTbl = formControlData.fields.find(
-        (item) => item.fieldname === fieldName
+        (item) => item.fieldname === fieldName,
       );
       if (!getterTbl) {
         return {
@@ -5727,7 +6278,7 @@ const setSameSizeValues = (obj) => {
       }
       const getterDropDown = getterTbl.dropdownFilter;
       const setterTbl = formControlData.fields.find(
-        (item) => item.fieldname === argsArray[1]
+        (item) => item.fieldname === argsArray[1],
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
@@ -5758,7 +6309,7 @@ const setSameSizeValues = (obj) => {
       const sizeIds = getterSize;
 
       const getterTbl = formControlData.fields.find(
-        (item) => item.fieldname === fieldName
+        (item) => item.fieldname === fieldName,
       );
       if (!getterTbl) {
         return {
@@ -5774,10 +6325,10 @@ const setSameSizeValues = (obj) => {
       }
       const getterDropDown = getterTbl.dropdownFilter;
       const setterTbl = formControlData.child.find(
-        (item) => item.tableName === argsArray[1]
+        (item) => item.tableName === argsArray[1],
       );
       const setterField = setterTbl?.fields.find(
-        (item) => item.fieldname === fieldName
+        (item) => item.fieldname === fieldName,
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
@@ -5829,7 +6380,7 @@ const setSameSizeValues = (obj) => {
       let sizeIds = getterSize.map(determineLabel);
 
       let flattenedArray = sizeIds.flatMap((item) =>
-        Array.isArray(item) ? item : [item]
+        Array.isArray(item) ? item : [item],
       );
 
       const allSizes = [currentSize, ...flattenedArray];
@@ -5837,12 +6388,12 @@ const setSameSizeValues = (obj) => {
       // Convert each element to a number if possible
       let uniqueNumbers = [
         ...new Set(
-          allSizes.map((item) => (isNaN(Number(item)) ? item : Number(item)))
+          allSizes.map((item) => (isNaN(Number(item)) ? item : Number(item))),
         ),
       ];
 
       const getterTbl = formControlData.child.find(
-        (item) => item.tableName === argsArray[0]
+        (item) => item.tableName === argsArray[0],
       );
       if (!getterTbl) {
         return {
@@ -5857,15 +6408,15 @@ const setSameSizeValues = (obj) => {
         };
       }
       const getterField = getterTbl.fields.find(
-        (item) => item.fieldname === fieldName
+        (item) => item.fieldname === fieldName,
       );
       const getterDropDown = getterField ? getterField.dropdownFilter : "";
 
       const setterTbl = formControlData.child.find(
-        (item) => item.tableName === argsArray[1]
+        (item) => item.tableName === argsArray[1],
       );
       const setterField = setterTbl?.fields.find(
-        (item) => item.fieldname === fieldName
+        (item) => item.fieldname === fieldName,
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
@@ -5920,7 +6471,7 @@ const setSameSizeValues = (obj) => {
       let sizeIds = getterSize.map(determineLabel);
 
       let flattenedArray = sizeIds.flatMap((item) =>
-        Array.isArray(item) ? item : [item]
+        Array.isArray(item) ? item : [item],
       );
 
       const allSizes = [currentSize, ...flattenedArray];
@@ -5939,15 +6490,15 @@ const setSameSizeValues = (obj) => {
         };
       }
       const getterTbl = formControlData.child.find(
-        (item) => item.tableName === argsArray[0]
+        (item) => item.tableName === argsArray[0],
       );
       const getterField = getterTbl.fields.find(
-        (item) => item.fieldname === fieldName
+        (item) => item.fieldname === fieldName,
       );
       const getterDropDown = getterField.dropdownFilter;
 
       const setterTbl = formControlData.fields.find(
-        (item) => item.fieldname === fieldName
+        (item) => item.fieldname === fieldName,
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
@@ -6006,7 +6557,7 @@ const setSameTypeValues = (obj) => {
 
   // Gather dropdown labels
   const filteredItems = parentField.filter(
-    (item) => item.fieldname === currentId
+    (item) => item.fieldname === currentId,
   );
 
   const labels = filteredItems
@@ -6030,7 +6581,7 @@ const setSameTypeValues = (obj) => {
 
   const childFields =
     formControlData.child.find(
-      (item) => item.tableName.toLowerCase() === childTable.toLowerCase()
+      (item) => item.tableName.toLowerCase() === childTable.toLowerCase(),
     )?.fields || [];
 
   const childField = childFields.find((item) => item.fieldname === filterField);
@@ -6263,7 +6814,7 @@ const calculateAllFields = (obj) => {
 
           if (isNaN(operand1) || isNaN(operand2)) {
             console.warn(
-              `Invalid operand encountered: operand1=${operand1}, operand2=${operand2}`
+              `Invalid operand encountered: operand1=${operand1}, operand2=${operand2}`,
             );
             return NaN; // Return NaN if any operand is not a number
           }
@@ -8407,7 +8958,10 @@ const setBranchForContainerMovement = async (obj) => {
 const setBankByDefault = async (obj) => {
   const { args, values, newState, setStateVariable } = obj;
   try {
-    const argNames = (args || "").split(",").map((a) => a.trim()).filter(Boolean);
+    const argNames = (args || "")
+      .split(",")
+      .map((a) => a.trim())
+      .filter(Boolean);
     const currencyField = argNames[0] || "currencyId";
     const currency =
       values?.[currencyField] ??
@@ -8618,9 +9172,7 @@ const calculateVoucherAmt = async (obj) => {
 
     // tdsPercent can be either a field name or a numeric literal
     const tdsPercent =
-      toNumOrNull(newState?.[tdsPercentKey]) ??
-      toNumOrNull(tdsPercentKey) ??
-      0;
+      toNumOrNull(newState?.[tdsPercentKey]) ?? toNumOrNull(tdsPercentKey) ?? 0;
 
     // nothing to calculate
     if (currency === null || currency === undefined || currency === "") {
@@ -8658,8 +9210,7 @@ const calculateVoucherAmt = async (obj) => {
       };
     }
 
-    const isHomeCurrency =
-      Number(companyCurrencyId) === Number(currency);
+    const isHomeCurrency = Number(companyCurrencyId) === Number(currency);
 
     let nextAmtRec = amtRecValue;
     let nextAmtRecFC = amtRecFCValue;
@@ -8679,14 +9230,19 @@ const calculateVoucherAmt = async (obj) => {
       if (amtRecFCValue !== null && exchangeRate !== null && exchangeRate > 0) {
         nextAmtRecFC = round2(amtRecFCValue);
         nextAmtRec = round2(amtRecFCValue * exchangeRate);
-      } else if (amtRecValue !== null && exchangeRate !== null && exchangeRate > 0) {
+      } else if (
+        amtRecValue !== null &&
+        exchangeRate !== null &&
+        exchangeRate > 0
+      ) {
         nextAmtRec = round2(amtRecValue);
         nextAmtRecFC = round2(amtRecValue / exchangeRate);
       } else {
         return {
           type: "success",
           result: true,
-          message: "Exchange rate or amount not available. Calculation skipped.",
+          message:
+            "Exchange rate or amount not available. Calculation skipped.",
         };
       }
     }
@@ -8709,14 +9265,24 @@ const calculateVoucherAmt = async (obj) => {
       // do not overwrite fetched non-zero values with 0 during mount/hydration
       if (
         nextAmtRec !== null &&
-        !(nextAmtRec === 0 && prevAmtRec !== null && prevAmtRec !== 0 && amtRecValue === null)
+        !(
+          nextAmtRec === 0 &&
+          prevAmtRec !== null &&
+          prevAmtRec !== 0 &&
+          amtRecValue === null
+        )
       ) {
         updates[amtRecKey] = nextAmtRec;
       }
 
       if (
         nextAmtRecFC !== null &&
-        !(nextAmtRecFC === 0 && prevAmtRecFC !== null && prevAmtRecFC !== 0 && amtRecFCValue === null)
+        !(
+          nextAmtRecFC === 0 &&
+          prevAmtRecFC !== null &&
+          prevAmtRecFC !== 0 &&
+          amtRecFCValue === null
+        )
       ) {
         updates[amtRecFCKey] = nextAmtRecFC;
       }
@@ -8727,8 +9293,7 @@ const calculateVoucherAmt = async (obj) => {
       }
 
       if (tdsAmtKey) {
-        updates[tdsAmtKey] =
-          nextTdsAmt !== null ? nextTdsAmt : prevTdsAmt;
+        updates[tdsAmtKey] = nextTdsAmt !== null ? nextTdsAmt : prevTdsAmt;
       }
 
       const hasChanges = Object.keys(updates).some((key) => {
@@ -8887,19 +9452,19 @@ const setInvoiceChargeDetails = async (obj) => {
 
       // Filter only valid amountHc
       const validChargers = updatedChargers.filter(
-        (item) => item.amountHc != null && item.amountHc !== 0
+        (item) => item.amountHc != null && item.amountHc !== 0,
       );
 
       // Calculate total qty
       const qty = validChargers.reduce(
         (acc, item) => acc + Number(item.qty || 0),
-        0
+        0,
       );
 
       // Calculate sum of amountHc
       const totalAmountHc = validChargers.reduce(
         (acc, item) => acc + Number(item.amountHc || 0),
-        0
+        0,
       );
 
       // Calculate average amountHc for rate
@@ -9085,14 +9650,14 @@ const getThirdLevelDetails = async (obj) => {
     // ✅ total qty
     const qty = updatedChargers.reduce(
       (acc, item) => acc + (Number(item["qty"]) || 0),
-      0
+      0,
     );
 
     // ✅ total of (noOfDays * rate)
     const totalWeighted = updatedChargers.reduce(
       (acc, item) =>
         acc + (Number(item["noOfDays"]) || 0) * (Number(item["rate"]) || 0),
-      0
+      0,
     );
 
     // ✅ average rate
@@ -9567,7 +10132,12 @@ const getBillingPartyFromJob = async (obj) => {
   const { blId, voucherTypeId } = newState;
   const { companyId, clientId } = getUserDetails();
 
-  const requestData = { id: blId, clientId: clientId, voucherTypeId: voucherTypeId, companyId: companyId };
+  const requestData = {
+    id: blId,
+    clientId: clientId,
+    voucherTypeId: voucherTypeId,
+    companyId: companyId,
+  };
   const fetchInvoice = await getGeneralLegerBillingParty(requestData);
 
   // normalize response
@@ -9714,7 +10284,7 @@ const filterContainerNo = async (obj) => {
   const fetchContainerDetails = await fetchContainerNoData(requestData);
 
   const idsPattern = `(${fetchContainerDetails.Chargers.map(
-    (c) => `'${c.containerId}'`
+    (c) => `'${c.containerId}'`,
   ).join(",")})`;
   const query = `and id in ${idsPattern}`;
   console.log("idsPattern", query);
@@ -9727,7 +10297,7 @@ const filterContainerNo = async (obj) => {
       fields: (section.fields ?? []).map((f) =>
         f?.id === 104122 || f?.fieldname === "containerId"
           ? { ...f, dropdownFilter: query }
-          : f
+          : f,
       ),
     })),
   };
@@ -9828,7 +10398,7 @@ const setPickUpDate = (obj) => {
 
   if (pickupDateObj.getTime() > baseDate.getTime()) {
     toast.error(
-      `Pickup Date (${pickupDateObj.toLocaleDateString()}) must be on or before ${baseDate.toLocaleDateString()}`
+      `Pickup Date (${pickupDateObj.toLocaleDateString()}) must be on or before ${baseDate.toLocaleDateString()}`,
     );
 
     // ❌ Clear the field value
@@ -9947,7 +10517,7 @@ const setTransit = async (obj) => {
     updatedGoodsDesc = updatedGoodsDesc
       .replace(
         /Cargo in transit to .*? on consignee’s risk, cost & responsibilities/gi,
-        ""
+        "",
       )
       .trim();
 
@@ -10178,7 +10748,6 @@ const setVesselVoyageKenya = async (obj) => {
   }
 };
 
-
 const getBlCharges = async (obj) => {
   const { newState, values, setStateVariable } = obj;
 
@@ -10192,7 +10761,7 @@ const getBlCharges = async (obj) => {
     companyId: getUserDetails().companyId,
     companyBranchId: getUserDetails().branchId,
     currencyId: newState?.currencyId,
-    exchangeRate: newState?.exchangeRate
+    exchangeRate: newState?.exchangeRate,
   };
 
   const fetchCharges = await getBlChargeDetails(requestData);
@@ -10218,11 +10787,13 @@ const getBlCharges = async (obj) => {
     });
 
     // Safe numeric fields
-    const safeTotalAmount = Number(charge.totalAmount || charge.totalAmountHc) || 0;
+    const safeTotalAmount =
+      Number(charge.totalAmount || charge.totalAmountHc) || 0;
     const safeTotalAmountFc = Number(charge.totalAmountFc) || 0;
     const safeChargeGlId = charge.chargeGlId || charge.glId || 0;
     const safeSacId = charge.sacId || 0;
-    const safeExchangeRate = Number(charge.exchangeRate || newState?.exchangeRate || 1) || 1;
+    const safeExchangeRate =
+      Number(newState?.exchangeRate || 1) || 1;
 
     // 2️⃣ Fetch GST / Tax
     const taxRequestData = {
@@ -10252,6 +10823,7 @@ const getBlCharges = async (obj) => {
       billingPartyBranch: newState.billingPartyBranchId || 0,
       billingPartyState: newState.billingPartyStateId || 0,
       voucherTypeId: newState?.voucherTypeId || 0,
+      isTaxApplicable: charge?.taxApplicable || 0,
     };
 
     const fetchGST = await getTaxDetails(taxRequestData);
@@ -10272,6 +10844,7 @@ const getBlCharges = async (obj) => {
         formControlId: newState?.menuID || 0,
         totalAmount: Number(charge?.totalAmountHc || charge?.totalAmount || 0),
         exchangeRateGrid: safeExchangeRate,
+        invoiceCurrencyId: newState?.currencyId,
         clientId: getUserDetails().clientId,
       };
 
@@ -10283,9 +10856,8 @@ const getBlCharges = async (obj) => {
           tdsAmount: Number(Number(t.tdsAmount || 0).toFixed(2)),
           tdsAmountFc: Number(
             Number(
-              t.tdsAmountFc ||
-              ((Number(t.tdsAmount || 0) / safeExchangeRate) || 0)
-            ).toFixed(2)
+              t.tdsAmountFc || Number(t.tdsAmount || 0) / safeExchangeRate || 0,
+            ).toFixed(2),
           ),
         })) || [];
     } else {
@@ -10735,12 +11307,6 @@ const setSameCurrencyHc = async (obj) => {
 
     const balanceAmtHc = hcData + bankCharges + exGainLoss;
 
-    console.log("rohit setSameCurrencyHc", {
-      hcData,
-      bankCharges,
-      exGainLoss,
-      balanceAmtHc,
-    });
 
     // Store in newState
     setStateVariable((prev) => ({
@@ -10831,7 +11397,7 @@ const LedgerEntriesRule = (obj) => {
   if (fieldName == parameter[0]) {
     if (values[parameter[2]] > 0 && values[parameter[0]] > 0) {
       toast.error(
-        `Both Debit and Credit amounts cannot be greater than zero simultaneously.`
+        `Both Debit and Credit amounts cannot be greater than zero simultaneously.`,
       );
       setStateVariable((prev) => ({
         ...prev,
@@ -10900,7 +11466,7 @@ const getAutoAllocateAmount = async (obj) => {
   console.log("getAutoAllocateAmount newState =>>", newState);
   console.log(
     "getAutoAllocateAmount newState?.tblVoucherLedgerDetails =>>",
-    newState?.tblVoucherLedgerDetails
+    newState?.tblVoucherLedgerDetails,
   );
   console.log("getAutoAllocateAmount values =>>", values);
   console.log("fieldName values =>>", fieldName);
@@ -11132,7 +11698,7 @@ const calculateVoucherAmtDy = async (obj) => {
       //amtRecFC
       const amtRecFc = amtRec;
       const onAccountHc = amtRec;
-      const OnAccountHFc = amtRec
+      const OnAccountHFc = amtRec;
       // Store in newState
       setStateVariable((prev) => ({
         ...prev,
@@ -11224,8 +11790,8 @@ const setTdsAmt = async (obj) => {
       if (!isTds) {
         return {
           ...base,
-          tdsAmt: null,     // or 0 if you prefer
-          tdsAmtFC: null,   // or 0 if you prefer
+          tdsAmt: null, // or 0 if you prefer
+          tdsAmtFC: null, // or 0 if you prefer
         };
       }
 
@@ -11287,7 +11853,7 @@ const setDateOnFinalInvoice = async (obj) => {
   if (final == "Y") {
     setStateVariable((prev) => ({
       ...prev,
-      invoiceDate: Date.now()
+      invoiceDate: Date.now(),
     }));
 
     return {
@@ -11296,7 +11862,7 @@ const setDateOnFinalInvoice = async (obj) => {
       message: "Date set successfully",
     };
   }
-}
+};
 // const getBlChargesForTariff = async (obj) => {
 //   const { args, values, newState, setStateVariable } = obj;
 
@@ -11409,7 +11975,7 @@ const getBlChargesForTariff = async (obj) => {
         (x) =>
           Number(x?.rate || 0) > 0 ||
           Number(x?.totalAmount || 0) > 0 ||
-          Number(x?.totalAmountFc || 0) > 0
+          Number(x?.totalAmountFc || 0) > 0,
       ) || chargers[0];
 
     console.log("Selected tariff row:", row);
@@ -11455,13 +12021,13 @@ const arriDate = async (obj) => {
   } = obj;
   const argNames = args.split(",").map((arg) => arg.trim());
   const voyageId = values[argNames[0]];
-
+  const portOfCallId = values[argNames[1]];
   const token = localStorage.getItem("token");
 
   const request = {
     columns: "*",
-    tableName: 'tblVoyageRoute',
-    whereCondition: `voyageId = ${voyageId} and status = 1`,
+    tableName: "tblVoyageRoute",
+    whereCondition: `voyageId = ${voyageId} and status = 1 and portOfCallId = ${portOfCallId}`,
     clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
   };
   return fetchReportData(request).then((response) => {
@@ -11470,11 +12036,11 @@ const arriDate = async (obj) => {
     if (dueToValue !== undefined && dueToValue !== null) {
       const updatedValues = {
         ...values,
-        [argNames[1]]: dueToValue,
+        [argNames[2]]: dueToValue,
       };
       setStateVariable((prev) => ({
         ...prev,
-        [argNames[1]]: dueToValue,
+        [argNames[2]]: dueToValue,
       }));
 
       return {
@@ -11502,13 +12068,23 @@ const sailDate = async (obj) => {
   } = obj;
   const argNames = args.split(",").map((arg) => arg.trim());
   const voyageId = values[argNames[0]];
-
+  const portOfCallId = values[argNames[2]];
   const token = localStorage.getItem("token");
+  if (
+    voyageId == null ||
+    voyageId == undefined ||
+    voyageId == "" ||
+    portOfCallId == null ||
+    portOfCallId == undefined ||
+    portOfCallId == ""
+  ) {
+    return;
+  }
 
   const request = {
     columns: "*",
-    tableName: 'tblVoyageRoute',
-    whereCondition: `voyageId = ${voyageId} and status = 1`,
+    tableName: "tblVoyageRoute",
+    whereCondition: `voyageId = ${voyageId} and status = 1 portOfCallId = ${portOfCallId}`,
     clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
   };
   return fetchReportData(request).then((response) => {
@@ -11539,10 +12115,7 @@ const sailDate = async (obj) => {
 
 const checkJobAgainstBl = async (obj) => {
   try {
-    const {
-      args,
-      newState,
-    } = obj;
+    const { args, newState } = obj;
     const argNames = (args || "").split(",").map((a) => a.trim());
     const blId = newState?.[argNames?.[0]];
     if (!blId) {
@@ -11551,7 +12124,7 @@ const checkJobAgainstBl = async (obj) => {
     }
     const requestData = {
       blId: blId,
-      clientId: clientId
+      clientId: clientId,
     };
     const res = await checkJobCreatedAgainstBLData(requestData);
     const chargers = res?.Chargers ?? res?.data?.Chargers;
@@ -11560,7 +12133,6 @@ const checkJobAgainstBl = async (obj) => {
       toast.error("Against this BL No booking is not created.");
       return false;
     }
-
   } catch (err) {
     console.error("checkJobAgainstBl error:", err);
     toast.error("Failed to validate BL booking. Please try again.");
@@ -11649,7 +12221,7 @@ const checkDisChargeActivityBl11 = async (obj) => {
 
     if (chargers?.message === "BL not found" || dischargeDone === "N") {
       const confirmProceed = window.confirm(
-        "Against this BL Discharge Activity is not there.\n\nDo you want to continue ?"
+        "Against this BL Discharge Activity is not there.\n\nDo you want to continue ?",
       );
 
       if (!confirmProceed) {
@@ -11705,7 +12277,7 @@ const checkDisChargeActivityBl = async (obj) => {
 
     if (chargers?.message === "BL not found" || dischargeDone === "N") {
       const confirmProceed = window.confirm(
-        "Against this BL Discharge Activity is not there.\n\nDo you want to continue and flow the charges?"
+        "Against this BL Discharge Activity is not there.\n\nDo you want to continue and flow the charges?",
       );
 
       if (!confirmProceed) {
@@ -11777,14 +12349,24 @@ const checkRate = (obj) => {
       (Number.isFinite(+values?.idx) ? +values.idx : null) ??
       (Number.isFinite(+values?.index) ? +values.index : null) ??
       (Number.isFinite(+values?.indexValue) ? +values.indexValue : null) ??
-      (Number.isFinite(+newState?.selectedIndex) ? +newState.selectedIndex : null);
+      (Number.isFinite(+newState?.selectedIndex)
+        ? +newState.selectedIndex
+        : null);
 
     // ✅ 2) fallback match using keys (also supports dropdown objects)
     if (!(Number.isFinite(idx) && idx >= 0 && idx < table.length)) {
       const vBlId = pickVal(values?.blId);
-      const vChargeId = pickVal(values?.chargeId ?? values?.chargeIdText ?? values?.chargeIddropdown);
-      const vCurrencyId = pickVal(values?.currencyId ?? values?.currencyIdText ?? values?.currencyIddropdown);
-      const vRateBasisId = pickVal(values?.rateBasisId ?? values?.rateBasisIddropdown);
+      const vChargeId = pickVal(
+        values?.chargeId ?? values?.chargeIdText ?? values?.chargeIddropdown,
+      );
+      const vCurrencyId = pickVal(
+        values?.currencyId ??
+        values?.currencyIdText ??
+        values?.currencyIddropdown,
+      );
+      const vRateBasisId = pickVal(
+        values?.rateBasisId ?? values?.rateBasisIddropdown,
+      );
       const vSizeId = pickVal(values?.sizeId ?? values?.sizeIddropdown);
       const vTypeId = pickVal(values?.typeId ?? values?.typeIddropdown);
 
@@ -11800,7 +12382,7 @@ const checkRate = (obj) => {
         idx = table.findIndex(
           (r) =>
             String(pickVal(r?.chargeId) ?? "") === String(vChargeId ?? "") &&
-            String(pickVal(r?.currencyId) ?? "") === String(vCurrencyId ?? "")
+            String(pickVal(r?.currencyId) ?? "") === String(vCurrencyId ?? ""),
         );
       }
     }
@@ -11811,14 +12393,18 @@ const checkRate = (obj) => {
     const row = (didInit ? initTable : table)[idx];
     if (!row) return;
 
-    const currentRate = toNum(values?.[rateKey] ?? row?.[rateKey] ?? row?.rateText);
+    const currentRate = toNum(
+      values?.[rateKey] ?? row?.[rateKey] ?? row?.rateText,
+    );
     const flowedRate = toNum(row?.[flowedKey]);
 
     if (!(flowedRate > 0)) return;
 
     // ✅ 3) validate
     if (currentRate < flowedRate) {
-      toast.error(`Rate cannot be less than previous rate (${flowedRate.toFixed(2)}).`);
+      toast.error(
+        `Rate cannot be less than previous rate (${flowedRate.toFixed(2)}).`,
+      );
 
       const updatedTable = [...(didInit ? initTable : table)];
       updatedTable[idx] = {
@@ -11834,7 +12420,12 @@ const checkRate = (obj) => {
         type: "success",
         result: true,
         newState: { ...newState },
-        values: { ...values, [rateKey]: flowedRate.toFixed(2), rateText: flowedRate.toFixed(2), [flowedKey]: flowedRate },
+        values: {
+          ...values,
+          [rateKey]: flowedRate.toFixed(2),
+          rateText: flowedRate.toFixed(2),
+          [flowedKey]: flowedRate,
+        },
         message: "Rate reverted",
       };
     }
@@ -11853,11 +12444,11 @@ const setBillingPartyForBl = async (obj) => {
     const requestData = {
       blId: blId,
       clientId: clientId,
-      voucherTypeId: newState?.voucherTypeId
+      voucherTypeId: newState?.voucherTypeId,
     };
     const res = await getBillingPartyOnBlData(requestData);
     const chargers = res?.Chargers ?? res?.data?.Chargers;
-    console.log("chargers", chargers)
+    console.log("chargers", chargers);
     const billingPartyId = chargers[0]?.id;
     setStateVariable((prev) => ({
       ...prev,
@@ -11871,7 +12462,6 @@ const setBillingPartyForBl = async (obj) => {
       values: { ...values, billingPartyId: billingPartyId || 0 },
       newState: { ...newState, billingPartyId: billingPartyId || 0 },
     };
-
   } catch (error) {
     console.error("Error in setBillingPartyForBl:", error);
     return {
@@ -11899,7 +12489,7 @@ const SetVehicleTyeChassiNo = async (obj) => {
 
   const request = {
     columns: "*",
-    tableName: 'tblVehicle',
+    tableName: "tblVehicle",
     whereCondition: `id= ${vehicalId} and status = 1`,
     clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
   };
@@ -11928,7 +12518,6 @@ const SetVehicleTyeChassiNo = async (obj) => {
       values: updatedValues,
       message: "Data found !",
     };
-
   });
 };
 
@@ -12132,10 +12721,7 @@ const setexFromVoyageDailyExrate = async (obj) => {
     }
 
     const localClientId =
-      newState?.clientId ||
-      values?.clientId ||
-      userData?.clientId ||
-      clientId; // keeping your existing global fallback if available
+      newState?.clientId || values?.clientId || userData?.clientId || clientId; // keeping your existing global fallback if available
 
     let finalExchangeRate = "";
 
@@ -12163,7 +12749,7 @@ const setexFromVoyageDailyExrate = async (obj) => {
       const rateRow =
         response?.data?.find(
           (row) =>
-            row?.exportExchangeRate != null || row?.importExchangeRate != null
+            row?.exportExchangeRate != null || row?.importExchangeRate != null,
         ) || {};
 
       const exportExchangeRate = rateRow?.exportExchangeRate ?? "";
@@ -12188,7 +12774,9 @@ const setexFromVoyageDailyExrate = async (obj) => {
       Number(finalExchangeRate) === 0;
 
     if (isEmptyRate && currencyId) {
-      console.log("Voyage route rate not found. Falling back to daily exchange rate...");
+      console.log(
+        "Voyage route rate not found. Falling back to daily exchange rate...",
+      );
 
       // Get company currency
       const companyRequestBody = {
@@ -12317,11 +12905,14 @@ const activityDateCompare = async (obj) => {
     }
 
     if (nextDateObj <= lastDateObj) {
-      toast.error("Next activity date should be greater than last activity date.");
+      toast.error(
+        "Next activity date should be greater than last activity date.",
+      );
       return {
         type: "error",
         result: false,
-        message: "Next activity date should be greater than last activity date.",
+        message:
+          "Next activity date should be greater than last activity date.",
       };
     }
 
@@ -12351,7 +12942,7 @@ const setPartyLedgerData = async (obj) => {
   try {
     const argNames = args.split(",").map((arg) => arg.trim());
     const companyId = newState[argNames[0]];
-    const companyBranchId = values[argNames[1]]
+    const companyBranchId = values[argNames[1]];
     const request = {
       columns: "*",
       tableName: "tblCompanyBranch",
@@ -12373,7 +12964,7 @@ const setPartyLedgerData = async (obj) => {
       cityId: city,
       pincode: pinCode,
       taxRegistrationNo: gstNo,
-      stateId: state
+      stateId: state,
     }));
 
     return {
@@ -12381,21 +12972,22 @@ const setPartyLedgerData = async (obj) => {
       result: true,
       message: "Billing party set successfully.",
       values: {
-        ...values, address: address,
+        ...values,
+        address: address,
         cityId: city,
         pinCode: pinCode,
         taxRegistrationNo: gstNo,
-        stateId: state
+        stateId: state,
       },
       newState: {
-        ...newState, address: address,
+        ...newState,
+        address: address,
         cityId: city,
         pinCode: pinCode,
         taxRegistrationNo: gstNo,
-        stateId: state
+        stateId: state,
       },
     };
-
   } catch (error) {
     console.error("Error in setBillingPartyForBl:", error);
     return {
@@ -12404,7 +12996,7 @@ const setPartyLedgerData = async (obj) => {
       message: "Error while setting billing party. Please try again.",
     };
   }
-}
+};
 // const getChargeForTariff = async (obj) => {
 //   const { args, values, fieldName, newState, setStateVariable } = obj;
 
@@ -12504,6 +13096,7 @@ const getChargeForTariff = async (obj) => {
       materialCost,
       quantity,
       totalAmoumt,
+      prevQuantity: quantity,
     }));
 
     return {
@@ -12551,7 +13144,7 @@ const setGLSacDetailsGeneral = async (obj) => {
     chargeId: values?.chargeId,
     voucherTypeId: newState?.voucherTypeId,
     companyId: companyId,
-    glId: values?.chargeGlId
+    glId: values?.chargeGlId,
   };
 
   const response = await getGLChargeDetails(requestBody);
@@ -12723,7 +13316,7 @@ const setSizeTypeData = async (obj) => {
       sizeId: size || "",
       typeId: type || null,
       agentId: companyId,
-      agentBranchId: branchId
+      agentBranchId: branchId,
     }));
 
     return {
@@ -12731,12 +13324,18 @@ const setSizeTypeData = async (obj) => {
       result: true,
       message: "BL data set successfully.",
       values: {
-        ...values, sizeId: size || "",
-        typeId: type || null, agentId: companyId, agentBranchId: branchId
+        ...values,
+        sizeId: size || "",
+        typeId: type || null,
+        agentId: companyId,
+        agentBranchId: branchId,
       },
       newState: {
-        ...newState, sizeId: size || "",
-        typeId: type || null, agentId: companyId, agentBranchId: branchId
+        ...newState,
+        sizeId: size || "",
+        typeId: type || null,
+        agentId: companyId,
+        agentBranchId: branchId,
       },
     };
   } catch (error) {
@@ -12781,7 +13380,7 @@ const parentCurrency = async (obj) => {
       result: true,
       message: "BL data set successfully.",
       values: {
-        ...values
+        ...values,
       },
       newState: {
         ...newState,
@@ -12917,7 +13516,7 @@ const parentCurrency = async (obj) => {
 //   }
 // };
 const calculateBaseOnCurrency = async (obj) => {
-  const { args, values, fieldName, newState, setStateVariable } = obj;
+  const { args, values, fieldName, newState, setStateVariable, formControlData } = obj;
   const { companyId } = getUserDetails();
 
   try {
@@ -12929,6 +13528,7 @@ const calculateBaseOnCurrency = async (obj) => {
     const qty = values[argNames[1]] || 0;
     const exchangeRate = values[argNames[2]] || 0;
     const rate = values[argNames[3]] || 0;
+    const totalAmountFc = values[argNames[4]] || 0;
 
     const request = {
       columns: "currencyId",
@@ -12956,9 +13556,11 @@ const calculateBaseOnCurrency = async (obj) => {
         totalAmount = Number(qty * rate * exchangeRate).toFixed(2);
         totalAmountHc = Number(qty * rate).toFixed(2);
       } else if (currencyId == childCurrencyId) {
-        totalAmountHc = Number(
-          ParentExchangeRate != 0 ? (qty * rate) / ParentExchangeRate : 0
-        ).toFixed(2);
+        // totalAmountHc = Number(
+        //   ParentExchangeRate != 0 ? (qty * rate) / ParentExchangeRate : 0
+        // ).toFixed(2);
+        // totalAmount = Number(qty * rate * exchangeRate).toFixed(2);
+        totalAmountHc = Number(qty * rate * ParentExchangeRate).toFixed(2);
         totalAmount = Number(qty * rate * exchangeRate).toFixed(2);
       }
     }
@@ -12985,12 +13587,16 @@ const calculateBaseOnCurrency = async (obj) => {
         totalAmountHc: totalAmountHc,
         totalAmountFc: totalAmount,
       },
+      formControlData
     };
   } catch (error) {
     console.error("Error in calculateBaseOnCurrency:", error);
     return {
       type: "error",
       result: false,
+      values,
+      newState,
+      formControlData,
       message: "Error while calculating amount based on currency.",
     };
   }
@@ -13023,7 +13629,7 @@ const labourRate = async (obj) => {
       result: true,
       message: "labourRate data set successfully.",
       values: {
-        ...values
+        ...values,
       },
       newState: {
         ...newState,
@@ -13038,6 +13644,204 @@ const labourRate = async (obj) => {
     };
   }
 };
+const setDestinationFreeDaysInChild = async (obj) => {
+  const {
+    args = "",
+    values = {},
+    fieldName,
+    newState = {},
+    setStateVariable,
+  } = obj;
+
+  try {
+    const argNames = args
+      .split(",")
+      .map((arg) => arg.trim())
+      .filter(Boolean);
+
+    // Prefer args first, then fieldName, then fixed field name
+    const parentFieldName = argNames[0] || fieldName || "destinationFreeDays";
+
+    const destinationFreeDays =
+      values?.[parentFieldName] ?? newState?.[parentFieldName] ?? "";
+
+    const updateContainerRows = (rows) => {
+      if (!Array.isArray(rows)) return [];
+
+      return rows.map((row) => ({
+        ...row,
+        destinationFreeDays: destinationFreeDays,
+      }));
+    };
+
+    const updatedTblBlContainer = updateContainerRows(newState?.tblBlContainer);
+
+    setStateVariable((prev) => ({
+      ...prev,
+
+      // parent field update
+      [parentFieldName]: destinationFreeDays,
+      destinationFreeDays: destinationFreeDays,
+
+      // child rows update
+      tblBlContainer: updateContainerRows(prev?.tblBlContainer),
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      message:
+        "Destination free days updated in child containers successfully.",
+      values: {
+        ...values,
+        [parentFieldName]: destinationFreeDays,
+        destinationFreeDays: destinationFreeDays,
+        tblBlContainer: updatedTblBlContainer,
+      },
+      newState: {
+        ...newState,
+        [parentFieldName]: destinationFreeDays,
+        destinationFreeDays: destinationFreeDays,
+        tblBlContainer: updatedTblBlContainer,
+      },
+    };
+  } catch (error) {
+    console.error("Error in setDestinationFreeDaysInChild:", error);
+
+    return {
+      type: "error",
+      result: false,
+      message: "Error while updating destination free days in containers.",
+    };
+  }
+};
+const setMblNoToDD = async (obj) => {
+  const {
+    args,
+    values,
+    fieldName,
+    newState,
+    formControlData,
+    setFormControlData,
+    setStateVariable,
+  } = obj;
+  const argNames = args.split(",").map((arg) => arg.trim());
+  const mblNo = values[argNames[0]];
+  const requestBody = {
+    columns: "id,mblNo",
+    tableName: "tblBl",
+    whereCondition: `mblNo = '${mblNo}'`,
+    clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+  };
+
+  const data = await fetchReportData(requestBody);
+  const mblData = data.data[0];
+
+  if (mblData) {
+    const updatedValues = {
+      ...values,
+      blId: mblData.id,
+    };
+    setStateVariable((prev) => ({
+      ...prev,
+      blId: mblData.id,
+    }));
+
+    return {
+      type: "success",
+      result: true,
+      newState: {
+        ...newState,
+      },
+      values: updatedValues,
+      message: "Data found !",
+    };
+  }
+};
+const setNoOfOriginals = (obj) => {
+  const {
+    args = "",
+    values = {},
+    fieldName,
+    newState = {},
+    setStateVariable,
+  } = obj;
+
+  try {
+    const blTypeName = newState[`${fieldName}dropdown`]?.[0]?.label;
+    let setNoOfBl = null;
+    if (blTypeName === "Surrender") {
+      setNoOfBl = 1;
+    } else if (blTypeName === "Original") {
+      setNoOfBl = 3;
+    } else if (blTypeName === "Seaway Bill") {
+      setNoOfBl = 0;
+    }
+
+    setStateVariable((prev) => ({ ...prev, noOfBl: setNoOfBl }));
+
+    return {
+      type: "success",
+      result: true,
+      message: "No Of Originals is set successfully.",
+      values: { ...values, noOfBl: setNoOfBl },
+      newState: {
+        ...newState,
+        noOfBl: setNoOfBl,
+      },
+    };
+  } catch (error) {
+    console.error("Error in setNoOfOriginals:", error);
+
+    return {
+      type: "error",
+      result: false,
+      message: "Error while updating No Of Originals.",
+    };
+  }
+};
+const setLabourAndMaterial = (obj) => {
+  const {
+    args = "",
+    values = {},
+    fieldName,
+    newState = {},
+    setStateVariable,
+  } = obj;
+
+  const splitArgs = args.split(",");
+  const labourHours = values[splitArgs[0]];
+  const materialCost = values[splitArgs[1]];
+  const tableName = splitArgs[2];
+  const quantity = Number(values[fieldName]);
+  const editInitialQnt = newState?.[tableName]?.filter((item) => item?.indexValue === values?.indexValue)?.[0]?.[fieldName];
+  const prevQuantity = Number(values?.prevQuantity || editInitialQnt || 1);
+
+  const setLabourHourse = (labourHours / prevQuantity) * quantity;
+  const setMaterialCost = (materialCost / prevQuantity) * quantity;
+
+  setStateVariable((prev) => ({ ...prev, labourHours: setLabourHourse, materialCost: setMaterialCost, prevQuantity: quantity, totalAmoumt: newState?.labourRate  * setLabourHourse + setMaterialCost}))
+}
+const setParentFieldsDisableOnEdit = (obj) => {
+  const {
+    args,
+    newState,
+    isEditMode,
+    parentFieldDataInArray,
+    setParentFieldDataInArray,
+  } = obj;
+
+  const parsedJson = JSON.parse(args);
+   if(isEditMode === true){
+     const newParentFieldDataInArra = parentFieldDataInArray.map((item) => {  
+              if(Object.keys(parsedJson)?.includes(item.fieldname) &&  parsedJson[item.fieldname] === newState[item.fieldname]){
+          return {...item, isEditable : false, isEditableMode: "B", columnsToDisabled: true};
+         }
+         return item;
+     })
+      setParentFieldDataInArray(newParentFieldDataInArra)
+   }
+}
 
 export {
   setSameCurrencyFc,
@@ -13193,5 +13997,10 @@ export {
   setSizeTypeData,
   parentCurrency,
   calculateBaseOnCurrency,
-  labourRate
+  labourRate,
+  setDestinationFreeDaysInChild,
+  setMblNoToDD,
+  setNoOfOriginals,
+  setLabourAndMaterial,
+  setParentFieldsDisableOnEdit
 };

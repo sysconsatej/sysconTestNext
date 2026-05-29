@@ -38,6 +38,7 @@ import {
 import { toast } from "react-toastify";
 import Checkbox from "@mui/material/Checkbox";
 import * as onSubmitValidation from "@/helper/onSubmitFunction";
+import * as onGridSaveValidation from "@/helper/onGridSave";
 import { ActionButton } from "@/components/ActionsButtons";
 ("");
 import { useDispatch } from "react-redux";
@@ -59,7 +60,7 @@ async function onSubmitFunctionCall(
   newState,
   formControlData,
   values,
-  setStateVariable
+  setStateVariable,
 ) {
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
@@ -87,6 +88,51 @@ async function onSubmitFunctionCall(
         formControlData,
         values,
         setStateVariable,
+      });
+      return result;
+      // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
+    }
+  }
+}
+
+async function onGridSaveFunctionCall(
+  functionData,
+  newState,
+  formControlData,
+  values,
+  setStateVariable,
+  submitNewState,
+  setSubmitNewState,
+) {
+  const funcNameMatch = functionData?.match(/^(\w+)/);
+  const argsMatch = functionData?.match(/\((.*)\)/);
+  //console.log(functionData, "functionData");
+  // Check if we have a function name match, and we have an argsMatch (even if there are no arguments)
+  if (funcNameMatch && argsMatch !== null) {
+    const funcName = funcNameMatch[1];
+    const argsStr = argsMatch[1] || "";
+
+    // Find the function in formControlValidation by the extracted name
+    const func = onGridSaveValidation?.[funcName];
+
+    if (typeof func === "function") {
+      // Prepare arguments: If there are no arguments, argsStr will be an empty string
+      let args;
+      if (argsStr === "") {
+        args = {}; // No arguments, so pass an empty object or as per the function's expected parameters
+      } else {
+        args = argsStr; // Has arguments, pass them as an object
+      }
+      //console.log(args);
+      // Call the function with the prepared arguments
+      let result = onGridSaveValidation?.[funcName]({
+        args,
+        newState,
+        formControlData,
+        values,
+        setStateVariable,
+        submitNewState,
+        setSubmitNewState,
       });
       return result;
       // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
@@ -174,7 +220,7 @@ export default function RowComponent({
   const [indexValue, setIndexValue] = useState({ ...row });
   // const [isChecked, setIsChecked] = useState(true);
   const [subChildComponent, setSubChildComponent] = useState(
-    expandAll ? true : false
+    expandAll ? true : false,
   );
   const isChildDeleteHidden = isConfigFlagEnabled(sectionData?.isDeleteHide);
   const isChildCopyHidden = isConfigFlagEnabled(sectionData?.isAddHide);
@@ -183,7 +229,7 @@ export default function RowComponent({
       updateFlag({
         flag: "selectedIndex",
         value: row.indexValue,
-      })
+      }),
     );
   }
   let groupedData =
@@ -272,7 +318,7 @@ export default function RowComponent({
     setCalculateData(
       Object.values(tmpData).reduce((acc, item) => {
         return acc + Number(item) ? Number(item) : 0;
-      }, 0) + calculateData
+      }, 0) + calculateData,
     );
 
     setDummyFieldArray(
@@ -281,7 +327,7 @@ export default function RowComponent({
           Object.values(tmpData).reduce((acc, item) => {
             return acc + Number(item);
           }, 0) + calculateData,
-      }))
+      })),
     );
   };
 
@@ -339,7 +385,7 @@ export default function RowComponent({
         const newStateCopy = { ...newState, ...prevState };
         // Assume each entry in the array has an 'id' property
         let updatedData = newStateCopy[sectionData.tableName].filter(
-          (_, idx) => idx === index
+          (_, idx) => idx === index,
         );
         updatedData = { ...updatedData[0], isChecked: true };
         newStateCopy[sectionData.tableName][index] = updatedData;
@@ -349,7 +395,7 @@ export default function RowComponent({
         const newStateCopy = { ...newState, ...prevState };
         // Assume each entry in the array has an 'id' property
         let updatedData = newStateCopy[sectionData.tableName].filter(
-          (_, idx) => idx === index
+          (_, idx) => idx === index,
         );
         updatedData = { ...updatedData[0], isChecked: true };
         newStateCopy[sectionData.tableName][index] = updatedData;
@@ -415,7 +461,7 @@ export default function RowComponent({
       if (!Array.isArray(newCopy[tableName])) {
         console.error(
           `Expected an array at newCopy[${tableName}], but got:`,
-          newCopy[tableName]
+          newCopy[tableName],
         );
         return prev; // don't update state if data is malformed
       }
@@ -433,7 +479,7 @@ export default function RowComponent({
         updateFlag({
           flag: "childRecord",
           value: newCopy,
-        })
+        }),
       );
       return newCopy;
     });
@@ -445,7 +491,7 @@ export default function RowComponent({
     if (!newState || !Array.isArray(newState[tableName])) return;
 
     const filteredRows = newState[tableName].filter(
-      (_, index) => index !== childIndex
+      (_, index) => index !== childIndex,
     );
 
     let totalVolume = 0;
@@ -478,7 +524,6 @@ export default function RowComponent({
     tableBodyWidhth === "0"
       ? { right: tableBodyWidhth + "px", width: "auto" }
       : { left: tableBodyWidhth + "px", width: "auto" };
-
 
   const didInitCopyRef = useRef(false);
   const prevFirstRowRef = useRef(""); // (kept, but now stores JSON of patch)
@@ -520,7 +565,7 @@ export default function RowComponent({
         "containerId",
         "containerIdDropdown",
       ]),
-    []
+    [],
   );
 
   // ✅ SAME NAME (updated behavior: only changed field(s) copied)
@@ -558,7 +603,10 @@ export default function RowComponent({
     }
 
     const changedKeys = [];
-    const allKeys = new Set([...Object.keys(prevPatchObj), ...Object.keys(patch)]);
+    const allKeys = new Set([
+      ...Object.keys(prevPatchObj),
+      ...Object.keys(patch),
+    ]);
     allKeys.forEach((k) => {
       if (PROTECT_KEYS.has(k)) return;
       // compare via stableSignature to handle date/dayjs
@@ -607,12 +655,10 @@ export default function RowComponent({
           if (!PROTECT_KEYS.has(k)) patch[k] = r0[k];
         });
         return patch;
-      })()
+      })(),
     ),
     newState?.tblContainerTransactionDetails?.length,
   ]);
-
-
 
   return (
     <React.Fragment>
@@ -657,7 +703,9 @@ export default function RowComponent({
                                 checked={row.isChecked}
                                 tabIndex={-1}
                                 disableRipple
-                                inputProps={{ "aria-labelledby": field.fieldname }}
+                                inputProps={{
+                                  "aria-labelledby": field.fieldname,
+                                }}
                                 onChange={(event) =>
                                   handleChange(event, row, childIndex)
                                 }
@@ -675,50 +723,72 @@ export default function RowComponent({
                     align="left"
                     sx={{
                       ...gridSectionStyles,
-                      paddingLeft: index === 0 ? "29px" : showSrNo ? "29px" : "0px",
+                      paddingLeft:
+                        index === 0 ? "29px" : showSrNo ? "29px" : "0px",
                     }}
                   >
                     <div className="relative">
                       <div
                         className={`${childTableRowStyles} overflow-hidden whitespace-nowrap`}
-                        style={{ maxWidth: "200px" }}
+                        style={{
+                          maxWidth: "200px",
+                        }}
                       >
-                        {field.controlname === "dropdown" ||
-                          field.controlname === "multiselect"
-                          ? (
-                            row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                            row[`${field.fieldname}Dropdown`]
-                          )?.length > 50
-                            ? (
-                              row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                              row[`${field.fieldname}Dropdown`]
-                            )?.slice(0, 50) + "..."
-                            : row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                            row[`${field.fieldname}Dropdown`] ||
-                            ""
-                          : isDateFormat(row[`${field.fieldname}`]) || ""}
+                        <LightTooltip
+                          title={
+                            field.controlname === "dropdown" ||
+                            field.controlname === "multiselect"
+                              ? row[`${field.fieldname}dropdown`]?.[0]?.label ||
+                                row[`${field.fieldname}Dropdown`] ||
+                                ""
+                              : isDateFormat(row[`${field.fieldname}`]) || ""
+                          }
+                          arrow
+                        >
+                          <span>
+                            {field.controlname === "dropdown" ||
+                            field.controlname === "multiselect"
+                              ? (
+                                  row[`${field.fieldname}dropdown`]?.[0]
+                                    ?.label || row[`${field.fieldname}Dropdown`]
+                                )?.length > 50
+                                ? (
+                                    row[`${field.fieldname}dropdown`]?.[0]
+                                      ?.label ||
+                                    row[`${field.fieldname}Dropdown`]
+                                  )?.slice(0, 50) + "..."
+                                : row[`${field.fieldname}dropdown`]?.[0]
+                                    ?.label ||
+                                  row[`${field.fieldname}Dropdown`] ||
+                                  ""
+                              : isDateFormat(row[`${field.fieldname}`]) || ""}
+                          </span>
+                        </LightTooltip>
                       </div>
 
-                      {!showSrNo && index == 0 && <div className={` ${styles.iconContainer}`}>
-                        <div className="absolute left-[-7px] top-[-2px] cursor-pointer">
-                          <Checkbox
-                            edge="start"
-                            sx={{
-                              ...checkBoxStyle,
-                            }}
-                            checked={row.isChecked}
-                            tabIndex={-1}
-                            disableRipple
-                            inputProps={{ "aria-labelledby": field.fieldname }}
-                            onChange={(event) =>
-                              handleChange(event, row, childIndex)
-                            }
-                          />
+                      {!showSrNo && index == 0 && (
+                        <div className={` ${styles.iconContainer}`}>
+                          <div className="absolute left-[-7px] top-[-2px] cursor-pointer">
+                            <Checkbox
+                              edge="start"
+                              sx={{
+                                ...checkBoxStyle,
+                              }}
+                              checked={row.isChecked}
+                              tabIndex={-1}
+                              disableRipple
+                              inputProps={{
+                                "aria-labelledby": field.fieldname,
+                              }}
+                              onChange={(event) =>
+                                handleChange(event, row, childIndex)
+                              }
+                            />
+                          </div>
                         </div>
-                      </div>}
+                      )}
                     </div>
                   </TableCell>
-
                 </React.Fragment>
               ))}
             <div
@@ -935,72 +1005,19 @@ export default function RowComponent({
                               feild.isRequired &&
                               (!Object.prototype.hasOwnProperty.call(
                                 childValuseObj,
-                                feild.fieldname
+                                feild.fieldname,
                               ) ||
                                 childValuseObj[feild.fieldname]
                                   ?.toString()
                                   ?.trim() === "")
                             ) {
                               toast.error(
-                                `Value for ${feild.yourlabel} is missing or empty.`
+                                `Value for ${feild.yourlabel} is missing or empty.`,
                               );
                               return;
                             }
                           }
-                          try {
-                            if (
-                              sectionData.functionOnSubmit &&
-                              sectionData.functionOnSubmit != null
-                            ) {
-                              // sectionData?.functionOnSubmit.split(";").forEach((e) => onSubmitFunctionCall(e, childValuseObj))
-                              for (const fun of sectionData.functionOnSubmit
-                                .trim()
-                                .split(";") || []) {
-                                let updatedData = await onSubmitFunctionCall(
-                                  fun,
-                                  newState,
-                                  formControlData,
-                                  childValuseObj,
-                                  setChildValuseObj
-                                );
-                                if (updatedData?.alertShow == true) {
-                                  // if (updatedData.type == "success") {
-                                  //   toast.success(updatedData.message);
-
-                                  // }
-                                  // else {
-                                  setParaText(updatedData.message);
-                                  setIsError(true);
-                                  setOpenModal((prev) => !prev);
-                                  setTypeofModal("onCheck");
-                                  // }
-                                }
-                                if (updatedData) {
-                                  setChildValuseObj((prev) => {
-                                    return { ...prev, ...updatedData?.values };
-                                  });
-                                  setNewState((prev) => {
-                                    return {
-                                      ...prev,
-                                      ...updatedData?.newState,
-                                    };
-                                  });
-                                  setSubmitNewState((prev) => {
-                                    return {
-                                      ...prev,
-                                      ...updatedData?.newState,
-                                    };
-                                  });
-                                }
-                              }
-                            }
-                            // if (typeof onSubmitValidation[sectionData.functionOnSubmit]=="function") {
-                            //   onSubmitValidation[sectionData.functionOnSubmit]({
-                            //     ...childValuseObj})
-                            // }
-                          } catch (error) {
-                            return toast.error(error.message);
-                          }
+ 
                           setNewState((prev) => {
                             const newState = { ...prev };
                             // Assuming you have the index of the item you want to update
@@ -1042,6 +1059,81 @@ export default function RowComponent({
 
                             return newState;
                           });
+
+                           try {
+                            if (
+                              sectionData.functionOnGridSave &&
+                              sectionData.functionOnGridSave != null
+                            ) {
+                              for (const fun of sectionData.functionOnGridSave
+                                .trim()
+                                .split(";") || []) {
+                                let updatedData = await onGridSaveFunctionCall(
+                                  fun,
+                                  newState,
+                                  formControlData,
+                                  childValuseObj,
+                                  setChildValuseObj,
+                                );
+                                if (updatedData?.alertShow == true) {
+                                  setParaText(updatedData.message);
+                                  setIsError(true);
+                                  setOpenModal((prev) => !prev);
+                                  setTypeofModal("onCheck");
+                                }
+                                if (updatedData) {
+                                  setChildValuseObj((prev) => {
+                                    return { ...prev, ...updatedData?.values };
+                                  });
+
+                             setNewState((prev) => {
+                               const newState = { ...prev, ...updatedData?.newState };
+                      
+                            const idToUpdate = childValuseObj.indexValue;
+
+                            newState[sectionData.tableName] = newState[
+                              sectionData.tableName
+                            ].map((record) => {
+                           
+                              console.log(record.indexValue);
+                              if (record.indexValue === idToUpdate) {
+               
+                                return childValuseObj;
+                              }
+                              return record;
+                            });
+
+                            return newState;
+                                  });
+
+                                  setSubmitNewState((prev) => {
+                                   const newState = { ...prev, ...updatedData?.newState };
+                      
+                            const idToUpdate = childValuseObj.indexValue;
+
+                            newState[sectionData.tableName] = newState[
+                              sectionData.tableName
+                            ].map((record) => {
+                           
+                              if (record.indexValue === idToUpdate) {
+               
+                                return childValuseObj;
+                              }
+                              return record;
+                            });
+
+                            return newState;
+                            
+                                  });
+
+
+                                }
+                              }
+                            }
+
+                          } catch (error) {
+                            return toast.error(error.message);
+                          }
 
                           setRenderedData(newState[sectionData.tableName]);
                           toggleRow();

@@ -308,7 +308,7 @@ export default function CustomeInputFields({
     Object.assign(updatedValues, {
       [field.fieldname]:
         Array.isArray(formattedValue) &&
-          field.controlname?.toLowerCase() === "dropdown"
+        field.controlname?.toLowerCase() === "dropdown"
           ? formattedValue.join(",")
           : formattedValue,
     });
@@ -326,7 +326,7 @@ export default function CustomeInputFields({
         } else {
           if (val?.length > field?.size?.split(",")[0])
             toast.error(
-              `can not enter more characters in ${field?.yourlabel} field`
+              `can not enter more characters in ${field?.yourlabel} field`,
             );
         }
         return;
@@ -337,7 +337,7 @@ export default function CustomeInputFields({
       }
       if (updatedValues[`${field?.fieldname}`]?.length > field?.size) {
         return toast.error(
-          `can not enter more than ${field?.size} characters in ${field?.yourlabel} field`
+          `can not enter more than ${field?.size} characters in ${field?.yourlabel} field`,
         );
       } else {
         onValuesChange(updatedValues);
@@ -406,7 +406,7 @@ export default function CustomeInputFields({
     Object.assign(updatedValues, {
       [field.fieldname]:
         Array.isArray(formattedValue) &&
-          field.controlname?.toLowerCase() === "dropdown"
+        field.controlname?.toLowerCase() === "dropdown"
           ? formattedValue.join(",")
           : formattedValue,
     });
@@ -424,7 +424,7 @@ export default function CustomeInputFields({
         } else {
           if (val?.length > field?.size?.split(",")[0])
             toast.error(
-              `can not enter more characters in ${field?.yourlabel} field`
+              `can not enter more characters in ${field?.yourlabel} field`,
             );
         }
         return;
@@ -435,7 +435,7 @@ export default function CustomeInputFields({
       }
       if (updatedValues[`${field?.fieldname}`]?.length > field?.size) {
         return toast.error(
-          `can not enter more than ${field?.size} characters in ${field?.yourlabel} field`
+          `can not enter more than ${field?.size} characters in ${field?.yourlabel} field`,
         );
       } else {
         if (menuId == "1384") {
@@ -502,7 +502,7 @@ export default function CustomeInputFields({
   function checkCorrectDate(dateStr) {
     // 1) Quick format check via regex
     const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(
-      dateStr
+      dateStr,
     );
     if (!match) return false;
 
@@ -572,7 +572,7 @@ export default function CustomeInputFields({
           pageNo,
           inputValueForDataFetch,
           values[field.fieldname],
-          "first"
+          "first",
         );
       } else if (
         field.controlname.toLowerCase() === "dropdown" ||
@@ -583,7 +583,7 @@ export default function CustomeInputFields({
           pageNo,
           inputValueForDataFetch,
           values[field.fieldname],
-          "first"
+          "first",
         );
       }
     }, [field, values?.[field.fieldname]]);
@@ -610,7 +610,7 @@ export default function CustomeInputFields({
                 funcCall,
                 updatedValues,
                 field.fieldname,
-                tableName
+                tableName,
               );
             }
           });
@@ -687,28 +687,28 @@ export default function CustomeInputFields({
 
         // Detect if it's matching the pattern regardless of index
         const patternMatch = variableName.match(
-          /newState\.tblJob\[(\d+)\]\.id/
+          /newState\.tblJob\[(\d+)\]\.id/,
         );
 
         if (patternMatch) {
           // Replace index with selectedIndex
           const updatedVariableName = variableName.replace(
             /\[\d+\]/,
-            `[${selectedIndex}]`
+            `[${selectedIndex}]`,
           );
 
           const variableValue = eval(updatedVariableName); // Get the ID value
 
           inputString = inputString.replace(
             "${" + variableName + "}",
-            variableValue
+            variableValue,
           );
         } else {
           const variableValue = eval(variableName);
 
           inputString = inputString.replace(
             "${" + variableName + "}",
-            variableValue
+            variableValue,
           );
         }
       }
@@ -723,7 +723,7 @@ export default function CustomeInputFields({
       pageNo,
       inputValueForDataFetch,
       value,
-      action
+      action,
     ) {
       if (Controller) {
         Controller.abort();
@@ -738,8 +738,8 @@ export default function CustomeInputFields({
         referenceView: field.referenceView,
         dropdownFilter:
           field.dropdownFilter &&
-            field.dropdownFilter !== null &&
-            field.dropdownFilter !== ""
+          field.dropdownFilter !== null &&
+          field.dropdownFilter !== ""
             ? dynamicValuReplace(field.dropdownFilter)
             : "",
         search: inputValueForDataFetch,
@@ -753,7 +753,7 @@ export default function CustomeInputFields({
         } else {
           const apiResponse = await dynamicDropDownFieldsData(
             requestData,
-            Controller
+            Controller,
           );
           if (apiResponse.nextPage === null) {
             // Handle the response where apiResponse is falsy (e.g., null, undefined)
@@ -788,7 +788,7 @@ export default function CustomeInputFields({
         pageNo,
         newInputValue,
         values?.[field.fieldname],
-        "search"
+        "search",
       );
     };
 
@@ -869,7 +869,7 @@ export default function CustomeInputFields({
       values,
       fieldName,
       tableName,
-      valueToupdate
+      valueToupdate,
     ) {
       const funcNameMatch = functionData?.match(/^(\w+)/);
       // Check for the presence of parentheses to confirm the argument list, even if it's empty
@@ -942,7 +942,7 @@ export default function CustomeInputFields({
       functionData,
       values,
       fieldName,
-      tableName
+      tableName,
     ) {
       const funcNameMatch = functionData?.match(/^(\w+)/);
       // Check for the presence of parentheses to confirm the argument list, even if it's empty
@@ -1069,7 +1069,7 @@ export default function CustomeInputFields({
             .isRequired,
           label: PropTypes.string.isRequired,
           handler: PropTypes.func.isRequired,
-        })
+        }),
       ).isRequired,
       className: PropTypes.string,
     };
@@ -1112,7 +1112,7 @@ export default function CustomeInputFields({
                 value={
                   // `${values[field.fieldname] + "Text"}`
                   dropDownValues?.find(
-                    (item) => item.value === values[field.fieldname]
+                    (item) => item.value === values[field.fieldname],
                   )?.label || null
                 }
                 onChange={(e) => {
@@ -1145,7 +1145,7 @@ export default function CustomeInputFields({
                           funcCall,
                           values,
                           field.fieldname,
-                          tableName
+                          tableName,
                         );
                       });
                     }
@@ -1174,7 +1174,7 @@ export default function CustomeInputFields({
                         funcCall,
                         values,
                         field.fieldname,
-                        tableName
+                        tableName,
                       );
                     });
                   }
@@ -1185,11 +1185,11 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase(),
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable)
                 }
                 InputLabelProps={{
                   classes: {
@@ -1205,14 +1205,15 @@ export default function CustomeInputFields({
                 }}
               >
                 <p
-                  className={`absolute left-[11px] z-10 px-2 transition-all duration-200 ${showLabel ||
+                  className={`absolute left-[11px] z-10 px-2 transition-all duration-200 ${
+                    showLabel ||
                     values[field.fieldname] ||
                     inputValueChange.length > 0
-                    ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 opacity-100" // Label moves to the top
-                    : inputValueChange.length == 0 || !values[field.fieldname]
-                      ? "top-[calc(100%-1.2rem)] opacity-100"
-                      : "" // Label sits at the bottom, emulating a placeholder
-                    }`}
+                      ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 opacity-100" // Label moves to the top
+                      : inputValueChange.length == 0 || !values[field.fieldname]
+                        ? "top-[calc(100%-1.2rem)] opacity-100"
+                        : "" // Label sits at the bottom, emulating a placeholder
+                  }`}
                   style={{ fontSize: "var(--inputFontSize)" }}
                 >
                   <span
@@ -1268,17 +1269,17 @@ export default function CustomeInputFields({
                       ? inEditMode?.isCopy === true
                         ? !field?.isCopyEditable
                         : ["e", "b"].includes(
-                          field.isEditableMode?.toLowerCase()
-                        ) && !field.isEditable
+                            field.isEditableMode?.toLowerCase(),
+                          ) && !field.isEditable
                       : ["a", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable)
+                          field.isEditableMode?.toLowerCase(),
+                        ) && !field.isEditable)
                   }
                   value={
                     Array.isArray(dropDownValues)
                       ? dropDownValues?.find(
-                        (item) => item.value == values?.[field.fieldname]
-                      )
+                          (item) => item.value == values?.[field.fieldname],
+                        )
                       : null
                   }
                   noOptionsMessage={() =>
@@ -1335,7 +1336,7 @@ export default function CustomeInputFields({
                             funcCall,
                             values,
                             field.fieldname,
-                            tableName
+                            tableName,
                           );
                         });
                       }
@@ -1347,7 +1348,7 @@ export default function CustomeInputFields({
                         return formControlValidation?.[field.functionOnBlur](
                           state,
                           field.fieldname,
-                          e.target.value
+                          e.target.value,
                         );
                       });
 
@@ -1364,7 +1365,7 @@ export default function CustomeInputFields({
                           funcCall,
                           values,
                           field.fieldname,
-                          tableName
+                          tableName,
                         );
                       });
                     }
@@ -1382,7 +1383,7 @@ export default function CustomeInputFields({
                         pageNo,
                         value,
                         values?.[field.fieldname],
-                        "search"
+                        "search",
                       );
                     }
                   }}
@@ -1396,14 +1397,15 @@ export default function CustomeInputFields({
           <LightTooltip title={inputLabel}>
             <div className="relative ">
               <p
-                className={`text-[8px] absolute left-[11px] z-10 px-2 transition-all duration-200 ${showLabel ||
+                className={`text-[8px] absolute left-[11px] z-10 px-2 transition-all duration-200 ${
+                  showLabel ||
                   values[field.fieldname] ||
                   inputValueChange.length > 0
-                  ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-75 opacity-100" // Label moves to the top
-                  : inputValueChange.length == 0 || !values[field.fieldname]
-                    ? "top-[calc(100%-1.2rem)] opacity-100"
-                    : "" // Label sits at the bottom, emulating a placeholder
-                  }`}
+                    ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-75 opacity-100" // Label moves to the top
+                    : inputValueChange.length == 0 || !values[field.fieldname]
+                      ? "top-[calc(100%-1.2rem)] opacity-100"
+                      : "" // Label sits at the bottom, emulating a placeholder
+                }`}
               >
                 <span
                   onClick={() => {
@@ -1411,11 +1413,12 @@ export default function CustomeInputFields({
                     setMenuOpen(true);
                   }}
                   style={{ color: "rgba(0, 0, 0, 0.75)" }}
-                  className={`${(showLabel || inputValueChange.length > 0) &&
+                  className={`${
+                    (showLabel || inputValueChange.length > 0) &&
                     values[field.fieldname]
-                    ? "text-[8px]"
-                    : "text-[9px]"
-                    }`}
+                      ? "text-[8px]"
+                      : "text-[9px]"
+                  }`}
                 >
                   {field.isRequired ? (
                     <span className={`${styles.inputTextColor}`}>
@@ -1480,20 +1483,20 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase(),
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable)
                 }
                 value={
                   values?.[`${field.fieldname}multiselect`] ||
-                    dropDownValues?.length > 0
+                  dropDownValues?.length > 0
                     ? dropDownValues?.filter((value) =>
-                      values?.[`${field.fieldname}`]
-                        ?.split(",")
-                        ?.includes(value.value.toString())
-                    )
+                        values?.[`${field.fieldname}`]
+                          ?.split(",")
+                          ?.includes(value.value.toString()),
+                      )
                     : [] || []
                 }
                 noOptionsMessage={() =>
@@ -1549,7 +1552,7 @@ export default function CustomeInputFields({
                           funcCall,
                           values,
                           field.fieldname,
-                          tableName
+                          tableName,
                         );
                       });
                     }
@@ -1560,7 +1563,7 @@ export default function CustomeInputFields({
                       return formControlValidation?.[field.functionOnBlur](
                         state,
                         field.fieldname,
-                        e.target.value
+                        e.target.value,
                       );
                     });
 
@@ -1577,7 +1580,7 @@ export default function CustomeInputFields({
                         funcCall,
                         values,
                         field.fieldname,
-                        tableName
+                        tableName,
                       );
                     });
                   }
@@ -1609,8 +1612,9 @@ export default function CustomeInputFields({
                 className="absolute px-2 inline bg-[--inputBg] pr-[10%] leading-[0.8px] top-[-1px] left-[8px] p-0 scale-100"
               >
                 <span
-                  className={`${isView ? "text-[#B2BAC2]" : styles.inputTextColor
-                    } font-[var(--inputFontWeight)]`}
+                  className={`${
+                    isView ? "text-[#B2BAC2]" : styles.inputTextColor
+                  } font-[var(--inputFontWeight)]`}
                   style={{ fontSize: "var(--inputFontSize)" }}
                 >
                   {field.isRequired ? (
@@ -1652,8 +1656,8 @@ export default function CustomeInputFields({
                             fn,
                             values,
                             field.fieldname,
-                            tableName
-                          )
+                            tableName,
+                          ),
                         );
                     }
                   }
@@ -1674,86 +1678,86 @@ export default function CustomeInputFields({
                 {/* Array source */}
                 {Array.isArray(field.dropDownValues)
                   ? field.dropDownValues.map((item, idx) => {
-                    const optionValue = item.id.toString();
-                    const optionLabel = item.value.toString();
-                    return (
-                      <FormControlLabel
-                        key={idx}
-                        value={optionValue}
-                        label={optionLabel}
-                        labelPlacement="start"
-                        sx={radioControlStyle}
-                        control={
-                          <Radio
-                            disabled={
-                              isView ||
-                              (inEditMode?.isEditMode
-                                ? inEditMode?.isCopy === true
-                                  ? !field?.isCopyEditable
-                                  : ["e", "b"].includes(
-                                    field.isEditableMode?.toLowerCase()
-                                  ) && !field.isEditable
-                                : ["a", "b"].includes(
-                                  field.isEditableMode?.toLowerCase()
-                                ) && !field.isEditable)
-                            }
-                            sx={radioControlStyle}
-                            onClick={(e) => {
-                              // Deselect when clicking the already-selected radio
-                              const current =
-                                values[field.fieldname]?.toString() ?? null;
-                              if (current === optionValue) {
-                                e.stopPropagation();
-                                handleChange(null, field);
-                                values[field.fieldname] = null;
+                      const optionValue = item.id.toString();
+                      const optionLabel = item.value.toString();
+                      return (
+                        <FormControlLabel
+                          key={idx}
+                          value={optionValue}
+                          label={optionLabel}
+                          labelPlacement="start"
+                          sx={radioControlStyle}
+                          control={
+                            <Radio
+                              disabled={
+                                isView ||
+                                (inEditMode?.isEditMode
+                                  ? inEditMode?.isCopy === true
+                                    ? !field?.isCopyEditable
+                                    : ["e", "b"].includes(
+                                        field.isEditableMode?.toLowerCase(),
+                                      ) && !field.isEditable
+                                  : ["a", "b"].includes(
+                                      field.isEditableMode?.toLowerCase(),
+                                    ) && !field.isEditable)
                               }
-                            }}
-                          />
-                        }
-                      />
-                    );
-                  })
+                              sx={radioControlStyle}
+                              onClick={(e) => {
+                                // Deselect when clicking the already-selected radio
+                                const current =
+                                  values[field.fieldname]?.toString() ?? null;
+                                if (current === optionValue) {
+                                  e.stopPropagation();
+                                  handleChange(null, field);
+                                  values[field.fieldname] = null;
+                                }
+                              }}
+                            />
+                          }
+                        />
+                      );
+                    })
                   : /* CSV string source */
-                  field.dropDownValues.split(",").map((item, idx) => {
-                    const parts = item.split(".");
-                    const optionValue = parts[0].trim();
-                    const optionLabel = parts[1]?.trim() || optionValue;
-                    return (
-                      <FormControlLabel
-                        key={idx}
-                        value={optionValue}
-                        label={optionLabel}
-                        labelPlacement="start"
-                        sx={radioControlStyle}
-                        control={
-                          <Radio
-                            disabled={
-                              isView ||
-                              (inEditMode?.isEditMode
-                                ? inEditMode?.isCopy === true
-                                  ? !field?.isCopyEditable
-                                  : ["e", "b"].includes(
-                                    field.isEditableMode?.toLowerCase()
-                                  ) && !field.isEditable
-                                : ["a", "b"].includes(
-                                  field.isEditableMode?.toLowerCase()
-                                ) && !field.isEditable)
-                            }
-                            sx={radioControlStyle}
-                            onClick={(e) => {
-                              const current =
-                                values[field.fieldname]?.toString() ?? null;
-                              if (current === optionValue) {
-                                e.stopPropagation();
-                                handleChange(null, field);
-                                values[field.fieldname] = null;
+                    field.dropDownValues.split(",").map((item, idx) => {
+                      const parts = item.split(".");
+                      const optionValue = parts[0].trim();
+                      const optionLabel = parts[1]?.trim() || optionValue;
+                      return (
+                        <FormControlLabel
+                          key={idx}
+                          value={optionValue}
+                          label={optionLabel}
+                          labelPlacement="start"
+                          sx={radioControlStyle}
+                          control={
+                            <Radio
+                              disabled={
+                                isView ||
+                                (inEditMode?.isEditMode
+                                  ? inEditMode?.isCopy === true
+                                    ? !field?.isCopyEditable
+                                    : ["e", "b"].includes(
+                                        field.isEditableMode?.toLowerCase(),
+                                      ) && !field.isEditable
+                                  : ["a", "b"].includes(
+                                      field.isEditableMode?.toLowerCase(),
+                                    ) && !field.isEditable)
                               }
-                            }}
-                          />
-                        }
-                      />
-                    );
-                  })}
+                              sx={radioControlStyle}
+                              onClick={(e) => {
+                                const current =
+                                  values[field.fieldname]?.toString() ?? null;
+                                if (current === optionValue) {
+                                  e.stopPropagation();
+                                  handleChange(null, field);
+                                  values[field.fieldname] = null;
+                                }
+                              }}
+                            />
+                          }
+                        />
+                      );
+                    })}
               </RadioGroup>
             </div>
           </LightTooltip>
@@ -1768,8 +1772,9 @@ export default function CustomeInputFields({
                 className={`absolute px-2 inline left-[8px] bg-[--inputBg] pr-[10%] leading-[0.8px] top-[-1px] scale-100 text-[8px] `}
               >
                 <span
-                  className={`${isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
-                    }`}
+                  className={`${
+                    isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
+                  }`}
                 >
                   {field.isRequired ? (
                     <span className={`${styles.inputTextColor}`}>
@@ -1805,7 +1810,7 @@ export default function CustomeInputFields({
                                 funcCall,
                                 values,
                                 field.fieldname,
-                                tableName
+                                tableName,
                               );
                             });
                           }
@@ -1836,7 +1841,7 @@ export default function CustomeInputFields({
                                 funcCall,
                                 values,
                                 field.fieldname,
-                                tableName
+                                tableName,
                               );
                             });
                           }
@@ -1855,11 +1860,11 @@ export default function CustomeInputFields({
                             ? inEditMode?.isCopy === true
                               ? !field?.isCopyEditable
                               : ["e", "b"].includes(
-                                field.isEditableMode?.toLowerCase()
-                              ) && !field.isEditable
+                                  field.isEditableMode?.toLowerCase(),
+                                ) && !field.isEditable
                             : ["a", "b"].includes(
-                              field.isEditableMode?.toLowerCase()
-                            ) && !field.isEditable)
+                                field.isEditableMode?.toLowerCase(),
+                              ) && !field.isEditable)
                         }
                       />
                     }
@@ -1880,8 +1885,9 @@ export default function CustomeInputFields({
                 className={`absolute px-2 inline top-[-8px] left-[8px] text-[8px] ${styles.pageBackground}`}
               >
                 <span
-                  className={`${isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
-                    }`}
+                  className={`${
+                    isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
+                  }`}
                 >
                   {field.isRequired ? (
                     <span className={`${styles.inputTextColor}`}>
@@ -1923,7 +1929,7 @@ export default function CustomeInputFields({
                               } else {
                                 // Remove value from array
                                 updatedValues = updatedValues.filter(
-                                  (val) => val !== item.id.toString()
+                                  (val) => val !== item.id.toString(),
                                 );
                               }
                               handleChange(updatedValues.join(","), field); // Join array into a string when updating
@@ -1942,7 +1948,7 @@ export default function CustomeInputFields({
                                     funcCall,
                                     values,
                                     field.fieldname,
-                                    tableName
+                                    tableName,
                                   );
                                 });
                               }
@@ -1971,7 +1977,7 @@ export default function CustomeInputFields({
                                     funcCall,
                                     values,
                                     field.fieldname,
-                                    tableName
+                                    tableName,
                                   );
                                 });
                               }
@@ -1991,11 +1997,11 @@ export default function CustomeInputFields({
                                 ? inEditMode?.isCopy === true
                                   ? !field?.isCopyEditable
                                   : ["e", "b"].includes(
-                                    field.isEditableMode?.toLowerCase()
-                                  ) && !field.isEditable
+                                      field.isEditableMode?.toLowerCase(),
+                                    ) && !field.isEditable
                                 : ["a", "b"].includes(
-                                  field.isEditableMode?.toLowerCase()
-                                ) && !field.isEditable)
+                                    field.isEditableMode?.toLowerCase(),
+                                  ) && !field.isEditable)
                             }
                           />
                         }
@@ -2038,11 +2044,11 @@ export default function CustomeInputFields({
               // }
               value={
                 values?.[field.fieldname] !== undefined &&
-                  values?.[field.fieldname] !== null
+                values?.[field.fieldname] !== null
                   ? values[field.fieldname]
                   : field.controlDefaultValue !== undefined &&
-                    field.controlDefaultValue !== null &&
-                    field.controlDefaultValue !== ""
+                      field.controlDefaultValue !== null &&
+                      field.controlDefaultValue !== ""
                     ? parseInt(field.controlDefaultValue, 10)
                     : ""
               }
@@ -2066,7 +2072,7 @@ export default function CustomeInputFields({
                 // Show warning if value is not a valid integer
                 if (!isInteger && field.typeValue == "number") {
                   toast.warning(
-                    `${inputLabel} does not support decimal values`
+                    `${inputLabel} does not support decimal values`,
                   );
                   return;
                 }
@@ -2120,7 +2126,7 @@ export default function CustomeInputFields({
                           funcCall,
                           updatedValues,
                           field.fieldname,
-                          tableName
+                          tableName,
                         );
                       }
                     });
@@ -2138,7 +2144,7 @@ export default function CustomeInputFields({
                       state: state,
                       fieldName: field.fieldname,
                       value: e.target.value,
-                    })
+                    }),
                   );
                 }
 
@@ -2153,7 +2159,7 @@ export default function CustomeInputFields({
                       funcCall,
                       updatedValues,
                       field.fieldname,
-                      tableName
+                      tableName,
                     );
                   });
                   onBlurHandler(updatedValues);
@@ -2171,10 +2177,10 @@ export default function CustomeInputFields({
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                    !field.isEditable)
               }
               InputLabelProps={{
                 classes: {
@@ -2239,7 +2245,7 @@ export default function CustomeInputFields({
                           funcCall,
                           updatedValues,
                           field.fieldname,
-                          tableName
+                          tableName,
                         );
                         // updatedValues=result
                       }
@@ -2275,7 +2281,7 @@ export default function CustomeInputFields({
                       funcCall,
                       updatedValues,
                       field.fieldname,
-                      tableName
+                      tableName,
                     );
                   });
                   //                  console.log("updatedValues", updatedValues);
@@ -2372,7 +2378,7 @@ export default function CustomeInputFields({
                           funcCall,
                           values,
                           field.fieldname,
-                          tableName
+                          tableName,
                         );
                       });
                     }
@@ -2389,7 +2395,7 @@ export default function CustomeInputFields({
                         funcCall,
                         values,
                         field.fieldname,
-                        tableName
+                        tableName,
                       );
                     });
                   }
@@ -2475,7 +2481,7 @@ export default function CustomeInputFields({
                       return formControlValidation?.[field.functionOnBlur](
                         state,
                         field.fieldname,
-                        e.target.value
+                        e.target.value,
                       );
                     });
 
@@ -2491,7 +2497,7 @@ export default function CustomeInputFields({
                         funcCall,
                         values,
                         field.fieldname,
-                        tableName
+                        tableName,
                       );
                     });
                   }
@@ -2515,11 +2521,11 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase(),
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable)
                 }
               />
             </div>
@@ -2607,7 +2613,7 @@ export default function CustomeInputFields({
                           funcCall,
                           values,
                           field.fieldname,
-                          tableName
+                          tableName,
                         );
                       });
                     }
@@ -2624,7 +2630,7 @@ export default function CustomeInputFields({
                         funcCall,
                         values,
                         field.fieldname,
-                        tableName
+                        tableName,
                       );
                     });
                   }
@@ -2667,7 +2673,7 @@ export default function CustomeInputFields({
                           funcCall,
                           values,
                           field.fieldname,
-                          tableName
+                          tableName,
                         );
                       });
                     }
@@ -2678,7 +2684,7 @@ export default function CustomeInputFields({
                       return formControlValidation?.[field.functionOnBlur](
                         state,
                         field.fieldname,
-                        e.target.value
+                        e.target.value,
                       );
                     });
 
@@ -2695,7 +2701,7 @@ export default function CustomeInputFields({
                         funcCall,
                         values,
                         field.fieldname,
-                        tableName
+                        tableName,
                       );
                     });
                   }
@@ -2719,11 +2725,11 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase(),
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable)
                 }
               />
             </div>
@@ -2766,7 +2772,7 @@ export default function CustomeInputFields({
                           funcCall,
                           values,
                           field.fieldname,
-                          tableName
+                          tableName,
                         );
                       });
                     }
@@ -2783,7 +2789,7 @@ export default function CustomeInputFields({
                         funcCall,
                         values,
                         field.fieldname,
-                        tableName
+                        tableName,
                       );
                     });
                   }
@@ -2794,6 +2800,11 @@ export default function CustomeInputFields({
                   }
                 }}
                 ampm={false}
+                format={
+                  dateFormat === "" || dateFormat === null
+                    ? "DD-MM-YYYY HH:mm:ss"
+                    : `${dateFormat} HH:mm:ss`
+                }
                 viewRenderers={{
                   hours: renderTimeViewClock,
                   minutes: renderTimeViewClock,
@@ -2891,7 +2902,7 @@ export default function CustomeInputFields({
                           funcCall,
                           values,
                           field.fieldname,
-                          tableName
+                          tableName,
                         );
                       });
                     }
@@ -2902,7 +2913,7 @@ export default function CustomeInputFields({
                       return formControlValidation?.[field.functionOnBlur](
                         state,
                         field.fieldname,
-                        e.target.value
+                        e.target.value,
                       );
                     });
 
@@ -2920,7 +2931,7 @@ export default function CustomeInputFields({
                         funcCall,
                         values,
                         field.fieldname,
-                        tableName
+                        tableName,
                       );
                     });
                   }
@@ -2944,11 +2955,11 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase(),
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable)
                 }
               />
             </div>
@@ -2966,10 +2977,11 @@ export default function CustomeInputFields({
               }}
             >
               <p
-                className={`custom-placeholder ${textareaLabel || values?.[field.fieldname]
-                  ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 "
-                  : "top-[7px]"
-                  } `}
+                className={`custom-placeholder ${
+                  textareaLabel || values?.[field.fieldname]
+                    ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 "
+                    : "top-[7px]"
+                } `}
                 style={{
                   ...textAreaLabelStyle,
                 }}
@@ -2990,11 +3002,11 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase(),
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable)
                 }
                 onPaste={handlePaste}
                 onChange={(e) => {
@@ -3047,7 +3059,7 @@ export default function CustomeInputFields({
                           funcCall,
                           values,
                           field.fieldname,
-                          tableName
+                          tableName,
                         );
                       });
                     }
@@ -3065,7 +3077,7 @@ export default function CustomeInputFields({
                         funcCall,
                         values,
                         field.fieldname,
-                        tableName
+                        tableName,
                       );
                     });
                   }
@@ -3104,7 +3116,7 @@ export default function CustomeInputFields({
                         funcCall,
                         values,
                         field.fieldname,
-                        tableName
+                        tableName,
                       );
                     });
                   }
@@ -3121,11 +3133,11 @@ export default function CustomeInputFields({
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase()
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase(),
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable)
                 }
               >
                 <span className="text-[10px]">
@@ -3178,7 +3190,7 @@ export default function CustomeInputFields({
                   if (url.includes(pattern)) {
                     url = url.replace(
                       pattern,
-                      `\${newState.tblJob[${selectedIndex}].id}`
+                      `\${newState.tblJob[${selectedIndex}].id}`,
                     );
                   } else {
                     url = field.hyperlinkValue;
@@ -3214,7 +3226,7 @@ export default function CustomeInputFields({
                     encodedData = pathSegments.pop();
                     console.log(
                       "encodedData",
-                      decodeURIComponent(encodedData).startsWith("{")
+                      decodeURIComponent(encodedData).startsWith("{"),
                     );
                     // Get the last part of the URL
 
@@ -3222,7 +3234,7 @@ export default function CustomeInputFields({
                       // If no encoded data is found, just open the URL as is
                       console.log(
                         "No encoded data found, opening URL directly:",
-                        url
+                        url,
                       );
                       window.open(url, "_blank");
                       return; // Exit early
@@ -3264,28 +3276,28 @@ export default function CustomeInputFields({
 
                         // Detect if it's matching the pattern regardless of index
                         const patternMatch = variableName.match(
-                          /newState\.tblJob\[(\d+)\]\.id/
+                          /newState\.tblJob\[(\d+)\]\.id/,
                         );
 
                         if (patternMatch) {
                           // Replace index with selectedIndex
                           const updatedVariableName = variableName.replace(
                             /\[\d+\]/,
-                            `[${selectedIndex}]`
+                            `[${selectedIndex}]`,
                           );
 
                           const variableValue = eval(updatedVariableName); // Get the ID value
 
                           inputString = inputString.replace(
                             "${" + variableName + "}",
-                            variableValue
+                            variableValue,
                           );
                         } else {
                           const variableValue = eval(variableName);
 
                           inputString = inputString.replace(
                             "${" + variableName + "}",
-                            variableValue
+                            variableValue,
                           );
                         }
                       }
@@ -3295,7 +3307,7 @@ export default function CustomeInputFields({
                     } catch (error) {
                       console.error(
                         "Error during dynamic value replacement:",
-                        error
+                        error,
                       );
                       return inputString; // Return the input string unchanged in case of error
                     }
@@ -3324,7 +3336,7 @@ export default function CustomeInputFields({
                   let modifiedEncodedData;
                   try {
                     modifiedEncodedData = encodeURIComponent(
-                      JSON.stringify(dataObject)
+                      JSON.stringify(dataObject),
                     );
                   } catch (error) {
                     console.error("Error encoding the modified data:", error);
@@ -3384,10 +3396,11 @@ export default function CustomeInputFields({
               size="small"
               name={field.fieldname}
               required={field.isRequired}
-              className={`${styles.inputField} ${field.type === "decimal" || field.type === "number"
-                ? "w-[10rem]"
-                : ""
-                }`}
+              className={`${styles.inputField} ${
+                field.type === "decimal" || field.type === "number"
+                  ? "w-[10rem]"
+                  : ""
+              }`}
               value={
                 values?.[field.fieldname] ?? field.controlDefaultValue ?? ""
               }
@@ -3421,7 +3434,7 @@ export default function CustomeInputFields({
                           funcCall,
                           updatedValues,
                           field.fieldname,
-                          tableName
+                          tableName,
                         );
                       }
                     });
@@ -3457,7 +3470,7 @@ export default function CustomeInputFields({
                       funcCall,
                       updatedValues,
                       field.fieldname,
-                      tableName
+                      tableName,
                     );
                   });
 
@@ -3482,10 +3495,10 @@ export default function CustomeInputFields({
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                      field.isEditableMode?.toLowerCase()
-                    ) && !field.isEditable
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                    !field.isEditable)
               }
               InputLabelProps={{
                 classes: {
@@ -3500,10 +3513,11 @@ export default function CustomeInputFields({
 
   return (
     <div
-      className={`flex flex-wrap py-[3px] ${inputFieldData?.map((field) => field.isBreak).includes(true)
-        ? ""
-        : "mr-2 "
-        }
+      className={`flex flex-wrap py-[3px] ${
+        inputFieldData?.map((field) => field.isBreak).includes(true)
+          ? ""
+          : "mr-2 "
+      }
       `}
     >
       {inputFieldData?.map((field, index, array) => {

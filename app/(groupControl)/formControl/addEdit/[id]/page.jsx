@@ -72,6 +72,7 @@ import * as formControlValidation from "@/helper/formControlValidation";
 import CustomeBreadCrumb from "@/components/BreadCrumbs/breadCrumb";
 import { AddRow } from "../AddRow";
 import * as onSubmitValidation from "@/helper/onSubmitFunction";
+import * as onGridSaveValidation from "@/helper/onGridSave";
 import QuotationModal from "@/components/Modal/quotationModal.jsx";
 import QuotationModalAir from "@/components/Modal/quotationModalAir.jsx";
 import VenderModal from "@/components/Modal/vendorModal";
@@ -179,6 +180,50 @@ async function onSubmitFunctionCall(
     }
   }
 }
+async function onGridSaveFunctionCall(
+  functionData,
+  newState,
+  formControlData,
+  values,
+  setStateVariable,
+  submitNewState,
+  setSubmitNewState,
+) {
+  const funcNameMatch = functionData?.match(/^(\w+)/);
+  const argsMatch = functionData?.match(/\((.*)\)/);
+  //console.log(functionData, "functionData");
+  // Check if we have a function name match, and we have an argsMatch (even if there are no arguments)
+  if (funcNameMatch && argsMatch !== null) {
+    const funcName = funcNameMatch[1];
+    const argsStr = argsMatch[1] || "";
+
+    // Find the function in formControlValidation by the extracted name
+    const func = onGridSaveValidation?.[funcName];
+
+    if (typeof func === "function") {
+      // Prepare arguments: If there are no arguments, argsStr will be an empty string
+      let args;
+      if (argsStr === "") {
+        args = {}; // No arguments, so pass an empty object or as per the function's expected parameters
+      } else {
+        args = argsStr; // Has arguments, pass them as an object
+      }
+      //console.log(args);
+      // Call the function with the prepared arguments
+      let result = onGridSaveValidation?.[funcName]({
+        args,
+        newState,
+        formControlData,
+        values,
+        setStateVariable,
+        submitNewState,
+        setSubmitNewState,
+      });
+      return result;
+      // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
+    }
+  }
+}
 export default function AddEditFormControll() {
   const { push } = useRouter();
   const params = useParams();
@@ -229,6 +274,7 @@ export default function AddEditFormControll() {
   const formControlRef = useRef(null);
   const prevNewStateRef = useRef({});
   const prevNewStateRefData = useRef({});
+
   const [openPrintModal, setOpenPrintModal] = useState(false);
   const [openAllocation, setOpenAllocation] = useState(false);
   const [submittedRecordId, setSubmittedRecordId] = useState(null);
@@ -563,114 +609,114 @@ export default function AddEditFormControll() {
     [keysTovalidate],
   );
 
-  const handleFieldValuesChange2 = async (
-    updatedValues,
-    field,
-    formControlField,
-  ) => {
-    try {
-      const requestData = {
-        id: updatedValues.copyMappingName,
-        filterValue: field?.[field.length - 1],
-        menuID: search.menuName,
-      };
+  // const handleFieldValuesChange2 = async (
+  //   updatedValues,
+  //   field,
+  //   formControlField,
+  // ) => {
+  //   try {
+  //     const requestData = {
+  //       id: updatedValues.copyMappingName,
+  //       filterValue: field?.[field.length - 1],
+  //       menuID: search.menuName,
+  //     };
 
-      const copyResponse = await getCopyData(requestData);
+  //     const copyResponse = await getCopyData(requestData);
 
-      if (!copyResponse?.success) {
-        toast.error(copyResponse?.Message || "Copy mapping failed");
-        return;
-      }
+  //     if (!copyResponse?.success) {
+  //       toast.error(copyResponse?.Message || "Copy mapping failed");
+  //       return;
+  //     }
 
-      let dataToCopy = {};
-      const mappings = copyResponse?.keyToValidate?.fieldsMaping || [];
-      const sourceData = copyResponse?.data?.[0] || {};
+  //     let dataToCopy = {};
+  //     const mappings = copyResponse?.keyToValidate?.fieldsMaping || [];
+  //     const sourceData = copyResponse?.data?.[0] || {};
 
-      mappings
-        .filter((item) => !isCopyChildFlag(item?.isChild))
-        .forEach((item) => {
-          const targetKey = getCopyMapFieldName(item);
+  //     mappings
+  //       .filter((item) => !isCopyChildFlag(item?.isChild))
+  //       .forEach((item) => {
+  //         const targetKey = getCopyMapFieldName(item);
 
-          if (
-            Array.isArray(sourceData[targetKey]) &&
-            formControlField?.controlname?.toLowerCase() === "multiselect"
-          ) {
-            dataToCopy[targetKey] = [
-              ...(Array.isArray(newState[targetKey]) ? newState[targetKey] : []),
-              ...sourceData[targetKey],
-            ];
-          } else {
-            dataToCopy[targetKey] = sourceData[targetKey];
-          }
-        });
+  //         if (
+  //           Array.isArray(sourceData[targetKey]) &&
+  //           formControlField?.controlname?.toLowerCase() === "multiselect"
+  //         ) {
+  //           dataToCopy[targetKey] = [
+  //             ...(Array.isArray(newState[targetKey]) ? newState[targetKey] : []),
+  //             ...sourceData[targetKey],
+  //           ];
+  //         } else {
+  //           dataToCopy[targetKey] = sourceData[targetKey];
+  //         }
+  //       });
 
-      mappings
-        .filter((item) => isCopyChildFlag(item?.isChild))
-        .forEach((item) => {
-          const targetTable = getCopyChildTableName(item);
-          const incomingRows = Array.isArray(sourceData[targetTable])
-            ? sourceData[targetTable]
-            : [];
+  //     mappings
+  //       .filter((item) => isCopyChildFlag(item?.isChild))
+  //       .forEach((item) => {
+  //         const targetTable = getCopyChildTableName(item);
+  //         const incomingRows = Array.isArray(sourceData[targetTable])
+  //           ? sourceData[targetTable]
+  //           : [];
 
-          dataToCopy[targetTable] =
-            formControlField?.controlname?.toLowerCase() === "multiselect"
-              ? [
-                  ...(Array.isArray(newState[targetTable])
-                    ? newState[targetTable]
-                    : []),
-                  ...incomingRows,
-                ]
-              : incomingRows;
-        });
+  //         dataToCopy[targetTable] =
+  //           formControlField?.controlname?.toLowerCase() === "multiselect"
+  //             ? [
+  //               ...(Array.isArray(newState[targetTable])
+  //                 ? newState[targetTable]
+  //                 : []),
+  //               ...incomingRows,
+  //             ]
+  //             : incomingRows;
+  //       });
 
-      Object.keys(dataToCopy).forEach((key) => {
-        if (Array.isArray(dataToCopy[key])) {
-          dataToCopy[key] = dataToCopy[key].map((item, index) => ({
-            ...item,
-            indexValue: index + 1,
-          }));
-        }
-      });
+  //     Object.keys(dataToCopy).forEach((key) => {
+  //       if (Array.isArray(dataToCopy[key])) {
+  //         dataToCopy[key] = dataToCopy[key].map((item, index) => ({
+  //           ...item,
+  //           indexValue: index + 1,
+  //         }));
+  //       }
+  //     });
 
-      const childMappings = mappings.filter((item) =>
-        isCopyChildFlag(item?.isChild),
-      );
+  //     const childMappings = mappings.filter((item) =>
+  //       isCopyChildFlag(item?.isChild),
+  //     );
 
-      setChildsFields((prev) => {
-        const updated = [...prev];
+  //     setChildsFields((prev) => {
+  //       const updated = [...prev];
 
-        childMappings.forEach((item) => {
-          const tableName = getCopyChildTableName(item);
-          const index = updated.findIndex((row) => row.tableName === tableName);
+  //       childMappings.forEach((item) => {
+  //         const tableName = getCopyChildTableName(item);
+  //         const index = updated.findIndex((row) => row.tableName === tableName);
 
-          if (index !== -1) {
-            updated[index] = {
-              ...updated[index],
-              isAddFunctionality: item?.isAddFunctionality,
-              isDeleteFunctionality: item?.isDeleteFunctionality,
-              isCopyFunctionality: item?.isCopyFunctionality,
-            };
-          }
-        });
+  //         if (index !== -1) {
+  //           updated[index] = {
+  //             ...updated[index],
+  //             isAddFunctionality: item?.isAddFunctionality,
+  //             isDeleteFunctionality: item?.isDeleteFunctionality,
+  //             isCopyFunctionality: item?.isCopyFunctionality,
+  //           };
+  //         }
+  //       });
 
-        return updated;
-      });
+  //       return updated;
+  //     });
 
-      setNewState((prev) => ({
-        ...prev,
-        ...dataToCopy,
-      }));
+  //     setNewState((prev) => ({
+  //       ...prev,
+  //       ...dataToCopy,
+  //     }));
 
-      setSubmitNewState((prev) => ({
-        ...prev,
-        ...dataToCopy,
-      }));
+  //     setSubmitNewState((prev) => ({
+  //       ...prev,
+  //       ...dataToCopy,
+  //     }));
 
-      setKeysTovalidate(mappings);
-    } catch (error) {
-      console.error("Copy mapping error:", error);
-    }
-  };
+  //     setKeysTovalidate(mappings);
+  //   } catch (error) {
+  //     console.error("Copy mapping error:", error);
+  //   }
+  // };
 
   async function fetchData() {
     const { clientId } = getUserDetails();
@@ -965,7 +1011,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: true }
                 : field,
           );
@@ -1005,7 +1051,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, isEditable: true }
                 : field,
           );
@@ -1110,7 +1156,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: false }
                 : field,
           );
@@ -1150,7 +1196,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, isEditable: false }
                 : field,
           );
@@ -1172,49 +1218,15 @@ export default function AddEditFormControll() {
     });
   }, [newState, actionFieldNames]);
 
-  // useEffect(() => {
-  //   function hideUnhide() {
-  //     if (
-  //       newState?.cargoTypeIddropdown &&
-  //       newState?.cargoTypeIddropdown.length > 0 &&
-  //       newState?.cargoTypeIddropdown[0]?.label === "HAZARDOUS"
-  //     ) {
-  //       const updatedArray = parentFieldDataInArray.map((item) => {
-  //         if (item.fieldname === "commodity") {
-  //           return { ...item, columnsToBeVisible: true };
-  //         }
-  //         return item;
-  //       });
-  //       const resData = groupAndSortFields(updatedArray);
-  //       let updatedFormControlDataParentsFields = { ...resData };
-  //       setParentsFields(updatedFormControlDataParentsFields);
-  //     } else {
-  //       const updatedArray = parentFieldDataInArray.map((item) => {
-  //         if (item.fieldname === "commodity") {
-  //           return { ...item, columnsToBeVisible: false };
-  //         }
-  //         return item;
-  //       });
-  //       const resData = groupAndSortFields(updatedArray);
-  //       let updatedFormControlDataParentsFields = { ...resData };
-  //       setParentsFields(updatedFormControlDataParentsFields);
-  //     }
-  //   }
-
-  //   if (newState.cargoTypeId != null) {
-  //     hideUnhide();
-  //   }
-  // }, [newState.cargoTypeId, parentFieldDataInArray]);
-
   useEffect(() => {
-    console.log("omk", newState);
 
     const isHazardous = newState?.cargoTypeIddropdown
       ? newState?.cargoTypeIddropdown?.[0]?.label === "HAZARDOUS"
       : newState?.cargoTypeId === 164;
 
-    const routeLabel = newState?.routeIddropdown?.[0]?.label || "";
-    const isTranshipment = routeLabel === "Transhipment";
+    const routeLabel = newState?.routeIddropdown?.[0]?.label || newState?.routeId;
+    console.log('newState', newState)
+    const isTranshipment = routeLabel === "Transhipment" || 11058;
 
     const isSwitchBl = newState?.switchBl === "1";
 
@@ -1269,43 +1281,6 @@ export default function AddEditFormControll() {
     newState.hss, // ✅ Dependency for HSS
   ]);
 
-  //   useEffect(() => {
-  //   const cargoTypeLabel = newState?.cargoTypeIddropdown?.[0]?.label;
-  //   const routeLabel = newState?.routeIddropdown?.[0]?.label;
-
-  //   if (!cargoTypeLabel || !routeLabel) return; // ⛔ Skip until data is available
-
-  //   const isHazardous = cargoTypeLabel === "HAZARDOUS";
-  //   const isTranshipment = routeLabel === "Transhipment";
-
-  //   const fieldsToShowForHazardous = ["imoId"];
-  //   const fieldsToShowForTranshipment = [
-  //     "transhipPort1Id",
-  //     "transhipPort1AgentId",
-  //     "transhipPort1AgentBranchId",
-  //     "transhipPort2Id",
-  //     "transhipPort2AgentId",
-  //     "transhipPort2AgentBranchId",
-  //     "transhipPort3Id",
-  //     "transhipPort3AgentId",
-  //     "transhipPort3AgentBranchId",
-  //   ];
-
-  //   const updatedArray = parentFieldDataInArray.map((item) => {
-  //     if (fieldsToShowForHazardous.includes(item.fieldname)) {
-  //       return { ...item, columnsToBeVisible: isHazardous };
-  //     }
-
-  //     if (fieldsToShowForTranshipment.includes(item.fieldname)) {
-  //       return { ...item, columnsToBeVisible: isTranshipment };
-  //     }
-
-  //     return item;
-  //   });
-
-  //   const resData = groupAndSortFields(updatedArray);
-  //   setParentsFields({ ...resData });
-  // }, [newState?.cargoTypeIddropdown, newState?.routeIddropdown]);
   const functionHideDisable = async () => {
     try {
       const disabledFieldNames = await fetchDisabledFields();
@@ -1366,106 +1341,6 @@ export default function AddEditFormControll() {
     }
   };
 
-  // const fetchExchangeRates = async (
-  //   charge,
-  //   parentCurrencyId,
-  //   parentExchangeRate
-  // ) => {
-  //   try {
-  //     let updatedCharge = { ...charge };
-  //     //console.log("Processing charge: ", charge);
-
-  //     const { companyId, clientId } = getUserDetails();
-  //     //console.log("Fetched user details: ", companyId, clientId);
-
-  //     const requestData = {
-  //       columns: "*",
-  //       tableName: "tblCompanyParameter",
-  //       whereCondition: `companyId = ${companyId}  AND currencyId = ${parentCurrencyId}`,
-  //       clientIdCondition: ` status = 1 FOR JSON PATH`,
-  //     }; //clientId = ${clientId} AND
-
-  //     //console.log("Making request for home currency check: ", requestData);
-  //     const isHomeCurrency = await fetchReportData(requestData);
-  //     //console.log("Home currency data: ", isHomeCurrency);
-
-  //     // Fetch exchange rate data for buyCurrencyId
-  //     if (charge.buyCurrencyId === parentCurrencyId) {
-  //       updatedCharge.buyExchangeRate = 1;
-  //     } else if (isHomeCurrency.data && isHomeCurrency.data.length > 0) {
-  //       const buyExchangeRateRequestData = {
-  //         columns: "ex.exportExchangeRate",
-  //         tableName: "tblExchangeRate ex",
-  //         whereCondition: `ex.fromCurrencyId = ${parentCurrencyId} AND ex.toCurrencyId = ${updatedCharge.buyCurrencyId}`,
-  //         clientIdCondition: `status = 1 FOR JSON PATH`,
-  //       }; //ex.clientId = ${clientId} AND
-
-  //       // //console.log(
-  //       //   "Making request for buy exchange rates: ",
-  //       //   buyExchangeRateRequestData
-  //       // );
-  //       const fetchedBuyData = await fetchReportData(
-  //         buyExchangeRateRequestData
-  //       );
-
-  //       //console.log("Fetched buy exchange rate data: ", fetchedBuyData);
-  //       const buyExchangeRateFromMaster =
-  //         fetchedBuyData.data[0]?.exportExchangeRate;
-
-  //       updatedCharge.buyExchangeRate = buyExchangeRateFromMaster
-  //         ? parseFloat(buyExchangeRateFromMaster.toFixed(3))
-  //         : 1;
-  //     } else if (isHomeCurrency.data.length == 0) {
-  //       const buyExchangeRate = 1 / parentExchangeRate;
-  //       updatedCharge.buyExchangeRate = parseFloat(buyExchangeRate.toFixed(3));
-  //     } else {
-  //       updatedCharge.buyExchangeRate = 1;
-  //     }
-
-  //     // Fetch exchange rate data for sellCurrencyId
-  //     if (charge.sellCurrencyId === parentCurrencyId) {
-  //       updatedCharge.sellExchangeRate = 1;
-  //     } else if (isHomeCurrency.data && isHomeCurrency.data.length > 0) {
-  //       const sellExchangeRateRequestData = {
-  //         columns: "ex.exportExchangeRate",
-  //         tableName: "tblExchangeRate ex",
-  //         whereCondition: `ex.fromCurrencyId = ${parentCurrencyId} AND ex.toCurrencyId = ${updatedCharge.sellCurrencyId}`,
-  //         clientIdCondition: `status = 1 FOR JSON PATH`,
-  //       };
-
-  //       // //console.log(
-  //       //   "Making request for sell exchange rates: ",
-  //       //   sellExchangeRateRequestData
-  //       // );
-  //       const fetchedSellData = await fetchReportData(
-  //         sellExchangeRateRequestData
-  //       );
-
-  //       //console.log("Fetched sell exchange rate data: ", fetchedSellData);
-  //       const sellExchangeRateFromMaster =
-  //         fetchedSellData.data[0]?.exportExchangeRate;
-
-  //       updatedCharge.sellExchangeRate = sellExchangeRateFromMaster
-  //         ? parseFloat(sellExchangeRateFromMaster.toFixed(3))
-  //         : 1;
-  //     } else if (isHomeCurrency.data.length == 0) {
-  //       const sellExchangeRate = 1 / parentExchangeRate;
-  //       updatedCharge.sellExchangeRate = parseFloat(
-  //         sellExchangeRate.toFixed(3)
-  //       );
-  //     } else {
-  //       updatedCharge.buyExchangeRate = 1;
-  //     }
-  //     //console.log("Updated charge: ", updatedCharge);
-  //     return updatedCharge;
-  //   } catch (error) {
-  //     console.error(
-  //       "Error fetching exchange rates or updating charge: ",
-  //       error
-  //     );
-  //     throw error;
-  //   }
-  // };
 
   useEffect(() => {
     const updateCharges = async () => {
@@ -2160,7 +2035,7 @@ export default function AddEditFormControll() {
                 ],
                 buyCurrencyId:
                   item.buyCurrencyId !== null &&
-                  item.buyCurrencyId !== undefined
+                    item.buyCurrencyId !== undefined
                     ? String(item.buyCurrencyId)
                     : null,
                 buyCurrencyIddropdown: [
@@ -2171,7 +2046,7 @@ export default function AddEditFormControll() {
                 ],
                 sellCurrencyId:
                   item.sellCurrencyId !== null &&
-                  item.sellCurrencyId !== undefined
+                    item.sellCurrencyId !== undefined
                     ? String(item.sellCurrencyId)
                     : null,
                 sellCurrencyIddropdown: [
@@ -2182,12 +2057,12 @@ export default function AddEditFormControll() {
                 ],
                 buyExchangeRate:
                   item.buyExchangeRate !== null &&
-                  item.buyExchangeRate !== undefined
+                    item.buyExchangeRate !== undefined
                     ? String(item.buyExchangeRate)
                     : null,
                 sellExchangeRate:
                   item.sellExchangeRate !== null &&
-                  item.sellExchangeRate !== undefined
+                    item.sellExchangeRate !== undefined
                     ? String(item.sellExchangeRate)
                     : null,
               };
@@ -2503,7 +2378,7 @@ export default function AddEditFormControll() {
                 parentTableName={tableName}
                 formControlData={formControlData}
                 setFormControlData={setFormControlData}
-                handleFieldValuesChange2={handleFieldValuesChange2}
+                //handleFieldValuesChange2={handleFieldValuesChange2}
                 //
                 getLabelValue={getLabelValue}
               />
@@ -2531,7 +2406,7 @@ export default function AddEditFormControll() {
                 setSubmitNewState={setSubmitNewState}
                 formControlData={formControlData}
                 setFormControlData={setFormControlData}
-                handleFieldValuesChange2={handleFieldValuesChange2}
+                // handleFieldValuesChange2={handleFieldValuesChange2}
                 getLabelValue={getLabelValue}
                 childsFields={childsFields}
                 childTableRow={childTableRow}
@@ -2644,7 +2519,7 @@ ParentAccordianComponent.propTypes = {
   indexValue: PropTypes.any,
   newState: PropTypes.any,
   parentsFields: PropTypes.any,
-  handleFieldValuesChange2: PropTypes.any,
+  // handleFieldValuesChange2: PropTypes.any,
   expandAll: PropTypes.any,
   isCopy: PropTypes.any,
   setNewState: PropTypes.any,
@@ -2667,7 +2542,7 @@ function ParentAccordianComponent({
   indexValue,
   newState,
   parentsFields,
-  handleFieldValuesChange2,
+  // handleFieldValuesChange2,
   expandAll,
   isCopy,
   setNewState,
@@ -2794,8 +2669,8 @@ function ParentAccordianComponent({
             inputFieldData={parentsFields[section]}
             values={newState}
             onValuesChange={handleFieldValuesChange}
-            handleFieldValuesChange2={handleFieldValuesChange2}
-            inEditMode={{ isEditMode: false, isCopy: true }}
+            //handleFieldValuesChange2={handleFieldValuesChange2}
+            inEditMode={{ isEditMode: true, isCopy: isCopy }}
             onChangeHandler={(result) => {
               handleChangeFunction(result);
             }}
@@ -2823,7 +2698,7 @@ ChildAccordianComponent.propTypes = {
   indexValue: PropTypes.any,
   newState: PropTypes.any,
   setNewState: PropTypes.any,
-  handleFieldValuesChange2: PropTypes.any,
+  // handleFieldValuesChange2: PropTypes.any,
   expandAll: PropTypes.any,
   isCopy: PropTypes.any,
   originalData: PropTypes.any,
@@ -2849,7 +2724,7 @@ function ChildAccordianComponent({
   indexValue,
   newState,
   setNewState,
-  handleFieldValuesChange2,
+  // handleFieldValuesChange2,
   expandAll,
   isCopy,
   isView,
@@ -2894,8 +2769,83 @@ function ChildAccordianComponent({
   const search = JSON.parse(decodeURIComponent(params.id));
   const isChildAddHidden = isConfigFlagEnabled(section?.isAddHide);
   const isChildDeleteHidden = isConfigFlagEnabled(section?.isDeleteHide);
-  console.log("copyChildValueObj page", copyChildValueObj);
-  console.log("childObject", childObject);
+  const hasDestinationFreeDaysField = section?.fields?.some(
+    (field) => field?.fieldname === "destinationFreeDays",
+  );
+
+  useEffect(() => {
+    if (!hasDestinationFreeDaysField || !section?.tableName) return;
+
+    const parentDestinationFreeDays = newState?.destinationFreeDays ?? "";
+
+    // 1. Update currently open unsaved child form
+    if (inputFieldsVisible) {
+      setChildObject((prev) => {
+        if ((prev?.destinationFreeDays ?? "") === parentDestinationFreeDays) {
+          return prev;
+        }
+
+        return {
+          ...(prev || {}),
+          destinationFreeDays: parentDestinationFreeDays,
+        };
+      });
+    }
+
+    // 2. Update already saved child grid rows
+    const updateChildRows = (prevState) => {
+      const rows = prevState?.[section.tableName];
+
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return prevState;
+      }
+
+      let isChanged = false;
+
+      const updatedRows = rows.map((row) => {
+        if ((row?.destinationFreeDays ?? "") === parentDestinationFreeDays) {
+          return row;
+        }
+
+        isChanged = true;
+
+        return {
+          ...row,
+          destinationFreeDays: parentDestinationFreeDays,
+        };
+      });
+
+      if (!isChanged) {
+        return prevState;
+      }
+
+      return {
+        ...prevState,
+        [section.tableName]: updatedRows,
+      };
+    };
+
+    setNewState(updateChildRows);
+    setSubmitNewState(updateChildRows);
+  }, [
+    newState?.destinationFreeDays,
+    section?.tableName,
+    inputFieldsVisible,
+    hasDestinationFreeDaysField,
+  ]);
+
+  const handleAddContainerRow = (section, indexValue) => {
+    if (isConfigFlagEnabled(section?.isAddHide)) return;
+
+    setIschildAccordionOpen(true);
+    setInputFieldsVisible(true);
+
+    setChildObject((prev) => ({
+      ...(prev || {}),
+      destinationFreeDays: newState?.destinationFreeDays ?? "",
+      isChecked: true,
+    }));
+  };
   const [clientName, setClientName] = useState(null);
 
   useEffect(() => {
@@ -3062,7 +3012,6 @@ function ChildAccordianComponent({
 
   const childButtonHandler = async (section, indexValue, islastTab) => {
     if (isConfigFlagEnabled(section?.isAddHide)) return;
-    //console.log("childButtonHandler", section);
     if (isChildAccordionOpen) {
       setClickCount((prevCount) => prevCount + 1);
     }
@@ -3086,11 +3035,37 @@ function ChildAccordianComponent({
 
       toast.dismiss();
       try {
-        if (section.functionOnSubmit && section.functionOnSubmit !== null) {
-          let functonsArray = section.functionOnSubmit.trim().split(";");
-          // let Data = { ...childObject }
+        const tmpData = { ...newState };
+        const subChild = section.subChild?.reduce((obj, item) => {
+          obj[item.tableName] = [];
+          return obj;
+        }, {});
+        Object.assign(subChild, Data);
+        if (hasBlackValues(subChild)) {
+          return;
+        }
+        if (Array.isArray(tmpData[section.tableName])) {
+          tmpData[section.tableName].push({
+            ...subChild,
+            isChecked: true,
+            indexValue: tmpData[section.tableName].length,
+          });
+        } else {
+          tmpData[section.tableName] = [
+            {
+              ...subChild,
+              isChecked: true,
+              indexValue: tmpData[section.tableName]?.length,
+            },
+          ];
+        }
+        setNewState(tmpData);
+        setSubmitNewState(tmpData);
+
+        if (section.functionOnGridSave && section.functionOnGridSave !== null) {
+          let functonsArray = section.functionOnGridSave.trim().split(";");
           for (const fun of functonsArray) {
-            let updatedData = await onSubmitFunctionCall(
+            let updatedData = await onGridSaveFunctionCall(
               fun,
               newState,
               formControlData,
@@ -3098,18 +3073,10 @@ function ChildAccordianComponent({
               setChildObject,
             );
             if (updatedData?.alertShow == true) {
-              // if (updatedData.type == "success") {
-              //   toast.success(updatedData.message);
-
-              // }
-              // else {
-              // toast.error(updatedData.message);
               setParaText(updatedData.message);
               setIsError(true);
               setOpenModal((prev) => !prev);
               setTypeofModal("onCheck");
-              // return
-              // }
             }
             if (updatedData) {
               Data = updatedData.values;
@@ -3127,66 +3094,22 @@ function ChildAccordianComponent({
               });
             }
           }
-          //console.log("childButtonHandler", Data);
-
-          // setChildObject((prevObject) => {
-          //   return { ...prevObject, ...Data }; // Merge new data into childObject
-          // });
-          // section?.functionOnSubmit
-          //   .split(";")
-          //   .forEach((e) => onSubmitFunctionCall(e, childObject));
         }
       } catch (error) {
         return toast.error(error.message);
       }
 
-      // try {
-      //   if (typeof onSubmitValidation[section.functionOnSubmit] == "function") {
-      //   onSubmitValidation?.[section.functionOnSubmit]({
-      //     ...childObject})
-      //   }
-      // } catch (error) {
-      //  return toast.error(error.message);
-      // }
-      const tmpData = { ...newState };
-      const subChild = section.subChild?.reduce((obj, item) => {
-        obj[item.tableName] = [];
-        return obj;
-      }, {});
-      Object.assign(subChild, Data);
-      if (hasBlackValues(subChild)) {
-        return;
-      }
-      if (Array.isArray(tmpData[section.tableName])) {
-        tmpData[section.tableName].push({
-          ...subChild,
-          isChecked: true,
-          indexValue: tmpData[section.tableName].length,
-        });
-      } else {
-        tmpData[section.tableName] = [
-          {
-            ...subChild,
-            isChecked: true,
-            indexValue: tmpData[section.tableName]?.length,
-          },
-        ];
-      }
-      setNewState(tmpData);
-      setSubmitNewState(tmpData);
-      setRenderedData(newState[section.tableName]);
-      setChildObject({});
-      setInputFieldsVisible((prev) => !prev);
       if (islastTab == true) {
         setTimeout(() => {
           setInputFieldsVisible((prev) => !prev);
         }, 3);
       }
-      // islastTab == true &&
+
+      setRenderedData(newState[section.tableName]);
+      setChildObject({});
+      setInputFieldsVisible((prev) => !prev);
     }
   };
-
-  console.log("childTableData", childTableDatas);
 
   const childExpandedAccordion = () => {
     setIschildAccordionOpen((prev) => !prev);
@@ -3231,12 +3154,12 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-                const parsedValue =
-                  typeof row[item.fieldname] === "number"
-                    ? row[item.fieldname]
-                    : parseFloat(row[item.fieldname] || 0);
-                return isNaN(parsedValue) ? sum : sum + parsedValue;
-              }, 0) // Calculate sum for 's' type
+              const parsedValue =
+                typeof row[item.fieldname] === "number"
+                  ? row[item.fieldname]
+                  : parseFloat(row[item.fieldname] || 0);
+              return isNaN(parsedValue) ? sum : sum + parsedValue;
+            }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -3247,69 +3170,69 @@ function ChildAccordianComponent({
     });
   };
 
-  const calculateTotalVolumeAndWeight = () => {
-    if (!newState || !Array.isArray(newState.tblRateRequestQty)) {
-      return newState; // Return unchanged state if invalid
-    }
+  // const calculateTotalVolumeAndWeight = () => {
+  //   if (!newState || !Array.isArray(newState.tblRateRequestQty)) {
+  //     return newState; // Return unchanged state if invalid
+  //   }
 
-    let totalVolume = 0;
-    let totalVolumeWt = 0;
-    let totalNoPackage = 0;
-    newState.tblRateRequestQty.forEach((row) => {
-      const volume = parseFloat(row.volume) || 0;
-      const volumeWt = parseFloat(row.volumeWt) || 0;
-      const noPackage = parseFloat(row.noOfPackages) || 0;
-      totalVolume += volume;
-      totalVolumeWt += volumeWt;
-      totalNoPackage += noPackage;
-    });
+  //   let totalVolume = 0;
+  //   let totalVolumeWt = 0;
+  //   let totalNoPackage = 0;
+  //   newState.tblRateRequestQty.forEach((row) => {
+  //     const volume = parseFloat(row.volume) || 0;
+  //     const volumeWt = parseFloat(row.volumeWt) || 0;
+  //     const noPackage = parseFloat(row.noOfPackages) || 0;
+  //     totalVolume += volume;
+  //     totalVolumeWt += volumeWt;
+  //     totalNoPackage += noPackage;
+  //   });
 
-    setNewState((prevState) => ({
-      ...prevState,
-      volume: totalVolume,
-      volumeWt: totalVolumeWt,
-      noOfPackages: totalNoPackage,
-    }));
-  };
-  useEffect(() => {
-    calculateTotalVolumeAndWeight();
-  }, [newState.tblRateRequestQty]);
+  //   setNewState((prevState) => ({
+  //     ...prevState,
+  //     volume: totalVolume,
+  //     volumeWt: totalVolumeWt,
+  //     noOfPackages: totalNoPackage,
+  //   }));
+  // };
+  // useEffect(() => {
+  //   calculateTotalVolumeAndWeight();
+  // }, [newState.tblRateRequestQty]);
 
-//   const calculateTotalNoOfPackages = () => {
-//      if (search?.menuName != "1278") {
-//     if (!newState || !Array.isArray(newState.tblJobContainer)) {
-//       return newState; // Return unchanged state if invalid
-//     }
-  
+  //   const calculateTotalNoOfPackages = () => {
+  //      if (search?.menuName != "1278") {
+  //     if (!newState || !Array.isArray(newState.tblJobContainer)) {
+  //       return newState; // Return unchanged state if invalid
+  //     }
 
-//     const toNum = (v) =>
-//       v == null || v === "" ? 0 : Number(String(v).replace(/,/g, "")) || 0;
 
-//     let totalNoPackages = 0;
+  //     const toNum = (v) =>
+  //       v == null || v === "" ? 0 : Number(String(v).replace(/,/g, "")) || 0;
 
-//     newState.tblJobContainer.forEach((row) => {
-//       totalNoPackages += toNum(row?.noOfPackages);
-//     });
+  //     let totalNoPackages = 0;
 
-//     setNewState((prevState) => {
-//       // If your state ever had a legacy key, prefer it
-//       const targetKey = Object.prototype.hasOwnProperty.call(
-//         prevState,
-//         "noOfpackages",
-//       )
-//         ? "noOfpackages"
-//         : "noOfPackages";
+  //     newState.tblJobContainer.forEach((row) => {
+  //       totalNoPackages += toNum(row?.noOfPackages);
+  //     });
 
-//       // Prevent unnecessary re-renders
-//       if (toNum(prevState?.[targetKey]) === totalNoPackages) return prevState;
+  //     setNewState((prevState) => {
+  //       // If your state ever had a legacy key, prefer it
+  //       const targetKey = Object.prototype.hasOwnProperty.call(
+  //         prevState,
+  //         "noOfpackages",
+  //       )
+  //         ? "noOfpackages"
+  //         : "noOfPackages";
 
-//       return {
-//         ...prevState,
-//         [targetKey]: totalNoPackages,
-//       };
-//     });
-//   };
-// }
+  //       // Prevent unnecessary re-renders
+  //       if (toNum(prevState?.[targetKey]) === totalNoPackages) return prevState;
+
+  //       return {
+  //         ...prevState,
+  //         [targetKey]: totalNoPackages,
+  //       };
+  //     });
+  //   };
+  // }
 
   // useEffect(() => {
   //   calculateTotalNoOfPackages();
@@ -3382,7 +3305,7 @@ function ChildAccordianComponent({
     setRenderedData((prevData) => [...prevData, ...newData]);
     setDummyData((prevData) => [...prevData, ...newData]);
   };
-  const deleteChildRecord = (index) => {
+  const deleteChildRecord = async (index) => {
     if (isChildDeleteHidden) return;
     try {
       if (section.functionOnDelete && section.functionOnDelete !== null) {
@@ -3395,14 +3318,12 @@ function ChildAccordianComponent({
           [section.tableName]: filteredRows,
         };
 
-        let Data = { ...newState[section.tableName][index] };
-
         for (const fun of functonsArray) {
           if (typeof onSubmitValidation[fun] === "function") {
             // Optional: Validation logic
           }
 
-          const updatedData = onSubmitFunctionCall(
+          const updatedData = await onSubmitFunctionCall(
             fun,
             UpdatedNewState,
             formControlData,
@@ -3418,25 +3339,30 @@ function ChildAccordianComponent({
           }
 
           if (updatedData) {
-            Data = updatedData.values;
 
             setNewState((prevState) => {
-              const updated = {
-                ...prevState,
-                ...updatedData.newState,
-              };
-              // ✅ Recalculate totals with updated rows
-              calculateTotalVolumeAndWeight(
-                updated[section.tableName],
-                setNewState,
+              const updatedRows = updatedData.newState[section.tableName].filter(
+                (_, idx) => idx !== index,
               );
-              return updated;
+              const updatedState = {
+                ...updatedData.newState,
+                [section.tableName]: updatedRows,
+              };
+              //calculateTotalVolumeAndWeight(updatedRows, setNewState); // ✅ Recalculate
+              return updatedState;
             });
 
-            setSubmitNewState((prevState) => ({
-              ...prevState,
-              ...updatedData.newState,
-            }));
+            setSubmitNewState((prevState) => {
+              const updatedRows = updatedData.newState[section.tableName].filter(
+                (_, idx) => idx !== index,
+              );
+              const updatedState = {
+                ...updatedData.newState,
+                [section.tableName]: updatedRows,
+              };
+              //calculateTotalVolumeAndWeight(updatedRows, setNewState); // ✅ Recalculate
+              return updatedState;
+            });
           }
         }
       } else {
@@ -3449,7 +3375,7 @@ function ChildAccordianComponent({
             ...prevState,
             [section.tableName]: updatedRows,
           };
-          calculateTotalVolumeAndWeight(updatedRows, setNewState); // ✅ Recalculate
+          //calculateTotalVolumeAndWeight(updatedRows, setNewState); // ✅ Recalculate
           return updatedState;
         });
 
@@ -3462,25 +3388,11 @@ function ChildAccordianComponent({
             [section.tableName]: updatedRows,
           };
         });
-
-        setOriginalData((prevState) => {
-          const updatedRows = prevState[section?.tableName]?.filter(
-            (_, idx) => idx !== index,
-          );
-          if (updatedRows?.length === 0) {
-            setInputFieldsVisible(true);
-          }
-          return {
-            ...prevState,
-            [section.tableName]: updatedRows,
-          };
-        });
       }
     } catch (error) {
       toast.error(error.message);
     }
   };
-
   // const deleteChildRecord = (index) => {
   //   setNewState((prevState) => {
   //     const newStateCopy = { ...prevState };
@@ -3990,7 +3902,7 @@ function ChildAccordianComponent({
       const right = Math.round(
         Math.floor(
           tableRef.current?.getBoundingClientRect()?.width +
-            tableRef.current?.scrollLeft,
+          tableRef.current?.scrollLeft,
         ),
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
@@ -4143,14 +4055,14 @@ function ChildAccordianComponent({
           className={` ${styles.txtColor} relative flex `}
           sx={{
             padding: inputFieldsVisible ? "0" : "0",
-            height: clickCount === 0 ? "2.5rem" : "auto",
+            height: newState[section.tableName]?.length <= 0 && !inputFieldsVisible ? "2.5rem" : "auto",
             width: "100%",
           }}
         >
           <div key={indexValue} className={`w-full  ${styles.thinScrollBar}`}>
             {/* Icon Button on the right */}
             <div className="absolute top-1 right-[-3px] flex justify-end ">
-              {!isView && !isChildAddHidden && clickCount === 0 && (
+              {!isChildAddHidden && !inputFieldsVisible && (
                 //    <IconButton
                 //    aria-label="Add"
                 //    className={`${styles.inputTextColor} `}
@@ -4175,7 +4087,7 @@ function ChildAccordianComponent({
                   altText={"Add"}
                   title={"Add"}
                   onClick={() => {
-                    childButtonHandler(section, indexValue);
+                    handleAddContainerRow(section, indexValue);
                   }}
                 />
               )}
@@ -4187,9 +4099,9 @@ function ChildAccordianComponent({
                 <CustomeInputFields
                   inputFieldData={section.fields}
                   onValuesChange={handleFieldChildrenValuesChange}
-                  handleFieldValuesChange2={handleFieldValuesChange2}
+                  // handleFieldValuesChange2={handleFieldValuesChange2}
                   values={childObject}
-                  inEditMode={{ isEditMode: false, isCopy: true }}
+                  inEditMode={{ isEditMode: true, isCopy: isCopy }}
                   onChangeHandler={(result) => {
                     handleChangeFunction(result);
                   }}
@@ -4206,9 +4118,9 @@ function ChildAccordianComponent({
                   getLabelValue={getLabelValue}
                   callSaveFunctionOnLastTab={() => {
                     childButtonHandler(section, indexValue, true);
-                    calculateTotalVolumeAndWeight();
-                    calculateTotalGrossWeight();
-                    calculateTotalGrossWeightBl();
+                    // calculateTotalVolumeAndWeight();
+                    // calculateTotalGrossWeight();
+                    // calculateTotalGrossWeightBl();
                   }}
                   wrap
                 />
@@ -4232,10 +4144,10 @@ function ChildAccordianComponent({
                     title={"Save 1"}
                     onClick={() => {
                       childButtonHandler(section, indexValue);
-                      calculateTotalVolumeAndWeight();
-                      calculateTotalGrossWeight();
-                      calculateTotalGrossWeightBl();
-                     // calculateTotalNoOfPackages();
+                      // calculateTotalVolumeAndWeight();
+                      // calculateTotalGrossWeight();
+                      // calculateTotalGrossWeightBl();
+                      // calculateTotalNoOfPackages();
                     }}
                   />
                 </div>
@@ -4325,7 +4237,7 @@ function ChildAccordianComponent({
                                         isView && index === 0
                                           ? "29px"
                                           : section?.showSrNo == true ||
-                                              section?.showSrNo == "true"
+                                            section?.showSrNo == "true"
                                             ? "29px !important"
                                             : "0px !important",
                                       zIndex: 10,
@@ -4420,7 +4332,7 @@ function ChildAccordianComponent({
                               setNewState={setNewState}
                               setInputFieldsVisible={setInputFieldsVisible}
                               expandAll={expandAll}
-                              inEditMode={{ isEditMode: false, isCopy: true }}
+                              inEditMode={{ isEditMode: true, isCopy: isCopy }}
                               setRenderedData={setRenderedData}
                               deleteChildRecord={deleteChildRecord}
                               calculateData={calculateData}
@@ -4431,7 +4343,7 @@ function ChildAccordianComponent({
                               isGridEdit={
                                 checker
                                   ? section?.gridEditableOnLoad?.toLowerCase() ===
-                                    "true"
+                                  "true"
                                   : isGridEdit
                               }
                               setIsGridEdit={setIsGridEdit}
@@ -4494,10 +4406,10 @@ function ChildAccordianComponent({
                                               {(field.type === "number" ||
                                                 field.type === "decimal" ||
                                                 field.type === "string") &&
-                                              field.gridTotal
+                                                field.gridTotal
                                                 ? columnTotals[
-                                                    field.fieldname
-                                                  ].toString()
+                                                  field.fieldname
+                                                ].toString()
                                                 : ""}
                                             </div>
                                           </div>

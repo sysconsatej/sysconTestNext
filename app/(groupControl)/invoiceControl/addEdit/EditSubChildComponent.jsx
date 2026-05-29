@@ -33,6 +33,8 @@ import { toast } from "react-toastify";
 import Checkbox from "@mui/material/Checkbox";
 import { ActionButton } from "@/components/ActionsButtons";
 import * as onSubmitValidation from "@/helper/onSubmitFunction";
+import { fetchReportData } from "@/services/auth/FormControl.services";
+import { getUserDetails } from "@/helper/userDetails";
 //import {setSameDDValuesBasedOnSecondRow} from "@/helper/onSubmitFunction"
 
 function isConfigFlagEnabled(value) {
@@ -52,7 +54,7 @@ function onSubmitFunctionCall(
   setStateVariable,
   childName,
   childIndex,
-  index
+  index,
 ) {
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
@@ -82,15 +84,13 @@ function onSubmitFunctionCall(
         setStateVariable,
         childName,
         childIndex,
-        valuesIndex: index
+        valuesIndex: index,
       });
       return result;
       // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
     }
   }
 }
-
-
 
 EditSubChildComponent.propTypes = {
   subChildObject: PropTypes.any,
@@ -155,37 +155,124 @@ export default function EditSubChildComponent(props) {
   const isSubChildDeleteHidden = isConfigFlagEnabled(subChild?.isDeleteHide);
   const isSubChildCopyHidden = isConfigFlagEnabled(subChild?.isAddHide);
   // const [isChecked, setIsChecked] = useState(true);
+  const [homeCurrencyId, setHomeCurrencyId] = useState("");
+  async function getHomeCurrencyFromCompanyParameter() {
+    try {
+      const { companyId } = getUserDetails();
 
+      if (!companyId) {
+        setHomeCurrencyId("");
+        return;
+      }
+
+      const request = {
+        columns: "currencyId",
+        tableName: "tblCompanyParameter",
+        whereCondition: `companyId=${companyId}`,
+        clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+      };
+
+      const response = await fetchReportData(request);
+      const data = response?.data || [];
+      const currencyId = data?.[0]?.currencyId;
+
+      setHomeCurrencyId(currencyId ? String(currencyId).trim() : "");
+    } catch (error) {
+      console.error("Error fetching home currency:", error);
+      setHomeCurrencyId("");
+    }
+  }
+  useEffect(() => {
+    getHomeCurrencyFromCompanyParameter();
+  }, []);
+  const HC_AMOUNT_FIELD_NAMES = new Set([
+    "debitAmount",
+    "creditAmount",
+    "debitAmountHc",
+    "creditAmountHc",
+  ]);
+
+  const normalizeCurrencyValue = (value) => {
+    if (value === null || value === undefined || value === "") return "";
+
+    if (Array.isArray(value)) {
+      const first = value[0];
+      return String(
+        first?.value ??
+        first?.id ??
+        first?.Id ??
+        first?.currencyId ??
+        first?.CurrencyId ??
+        "",
+      ).trim();
+    }
+
+    if (typeof value === "object") {
+      return String(
+        value?.value ??
+        value?.id ??
+        value?.Id ??
+        value?.currencyId ??
+        value?.CurrencyId ??
+        "",
+      ).trim();
+    }
+
+    return String(value).trim();
+  };
+
+  const shouldDisableVoucherDetailHcField = (field, rowObj = editSubChildObj) => {
+    if (subChild?.tableName !== "tblVoucherLedgerDetails") {
+      return false;
+    }
+
+    if (!HC_AMOUNT_FIELD_NAMES.has(field?.fieldname)) {
+      return false;
+    }
+
+    const rowCurrencyId = normalizeCurrencyValue(
+      rowObj?.currencyId ??
+      rowObj?.currencyIddropdown ??
+      rowObj?.currencyIdDropdown,
+    );
+
+    if (!homeCurrencyId || !rowCurrencyId) {
+      return false;
+    }
+
+    return String(homeCurrencyId) !== String(rowCurrencyId);
+  };
+
+  const getVoucherDetailFieldData = (field, rowObj = editSubChildObj) => {
+    if (!shouldDisableVoucherDetailHcField(field, rowObj)) {
+      return field;
+    }
+
+    return {
+      ...field,
+      isEditable: false,
+      isEditableMode: "b",
+      disabled: true,
+    };
+  };
+
+  const updatedVoucherDetailFields = (subChild?.fields || []).map((field) =>
+    getVoucherDetailFieldData(field, editSubChildObj),
+  );
   useEffect(() => {
     setEditSubChildObj({ ...subChildObject });
   }, [subChildObject]);
-
 
   const toggleSubChildEdit = () => {
     setOpenSubChildEdit((prev) => !prev);
   };
 
-  // const isSameEditableRow = (leftRow, rightRow) => {
-  //   if (!leftRow || !rightRow) return false;
-
-  //   if (leftRow?._id != null && rightRow?._id != null) {
-  //     return leftRow._id === rightRow._id;
-  //   }
-
-  //   if (
-  //     leftRow?.voucherOutstandingId != null &&
-  //     rightRow?.voucherOutstandingId != null
-  //   ) {
-  //     return leftRow.voucherOutstandingId === rightRow.voucherOutstandingId;
-  //   }
-
-  //   if (leftRow?.indexValue != null && rightRow?.indexValue != null) {
-  //     return leftRow.indexValue === rightRow.indexValue;
-  //   }
-
-  //   return false;
-  // };
-  const isSameEditableRow = (leftRow, rightRow, leftIndex = null, rightIndex = null) => {
+  const isSameEditableRow = (
+    leftRow,
+    rightRow,
+    leftIndex = null,
+    rightIndex = null,
+  ) => {
     if (!leftRow || !rightRow) return false;
 
     if (leftRow?._id != null && rightRow?._id != null) {
@@ -221,7 +308,8 @@ export default function EditSubChildComponent(props) {
     };
 
     const didHcChange =
-      String(prevRow?.debitAmount ?? "") !== String(nextRow?.debitAmount ?? "") ||
+      String(prevRow?.debitAmount ?? "") !==
+      String(nextRow?.debitAmount ?? "") ||
       String(prevRow?.creditAmount ?? "") !==
       String(nextRow?.creditAmount ?? "");
 
@@ -240,12 +328,8 @@ export default function EditSubChildComponent(props) {
 
     return {
       ...nextRow,
-      __manualAllocHC: didHcChange
-        ? hasManualHc
-        : !!prevRow?.__manualAllocHC,
-      __manualAllocFC: didFcChange
-        ? hasManualFc
-        : !!prevRow?.__manualAllocFC,
+      __manualAllocHC: didHcChange ? hasManualHc : !!prevRow?.__manualAllocHC,
+      __manualAllocFC: didFcChange ? hasManualFc : !!prevRow?.__manualAllocFC,
     };
   };
 
@@ -313,7 +397,8 @@ export default function EditSubChildComponent(props) {
           isChecked: true,
         };
 
-        newStateCopy[childName][childIndex][subChild.tableName][index] = updatedData;
+        newStateCopy[childName][childIndex][subChild.tableName][index] =
+          updatedData;
         return newStateCopy;
       });
 
@@ -326,12 +411,12 @@ export default function EditSubChildComponent(props) {
           isChecked: true,
         };
 
-        newStateCopy[childName][childIndex][subChild.tableName][index] = updatedData;
+        newStateCopy[childName][childIndex][subChild.tableName][index] =
+          updatedData;
         return newStateCopy;
       });
     }
   }
-
 
   const handleChange = (event, row, ledgerIndex) => {
     const checked = event.target.checked;
@@ -534,7 +619,6 @@ export default function EditSubChildComponent(props) {
     });
   };
 
-
   return (
     <React.Fragment>
       {!isGridEdit ? (
@@ -572,21 +656,45 @@ export default function EditSubChildComponent(props) {
                       className={`${childTableRowStyles} overflow-hidden whitespace-nowrap`}
                       style={{ maxWidth: "200px" }}
                     >
-                      {field.controlname === "dropdown" ||
-                        field.controlname === "multiselect"
-                        ? (
-                          subChildObject[`${field.fieldname}dropdown`]?.[0]
-                            ?.label || subChildObject[`${field.fieldname}Dropdown`]
-                        )?.length > 15
-                          ? (
-                            subChildObject[`${field.fieldname}dropdown`]?.[0]
-                              ?.label || subChildObject[`${field.fieldname}Dropdown`]
-                          )?.slice(0, 15) + "..."
-                          : subChildObject[`${field.fieldname}dropdown`]?.[0]
-                            ?.label ||
-                          subChildObject[`${field.fieldname}Dropdown`] ||
-                          ""
-                        : subChildObject[`${field.fieldname}`]?.toString() || ""}
+                      <LightTooltip
+                        title={
+                          field.controlname === "dropdown" ||
+                            field.controlname === "multiselect"
+                            ? subChildObject[`${field.fieldname}dropdown`]?.[0]
+                              ?.label ||
+                            subChildObject[`${field.fieldname}Dropdown`] ||
+                            ""
+                            : subChildObject[
+                              `${field.fieldname}`
+                            ]?.toString() || ""
+                        }
+                        arrow
+                      >
+                        <span>
+                          {field.controlname === "dropdown" ||
+                            field.controlname === "multiselect"
+                            ? (
+                              subChildObject[
+                                `${field.fieldname}dropdown`
+                              ]?.[0]?.label ||
+                              subChildObject[`${field.fieldname}Dropdown`]
+                            )?.length > 15
+                              ? (
+                                subChildObject[
+                                  `${field.fieldname}dropdown`
+                                ]?.[0]?.label ||
+                                subChildObject[`${field.fieldname}Dropdown`]
+                              )?.slice(0, 15) + "..."
+                              : subChildObject[
+                                `${field.fieldname}dropdown`
+                              ]?.[0]?.label ||
+                              subChildObject[`${field.fieldname}Dropdown`] ||
+                              ""
+                            : subChildObject[
+                              `${field.fieldname}`
+                            ]?.toString() || ""}
+                        </span>
+                      </LightTooltip>
                     </div>
 
                     {subIndex == 0 && (
@@ -600,11 +708,10 @@ export default function EditSubChildComponent(props) {
                             inputProps={{ "aria-labelledby": field.fieldname }}
                             onChange={(event) => {
                               // alert('workimng'),
-                              handleChange(event, subChildObject, index)
+                              handleChange(event, subChildObject, index);
                             }}
                           />
                         </div>
-
                       </div>
                     )}
                   </div>
@@ -625,9 +732,7 @@ export default function EditSubChildComponent(props) {
                     >
                       <Image
                         src={
-                          hoveredIcon === "delete"
-                            ? DeleteHover
-                            : DeleteIcon2
+                          hoveredIcon === "delete" ? DeleteHover : DeleteIcon2
                         }
                         alt="Delete Icon"
                         priority={false}
@@ -687,7 +792,7 @@ export default function EditSubChildComponent(props) {
                   }}
                 >
                   <Box className="flex gap-4">
-                    {index === 0 ?
+                    {index === 0 ? (
                       <React.Fragment key={index}>
                         <ActionButton
                           copyImagepath={copyDoc}
@@ -697,18 +802,19 @@ export default function EditSubChildComponent(props) {
                           showDelete={!isSubChildDeleteHidden}
                           showCopy={!isSubChildCopyHidden}
                         />
-
                       </React.Fragment>
-
-                      : <></>}
+                    ) : (
+                      <></>
+                    )}
                     <GridInputFields
-                      fieldData={field}
+                      //fieldData={field}
+                      fieldData={getVoucherDetailFieldData(field, editSubChildObj)}
                       indexValue={index}
                       onValuesChange={(e) => {
                         setEditSubChildObj((prev) => {
                           return applyVoucherDetailManualFlags(
                             { ...prev, ...e },
-                            prev
+                            prev,
                           );
                         });
                         setCopyChildValueObj((prev) => {
@@ -725,13 +831,13 @@ export default function EditSubChildComponent(props) {
                                   // Update the value of the matched object
                                   return applyVoucherDetailManualFlags(
                                     { ...item, ...e },
-                                    item
+                                    item,
                                   );
                                 }
                                 // Return the item unchanged if it's not the one to update
                                 return item;
                               });
-                            }
+                            },
                           );
 
                           // Return the updated state
@@ -762,7 +868,12 @@ export default function EditSubChildComponent(props) {
                 <div className="relative flex justify-between w-full">
                   {/* Custom Input Fields in the middle */}
                   <CustomeInputFields
-                    inputFieldData={subChild?.fields}
+                    // inputFieldData={subChild?.fields}
+                    inputFieldData={
+                      subChild?.tableName === "tblVoucherLedgerDetails"
+                        ? updatedVoucherDetailFields
+                        : subChild?.fields
+                    }
                     onValuesChange={(e) => {
                       setEditSubChildObj((prev) => {
                         return { ...prev, ...e };
@@ -805,7 +916,7 @@ export default function EditSubChildComponent(props) {
                         onClick={() => {
                           const nextEditedRow = applyVoucherDetailManualFlags(
                             editSubChildObj,
-                            subChildObject
+                            subChildObject,
                           );
 
                           for (const feild of subChild.fields) {
@@ -813,22 +924,26 @@ export default function EditSubChildComponent(props) {
                               feild.isRequired &&
                               (!Object.prototype.hasOwnProperty.call(
                                 nextEditedRow,
-                                feild.fieldname
+                                feild.fieldname,
                               ) ||
                                 nextEditedRow[feild.fieldname]
                                   .toString()
                                   .trim() === "")
                             ) {
                               toast.error(
-                                `Value for ${feild.yourlabel} is missing or empty.`
+                                `Value for ${feild.yourlabel} is missing or empty.`,
                               );
                               return;
                             }
                           }
                           try {
-                            if (subChild.functionOnSubmit && subChild.functionOnSubmit !== null) {
-                              for (const fun of subChild?.functionOnSubmit.split(";") || []) {
-
+                            if (
+                              subChild.functionOnSubmit &&
+                              subChild.functionOnSubmit !== null
+                            ) {
+                              for (const fun of subChild?.functionOnSubmit.split(
+                                ";",
+                              ) || []) {
                                 let updatedData = onSubmitFunctionCall(
                                   fun,
                                   newState,
@@ -837,7 +952,7 @@ export default function EditSubChildComponent(props) {
                                   setEditSubChildObj,
                                   childName,
                                   childIndex,
-                                  index
+                                  index,
                                 );
                                 if (updatedData?.alertShow == true) {
                                   // if (updatedData.type == "success") {
@@ -858,7 +973,10 @@ export default function EditSubChildComponent(props) {
                                     ...pre,
                                     ...updatedData?.values,
                                   }));
-                                  setNewState((pre) => ({ ...pre, ...updatedData?.newState }));
+                                  setNewState((pre) => ({
+                                    ...pre,
+                                    ...updatedData?.newState,
+                                  }));
                                   setSubmitNewState((pre) => ({
                                     ...pre,
                                     ...updatedData?.newState,
@@ -869,7 +987,7 @@ export default function EditSubChildComponent(props) {
                           } catch (error) {
                             return toast.error(error.message);
                           }
-                          //old code 
+                          //old code
                           // setNewState((prev) => {
                           //   const newState = JSON.parse(JSON.stringify(prev));
                           //   // Assuming you have the index of the item you want to update
@@ -917,14 +1035,24 @@ export default function EditSubChildComponent(props) {
                           // });
                           ///new code 14-04-26
                           setNewState((prev) => {
-                            const updatedState = JSON.parse(JSON.stringify(prev));
+                            const updatedState = JSON.parse(
+                              JSON.stringify(prev),
+                            );
 
                             if (
-                              updatedState?.[childName]?.[childIndex]?.[subChild.tableName] &&
-                              updatedState[childName][childIndex][subChild.tableName][index]
+                              updatedState?.[childName]?.[childIndex]?.[
+                              subChild.tableName
+                              ] &&
+                              updatedState[childName][childIndex][
+                              subChild.tableName
+                              ][index]
                             ) {
-                              updatedState[childName][childIndex][subChild.tableName][index] = {
-                                ...updatedState[childName][childIndex][subChild.tableName][index],
+                              updatedState[childName][childIndex][
+                                subChild.tableName
+                              ][index] = {
+                                ...updatedState[childName][childIndex][
+                                subChild.tableName
+                                ][index],
                                 ...nextEditedRow,
                               };
                             }
@@ -933,21 +1061,31 @@ export default function EditSubChildComponent(props) {
                           });
 
                           setSubmitNewState((prev) => {
-                            const updatedState = JSON.parse(JSON.stringify(prev));
+                            const updatedState = JSON.parse(
+                              JSON.stringify(prev),
+                            );
 
                             if (
-                              updatedState?.[childName]?.[childIndex]?.[subChild.tableName] &&
-                              updatedState[childName][childIndex][subChild.tableName][index]
+                              updatedState?.[childName]?.[childIndex]?.[
+                              subChild.tableName
+                              ] &&
+                              updatedState[childName][childIndex][
+                              subChild.tableName
+                              ][index]
                             ) {
-                              updatedState[childName][childIndex][subChild.tableName][index] = {
-                                ...updatedState[childName][childIndex][subChild.tableName][index],
+                              updatedState[childName][childIndex][
+                                subChild.tableName
+                              ][index] = {
+                                ...updatedState[childName][childIndex][
+                                subChild.tableName
+                                ][index],
                                 ...nextEditedRow,
                               };
                             }
 
                             return updatedState;
                           });
-                          ///here 
+                          ///here
                           toggleSubChildEdit();
                           syncLedgerTotalsFromDetails();
                         }}

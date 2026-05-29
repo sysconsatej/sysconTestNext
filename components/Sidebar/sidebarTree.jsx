@@ -1,6 +1,6 @@
 "use client";
 /* eslint-disable */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { use, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import styles from "@/components/common.module.css";
 import LightTooltip from "@/components/Tooltip/customToolTip";
@@ -88,7 +88,7 @@ export default function SideBarMenu() {
 
   const isRedirected = useSelector((state) => state?.counter?.isRedirection);
   const menuIdToRedirect = useSelector(
-    (state) => state?.counter?.menuIdToRedirect
+    (state) => state?.counter?.menuIdToRedirect,
   );
 
   useEffect(() => setRedirected(isRedirected), [isRedirected]);
@@ -148,8 +148,7 @@ export default function SideBarMenu() {
         "0 -22px 70px rgba(2,6,23,0.34), 0 -10px 20px rgba(2,6,23,0.18)",
 
       fabBg: "var(--sidebarTextColorHover)",
-      fabShadow:
-        "0 18px 60px rgba(2,6,23,0.30), 0 10px 22px rgba(2,6,23,0.20)",
+      fabShadow: "0 18px 60px rgba(2,6,23,0.30), 0 10px 22px rgba(2,6,23,0.20)",
 
       // ✅ grid touch surface (still NOT a card)
       tileHoverBg: "rgba(255,255,255,0.06)",
@@ -269,7 +268,7 @@ export default function SideBarMenu() {
           .filter((access) => access.isAccess);
 
         const roleMenuIdsArray = roleMenuAccessArray.map(
-          (access) => access.menuId
+          (access) => access.menuId,
         );
 
         const combinedMenuIdsArray = [
@@ -352,7 +351,7 @@ export default function SideBarMenu() {
       menuIdToRedirect?.parentAccordian,
       menuIdToRedirect?.item,
       menuIdToRedirect?.byIcon,
-      true
+      true,
     );
   };
 
@@ -361,7 +360,7 @@ export default function SideBarMenu() {
       updateFlag({
         flag: "menuIdToRedirect",
         value: { index, parentAccordian, item, byIcon },
-      })
+      }),
     );
     dispatch(updateFlag({ flag: "selectedMenuId", value: item?.id || null }));
 
@@ -398,7 +397,7 @@ export default function SideBarMenu() {
           id: item.id,
           menuName: item.menuName,
           parentMenuId: item.parentMenuId,
-        })}`
+        })}`,
       );
     } else if (
       menuDataRoute?.[menuDataRoute.length - 1]?.child?.length === 0 &&
@@ -430,7 +429,7 @@ export default function SideBarMenu() {
           id: item.id,
           menuName: item.menuName,
           parentMenuId: item.parentMenuId,
-        })}`
+        })}`,
       );
     } else if (
       (menuDataRoute?.[menuDataRoute.length - 1]?.child == null ||
@@ -444,7 +443,7 @@ export default function SideBarMenu() {
             id: item.id,
             menuName: item.menuName,
             parentMenuId: item.parentMenuId,
-          })}`
+          })}`,
         );
       } else {
         router.push(`${item.menuLink}?menuName=${item.id}`);
@@ -459,7 +458,7 @@ export default function SideBarMenu() {
           id: item.id,
           menuName: item.menuName,
           parentMenuId: item.parentMenuId,
-        })}`
+        })}`,
       );
     } else {
       return;
@@ -467,7 +466,95 @@ export default function SideBarMenu() {
 
     setTimeout(() => toggleEnlarge(), 500);
   };
+  //old
+  // const toggleAccordionMenus = (index, parentAccordian, item, byIcon) => {
+  //   setRedirected(true);
+  //   if (byIcon) toggleEnlarge();
+  //   if (parentAccordian) {
+  //     setIsMenuOpen((prevIndex) => (prevIndex === index ? null : index));
+  //   }
 
+  //   const menuDataRoute = extractMenuName(menuItem, item.id);
+
+  //   if (
+  //     menuDataRoute?.[menuDataRoute.length - 1]?.menuType == "S" ||
+  //     menuDataRoute?.[menuDataRoute.length - 1]?.menuType == "s"
+  //   ) {
+  //     const pageLink = menuDataRoute[menuDataRoute.length - 1].menuLink;
+  //     router.push(`${pageLink}`);
+  //     return false;
+  //   }
+
+  //   if (
+  //     menuDataRoute?.[menuDataRoute.length - 1]?.child?.length === 0 &&
+  //     (menuDataRoute?.[0]?.isFormcontrol == "true" ||
+  //       menuDataRoute?.[0]?.isFormcontrol == true)
+  //   ) {
+  //     router.push(
+  //       `/formControl?menuName=${encryptUrlFun({
+  //         id: item.id,
+  //         menuName: item.menuName,
+  //         parentMenuId: item.parentMenuId,
+  //       })}`
+  //     );
+  //   } else if (
+  //     menuDataRoute?.[menuDataRoute.length - 1]?.child?.length === 0 &&
+  //     (menuDataRoute?.[0]?.isFormcontrol == "false" ||
+  //       menuDataRoute?.[0]?.isFormcontrol == false) &&
+  //     menuDataRoute?.[0]?.menuLink === "/default"
+  //   ) {
+  //     router.push(`/dynamicReports?menuName=${item.reportId}`);
+  //   } else if (
+  //     menuDataRoute?.[0]?.menuLink === "/dynamicReports" &&
+  //     menuDataRoute?.[menuDataRoute.length - 1]?.child?.length === 0 &&
+  //     (menuDataRoute?.[0]?.isFormcontrol == "false" ||
+  //       menuDataRoute?.[0]?.isFormcontrol == false)
+  //   ) {
+  //     router.push(`/dynamicReports?menuName=${item.reportId}`);
+  //   } else if (
+  //     menuDataRoute?.[menuDataRoute.length - 1]?.child?.length === 0 &&
+  //     (menuDataRoute?.[0]?.isFormcontrol == "false" ||
+  //       menuDataRoute?.[0]?.isFormcontrol == false)
+  //   ) {
+  //     router.push(`${menuDataRoute[0].menuLink}?menuName=${item.id}`);
+  //   } else if (
+  //     (menuDataRoute?.[menuDataRoute.length - 1]?.child == null ||
+  //       menuDataRoute?.[menuDataRoute.length - 1]?.child?.length === 0) &&
+  //     menuDataRoute?.[0]?.menuLink == "/default"
+  //   ) {
+  //     router.push(
+  //       `/formControl?menuName=${encryptUrlFun({
+  //         id: item.id,
+  //         menuName: item.menuName,
+  //         parentMenuId: item.parentMenuId,
+  //       })}`
+  //     );
+  //   } else if (
+  //     (menuDataRoute?.[menuDataRoute.length - 1]?.child == null ||
+  //       menuDataRoute?.[menuDataRoute.length - 1]?.child?.length === 0) &&
+  //     item.menuLink !== null &&
+  //     item.menuLink !== "/default"
+  //   ) {
+  //     router.push(`${item.menuLink}?menuName=${item.id}`);
+  //   } else if (
+  //     (menuDataRoute?.[menuDataRoute.length - 1]?.child == null ||
+  //       menuDataRoute?.[menuDataRoute.length - 1]?.child?.length === 0) &&
+  //     (item.menuLink == null || item.menuLink == "/default")
+  //   ) {
+  //     router.push(
+  //       `/formControl?menuName=${encryptUrlFun({
+  //         id: item.id,
+  //         menuName: item.menuName,
+  //         parentMenuId: item.parentMenuId,
+  //       })}`
+  //     );
+  //   } else {
+  //     return;
+  //   }
+
+  //   setTimeout(() => toggleEnlarge(), 500);
+  // };
+  //toggleAccordion
   const toggleAccordionMenus = (index, parentAccordian, item, byIcon) => {
     setRedirected(true);
     if (byIcon) toggleEnlarge();
@@ -496,7 +583,7 @@ export default function SideBarMenu() {
           id: item.id,
           menuName: item.menuName,
           parentMenuId: item.parentMenuId,
-        })}`
+        })}`,
       );
     } else if (
       menuDataRoute?.[menuDataRoute.length - 1]?.child?.length === 0 &&
@@ -528,7 +615,7 @@ export default function SideBarMenu() {
           id: item.id,
           menuName: item.menuName,
           parentMenuId: item.parentMenuId,
-        })}`
+        })}`,
       );
     } else if (
       (menuDataRoute?.[menuDataRoute.length - 1]?.child == null ||
@@ -536,7 +623,17 @@ export default function SideBarMenu() {
       item.menuLink !== null &&
       item.menuLink !== "/default"
     ) {
-      router.push(`${item.menuLink}?menuName=${item.id}`);
+      if (item.menuLink == "/invoiceControl") {
+        router.push(
+          `${item.menuLink}?menuName=${encryptUrlFun({
+            id: item.id,
+            menuName: item.menuName,
+            parentMenuId: item.parentMenuId,
+          })}`,
+        );
+      } else {
+        router.push(`${item.menuLink}?menuName=${item.id}`);
+      }
     } else if (
       (menuDataRoute?.[menuDataRoute.length - 1]?.child == null ||
         menuDataRoute?.[menuDataRoute.length - 1]?.child?.length === 0) &&
@@ -547,7 +644,7 @@ export default function SideBarMenu() {
           id: item.id,
           menuName: item.menuName,
           parentMenuId: item.parentMenuId,
-        })}`
+        })}`,
       );
     } else {
       return;
@@ -569,7 +666,7 @@ export default function SideBarMenu() {
         ...item,
         randomIcon: getRandomIcon(),
       })),
-    [menuItem]
+    [menuItem],
   );
 
   // ======================== MOBILE/TABLET GRID MENU ========================
@@ -582,7 +679,7 @@ export default function SideBarMenu() {
   const filteredItems = (currentView.items || []).filter((x) =>
     String(x?.menuName || "")
       .toLowerCase()
-      .includes(String(searchText || "").toLowerCase())
+      .includes(String(searchText || "").toLowerCase()),
   );
 
   const openDrawer = () => {
@@ -748,7 +845,6 @@ export default function SideBarMenu() {
         </div>
 
         {/* hint */}
-
       </button>
     );
   };
@@ -1053,8 +1149,8 @@ export default function SideBarMenu() {
                           <AccordionHeader
                             className={`border-b-0 p-0 group h-full hover:bg-[var(--sidebarBgHover)] `}
                             onClick={() => {
-                              toggleAccordion(index, true, item),
-                                navigatedData(item);
+                              (toggleAccordion(index, true, item),
+                                navigatedData(item));
                             }}
                           >
                             <span>
@@ -1110,7 +1206,9 @@ export default function SideBarMenu() {
                           src={item.icon ? item.icon : item.randomIcon}
                           priority={false}
                           className="w-[16px] h-[16px] group-hover:filter-custom-blue "
-                          onClick={() => toggleAccordion(index, true, item, true)}
+                          onClick={() =>
+                            toggleAccordion(index, true, item, true)
+                          }
                           alt={item.menuName}
                         />
                       </div>
@@ -1182,7 +1280,7 @@ function ChildMenuSection(props) {
 
   const handleOptionClick = (optionIndex) => {
     setOpenOption((prevIndex) =>
-      prevIndex === optionIndex ? null : optionIndex
+      prevIndex === optionIndex ? null : optionIndex,
     );
   };
 
@@ -1413,7 +1511,7 @@ function ThiredLevelMenuSection(props) {
                 key={grandChildOptionIndex}
                 className={` bg-[var(--sidebarBg)] group  rounded-none p-0 m-0 h-[30px] border-b-[1px] hover:bg-[var(--table-hover-bg)]  border-opacity-50 flex justify-between w-full `}
                 onClick={() => {
-                  toggleAccordion(index, false, great), navigatedData(great);
+                  (toggleAccordion(index, false, great), navigatedData(great));
                 }}
               >
                 <span>

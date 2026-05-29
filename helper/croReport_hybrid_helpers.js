@@ -60,10 +60,6 @@ function getCanGrowColumnsSet(template) {
   return new Set(arr.map(normalizeCanGrowKey).filter(Boolean));
 }
 
-function ensureArray(v) {
-  return Array.isArray(v) ? v : [];
-}
-
 function addWarningToObj(obj, message) {
   const next = { ...(obj || {}) };
   const arr = Array.isArray(next.__layoutWarnings)
@@ -244,6 +240,155 @@ function writeNeighborIds(el, ids) {
   if ("rightId" in ids) n.rightId = ids.rightId;
 
   setNeighbourObj(el, n);
+}
+
+function overlapRatio1D(a0, a1, b0, b1) {
+  const inter = Math.max(0, Math.min(a1, b1) - Math.max(a0, b0));
+  const minLen = Math.max(0.0001, Math.min(a1 - a0, b1 - b0));
+  return inter / minLen;
+}
+
+function connectElementsByGeometry(elements, { force = true } = {}) {
+  const source = Array.isArray(elements) ? elements : [];
+  const visible = source
+    .filter((e) => e && !e.hidden && e.id != null)
+    .map((e) => ({ ...e }));
+
+  if (!visible.length) return source;
+
+  const byId = new Map(visible.map((e) => [String(e.id), e]));
+  const byBand = new Map();
+
+  for (const e of visible) {
+    const key = getBandKey(e);
+    if (!byBand.has(key)) byBand.set(key, []);
+    byBand.get(key).push(e);
+  }
+
+  const pickAbove = (e, laneEls) => {
+    const ex0 = Number(e.x || 0);
+    const ex1 = ex0 + Number(e.w || 0);
+    const ey0 = Number(e.y || 0);
+    let best = null;
+    let bestBottom = -Infinity;
+
+    for (const o of laneEls) {
+      if (o === e) continue;
+      const ox0 = Number(o.x || 0);
+      const ox1 = ox0 + Number(o.w || 0);
+      const oy0 = Number(o.y || 0);
+      const oy1 = oy0 + Number(o.h || 0);
+
+      if (oy1 > ey0 + 0.2) continue;
+      if (overlapRatio1D(ex0, ex1, ox0, ox1) < 0.15) continue;
+
+      if (oy1 > bestBottom) {
+        bestBottom = oy1;
+        best = o;
+      }
+    }
+
+    return best;
+  };
+
+  const pickBelow = (e, laneEls) => {
+    const ex0 = Number(e.x || 0);
+    const ex1 = ex0 + Number(e.w || 0);
+    const ey1 = Number(e.y || 0) + Number(e.h || 0);
+    let best = null;
+    let bestTop = Infinity;
+
+    for (const o of laneEls) {
+      if (o === e) continue;
+      const ox0 = Number(o.x || 0);
+      const ox1 = ox0 + Number(o.w || 0);
+      const oy0 = Number(o.y || 0);
+
+      if (oy0 < ey1 - 0.2) continue;
+      if (overlapRatio1D(ex0, ex1, ox0, ox1) < 0.15) continue;
+
+      if (oy0 < bestTop) {
+        bestTop = oy0;
+        best = o;
+      }
+    }
+
+    return best;
+  };
+
+  const pickLeft = (e, laneEls) => {
+    const ey0 = Number(e.y || 0);
+    const ey1 = ey0 + Number(e.h || 0);
+    const ex0 = Number(e.x || 0);
+    let best = null;
+    let bestRight = -Infinity;
+
+    for (const o of laneEls) {
+      if (o === e) continue;
+      const oy0 = Number(o.y || 0);
+      const oy1 = oy0 + Number(o.h || 0);
+      const ox1 = Number(o.x || 0) + Number(o.w || 0);
+
+      if (ox1 > ex0 + 0.2) continue;
+      if (overlapRatio1D(ey0, ey1, oy0, oy1) < 0.15) continue;
+
+      if (ox1 > bestRight) {
+        bestRight = ox1;
+        best = o;
+      }
+    }
+
+    return best;
+  };
+
+  const pickRight = (e, laneEls) => {
+    const ey0 = Number(e.y || 0);
+    const ey1 = ey0 + Number(e.h || 0);
+    const ex1 = Number(e.x || 0) + Number(e.w || 0);
+    let best = null;
+    let bestLeft = Infinity;
+
+    for (const o of laneEls) {
+      if (o === e) continue;
+      const oy0 = Number(o.y || 0);
+      const oy1 = oy0 + Number(o.h || 0);
+      const ox0 = Number(o.x || 0);
+
+      if (ox0 < ex1 - 0.2) continue;
+      if (overlapRatio1D(ey0, ey1, oy0, oy1) < 0.15) continue;
+
+      if (ox0 < bestLeft) {
+        bestLeft = ox0;
+        best = o;
+      }
+    }
+
+    return best;
+  };
+
+  for (const bandEls of byBand.values()) {
+    for (const e of bandEls) {
+      if (!force && getNeighbourObj(e)) continue;
+
+      const top = pickAbove(e, bandEls);
+      const bottom = pickBelow(e, bandEls);
+      const left = pickLeft(e, bandEls);
+      const right = pickRight(e, bandEls);
+
+      writeNeighborIds(e, {
+        topId: top?.id ?? null,
+        bottomId: bottom?.id ?? null,
+        leftId: left?.id ?? null,
+        rightId: right?.id ?? null,
+      });
+    }
+  }
+
+  return source.map((e) => {
+    if (!e?.id) return e;
+    const connected = byId.get(String(e.id));
+    return connected ? { ...e, neighbors: connected.neighbors } : e;
+  });
 }
 
 function getBandKey(el) {
@@ -687,7 +832,7 @@ function isCoveredByMerge(merges, r, c) {
   return !(m.r0 === r && m.c0 === c);
 }
 
-function resolveCellTextForMeasure({ el, tmeta, r, c, data }) {
+function resolveCellTextForMeasure({ tmeta, r, c, data }) {
   const merges = Array.isArray(tmeta?.merges) ? tmeta.merges : [];
   if (isCoveredByMerge(merges, r, c)) return "";
 
@@ -1527,20 +1672,197 @@ function splitRepeatTableElementMm(
 ========================================================= */
 
 function splitElementsByPage(elements, usableTop, usableHeightEff) {
-  const pages = [];
   const sliceH = Math.max(1, Number(usableHeightEff || 0));
   const EPS = 0.001;
+  const bodyBottom = Number(usableTop || 0) + sliceH;
+  const rowToleranceMm = 0.25;
+  const maxContinuationGapMm = 3;
+  const minContinuationGapMm = 0.25;
 
-  for (const el of elements || []) {
+  const pages = [[]];
+  const sorted = [...(elements || [])].sort(
+    (a, b) =>
+      Number(a?.y || 0) - Number(b?.y || 0) ||
+      Number(a?.x || 0) - Number(b?.x || 0) ||
+      Number(a?.z || 0) - Number(b?.z || 0),
+  );
+
+  const groups = [];
+  for (const el of sorted) {
     const y = Number(el?.y || 0);
-    const idx = Math.max(0, Math.floor((y - usableTop + EPS) / sliceH));
-    while (pages.length <= idx) pages.push([]);
-    pages[idx].push(el);
+    const last = groups[groups.length - 1];
+
+    if (!last || Math.abs(last.y - y) > rowToleranceMm) {
+      groups.push({ y, elements: [el] });
+    } else {
+      last.elements.push(el);
+    }
   }
 
-  for (const p of pages)
-    p.sort((a, b) => Number(a?.z || 0) - Number(b?.z || 0));
-  return pages;
+  const overflowGroups = [];
+  for (const group of groups) {
+    const groupBottom = group.elements.reduce((mx, el) => {
+      const y = Number(el?.y || 0);
+      const h = Number(el?.h || 0);
+      return Math.max(mx, y + h);
+    }, -Infinity);
+
+    if (groupBottom <= bodyBottom + EPS) {
+      pages[0].push(...group.elements);
+    } else {
+      overflowGroups.push({ ...group, bottom: groupBottom });
+    }
+  }
+
+  let pageIndex = 1;
+  let cursorY = Number(usableTop || 0);
+  let previousOriginalBottom = null;
+
+  for (const group of overflowGroups) {
+    const groupTop = Number(group.y || 0);
+    const groupHeight = group.elements.reduce((mx, el) => {
+      const y = Number(el?.y || 0);
+      const h = Number(el?.h || 0);
+      return Math.max(mx, y + h - groupTop);
+    }, 0);
+
+    let gap = 0;
+    if (previousOriginalBottom != null) {
+      const originalGap = groupTop - previousOriginalBottom;
+      gap = Math.min(
+        maxContinuationGapMm,
+        Math.max(minContinuationGapMm, Number(originalGap || 0)),
+      );
+    }
+
+    if (
+      pages[pageIndex]?.length &&
+      cursorY + gap + groupHeight > bodyBottom + EPS
+    ) {
+      pageIndex += 1;
+      cursorY = Number(usableTop || 0);
+      gap = 0;
+    }
+
+    while (pages.length <= pageIndex) pages.push([]);
+    cursorY += gap;
+
+    for (const el of group.elements) {
+      pages[pageIndex].push({
+        ...el,
+        y: cursorY + (Number(el?.y || 0) - groupTop) + pageIndex * sliceH,
+        __packedContinuation: true,
+      });
+    }
+
+    cursorY += groupHeight;
+    previousOriginalBottom = group.bottom;
+  }
+
+  return pages.map((p) =>
+    p.sort(
+      (a, b) =>
+        Number(a?.y || 0) - Number(b?.y || 0) ||
+        Number(a?.x || 0) - Number(b?.x || 0) ||
+        Number(a?.z || 0) - Number(b?.z || 0),
+    ),
+  );
+}
+
+function compactBodyRowsToTop(elements, bodyTop, bodyBottom, opts = {}) {
+  const thresholdMm = Number(opts.thresholdMm ?? 4) || 4;
+  const rowToleranceMm = Number(opts.rowToleranceMm ?? 0.25) || 0.25;
+  const maxGapMm = Number(opts.maxGapMm ?? 3) || 3;
+  const minGapMm = Number(opts.minGapMm ?? 0.25) || 0.25;
+
+  const source = Array.isArray(elements) ? elements : [];
+  const fixed = [];
+  const body = [];
+
+  source.forEach((el, order) => {
+    if (!el) return;
+    const band = String(el.attachBand || "body").toLowerCase();
+    const item = { el, order };
+    if (band === "header" || band === "footer") fixed.push(item);
+    else body.push(item);
+  });
+
+  if (!body.length) return source;
+
+  const minY = body.reduce(
+    (mn, item) => Math.min(mn, Number(item.el?.y || 0)),
+    Infinity,
+  );
+
+  const top = Number(bodyTop || 0);
+  const bottomLimit = Number(bodyBottom || 0);
+  if (!Number.isFinite(minY) || minY <= top + thresholdMm) return source;
+
+  const sorted = body.slice().sort(
+    (a, b) =>
+      Number(a.el?.y || 0) - Number(b.el?.y || 0) ||
+      Number(a.el?.x || 0) - Number(b.el?.x || 0) ||
+      Number(a.el?.z || 0) - Number(b.el?.z || 0),
+  );
+
+  const groups = [];
+  for (const item of sorted) {
+    const y = Number(item.el?.y || 0);
+    const last = groups[groups.length - 1];
+    if (!last || Math.abs(last.y - y) > rowToleranceMm) {
+      groups.push({ y, items: [item] });
+    } else {
+      last.items.push(item);
+    }
+  }
+
+  const compacted = [];
+  let cursorY = top;
+  let prevOriginalBottom = null;
+
+  for (const group of groups) {
+    const groupTop = Number(group.y || 0);
+    const groupBottom = group.items.reduce((mx, item) => {
+      const y = Number(item.el?.y || 0);
+      const h = Number(item.el?.h || 0);
+      return Math.max(mx, y + h);
+    }, groupTop);
+    const groupHeight = Math.max(0, groupBottom - groupTop);
+
+    let gap = 0;
+    if (prevOriginalBottom != null) {
+      const originalGap = groupTop - prevOriginalBottom;
+      gap = Math.min(maxGapMm, Math.max(minGapMm, Number(originalGap || 0)));
+    }
+
+    if (
+      compacted.length &&
+      bottomLimit > top &&
+      cursorY + gap + groupHeight > bottomLimit + 0.001
+    ) {
+      gap = 0;
+    }
+
+    cursorY += gap;
+
+    for (const item of group.items) {
+      compacted.push({
+        ...item,
+        el: {
+          ...item.el,
+          y: cursorY + (Number(item.el?.y || 0) - groupTop),
+          __compactedToPageTop: true,
+        },
+      });
+    }
+
+    cursorY += groupHeight;
+    prevOriginalBottom = groupBottom;
+  }
+
+  return [...fixed, ...compacted]
+    .sort((a, b) => a.order - b.order)
+    .map((item) => item.el);
 }
 
 /* =========================================================
@@ -2173,6 +2495,9 @@ export function layoutTemplateForData(
       try {
         page.sections = Array.isArray(page.sections) ? page.sections : [];
         page.elements = Array.isArray(page.elements) ? page.elements : [];
+        page.elements = connectElementsByGeometry(page.elements, {
+          force: true,
+        });
 
         const __origPosMap = buildOriginalPosMap(page.elements);
 
@@ -2563,6 +2888,18 @@ export function layoutTemplateForData(
           }));
 
           pe.elements = [...headerRepeat, ...bodyThisPage, ...footerRepeat];
+
+          if (pi > 0) {
+            pe.elements = compactBodyRowsToTop(
+              pe.elements,
+              bodyTop,
+              bodyTop + bodyHeightEff,
+            );
+          }
+
+          pe.elements = connectElementsByGeometry(pe.elements, {
+            force: true,
+          });
 
           pe.elements = tightenHeaderBodyGap(pe).elements;
           pe.elements = snapTouchingTables(pe, 3).elements;

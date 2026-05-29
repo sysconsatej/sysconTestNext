@@ -71,6 +71,7 @@ import Attachments from "@/app/(groupControl)/formControl/addEdit/Attachments.js
 import * as XLSX from "xlsx";
 import * as formControlValidation from "@/helper/formControlValidation";
 import * as onSubmitValidation from "@/helper/onSubmitFunction";
+import * as onGridSaveValidation from "@/helper/onGridSave";
 import QuotationModal from "@/components/Modal/quotationModal.jsx";
 import QuotationModalAir from "@/components/Modal/quotationModalAir.jsx";
 import BatchModel from "@/components/Modal/batchModel.jsx";
@@ -168,6 +169,51 @@ async function onSubmitFunctionCall(
         formControlData,
         values,
         setStateVariable,
+      });
+      return result;
+      // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
+    }
+  }
+}
+
+async function onGridSaveFunctionCall(
+  functionData,
+  newState,
+  formControlData,
+  values,
+  setStateVariable,
+  submitNewState,
+  setSubmitNewState,
+) {
+  const funcNameMatch = functionData?.match(/^(\w+)/);
+  const argsMatch = functionData?.match(/\((.*)\)/);
+  //console.log(functionData, "functionData");
+  // Check if we have a function name match, and we have an argsMatch (even if there are no arguments)
+  if (funcNameMatch && argsMatch !== null) {
+    const funcName = funcNameMatch[1];
+    const argsStr = argsMatch[1] || "";
+
+    // Find the function in formControlValidation by the extracted name
+    const func = onGridSaveValidation?.[funcName];
+
+    if (typeof func === "function") {
+      // Prepare arguments: If there are no arguments, argsStr will be an empty string
+      let args;
+      if (argsStr === "") {
+        args = {}; // No arguments, so pass an empty object or as per the function's expected parameters
+      } else {
+        args = argsStr; // Has arguments, pass them as an object
+      }
+      //console.log(args);
+      // Call the function with the prepared arguments
+      let result = onGridSaveValidation?.[funcName]({
+        args,
+        newState,
+        formControlData,
+        values,
+        setStateVariable,
+        submitNewState,
+        setSubmitNewState,
       });
       return result;
       // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
@@ -530,9 +576,8 @@ export default function AddEditFormControll() {
       });
     } else {
       // No files, proceed as normal
-      const formFieldsValues = { ...newState, ...updatedValues };
-      setNewState(formFieldsValues);
-      setSubmitNewState(formFieldsValues);
+      setNewState((prev) => ({...prev, ...updatedValues}));
+      setSubmitNewState((prev) => ({...prev, ...updatedValues}));
     }
   };
 
@@ -578,9 +623,9 @@ export default function AddEditFormControll() {
           dataToCopy[data?.toTableName] =
             formControlData?.controlname.toLowerCase() == "multiselect"
               ? [
-                  ...newState[data?.toTableName],
-                  ...getCopyDetails.data[0][data?.toTableName],
-                ]
+                ...newState[data?.toTableName],
+                ...getCopyDetails.data[0][data?.toTableName],
+              ]
               : getCopyDetails.data[0][data?.toTableName];
         });
 
@@ -971,7 +1016,7 @@ export default function AddEditFormControll() {
           ...prev,
           tblRateRequestCharge:
             newState?.scopeOfWork === null ||
-            newState?.scopeOfWork?.length === 0
+              newState?.scopeOfWork?.length === 0
               ? []
               : chargesWithExchangeRates.filter((r) => r !== undefined),
         };
@@ -999,7 +1044,7 @@ export default function AddEditFormControll() {
           ...prev,
           tblRateRequestCharge:
             newState?.scopeOfWork === null ||
-            newState?.scopeOfWork?.length === 0
+              newState?.scopeOfWork?.length === 0
               ? []
               : submitData.filter((r) => r !== undefined),
         };
@@ -1191,12 +1236,12 @@ export default function AddEditFormControll() {
                 ],
                 buyExchangeRate:
                   item.buyExchangeRate !== null &&
-                  item.buyExchangeRate !== undefined
+                    item.buyExchangeRate !== undefined
                     ? String(item.buyExchangeRate)
                     : null,
                 sellExchangeRate:
                   item.sellExchangeRate !== null &&
-                  item.sellExchangeRate !== undefined
+                    item.sellExchangeRate !== undefined
                     ? String(item.sellExchangeRate)
                     : null,
               };
@@ -1770,7 +1815,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: true }
                 : field,
           );
@@ -1810,7 +1855,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, isEditable: true }
                 : field,
           );
@@ -1915,7 +1960,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: false }
                 : field,
           );
@@ -1955,7 +2000,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-              field.isControlShow !== false
+                field.isControlShow !== false
                 ? { ...field, isEditable: false }
                 : field,
           );
@@ -2244,9 +2289,9 @@ export default function AddEditFormControll() {
       const hasChanges = updatedRows.some((updatedRow, index) => {
         return (
           updatedRow.buyExchangeRate !==
-            newState.tblRateRequestCharge[index].buyExchangeRate ||
+          newState.tblRateRequestCharge[index].buyExchangeRate ||
           updatedRow.sellExchangeRate !==
-            newState.tblRateRequestCharge[index].sellExchangeRate
+          newState.tblRateRequestCharge[index].sellExchangeRate
         );
       });
 
@@ -2925,103 +2970,31 @@ function ChildAccordianComponent({
     setChildObject((prevObject) => ({ ...prevObject, ...updatedValues }));
   };
 
-  const childButtonHandler = (section, indexValue, islastTab) => {
-    if (isConfigFlagEnabled(section?.isAddHide)) return;
-    //    console.log("childButtonHandler", section);
-    if (isChildAccordionOpen) {
-      setClickCount((prevCount) => prevCount + 1);
+const childButtonHandler = async (section, indexValue, islastTab) => {
+  if (isConfigFlagEnabled(section?.isAddHide)) return;
+  if (isChildAccordionOpen) {
+    setClickCount((prevCount) => prevCount + 1);
+  }
+
+  inputFieldsVisible == false && setInputFieldsVisible((prev) => !prev);
+  if (inputFieldsVisible) {
+    let Data = { ...childObject };
+    for (var feild of section.fields) {
+      if (
+        feild.isRequired &&
+        (!Object.prototype.hasOwnProperty.call(
+          childObject,
+          feild.fieldname,
+        ) ||
+          String(childObject[feild.fieldname] || "").trim() === "")
+      ) {
+        toast.error(`Value for ${feild.yourlabel} is missing or empty.`);
+        return;
+      }
     }
 
-    inputFieldsVisible == false && setInputFieldsVisible((prev) => !prev);
-    if (inputFieldsVisible) {
-      let Data = { ...childObject };
-      for (var feild of section.fields) {
-        if (
-          feild.isRequired &&
-          (!Object.prototype.hasOwnProperty.call(
-            childObject,
-            feild.fieldname,
-          ) ||
-            //childObject[feild.fieldname]?.trim() === "")
-            String(childObject[feild.fieldname] || "").trim() === "")
-        ) {
-          toast.error(`Value for ${feild.yourlabel} is missing or empty.`);
-          return;
-        }
-      }
-
-      toast.dismiss();
-      try {
-        if (section.functionOnSubmit && section.functionOnSubmit !== null) {
-          let functonsArray = section.functionOnSubmit?.trim().split(";");
-          //          console.log("functonsArray", functonsArray);
-
-          // let Data = { ...childObject }
-          for (const fun of functonsArray) {
-            if (typeof onSubmitValidation[fun] == "function") {
-            }
-
-            let updatedData = onSubmitFunctionCall(
-              fun,
-              newState,
-              formControlData,
-              Data,
-              setChildObject,
-            );
-            if (updatedData?.alertShow == true) {
-              // if (updatedData.type == "success") {
-              //   toast.success(updatedData.message);
-
-              // }
-              // else {
-              // toast.error(updatedData.message);
-              setParaText(updatedData.message);
-              setIsError(true);
-              setOpenModal((prev) => !prev);
-              setTypeofModal("onCheck");
-              // setClearFlag({
-              //   isClear: true,
-              //   fieldName: result.fieldName,
-              // });
-              // }
-            }
-            if (updatedData) {
-              Data = updatedData.values;
-              setNewState((prevState) => {
-                return {
-                  ...prevState,
-                  ...updatedData?.newState,
-                };
-              });
-              setSubmitNewState((prevState) => {
-                return {
-                  ...prevState,
-                  ...updatedData?.newState,
-                };
-              });
-            }
-          }
-          //          console.log("childButtonHandler", Data);
-
-          // setChildObject((prevObject) => {
-          //   return { ...prevObject, ...Data }; // Merge new data into childObject
-          // });
-          // section?.functionOnSubmit
-          //   .split(";")
-          //   .forEach((e) => onSubmitFunctionCall(e, childObject));
-        }
-      } catch (error) {
-        return toast.error(error.message);
-      }
-
-      // try {
-      //   if (typeof onSubmitValidation[section.functionOnSubmit] == "function") {
-      //   onSubmitValidation?.[section.functionOnSubmit]({
-      //     ...childObject})
-      //   }
-      // } catch (error) {
-      //  return toast.error(error.message);
-      // }
+    toast.dismiss();
+    try {
       const tmpData = { ...newState };
       const subChild = section.subChild?.reduce((obj, item) => {
         obj[item.tableName] = [];
@@ -3031,25 +3004,72 @@ function ChildAccordianComponent({
       if (hasBlackValues(subChild)) {
         return;
       }
-      tmpData[section.tableName].push({
-        ...subChild,
-        isChecked: true,
-        indexValue: tmpData[section.tableName].length,
-      });
+      if (Array.isArray(tmpData[section.tableName])) {
+        tmpData[section.tableName].push({
+          ...subChild,
+          isChecked: true,
+          indexValue: tmpData[section.tableName].length,
+        });
+      } else {
+        tmpData[section.tableName] = [
+          {
+            ...subChild,
+            isChecked: true,
+            indexValue: tmpData[section.tableName]?.length,
+          },
+        ];
+      }
       setNewState(tmpData);
       setSubmitNewState(tmpData);
-      setOriginalData(tmpData);
-      setRenderedData(newState[section.tableName]);
-      setChildObject({});
-      setInputFieldsVisible((prev) => !prev);
-      if (islastTab == true) {
-        setTimeout(() => {
-          setInputFieldsVisible((prev) => !prev);
-        }, 3);
+
+      if (section.functionOnGridSave && section.functionOnGridSave !== null) {
+        let functonsArray = section.functionOnGridSave.trim().split(";");
+        for (const fun of functonsArray) {
+          let updatedData = await onGridSaveFunctionCall(
+            fun,
+            newState,
+            formControlData,
+            Data,
+            setChildObject,
+          );
+          if (updatedData?.alertShow == true) {
+            setParaText(updatedData.message);
+            setIsError(true);
+            setOpenModal((prev) => !prev);
+            setTypeofModal("onCheck");
+          }
+          if (updatedData) {
+            Data = updatedData.values;
+            setNewState((prevState) => {
+              return {
+                ...prevState,
+                ...updatedData?.newState,
+              };
+            });
+            setSubmitNewState((prevState) => {
+              return {
+                ...prevState,
+                ...updatedData?.newState,
+              };
+            });
+          }
+        }
       }
-      // islastTab == true &&
+    } catch (error) {
+      return toast.error(error.message);
     }
-  };
+
+    if (islastTab == true) {
+      setTimeout(() => {
+        setInputFieldsVisible((prev) => !prev);
+      }, 3);
+    }
+
+    setRenderedData(newState[section.tableName]);
+    setChildObject({});
+    setInputFieldsVisible((prev) => !prev);
+  }
+};
 
   useEffect(() => {
     let tmpData = { ...childObject };
@@ -3095,12 +3115,12 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-                const parsedValue =
-                  typeof row[item.fieldname] === "number"
-                    ? row[item.fieldname]
-                    : parseFloat(row[item.fieldname] || 0);
-                return isNaN(parsedValue) ? sum : sum + parsedValue;
-              }, 0) // Calculate sum for 's' type
+              const parsedValue =
+                typeof row[item.fieldname] === "number"
+                  ? row[item.fieldname]
+                  : parseFloat(row[item.fieldname] || 0);
+              return isNaN(parsedValue) ? sum : sum + parsedValue;
+            }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -3111,115 +3131,115 @@ function ChildAccordianComponent({
     });
   };
 
-  const calculateTotalVolumeAndWeight = () => {
-    if (!newState || !Array.isArray(newState.tblRateRequestQty)) {
-      return newState;
-    }
+  // const calculateTotalVolumeAndWeight = () => {
+  //   if (!newState || !Array.isArray(newState.tblRateRequestQty)) {
+  //     return newState;
+  //   }
 
-    let totalVolume = 0;
-    let totalVolumeWt = 0;
-    let totalNoPackage = 0;
+  //   let totalVolume = 0;
+  //   let totalVolumeWt = 0;
+  //   let totalNoPackage = 0;
 
-    newState.tblRateRequestQty.forEach((row) => {
-      const volume = parseFloat(row.volume) || 0;
-      const volumeWt = parseFloat(row.volumeWt) || 0;
-      const noPackage = parseFloat(row.noOfPackages) || 0;
-      totalVolume += volume;
-      totalVolumeWt += volumeWt;
-      totalNoPackage += noPackage;
-    });
+  //   newState.tblRateRequestQty.forEach((row) => {
+  //     const volume = parseFloat(row.volume) || 0;
+  //     const volumeWt = parseFloat(row.volumeWt) || 0;
+  //     const noPackage = parseFloat(row.noOfPackages) || 0;
+  //     totalVolume += volume;
+  //     totalVolumeWt += volumeWt;
+  //     totalNoPackage += noPackage;
+  //   });
 
-    setNewState((prevState) => ({
-      ...prevState,
-      volume: totalVolume,
-      volumeWt: totalVolumeWt,
-      noOfPackages: totalNoPackage,
-    }));
-  };
+  //   setNewState((prevState) => ({
+  //     ...prevState,
+  //     volume: totalVolume,
+  //     volumeWt: totalVolumeWt,
+  //     noOfPackages: totalNoPackage,
+  //   }));
+  // };
 
-  useEffect(() => {
-    calculateTotalVolumeAndWeight();
-  }, [newState.tblRateRequestQty]);
+  // useEffect(() => {
+  //   calculateTotalVolumeAndWeight();
+  // }, [newState.tblRateRequestQty]);
 
-  const calculateTotalNoOfPackages = () => {
-    if (!newState || !Array.isArray(newState.tblJobContainer)) {
-      return newState; // Return unchanged state if invalid
-    }
+  // const calculateTotalNoOfPackages = () => {
+  //   if (!newState || !Array.isArray(newState.tblJobContainer)) {
+  //     return newState; // Return unchanged state if invalid
+  //   }
 
-    const toNum = (v) =>
-      v == null || v === "" ? 0 : Number(String(v).replace(/,/g, "")) || 0;
+  //   const toNum = (v) =>
+  //     v == null || v === "" ? 0 : Number(String(v).replace(/,/g, "")) || 0;
 
-    let totalNoPackages = 0;
+  //   let totalNoPackages = 0;
 
-    newState.tblJobContainer.forEach((row) => {
-      totalNoPackages += toNum(row?.noOfPackages);
-    });
+  //   newState.tblJobContainer.forEach((row) => {
+  //     totalNoPackages += toNum(row?.noOfPackages);
+  //   });
 
-    setNewState((prevState) => {
-      // If your state ever had a legacy key, prefer it
-      const targetKey = Object.prototype.hasOwnProperty.call(
-        prevState,
-        "noOfpackages",
-      )
-        ? "noOfpackages"
-        : "noOfPackages";
+  //   setNewState((prevState) => {
+  //     // If your state ever had a legacy key, prefer it
+  //     const targetKey = Object.prototype.hasOwnProperty.call(
+  //       prevState,
+  //       "noOfpackages",
+  //     )
+  //       ? "noOfpackages"
+  //       : "noOfPackages";
 
-      // Prevent unnecessary re-renders
-      if (toNum(prevState?.[targetKey]) === totalNoPackages) return prevState;
+  //     // Prevent unnecessary re-renders
+  //     if (toNum(prevState?.[targetKey]) === totalNoPackages) return prevState;
 
-      return {
-        ...prevState,
-        [targetKey]: totalNoPackages,
-      };
-    });
-  };
+  //     return {
+  //       ...prevState,
+  //       [targetKey]: totalNoPackages,
+  //     };
+  //   });
+  // };
 
-  useEffect(() => {
-    calculateTotalNoOfPackages();
-  }, [newState.tblJobContainer]);
-  const calculateTotalGrossWeight = () => {
-    if (!newState || !Array.isArray(newState.tblJobContainer)) {
-      return newState;
-    }
+  // useEffect(() => {
+  //   calculateTotalNoOfPackages();
+  // }, [newState.tblJobContainer]);
+  // const calculateTotalGrossWeight = () => {
+  //   if (!newState || !Array.isArray(newState.tblJobContainer)) {
+  //     return newState;
+  //   }
 
-    let totalGrossWt = 0;
+  //   let totalGrossWt = 0;
 
-    newState.tblJobContainer.forEach((row) => {
-      const cargoWt = parseFloat(row.grossWt) || 0;
-      totalGrossWt += cargoWt;
-    });
+  //   newState.tblJobContainer.forEach((row) => {
+  //     const cargoWt = parseFloat(row.grossWt) || 0;
+  //     totalGrossWt += cargoWt;
+  //   });
 
-    setNewState((prevState) => ({
-      ...prevState,
-      cargoWt: totalGrossWt,
-    }));
-  };
+  //   setNewState((prevState) => ({
+  //     ...prevState,
+  //     cargoWt: totalGrossWt,
+  //   }));
+  // };
 
-  useEffect(() => {
-    calculateTotalGrossWeight();
-  }, [newState.tblJobContainer]);
+  // useEffect(() => {
+  //   calculateTotalGrossWeight();
+  // }, [newState.tblJobContainer]);
 
-  const calculateTotalGrossWeightBl = () => {
-    if (!newState || !Array.isArray(newState.tblBlContainer)) {
-      return newState;
-    }
+  // const calculateTotalGrossWeightBl = () => {
+  //   if (!newState || !Array.isArray(newState.tblBlContainer)) {
+  //     return newState;
+  //   }
 
-    let totalGrossWt = 0;
+  //   let totalGrossWt = 0;
 
-    newState.tblBlContainer.forEach((row) => {
-      const grossWts = parseFloat(row.grossWt) || 0;
-      totalGrossWt += grossWts;
-    });
+  //   newState.tblBlContainer.forEach((row) => {
+  //     const grossWts = parseFloat(row.grossWt) || 0;
+  //     totalGrossWt += grossWts;
+  //   });
 
-    setNewState((prevState) => ({
-      ...prevState,
-      grossWt: totalGrossWt,
-    }));
-  };
+  //   setNewState((prevState) => ({
+  //     ...prevState,
+  //     grossWt: totalGrossWt,
+  //   }));
+  // };
 
-  useEffect(() => {
-    calculateTotalGrossWeightBl();
-  }, [newState.tblBlContainer]);
+  // useEffect(() => {
+  //   calculateTotalGrossWeightBl();
+  // }, [newState.tblBlContainer]);
 
   useEffect(() => {
     // Initialize with initial data
@@ -3243,102 +3263,91 @@ function ChildAccordianComponent({
     setRenderedData((prevData) => [...prevData, ...newData]);
   };
 
-  const deleteChildRecord = (index) => {
+  const deleteChildRecord = async (index) => {
     if (isChildDeleteHidden) return;
-    try {
+     try {
       if (section.functionOnDelete && section.functionOnDelete !== null) {
-        let functonsArray = section.functionOnDelete?.trim().split(";");
-        // let functonsArray = ["setCalculateVolume(volume)"]
-        //        console.log("functonsArray", functonsArray);
-        let UpdatedNewState = {
+        const functonsArray = section.functionOnDelete.trim().split(";");
+        const filteredRows = newState[section.tableName].filter(
+          (_, i) => i !== index,
+        );
+        const UpdatedNewState = {
           ...newState,
-          [section.tableName]: newState[section.tableName].filter(
-            (_, i) => i !== index,
-          ),
+          [section.tableName]: filteredRows,
         };
-        let Data = { ...newState[section.tableName][index] };
+
         for (const fun of functonsArray) {
-          if (typeof onSubmitValidation[fun] == "function") {
+          if (typeof onSubmitValidation[fun] === "function") {
+            // Optional: Validation logic
           }
 
-          let updatedData = onSubmitFunctionCall(
+          const updatedData = await onSubmitFunctionCall(
             fun,
             UpdatedNewState,
             formControlData,
             {},
             setChildObject,
           );
-          if (updatedData?.alertShow == true) {
-            // if (updatedData.type == "success") {
-            //   toast.success(updatedData.message);
 
-            // }
-            // else {
-            // toast.error(updatedData.message);
+          if (updatedData?.alertShow === true) {
             setParaText(updatedData.message);
             setIsError(true);
             setOpenModal((prev) => !prev);
             setTypeofModal("onCheck");
-            // setClearFlag({
-            //   isClear: true,
-            //   fieldName: result.fieldName,
-            // });
-            // }
           }
+
           if (updatedData) {
-            Data = updatedData.values;
-            setNewState((prevState) => {
-              return {
-                ...prevState,
-                ...updatedData?.newState,
-              };
+            
+           setNewState((prevState) => {
+         const updatedRows = updatedData.newState[section.tableName].filter(
+            (_, idx) => idx !== index,
+          );
+          const updatedState = {
+            ...updatedData.newState,
+            [section.tableName]: updatedRows,
+          };
+          //calculateTotalVolumeAndWeight(updatedRows, setNewState); // ✅ Recalculate
+          return updatedState;
             });
+
             setSubmitNewState((prevState) => {
-              return {
-                ...prevState,
-                ...updatedData?.newState,
-              };
+            const updatedRows = updatedData.newState[section.tableName].filter(
+            (_, idx) => idx !== index,
+          );
+          const updatedState = {
+            ...updatedData.newState,
+            [section.tableName]: updatedRows,
+          };
+          //calculateTotalVolumeAndWeight(updatedRows, setNewState); // ✅ Recalculate
+          return updatedState;
             });
           }
         }
       } else {
+        // ✅ Standard flow (no functionOnDelete)
         setNewState((prevState) => {
-          const newStateCopy = { ...prevState };
-          const updatedData = newStateCopy[section.tableName].filter(
+          const updatedRows = prevState[section.tableName].filter(
             (_, idx) => idx !== index,
           );
-          newStateCopy[section.tableName] = updatedData;
+          const updatedState = {
+            ...prevState,
+            [section.tableName]: updatedRows,
+          };
+          //calculateTotalVolumeAndWeight(updatedRows, setNewState); // ✅ Recalculate
+          return updatedState;
+        });
 
-          if (updatedData.length === 0) {
-            //setInputFieldsVisible((prev) => !prev);
-          }
-          return newStateCopy;
-        });
         setSubmitNewState((prevState) => {
-          const newStateCopy = { ...prevState };
-          const updatedData = newStateCopy[section.tableName].filter(
+          const updatedRows = prevState[section.tableName].filter(
             (_, idx) => idx !== index,
           );
-          newStateCopy[section.tableName] = updatedData;
-          if (updatedData.length === 0) {
-            //setInputFieldsVisible((prev) => !prev);
-          }
-          return newStateCopy;
-        });
-        setOriginalData((prevState) => {
-          const newStateCopy = { ...prevState };
-          const updatedData = newStateCopy[section?.tableName]?.filter(
-            (_, idx) => idx !== index,
-          );
-          newStateCopy[section.tableName] = updatedData;
-          if (updatedData?.length === 0) {
-            //setInputFieldsVisible((prev) => !prev);
-            setInputFieldsVisible(true);
-          }
-          return newStateCopy;
+          return {
+            ...prevState,
+            [section.tableName]: updatedRows,
+          };
         });
       }
-    } catch (error) {
+    }  catch (error) {
       setNewState((prevState) => {
         const newStateCopy = { ...prevState };
         const updatedData = newStateCopy[section.tableName].filter(
@@ -3413,18 +3422,85 @@ function ChildAccordianComponent({
     // });
   };
 
-  const handleAddContainerRow = (section, indexValue) => {
-    if (isConfigFlagEnabled(section?.isAddHide)) return;
-    setIschildAccordionOpen(true);
-    setInputFieldsVisible(true);
+  const hasDestinationFreeDaysField = section?.fields?.some(
+  (field) => field?.fieldname === "destinationFreeDays",
+);
 
-    setChildObject((prev) => ({
-      ...(prev || {}),
-      destinationFreeDays: newState?.destinationFreeDays ?? "",
-      ///noOfPackages: newState?.noOfPackages ?? "",
-      isChecked: true,
-    }));
+useEffect(() => {
+  if (!hasDestinationFreeDaysField || !section?.tableName) return;
+
+  const parentDestinationFreeDays = newState?.destinationFreeDays ?? "";
+
+  // 1. Update currently open unsaved child form
+  if (inputFieldsVisible) {
+    setChildObject((prev) => {
+      if ((prev?.destinationFreeDays ?? "") === parentDestinationFreeDays) {
+        return prev;
+      }
+
+      return {
+        ...(prev || {}),
+        destinationFreeDays: parentDestinationFreeDays,
+      };
+    });
+  }
+
+  // 2. Update already saved child grid rows
+  const updateChildRows = (prevState) => {
+    const rows = prevState?.[section.tableName];
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return prevState;
+    }
+
+    let isChanged = false;
+
+    const updatedRows = rows.map((row) => {
+      if ((row?.destinationFreeDays ?? "") === parentDestinationFreeDays) {
+        return row;
+      }
+
+      isChanged = true;
+
+      return {
+        ...row,
+        destinationFreeDays: parentDestinationFreeDays,
+      };
+    });
+
+    if (!isChanged) {
+      return prevState;
+    }
+
+    return {
+      ...prevState,
+      [section.tableName]: updatedRows,
+    };
   };
+
+  setNewState(updateChildRows);
+  setSubmitNewState(updateChildRows);
+}, [
+  newState?.destinationFreeDays,
+  section?.tableName,
+  inputFieldsVisible,
+  hasDestinationFreeDaysField,
+]);
+
+  const handleAddContainerRow = (section, indexValue) => {
+  if (isConfigFlagEnabled(section?.isAddHide)) return;
+
+  setIschildAccordionOpen(true);
+  setInputFieldsVisible(true);
+
+  setChildObject((prev) => ({
+    ...(prev || {}),
+    destinationFreeDays: newState?.destinationFreeDays ?? "",
+    isChecked: true,
+  }));
+};
+
+  console.log("newState Test", newState);
 
   const removeChildRecordFromInsert = (id, index) => {
     setSubmitNewState((prevState) => {
@@ -3773,7 +3849,7 @@ function ChildAccordianComponent({
       const right = Math.round(
         Math.floor(
           tableRef.current?.getBoundingClientRect()?.width +
-            tableRef.current?.scrollLeft,
+          tableRef.current?.scrollLeft,
         ),
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
@@ -3836,6 +3912,7 @@ function ChildAccordianComponent({
       }
     }
   }
+
   useEffect(() => {
     if (section && section?.functionOnLoad?.length > 0 && inputFieldsVisible) {
       const funcCallString = section.functionOnLoad;
@@ -3922,11 +3999,9 @@ function ChildAccordianComponent({
         <AccordionDetails
           className={`${styles.pageBackground} flex relative`}
           sx={{
-            height: inputFieldsVisible
-              ? "auto"
-              : clickCount === 0
-                ? "3.5rem"
-                : "auto",
+            height: newState[section.tableName]?.length <= 0 && !inputFieldsVisible
+            ? "3.5rem"
+             :  "auto",
             padding: inputFieldsVisible ? "0" : "0",
             width: "100%",
           }}
@@ -3934,7 +4009,7 @@ function ChildAccordianComponent({
           <div key={indexValue} className=" w-full ">
             {/* Icon Button on the right */}
             <div className="absolute top-1 right-[-3px] flex  justify-end">
-              {!isChildAddHidden && clickCount === 0 && !inputFieldsVisible && (
+              {!isChildAddHidden &&  !inputFieldsVisible && (
                 <HoverIcon
                   defaultIcon={addLogo}
                   hoverIcon={plusIconHover}
@@ -3958,7 +4033,7 @@ function ChildAccordianComponent({
             </div>
 
             {/* Custom Input Fields in the middle */}
-            {!isChildAddHidden && inputFieldsVisible && (
+            {!isChildAddHidden && inputFieldsVisible && !isGridEdit && (
               <div
                 className={` overflow-hidden  flex    items-start gap-4 mt-[0.5rem] ml-[1rem] mb-[0.5rem]  justify-between`}
               >
@@ -3986,7 +4061,7 @@ function ChildAccordianComponent({
                     //   setInputFieldsVisible(
                     //     (prev) => !prev
                     //   );
-                    calculateTotalVolumeAndWeight();
+                    //calculateTotalVolumeAndWeight();
                     calculateTotalGrossWeight();
                     calculateTotalGrossWeightBl();
                   }}
@@ -4013,10 +4088,10 @@ function ChildAccordianComponent({
                     title={"Save"}
                     onClick={() => {
                       childButtonHandler(section, indexValue);
-                      calculateTotalGrossWeight();
-                      calculateTotalVolumeAndWeight();
-                      calculateTotalGrossWeightBl();
-                      calculateTotalNoOfPackages();
+                      //calculateTotalGrossWeight();
+                      //calculateTotalVolumeAndWeight();
+                     // calculateTotalGrossWeightBl();
+                      //calculateTotalNoOfPackages();
                     }}
                   />
                 </div>
@@ -4053,7 +4128,7 @@ function ChildAccordianComponent({
 
             {/* {newState[section.tableName] &&
               newState[section.tableName]?.length > 0 && ( */}
-            {!inputFieldsVisible &&
+            {
               newState[section.tableName] &&
               newState[section.tableName]?.length > 0 && (
                 <>
@@ -4132,7 +4207,7 @@ function ChildAccordianComponent({
                                       ...childTableHeaderStyle,
                                       paddingLeft:
                                         section?.showSrNo === true ||
-                                        section?.showSrNo === "true"
+                                          section?.showSrNo === "true"
                                           ? "29px !important"
                                           : "0px !important",
                                     }}
@@ -4154,13 +4229,25 @@ function ChildAccordianComponent({
                                         <HoverIcon
                                           defaultIcon={addLogo}
                                           hoverIcon={plusIconHover}
-                                          altText={"Add"}
-                                          title={"Add"}
+                                          altText={"Add1"}
+                                          title={"Add1"}
+                                          // onClick={() => {
+                                          //   inputFieldsVisible == false &&
+                                          //     setInputFieldsVisible(
+                                          //       (prev) => !prev,
+                                          //     );
+                                          // }}
                                           onClick={() => {
-                                            inputFieldsVisible == false &&
+                                            if (inputFieldsVisible === false) {
                                               setInputFieldsVisible(
                                                 (prev) => !prev,
                                               );
+                                            }
+
+                                            handleAddContainerRow(
+                                              section,
+                                              indexValue,
+                                            );
                                           }}
                                         />
                                       )}
@@ -4241,7 +4328,7 @@ function ChildAccordianComponent({
                                 section?.showSrNo === true ||
                                 section?.showSrNo === "true"
                               }
-                              // expandAll={expandAll}
+                            // expandAll={expandAll}
                             />
                           ))}
                           <>
@@ -4276,7 +4363,7 @@ function ChildAccordianComponent({
                                               {(field.type === "number" ||
                                                 field.type === "decimal" ||
                                                 field.type === "string") &&
-                                              field.gridTotal
+                                                field.gridTotal
                                                 ? columnTotals[field.fieldname]
                                                 : ""}
                                             </div>

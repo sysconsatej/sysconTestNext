@@ -316,7 +316,7 @@ function CustomeInputFieldsDynamicReports({
     Object.assign(updatedValues, {
       [field.fieldname]:
         Array.isArray(formattedValue) &&
-          field.controlname?.toLowerCase() === "dropdown"
+        field.controlname?.toLowerCase() === "dropdown"
           ? formattedValue.join(",")
           : formattedValue,
     });
@@ -414,7 +414,7 @@ function CustomeInputFieldsDynamicReports({
     Object.assign(updatedValues, {
       [field.fieldname]:
         Array.isArray(formattedValue) &&
-          field.controlname?.toLowerCase() === "dropdown"
+        field.controlname?.toLowerCase() === "dropdown"
           ? formattedValue.join(",")
           : formattedValue,
     });
@@ -543,10 +543,11 @@ function CustomeInputFieldsDynamicReports({
 
   return (
     <div
-      className={`flex flex-wrap py-[3px] ${inputFieldData?.map((field) => field.isBreak).includes(true)
-        ? ""
-        : "mr-2 "
-        }
+      className={`flex flex-wrap py-[3px] ${
+        inputFieldData?.map((field) => field.isBreak).includes(true)
+          ? ""
+          : "mr-2 "
+      }
       `}
     >
       {inputFieldData?.map((field, index, array) => {
@@ -940,8 +941,8 @@ function InputFieldRenderer(props) {
       referenceView: field.referenceView,
       dropdownFilter:
         field.dropdownFilter &&
-          field.dropdownFilter !== null &&
-          field.dropdownFilter !== ""
+        field.dropdownFilter !== null &&
+        field.dropdownFilter !== ""
           ? dynamicValuReplace(field.dropdownFilter)
           : "",
       search: inputValueForDataFetch,
@@ -1005,7 +1006,83 @@ function InputFieldRenderer(props) {
   let uniqueId = `${field.controlname}_${field.fieldname}_${field?.id}_${index}`;
   let fieldId = `${field.fieldname}_${field?.id}_${index}`;
   let inputLabel = field.yourlabel;
+  const getTooltipValue = () => {
+    const value = values?.[field.fieldname];
+    const controlName = (field.controlname || "").toLowerCase();
+    if (value === null || value === undefined || value === "") {
+      return inputLabel;
+    }
+    if (controlName === "dropdown") {
+      return (
+        dropDownValues?.find((item) => item.value == value)?.label ||
+        String(value)
+      );
+    }
+    if (controlName === "multiselect") {
+      const selectedIds = String(value).split(",");
 
+      const labels = dropDownValues
+        ?.filter((item) => selectedIds.includes(String(item.value)))
+        ?.map((item) => item.label);
+
+      return labels?.length ? labels.join(", ") : inputLabel;
+    }
+    if (controlName === "checkbox") {
+      return value ? "Yes" : "No";
+    }
+    if (controlName === "radio") {
+      let options = [];
+
+      if (Array.isArray(field.dropDownValues)) {
+        options = field.dropDownValues.map((item) => ({
+          value: String(item.id),
+          label: String(item.value),
+        }));
+      } else if (typeof field.dropDownValues === "string") {
+        options = field.dropDownValues.split(",").map((item) => {
+          const parts = item.split(".");
+          const optionValue = parts[0].trim();
+          const optionLabel = parts[1]?.trim() || optionValue;
+
+          return {
+            value: optionValue,
+            label: optionLabel,
+          };
+        });
+      }
+
+      return (
+        options.find((item) => String(item.value) === String(value))?.label ||
+        String(value)
+      );
+    }
+    if (
+      controlName === "date" ||
+      controlName === "datetime" ||
+      controlName === "datetimepicker" ||
+      controlName === "time" ||
+      controlName === "timepicker" ||
+      controlName.includes("date") ||
+      controlName.includes("time")
+    ) {
+      const parsed = dayjs(value);
+
+      if (!parsed.isValid()) {
+        return String(value);
+      }
+      if (controlName === "time" || controlName === "timepicker") {
+        return parsed.format("HH:mm:ss");
+      }
+      if (controlName === "date") {
+        return parsed.format(dateFormat || "DD/MM/YYYY");
+      }
+      return parsed.format(`${dateFormat || "DD/MM/YYYY"} HH:mm:ss`);
+    }
+    if (controlName === "file" || controlName === "multiselectfile") {
+      return fileName?.[field.fieldname] || inputLabel;
+    }
+    return String(value);
+  };
   let callInputChangeFunc = true;
 
   const CustomMenuList = (props) => {
@@ -1318,7 +1395,7 @@ function InputFieldRenderer(props) {
     Object.assign(updatedValues, {
       [field.fieldname]:
         Array.isArray(formattedValue) &&
-          field.controlname?.toLowerCase() === "dropdown"
+        field.controlname?.toLowerCase() === "dropdown"
           ? formattedValue.join(",")
           : formattedValue,
     });
@@ -1422,7 +1499,9 @@ function InputFieldRenderer(props) {
       return (
         <LightTooltip
           key={uniqueId}
-          title={inputValueChange.length ? "" : field.yourlabel}
+          title={inputValueChange.length ? "" : getTooltipValue()}
+          arrow
+          placement="top"
         >
           {field.isSwitchToText && switchToText ? (
             <CustomeTextField
@@ -1524,10 +1603,10 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                      field.isEditableMode?.toLowerCase(),
-                    ) && !field.isEditable
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                    !field.isEditable)
               }
               InputLabelProps={{
                 classes: {
@@ -1543,14 +1622,15 @@ function InputFieldRenderer(props) {
               }}
             >
               <p
-                className={`absolute left-[11px] z-10 px-2 transition-all duration-200 ${showLabel ||
+                className={`absolute left-[11px] z-10 px-2 transition-all duration-200 ${
+                  showLabel ||
                   values[field.fieldname] ||
                   inputValueChange.length > 0
-                  ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 opacity-100" // Label moves to the top
-                  : inputValueChange.length == 0 || !values[field.fieldname]
-                    ? "top-[calc(100%-1.2rem)] opacity-100"
-                    : "" // Label sits at the bottom, emulating a placeholder
-                  }`}
+                    ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 opacity-100" // Label moves to the top
+                    : inputValueChange.length == 0 || !values[field.fieldname]
+                      ? "top-[calc(100%-1.2rem)] opacity-100"
+                      : "" // Label sits at the bottom, emulating a placeholder
+                }`}
                 style={{ fontSize: "var(--inputFontSize)" }}
               >
                 <span
@@ -1607,17 +1687,17 @@ function InputFieldRenderer(props) {
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase(),
-                      ) && !field.isEditable
+                          field.isEditableMode?.toLowerCase(),
+                        ) && !field.isEditable
                     : ["a", "b"].includes(
-                      field.isEditableMode?.toLowerCase(),
-                    ) && !field.isEditable)
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable)
                 }
                 value={
                   Array.isArray(dropDownValues)
                     ? dropDownValues?.find(
-                      (item) => item.value == values?.[field.fieldname],
-                    )
+                        (item) => item.value == values?.[field.fieldname],
+                      )
                     : null
                 }
                 noOptionsMessage={() =>
@@ -1732,17 +1812,18 @@ function InputFieldRenderer(props) {
       );
     case "multiselect":
       return (
-        <LightTooltip title={inputLabel}>
+        <LightTooltip title={getTooltipValue()} arrow placement="top">
           <div className="relative ">
             <p
-              className={`text-[8px] absolute left-[11px] z-10 px-2 transition-all duration-200 ${showLabel ||
+              className={`text-[8px] absolute left-[11px] z-10 px-2 transition-all duration-200 ${
+                showLabel ||
                 values[field.fieldname] ||
                 inputValueChange.length > 0
-                ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-75 opacity-100" // Label moves to the top
-                : inputValueChange.length == 0 || !values[field.fieldname]
-                  ? "top-[calc(100%-1.2rem)] opacity-100"
-                  : "" // Label sits at the bottom, emulating a placeholder
-                }`}
+                  ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-75 opacity-100" // Label moves to the top
+                  : inputValueChange.length == 0 || !values[field.fieldname]
+                    ? "top-[calc(100%-1.2rem)] opacity-100"
+                    : "" // Label sits at the bottom, emulating a placeholder
+              }`}
             >
               <span
                 onClick={() => {
@@ -1750,11 +1831,12 @@ function InputFieldRenderer(props) {
                   setMenuOpen(true);
                 }}
                 style={{ color: "rgba(0, 0, 0, 0.75)" }}
-                className={`${(showLabel || inputValueChange.length > 0) &&
+                className={`${
+                  (showLabel || inputValueChange.length > 0) &&
                   values[field.fieldname]
-                  ? "text-[8px]"
-                  : "text-[9px]"
-                  }`}
+                    ? "text-[8px]"
+                    : "text-[9px]"
+                }`}
               >
                 {field.isRequired ? (
                   <span className={`${styles.inputTextColor}`}>
@@ -1820,19 +1902,19 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                      field.isEditableMode?.toLowerCase(),
-                    ) && !field.isEditable
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                    !field.isEditable)
               }
               value={
                 values?.[`${field.fieldname}multiselect`] ||
-                  dropDownValues?.length > 0
+                dropDownValues?.length > 0
                   ? dropDownValues?.filter((value) =>
-                    values?.[`${field.fieldname}`]
-                      ?.split(",")
-                      ?.includes(value.value.toString()),
-                  )
+                      values?.[`${field.fieldname}`]
+                        ?.split(",")
+                        ?.includes(value.value.toString()),
+                    )
                   : [] || []
               }
               noOptionsMessage={() =>
@@ -1937,7 +2019,7 @@ function InputFieldRenderer(props) {
       );
     case "radio":
       return (
-        <LightTooltip title={inputLabel}>
+        <LightTooltip title={getTooltipValue()} arrow placement="top">
           <div
             className={`${customRadioCheckBoxStyle} ${styles.inputField} hover:border-[var(--inputBorderHoverColor)]`}
           >
@@ -1948,8 +2030,9 @@ function InputFieldRenderer(props) {
               className="absolute px-2 inline bg-[--inputBg] pr-[10%] leading-[0.8px] top-[-1px] left-[8px] p-0 scale-100"
             >
               <span
-                className={`${isView ? "text-[#B2BAC2]" : styles.inputTextColor
-                  } font-[var(--inputFontWeight)]`}
+                className={`${
+                  isView ? "text-[#B2BAC2]" : styles.inputTextColor
+                } font-[var(--inputFontWeight)]`}
                 style={{ fontSize: "var(--inputFontSize)" }}
               >
                 {field.isRequired ? (
@@ -2013,93 +2096,93 @@ function InputFieldRenderer(props) {
               {/* Array source */}
               {Array.isArray(field.dropDownValues)
                 ? field.dropDownValues.map((item, idx) => {
-                  const optionValue = item.id.toString();
-                  const optionLabel = item.value.toString();
-                  return (
-                    <FormControlLabel
-                      key={idx}
-                      value={optionValue}
-                      label={optionLabel}
-                      labelPlacement="start"
-                      sx={radioControlStyle}
-                      control={
-                        <Radio
-                          disabled={
-                            isView ||
-                            (inEditMode?.isEditMode
-                              ? inEditMode?.isCopy === true
-                                ? !field?.isCopyEditable
-                                : ["e", "b"].includes(
-                                  field.isEditableMode?.toLowerCase(),
-                                ) && !field.isEditable
-                              : ["a", "b"].includes(
-                                field.isEditableMode?.toLowerCase(),
-                              ) && !field.isEditable)
-                          }
-                          sx={radioControlStyle}
-                          onClick={(e) => {
-                            // Deselect when clicking the already-selected radio
-                            const current =
-                              values[field.fieldname]?.toString() ?? null;
-                            if (current === optionValue) {
-                              e.stopPropagation();
-                              handleChange(null, field);
-                              values[field.fieldname] = null;
+                    const optionValue = item.id.toString();
+                    const optionLabel = item.value.toString();
+                    return (
+                      <FormControlLabel
+                        key={idx}
+                        value={optionValue}
+                        label={optionLabel}
+                        labelPlacement="start"
+                        sx={radioControlStyle}
+                        control={
+                          <Radio
+                            disabled={
+                              isView ||
+                              (inEditMode?.isEditMode
+                                ? inEditMode?.isCopy === true
+                                  ? !field?.isCopyEditable
+                                  : ["e", "b"].includes(
+                                      field.isEditableMode?.toLowerCase(),
+                                    ) && !field.isEditable
+                                : ["a", "b"].includes(
+                                    field.isEditableMode?.toLowerCase(),
+                                  ) && !field.isEditable)
                             }
-                          }}
-                        />
-                      }
-                    />
-                  );
-                })
+                            sx={radioControlStyle}
+                            onClick={(e) => {
+                              // Deselect when clicking the already-selected radio
+                              const current =
+                                values[field.fieldname]?.toString() ?? null;
+                              if (current === optionValue) {
+                                e.stopPropagation();
+                                handleChange(null, field);
+                                values[field.fieldname] = null;
+                              }
+                            }}
+                          />
+                        }
+                      />
+                    );
+                  })
                 : /* CSV string source */
-                field.dropDownValues.split(",").map((item, idx) => {
-                  const parts = item.split(".");
-                  const optionValue = parts[0].trim();
-                  const optionLabel = parts[1]?.trim() || optionValue;
-                  return (
-                    <FormControlLabel
-                      key={idx}
-                      value={optionValue}
-                      label={optionLabel}
-                      labelPlacement="start"
-                      sx={radioControlStyle}
-                      control={
-                        <Radio
-                          disabled={
-                            isView ||
-                            (inEditMode?.isEditMode
-                              ? inEditMode?.isCopy === true
-                                ? !field?.isCopyEditable
-                                : ["e", "b"].includes(
-                                  field.isEditableMode?.toLowerCase(),
-                                ) && !field.isEditable
-                              : ["a", "b"].includes(
-                                field.isEditableMode?.toLowerCase(),
-                              ) && !field.isEditable)
-                          }
-                          sx={radioControlStyle}
-                          onClick={(e) => {
-                            const current =
-                              values[field.fieldname]?.toString() ?? null;
-                            if (current === optionValue) {
-                              e.stopPropagation();
-                              handleChange(null, field);
-                              values[field.fieldname] = null;
+                  field.dropDownValues.split(",").map((item, idx) => {
+                    const parts = item.split(".");
+                    const optionValue = parts[0].trim();
+                    const optionLabel = parts[1]?.trim() || optionValue;
+                    return (
+                      <FormControlLabel
+                        key={idx}
+                        value={optionValue}
+                        label={optionLabel}
+                        labelPlacement="start"
+                        sx={radioControlStyle}
+                        control={
+                          <Radio
+                            disabled={
+                              isView ||
+                              (inEditMode?.isEditMode
+                                ? inEditMode?.isCopy === true
+                                  ? !field?.isCopyEditable
+                                  : ["e", "b"].includes(
+                                      field.isEditableMode?.toLowerCase(),
+                                    ) && !field.isEditable
+                                : ["a", "b"].includes(
+                                    field.isEditableMode?.toLowerCase(),
+                                  ) && !field.isEditable)
                             }
-                          }}
-                        />
-                      }
-                    />
-                  );
-                })}
+                            sx={radioControlStyle}
+                            onClick={(e) => {
+                              const current =
+                                values[field.fieldname]?.toString() ?? null;
+                              if (current === optionValue) {
+                                e.stopPropagation();
+                                handleChange(null, field);
+                                values[field.fieldname] = null;
+                              }
+                            }}
+                          />
+                        }
+                      />
+                    );
+                  })}
             </RadioGroup>
           </div>
         </LightTooltip>
       );
     case "checkbox":
       return (
-        <LightTooltip title={inputLabel}>
+        <LightTooltip title={getTooltipValue()} arrow placement="top">
           <div
             className={`${customRadioCheckBoxStyle} bg-[var(--inputBg)] hover:border-[var(--inputBorderHoverColor)]  ${styles.inputField}`}
           >
@@ -2107,8 +2190,9 @@ function InputFieldRenderer(props) {
               className={`absolute px-2 inline left-[8px] bg-[--inputBg] pr-[10%] leading-[0.8px] top-[-1px] scale-100 text-[8px] `}
             >
               <span
-                className={`${isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
-                  }`}
+                className={`${
+                  isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
+                }`}
               >
                 {field.isRequired ? (
                   <span className={`${styles.inputTextColor}`}>
@@ -2191,11 +2275,11 @@ function InputFieldRenderer(props) {
                           ? inEditMode?.isCopy === true
                             ? !field?.isCopyEditable
                             : ["e", "b"].includes(
-                              field.isEditableMode?.toLowerCase(),
-                            ) && !field.isEditable
+                                field.isEditableMode?.toLowerCase(),
+                              ) && !field.isEditable
                           : ["a", "b"].includes(
-                            field.isEditableMode?.toLowerCase(),
-                          ) && !field.isEditable)
+                              field.isEditableMode?.toLowerCase(),
+                            ) && !field.isEditable)
                       }
                     />
                   }
@@ -2208,7 +2292,7 @@ function InputFieldRenderer(props) {
       );
     case "multicheckbox":
       return (
-        <LightTooltip title={inputLabel}>
+        <LightTooltip title={getTooltipValue()} arrow placement="top">
           <div
             className={`${customRadioCheckBoxStyle} ${styles.pageBackground}  ${styles.inputField}`}
           >
@@ -2216,8 +2300,9 @@ function InputFieldRenderer(props) {
               className={`absolute px-2 inline top-[-8px] left-[8px] text-[8px] ${styles.pageBackground}`}
             >
               <span
-                className={`${isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
-                  }`}
+                className={`${
+                  isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
+                }`}
               >
                 {field.isRequired ? (
                   <span className={`${styles.inputTextColor}`}>
@@ -2324,11 +2409,11 @@ function InputFieldRenderer(props) {
                               ? inEditMode?.isCopy === true
                                 ? !field?.isCopyEditable
                                 : ["e", "b"].includes(
-                                  field.isEditableMode?.toLowerCase(),
-                                ) && !field.isEditable
+                                    field.isEditableMode?.toLowerCase(),
+                                  ) && !field.isEditable
                               : ["a", "b"].includes(
-                                field.isEditableMode?.toLowerCase(),
-                              ) && !field.isEditable)
+                                  field.isEditableMode?.toLowerCase(),
+                                ) && !field.isEditable)
                           }
                         />
                       }
@@ -2344,7 +2429,7 @@ function InputFieldRenderer(props) {
       );
     case "number":
       return (
-        <LightTooltip title={inputLabel}>
+        <LightTooltip title={getTooltipValue()} arrow placement="top">
           <CustomeTextField
             id={uniqueId}
             autoComplete="off"
@@ -2371,11 +2456,11 @@ function InputFieldRenderer(props) {
             // }
             value={
               values?.[field.fieldname] !== undefined &&
-                values?.[field.fieldname] !== null
+              values?.[field.fieldname] !== null
                 ? values[field.fieldname]
                 : field.controlDefaultValue !== undefined &&
-                  field.controlDefaultValue !== null &&
-                  field.controlDefaultValue !== ""
+                    field.controlDefaultValue !== null &&
+                    field.controlDefaultValue !== ""
                   ? parseInt(field.controlDefaultValue, 10)
                   : ""
             }
@@ -2489,9 +2574,9 @@ function InputFieldRenderer(props) {
                 ? inEditMode?.isCopy === true
                   ? !field?.isCopyEditable
                   : ["e", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable
+                    !field.isEditable
                 : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                !field.isEditable)
+                  !field.isEditable)
             }
             InputLabelProps={{
               classes: {
@@ -2503,7 +2588,7 @@ function InputFieldRenderer(props) {
       );
     case "color":
       return (
-        <LightTooltip title={inputLabel}>
+        <LightTooltip title={getTooltipValue()} arrow placement="top">
           <MuiColorInput
             id={uniqueId}
             ref={inputRef}
@@ -2620,7 +2705,12 @@ function InputFieldRenderer(props) {
       );
     case "date":
       return (
-        <LightTooltip key={uniqueId} title={isFocused ? "" : inputLabel}>
+        <LightTooltip
+          key={uniqueId}
+          title={getTooltipValue() || inputLabel}
+          arrow
+          placement="top"
+        >
           <div
             onBlur={() => {
               if (index == inputFieldData.length - 1) {
@@ -2826,10 +2916,10 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                      field.isEditableMode?.toLowerCase(),
-                    ) && !field.isEditable
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                    !field.isEditable)
               }
             />
           </div>
@@ -2837,7 +2927,7 @@ function InputFieldRenderer(props) {
       );
     case "time":
       return (
-        <LightTooltip title={inputLabel}>
+        <LightTooltip title={getTooltipValue()} arrow placement="top">
           <div>
             <TimePicker
               autoFocus={clearFlag.isClear} // Automatically focus if clearDateFlag is true
@@ -3029,10 +3119,10 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                      field.isEditableMode?.toLowerCase(),
-                    ) && !field.isEditable
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                    !field.isEditable)
               }
             />
           </div>
@@ -3040,7 +3130,7 @@ function InputFieldRenderer(props) {
       );
     case "datetime":
       return (
-        <LightTooltip title={inputLabel}>
+        <LightTooltip title={getTooltipValue()} arrow placement="top">
           <div>
             <DateTimePicker
               autoFocus={clearFlag.isClear} // Automatically focus if clearDateFlag is true
@@ -3101,6 +3191,11 @@ function InputFieldRenderer(props) {
                 }
               }}
               ampm={false}
+              format={
+                dateFormat === "" || dateFormat === null
+                  ? "DD-MM-YYYY HH:mm:ss"
+                  : `${dateFormat} HH:mm:ss`
+              }
               viewRenderers={{
                 hours: renderTimeViewClock,
                 minutes: renderTimeViewClock,
@@ -3251,10 +3346,10 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                      field.isEditableMode?.toLowerCase(),
-                    ) && !field.isEditable
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                    !field.isEditable)
               }
             />
           </div>
@@ -3262,16 +3357,17 @@ function InputFieldRenderer(props) {
       );
     case "textarea":
       return (
-        <LightTooltip title={inputLabel}>
+        <LightTooltip title={getTooltipValue()} arrow placement="top">
           <div
             className={`textarea-container `}
             style={{ position: "relative", minHeight: "27px" }}
           >
             <p
-              className={`custom-placeholder ${textareaLabel || values?.[field.fieldname]
-                ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 "
-                : "top-[7px]"
-                } `}
+              className={`custom-placeholder ${
+                textareaLabel || values?.[field.fieldname]
+                  ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 "
+                  : "top-[7px]"
+              } `}
               style={{
                 ...textAreaLabelStyle,
               }}
@@ -3292,10 +3388,10 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                      field.isEditableMode?.toLowerCase(),
-                    ) && !field.isEditable
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                    !field.isEditable)
               }
               onPaste={handlePaste}
               onChange={(e) => {
@@ -3383,7 +3479,7 @@ function InputFieldRenderer(props) {
       );
     case "file":
       return (
-        <LightTooltip title={inputLabel}>
+        <LightTooltip title={getTooltipValue()} arrow placement="top">
           <div className="flex flex-col ">
             <Button
               component="label"
@@ -3422,10 +3518,10 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                      field.isEditableMode?.toLowerCase(),
-                    ) && !field.isEditable
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                    !field.isEditable)
               }
             >
               <span className="text-[10px]">
@@ -3451,7 +3547,7 @@ function InputFieldRenderer(props) {
       );
     case "multiselectfile": {
       return (
-        <LightTooltip title={inputLabel}>
+        <LightTooltip title={getTooltipValue()} arrow placement="top">
           <div className="flex flex-col ">
             <Button
               component="label"
@@ -3504,10 +3600,10 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                      field.isEditableMode?.toLowerCase(),
-                    ) && !field.isEditable
+                        field.isEditableMode?.toLowerCase(),
+                      ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                    !field.isEditable)
               }
             >
               <span className="text-[10px]">
@@ -3539,7 +3635,7 @@ function InputFieldRenderer(props) {
 
     case "label":
       return (
-        <LightTooltip title={inputLabel}>
+        <LightTooltip title={getTooltipValue()} arrow placement="top">
           <div className={`${styles.labelStyles}`} style={{ display: "block" }}>
             <span className="text-[10px]">
               {field.isDummy && (
@@ -3738,7 +3834,7 @@ function InputFieldRenderer(props) {
     case "text":
     default:
       return (
-        <LightTooltip title={inputLabel}>
+        <LightTooltip title={getTooltipValue()} arrow placement="top">
           <CustomeTextField
             autoComplete="off"
             id={uniqueId}
@@ -3761,10 +3857,11 @@ function InputFieldRenderer(props) {
             size="small"
             name={field.fieldname}
             required={field.isRequired}
-            className={`${styles.inputField} ${field.type === "decimal" || field.type === "number"
-              ? "w-[100%] lg:w-[12rem]"
-              : ""
-              }`}
+            className={`${styles.inputField} ${
+              field.type === "decimal" || field.type === "number"
+                ? "w-[100%] lg:w-[12rem]"
+                : ""
+            }`}
             value={values?.[field.fieldname] ?? field.controlDefaultValue ?? ""}
             onChange={(e) => {
               if (
@@ -3857,9 +3954,9 @@ function InputFieldRenderer(props) {
                 ? inEditMode?.isCopy === true
                   ? !field?.isCopyEditable
                   : ["e", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable
+                    !field.isEditable
                 : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                !field.isEditable)
+                  !field.isEditable)
             }
             InputLabelProps={{
               classes: {

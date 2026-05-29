@@ -1763,6 +1763,35 @@ export async function eInvoicing(data) {
   }
 }
 
+export async function cancelIRN_GSTHero({ invoiceId, reasonId, remark }) {
+  try {
+    const token = localStorage.getItem("token");
+    const body = {
+      invoiceId: Number(invoiceId) || 0,
+      companyId: Number(sessionStorage.getItem("companyId")) || 0,
+      loginBranch: Number(sessionStorage.getItem("branchId")) || 0,
+      reasonId: Number(reasonId) || 0,
+      remark: remark,
+    };
+    const response = await fetch(
+      `${baseUrlSQl}/api/eInvoicing/cancelIRN_GSTHero`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(body),
+      },
+    ).then((response) => response.json());
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
+
 export async function saveEditedReport(data) {
   try {
     const token = localStorage.getItem("token");
@@ -2723,5 +2752,136 @@ export async function getChargeForTariffData(data) {
     console.log(error);
     console.error(error);
     return false;
+  }
+}
+
+export async function UploadForm32AS(data) {
+  try {
+    const token = localStorage.getItem("token");
+
+    let parsedToken = "";
+
+    try {
+      parsedToken = token ? JSON.parse(token) : "";
+    } catch {
+      parsedToken = token || "";
+    }
+
+    let formData;
+
+    // ✅ Case 1: handleForm32AS already sends FormData
+    if (data instanceof FormData) {
+      formData = data;
+    } else {
+      // ✅ Case 2: fallback if old code sends normal object
+      const rawFiles =
+        data?.form32ASUploads || data?.invoiceUploads || data?.file || [];
+
+      const files =
+        rawFiles instanceof File
+          ? [rawFiles]
+          : Array.isArray(rawFiles)
+            ? rawFiles
+            : Array.from(rawFiles || []);
+
+      if (!files.length) {
+        return {
+          success: false,
+          statusCode: 400,
+          message: "No file found to upload",
+          data: null,
+        };
+      }
+
+      const file = files[0];
+
+      formData = new FormData();
+      formData.append("file", file);
+    }
+
+    const uploadedFile = formData.get("file");
+
+    console.log("UploadForm32AS uploadedFile =>", uploadedFile);
+
+    if (!uploadedFile) {
+      return {
+        success: false,
+        statusCode: 400,
+        message: "No file found to upload",
+        data: null,
+      };
+    }
+
+    const headers = {};
+
+    if (parsedToken) {
+      headers["x-access-token"] = parsedToken;
+    }
+
+    const res = await fetch(`${baseUrlSQl}/api/ai/extract/form32AsPdfData`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    let response = null;
+
+    try {
+      response = await res.json();
+    } catch {
+      response = {
+        success: false,
+        message: "Invalid response from server",
+        data: null,
+      };
+    }
+
+    console.log("UploadForm32AS response =>", response);
+
+    return {
+      ...response,
+      statusCode: res.status,
+    };
+  } catch (error) {
+    console.error("UploadForm32AS error =>", error);
+
+    return {
+      success: false,
+      statusCode: 500,
+      message: error?.message || "File upload failed",
+      data: null,
+    };
+  }
+}
+
+export async function GetForm32ASReadingStatus() {
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(
+      `${baseUrlSQl}/api/ai/extract/form32AsPdfData/readingStatus`,
+      {
+        method: "GET",
+        headers: {
+          "x-access-token": JSON.parse(token),
+        },
+      },
+    );
+
+    const response = await res.json();
+
+    return {
+      ...response,
+      statusCode: res.status,
+    };
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return {
+      success: false,
+      statusCode: 500,
+      message: "Failed to fetch reading status",
+      readingStatus: null,
+    };
   }
 }

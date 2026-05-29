@@ -19,21 +19,80 @@ export default function Print({
   reportIds,
 }) {
   const handlePrint = async () => {
+    try {
+      const pdfName = reportIds?.join("-") || "Report";
+      const blob = await generatePdfBlob();
+
+      const url = window.URL.createObjectURL(
+        new Blob([blob], { type: "application/pdf" })
+      );
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `${pdfName}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+
+      console.log("PDF generated and downloaded successfully.");
+    } catch (error) {
+      console.error("Error while generating PDF:", error);
+      toast.error("Error while generating PDF.");
+    }
+  };
+
+  const handleBrowserPrint = async () => {
+    try {
+      const blob = await generatePdfBlob();
+
+      const pdfUrl = window.URL.createObjectURL(
+        new Blob([blob], { type: "application/pdf" })
+      );
+
+      const iframe = document.createElement("iframe");
+
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      iframe.style.visibility = "hidden";
+
+      iframe.src = pdfUrl;
+
+      document.body.appendChild(iframe);
+
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            window.URL.revokeObjectURL(pdfUrl);
+          }, 3000);
+        }, 500);
+      };
+    } catch (error) {
+      console.error("Error while opening print:", error);
+      toast.error("Error while opening print.");
+    }
+  };
+
+  const buildPdfRequestBody = async () => {
     const style = await fetch("/style/reportTheme.css");
     const css = await style.text();
 
-    // 👇 Merge all report HTMLs
     const elements = enquiryModuleRefs.current || [];
-    // const allInnerHTML = elements
-    //   .filter(Boolean) // filter out any undefined refs
-    //   .map((el) => el.innerHTML)
-    //   .join("");
 
     const allInnerHTML = elements
       .filter(Boolean)
       .map((el, index) => {
         const html = el.innerHTML;
-        // Add page break before every report after the first
+
         return index === 0
           ? html
           : `<div style="page-break-before: always;"></div>${html}`;
@@ -41,40 +100,32 @@ export default function Print({
       .join("");
 
     const fullHtml = `
-      <!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <style>${css}</style>
-        </head>
-        <body>${allInnerHTML}</body>
-      </html>
-    `;
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <style>${css}</style>
+      </head>
+      <body>${allInnerHTML}</body>
+    </html>
+  `;
 
     const pdfName = reportIds?.join("-") || "Report";
-    //console.log("fullHtml", fullHtml);
 
-    const requestBody = {
+    return {
       orientation: printOrientation,
       pdfFilename: pdfName,
       htmlContent: fullHtml,
     };
-
-    try {
-      const blob = await printPDF(requestBody);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", pdfName);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      console.log("PDF generated and downloaded successfully.");
-    } catch (error) {
-      console.error("Error while generating PDF:", error);
-    }
   };
+
+  const generatePdfBlob = async () => {
+    const requestBody = await buildPdfRequestBody();
+    const blob = await printPDF(requestBody);
+    return blob;
+  };
+
   const handlePDFEmail = async () => {
     const style = await fetch("/style/reportTheme.css");
     const css = await style.text();
@@ -188,6 +239,13 @@ export default function Print({
       >
         Email
       </button> */}
+      <button
+        type="button"
+        className="inline-flex items-center px-8 py-1.5 text-xs font-medium text-center text-white bg-blue-700 rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 hover:bg-blue-800"
+        onClick={handleBrowserPrint}
+      >
+        Print
+      </button>
     </div>
   );
 }

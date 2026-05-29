@@ -1283,9 +1283,8 @@ function templateToPrintableHTML({ wMm, hMm, elementsHtml, header }) {
 <body>
   <div class="page">
 
-    ${
-      showHeader
-        ? `
+    ${showHeader
+      ? `
       <div style="
         position:absolute;
         top:0;
@@ -1303,7 +1302,7 @@ function templateToPrintableHTML({ wMm, hMm, elementsHtml, header }) {
         />
       </div>
       `
-        : ""
+      : ""
     }
 
     ${elementsHtml}
@@ -1381,11 +1380,10 @@ function renderElementsToHtml(elements = []) {
         ${commonBox}
         object-fit:${el.fit || "contain"};
         opacity:${el.opacity ?? 1};
-        border:${
-          (s.borderWidth ?? 0) > 0
+        border:${(s.borderWidth ?? 0) > 0
             ? `${s.borderWidth}px ${s.borderStyle || "solid"} ${s.borderColor}`
             : "none"
-        };
+          };
         border-radius:${Number(s.borderRadius || 0)}px;
       "
     />
@@ -1407,13 +1405,12 @@ function renderElementsToHtml(elements = []) {
         const wrapCss = `
     ${commonBox}
     display:flex;
-    align-items:${
-      vAlign === "middle"
-        ? "center"
-        : vAlign === "bottom"
-          ? "flex-end"
-          : "flex-start"
-    };
+    align-items:${vAlign === "middle"
+            ? "center"
+            : vAlign === "bottom"
+              ? "flex-end"
+              : "flex-start"
+          };
     overflow:hidden;
     background:${s.bg || "transparent"};
     border:${border};
@@ -1429,10 +1426,10 @@ function renderElementsToHtml(elements = []) {
     text-align:${align};
     opacity:${textOpacity};
     ${cssFromStyle({
-      ...s,
-      bg: "transparent",
-      borderWidth: 0,
-    })}
+          ...s,
+          bg: "transparent",
+          borderWidth: 0,
+        })}
   `;
 
         const printableText = formatNumericValue(
@@ -1448,13 +1445,11 @@ function renderElementsToHtml(elements = []) {
           commonBox +
           `
             background:${s.bg || "transparent"};
-            border:${
-              (s.borderWidth ?? 0) > 0
-                ? `${s.borderWidth}px ${s.borderStyle || "solid"} ${
-                    s.borderColor || "#000"
-                  }`
-                : "none"
-            };
+            border:${(s.borderWidth ?? 0) > 0
+            ? `${s.borderWidth}px ${s.borderStyle || "solid"} ${s.borderColor || "#000"
+            }`
+            : "none"
+          };
             border-radius:${Number(s.borderRadius || 0)}px;
           `;
         return `<div style="${boxCss}"></div>`;
@@ -1468,11 +1463,10 @@ function renderElementsToHtml(elements = []) {
           `
             background:${color};
             border:none;
-            ${
-              el.type === "lineH"
-                ? `height:${thickness}px;`
-                : `width:${thickness}px;`
-            }
+            ${el.type === "lineH"
+            ? `height:${thickness}px;`
+            : `width:${thickness}px;`
+          }
           `;
         return `<div style="${lineCss}"></div>`;
       }
@@ -1588,18 +1582,18 @@ function renderTableToHtml(el) {
         white-space:pre-wrap;
         word-break:break-word;
         ${cssFromStyle({
-          fontFamily: el.style?.fontFamily,
-          fontSize: fs,
-          fontWeight: fw,
-          color,
-          align,
-          vAlign,
-          padding: pad,
-          lineHeight: el.style?.lineHeight,
-          letterSpacing: el.style?.letterSpacing,
-          bg: "transparent",
-          borderWidth: 0,
-        })}
+        fontFamily: el.style?.fontFamily,
+        fontSize: fs,
+        fontWeight: fw,
+        color,
+        align,
+        vAlign,
+        padding: pad,
+        lineHeight: el.style?.lineHeight,
+        letterSpacing: el.style?.letterSpacing,
+        bg: "transparent",
+        borderWidth: 0,
+      })}
         background:transparent;
         border:none;
       `;
@@ -2436,9 +2430,9 @@ export default function BlCreatorPage() {
               return prev;
             });
           })
-          .catch(() => {});
+          .catch(() => { });
       }
-    } catch {}
+    } catch { }
   }
 
   function switchToPage(nextPageId) {
@@ -2861,11 +2855,11 @@ export default function BlCreatorPage() {
 
     try {
       localStorage.setItem(PAGE_CLIPBOARD_KEY, JSON.stringify(safe));
-    } catch {}
+    } catch { }
 
     try {
       navigator.clipboard?.writeText("__BL_CREATOR_PAGE_COPY__");
-    } catch {}
+    } catch { }
   }
 
   function readPageClipboard() {
@@ -3234,7 +3228,7 @@ export default function BlCreatorPage() {
     if (!ta) return;
     try {
       ta.setSelectionRange(textSel.start, textSel.end);
-    } catch {}
+    } catch { }
   }, [textDraft, editingId, textSel]);
 
   /** ---------- Text measurer (auto-size) ---------- */
@@ -4071,7 +4065,7 @@ export default function BlCreatorPage() {
         // clear any accidental browser text selection
         try {
           window.getSelection()?.removeAllRanges();
-        } catch {}
+        } catch { }
 
         copySelected();
         return;
@@ -4126,7 +4120,7 @@ export default function BlCreatorPage() {
 
       try {
         window.getSelection()?.removeAllRanges();
-      } catch {}
+      } catch { }
 
       copySelected();
 
@@ -4134,7 +4128,7 @@ export default function BlCreatorPage() {
       // so browser does not copy random selected text
       try {
         e.clipboardData?.setData("text/plain", "__BL_CREATOR_ELEMENT_COPY__");
-      } catch {}
+      } catch { }
     }
 
     function onNativeCut(e) {
@@ -4147,14 +4141,14 @@ export default function BlCreatorPage() {
 
       try {
         window.getSelection()?.removeAllRanges();
-      } catch {}
+      } catch { }
 
       copySelected();
       deleteSelected();
 
       try {
         e.clipboardData?.setData("text/plain", "__BL_CREATOR_ELEMENT_CUT__");
-      } catch {}
+      } catch { }
     }
 
     function onNativePaste(e) {
@@ -4247,7 +4241,7 @@ export default function BlCreatorPage() {
           setTimeout(() => {
             try {
               document.body.removeChild(iframe);
-            } catch {}
+            } catch { }
           }, 1000);
         }
       };
@@ -4262,7 +4256,7 @@ export default function BlCreatorPage() {
       setTimeout(() => {
         try {
           if (iframe.isConnected) doPrint();
-        } catch {}
+        } catch { }
       }, 120);
     } catch (err) {
       console.error("Print failed:", err);
@@ -4744,9 +4738,8 @@ export default function BlCreatorPage() {
               borderRadius: (s.borderRadius || 0) * ui.scale,
               border:
                 (s.borderWidth ?? 0) > 0
-                  ? `${s.borderWidth}px ${s.borderStyle || "solid"} ${
-                      s.borderColor || "#111827"
-                    }`
+                  ? `${s.borderWidth}px ${s.borderStyle || "solid"} ${s.borderColor || "#111827"
+                  }`
                   : "none",
               background: s.bg || "transparent",
               pointerEvents: "none",
@@ -4761,9 +4754,8 @@ export default function BlCreatorPage() {
     if (el.type === "box") {
       const boxStyle = {
         background: s.bg || "transparent",
-        border: `${s.borderWidth ?? 1}px ${s.borderStyle || "solid"} ${
-          s.borderColor || "#111827"
-        }`,
+        border: `${s.borderWidth ?? 1}px ${s.borderStyle || "solid"} ${s.borderColor || "#111827"
+          }`,
         borderRadius: (s.borderRadius || 0) * ui.scale,
         width: "100%",
         height: "100%",
@@ -4943,9 +4935,8 @@ export default function BlCreatorPage() {
     const totalH = t.rowH.reduce((a, b) => a + b, 0) || 1;
     const colPct = t.colW.map((w) => (w / totalW) * 100);
     const rowPct = t.rowH.map((h) => (h / totalH) * 100);
-    const border = `${t.borderWidth ?? 1}px solid ${
-      t.borderColor || "#111827"
-    }`;
+    const border = `${t.borderWidth ?? 1}px solid ${t.borderColor || "#111827"
+      }`;
 
     const showCellSelected = (r, c) =>
       active && active.r === r && active.c === c;
@@ -7452,12 +7443,16 @@ function Inspector({
                 "package",
                 "grossWt",
                 "grossWtAndUnit",
+                "netWtAndUnit",
                 "netWt",
                 "weightUnitCode",
                 "agentSealNo",
                 "customSealNo",
                 "createdDate",
                 "volumeAndCode",
+                "volumeUnit",
+                "volume",
+                "tareWtAndUnit",
               ],
               tblBLCharge: [
                 "code",
@@ -7479,11 +7474,11 @@ function Inspector({
 
             const fieldsForArray =
               repeat.arrayPath &&
-              Array.isArray(arraysObj?.[repeat.arrayPath]) &&
-              arraysObj[repeat.arrayPath].length
+                Array.isArray(arraysObj?.[repeat.arrayPath]) &&
+                arraysObj[repeat.arrayPath].length
                 ? arraysObj[repeat.arrayPath]
                 : repeat.arrayPath &&
-                    Array.isArray(FALLBACK_ARRAY_FIELDS[repeat.arrayPath])
+                  Array.isArray(FALLBACK_ARRAY_FIELDS[repeat.arrayPath])
                   ? FALLBACK_ARRAY_FIELDS[repeat.arrayPath]
                   : [];
 

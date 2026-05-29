@@ -36,6 +36,7 @@ function rptInvoice() {
   const hsnGridRef = useRef(null);
   const [chargeGridHeight, setChargeGridHeight] = useState("245px");
   const hsnGridHeight = 150;
+  const hsnGridHeightFF = 170;
   const [ImageUrl, setImageUrl] = useState("");
   const [footerImageUrl, setFooterImageUrl] = useState("");
   const enquiryModuleRefs = useRef([]);
@@ -55,6 +56,9 @@ function rptInvoice() {
     useState([]);
   const [isChargesFinishedOnFirstPage, setIsChargesFinishedOnFirstPage] =
     useState(false);
+  const [generalSalesInvoicePrint, setGeneralSalesInvoicePrint] = useState([]);
+  const [purchaseInvoicePrint, setPurchaseInvoicePrint] = useState([]);
+  const [creditNotePrint1, setCreditNotePrint1] = useState([]);
 
   function numberToWords(num) {
     if (num === 0) return "zero only";
@@ -433,6 +437,145 @@ function rptInvoice() {
 
     if (decimalPart > 0) {
       result += " and " + convertBelowHundred(decimalPart);
+    }
+
+    result += " only";
+
+    return result.charAt(0).toUpperCase() + result.slice(1);
+  }
+
+  function numberToWordsInIndianAndUsaSystem(num, countryCode) {
+    const ones = [
+      "",
+      "one",
+      "two",
+      "three",
+      "four",
+      "five",
+      "six",
+      "seven",
+      "eight",
+      "nine",
+      "ten",
+      "eleven",
+      "twelve",
+      "thirteen",
+      "fourteen",
+      "fifteen",
+      "sixteen",
+      "seventeen",
+      "eighteen",
+      "nineteen",
+    ];
+
+    const tens = [
+      "",
+      "",
+      "twenty",
+      "thirty",
+      "forty",
+      "fifty",
+      "sixty",
+      "seventy",
+      "eighty",
+      "ninety",
+    ];
+
+    function convertBelowHundred(n) {
+      if (n < 20) return ones[n];
+      return tens[Math.floor(n / 10)] + (n % 10 ? "-" + ones[n % 10] : "");
+    }
+
+    function convertBelowThousand(n) {
+      let result = "";
+
+      if (n >= 100) {
+        result += ones[Math.floor(n / 100)] + " hundred";
+        n %= 100;
+
+        if (n > 0) result += " ";
+      }
+
+      if (n > 0) {
+        result += convertBelowHundred(n);
+      }
+
+      return result.trim();
+    }
+
+    function convertWholeNumber(n) {
+      if (n === 0) return "zero";
+
+      let result = "";
+
+      if (n >= 10000000) {
+        result += convertBelowThousand(Math.floor(n / 10000000)) + " crore ";
+        n %= 10000000;
+      }
+
+      if (n >= 100000) {
+        result += convertBelowThousand(Math.floor(n / 100000)) + " lakh ";
+        n %= 100000;
+      }
+
+      if (n >= 1000) {
+        result += convertBelowThousand(Math.floor(n / 1000)) + " thousand ";
+        n %= 1000;
+      }
+
+      if (n > 0) {
+        result += convertBelowThousand(n);
+      }
+
+      return result.trim();
+    }
+
+    const cleanNum = String(num ?? "")
+      .replace(/,/g, "")
+      .trim();
+
+    const amount = Number(cleanNum);
+
+    if (isNaN(amount)) return "";
+
+    const [wholeStr, decimalStr = "0"] = Math.abs(amount).toFixed(2).split(".");
+
+    const wholePart = parseInt(wholeStr, 10);
+    const decimalPart = parseInt(decimalStr, 10);
+
+    const code = String(countryCode || "").toUpperCase();
+
+    const currencyConfig = {
+      INR: {
+        major: "rupees",
+        minor: "paise",
+      },
+      USD: {
+        major: "dollars",
+        minor: "cents",
+      },
+    };
+
+    const currency = currencyConfig[code];
+
+    let result = "";
+
+    if (amount < 0) {
+      result += "minus ";
+    }
+
+    result += convertWholeNumber(wholePart);
+
+    if (currency) {
+      result += " " + currency.major;
+    }
+
+    if (decimalPart > 0) {
+      result += " and " + convertBelowHundred(decimalPart);
+
+      if (currency) {
+        result += " " + currency.minor;
+      }
     }
 
     result += " only";
@@ -1051,7 +1194,12 @@ function rptInvoice() {
             reportNames[0] === "TGK Invoice " ||
             reportNames[0] === "Tax Invoice SLS" ||
             reportNames[0] === "Import Tax Invoice" ||
-            reportNames[0] === "Tax Invoice FF"
+            reportNames[0] === "Tax Invoice FF" ||
+            reportNames[0] === "General Sales Invoice Print" ||
+            reportNames[0] === "CreditNote Print" ||
+            reportNames[0] === "Tax Invoice Container" ||
+            reportNames[0] === "Domestic Invoice" ||
+            reportNames[0] === "Purchase Invoice"
           ) {
             const result = splitIntoChunksWithExtraArray(
               data.data[0]?.tblInvoiceCharge,
@@ -1071,7 +1219,14 @@ function rptInvoice() {
             );
             setTexInvoiceChargeSLS(texInvoiceChargeSLSData);
 
-            const firstPageItemsPerPage = 10;
+            const reportName = reportNames?.[0] || "";
+            const firstPageItemsPerPage =
+              reportName === "Tax Invoice Container"
+                ? 14
+                : reportName === "Tax Invoice FF" &&
+                    Number(data?.data?.[0]?.isHomeCurrency) === 1
+                  ? 7
+                  : 10;
             const otherPagesItemSize = 16;
 
             const taxInvoiceChargeDataForTaxInvoice =
@@ -1084,6 +1239,34 @@ function rptInvoice() {
             setInvoiceChargeDataForTaxInvoice(
               taxInvoiceChargeDataForTaxInvoice,
             );
+
+            /// set invoice charges for grid in General Sales Invoice Print report start
+            const firstPageItemsPerPageForGeneralSalesInvoicePrintCharges = 15;
+            const generalSalesInvoicePrintCharges =
+              splitIntoChunksWithExtraArrayForTaxInvoice(
+                data.data[0]?.tblInvoiceCharge ?? [],
+                firstPageItemsPerPageForGeneralSalesInvoicePrintCharges,
+                otherPagesItemSize,
+              );
+            setGeneralSalesInvoicePrint(generalSalesInvoicePrintCharges || []);
+
+            const firstPageItemsPerPageForPurchaseInvoicePrintCharges = 15;
+            const purchaseInvoicePrintCharges =
+              splitIntoChunksWithExtraArrayForTaxInvoice(
+                data.data[0]?.tblInvoiceCharge ?? [],
+                firstPageItemsPerPageForPurchaseInvoicePrintCharges,
+                otherPagesItemSize,
+              );
+            setPurchaseInvoicePrint(purchaseInvoicePrintCharges || []);
+
+            const firstPageItemsPerPageForCreditNotePrint1Charges = 15;
+            const creditNotePrint1Charges =
+              splitIntoChunksWithExtraArrayForTaxInvoice(
+                data.data[0]?.tblInvoiceCharge ?? [],
+                firstPageItemsPerPageForCreditNotePrint1Charges,
+                otherPagesItemSize,
+              );
+            setCreditNotePrint1(creditNotePrint1Charges || []);
 
             const allInvoiceDetails = data?.data[0]?.tblInvoiceCharge?.flatMap(
               (charge) => charge.tblInvoiceChargeDetails || [],
@@ -1141,30 +1324,70 @@ function rptInvoice() {
               let CGST = 0;
               let SGST = 0;
               let IGST = 0;
+              let CGST_HC = 0;
+              let SGST_HC = 0;
+              let IGST_HC = 0;
               let taxableAmount = 0;
+              let taxableAmountFc = 0;
               let taxPercentage = 0;
 
               matchingRecords.forEach((charge) => {
                 taxableAmount += Number(charge.taxableAmount) || 0;
+                taxableAmountFc += Number(charge.taxableAmountFc) || 0;
 
                 if (Array.isArray(charge.tblInvoiceChargeTax)) {
                   charge.tblInvoiceChargeTax.forEach((tax) => {
-                    const amount = Number(tax.taxAmountHc) || 0;
+                    // const amount =
+                    //   reportNames[0] === "Tax Invoice FF" ||
+                    //   reportNames[0] === "Tax Invoice"
+                    //     ? Number(tax.taxAmountFc) || 0
+                    //     : Number(tax.taxAmountHc) || 0;
+                    const amount = Number(tax.taxAmountFc) || 0;
+                    const amountHC = Number(tax.taxAmountHc) || 0;
                     // taxPercentage = Number(tax.taxPercentage) || 0;  // changes applied as per discussion with shahnaz
                     //taxPercentage += Number(tax.taxPercentage) || 0; // earlier we were summing tax percentages which doesn't make sense, it should be same for all taxes of same SAC, so just take from one of them
 
-                    switch (tax.taxCode) {
-                      case "CGST":
+                    // switch (tax.taxCode) {
+                    //   case "CGST":
+                    //     CGST += amount;
+                    //     CGST_HC += amountHC;
+                    //     taxPercentage = (Number(tax.taxPercentage) || 0) * 2;
+                    //     break;
+                    //   case "SGST":
+                    //     SGST += amount;
+                    //     SGST_HC += amountHC;
+                    //     taxPercentage = (Number(tax.taxPercentage) || 0) * 2;
+                    //     break;
+                    //   case "IGST":
+                    //     IGST += amount;
+                    //     IGST_HC += amountHC;
+                    //     taxPercentage = Number(tax.taxPercentage) || 0;
+                    //     break;
+                    // }
+                    const taxCode = String(tax.taxCode || "")
+                      .trim()
+                      .toUpperCase();
+
+                    switch (true) {
+                      case taxCode.startsWith("CGST"):
                         CGST += amount;
+                        CGST_HC += amountHC;
                         taxPercentage = (Number(tax.taxPercentage) || 0) * 2;
                         break;
-                      case "SGST":
+
+                      case taxCode.startsWith("SGST"):
                         SGST += amount;
+                        SGST_HC += amountHC;
                         taxPercentage = (Number(tax.taxPercentage) || 0) * 2;
                         break;
-                      case "IGST":
+
+                      case taxCode.startsWith("IGST"):
                         IGST += amount;
+                        IGST_HC += amountHC;
                         taxPercentage = Number(tax.taxPercentage) || 0;
+                        break;
+
+                      default:
                         break;
                     }
                   });
@@ -1177,8 +1400,12 @@ function rptInvoice() {
                 CGST,
                 SGST,
                 IGST,
+                CGST_HC,
+                SGST_HC,
+                IGST_HC,
                 taxableAmount,
                 taxPercentage,
+                taxableAmountFc,
               };
             });
 
@@ -1191,26 +1418,57 @@ function rptInvoice() {
               let CGST = 0;
               let SGST = 0;
               let IGST = 0;
+              let CGST_HC = 0;
+              let SGST_HC = 0;
+              let IGST_HC = 0;
               let taxableAmount = 0;
               let taxPercentage = 0;
+              let taxableAmountFc = 0;
 
               matchingRecords.forEach((charge) => {
                 taxableAmount += Number(charge.taxableAmount) || 0;
+                taxableAmountFc += Number(charge.taxableAmountFc) || 0;
 
                 if (Array.isArray(charge.tblInvoiceChargeTax)) {
                   charge.tblInvoiceChargeTax.forEach((tax) => {
-                    const amount = Number(tax.taxAmountHc) || 0;
-                    taxPercentage += Number(tax.taxPercentage) || 0;
+                    const amount = Number(tax.taxAmountFc) || 0;
+                    const amountHC = Number(tax.taxAmountHc) || 0;
 
-                    switch (tax.taxCode) {
-                      case "CGST":
+                    // switch (tax.taxCode) {
+                    //   case "CGST":
+                    //     CGST += amount;
+                    //     break;
+                    //   case "SGST":
+                    //     SGST += amount;
+                    //     break;
+                    //   case "IGST":
+                    //     IGST += amount;
+                    //     break;
+                    // }
+                    const taxCode = String(tax.taxCode || "")
+                      .trim()
+                      .toUpperCase();
+
+                    switch (true) {
+                      case taxCode.startsWith("CGST"):
                         CGST += amount;
+                        CGST_HC += amountHC;
+                        taxPercentage = (Number(tax.taxPercentage) || 0) * 2;
                         break;
-                      case "SGST":
+
+                      case taxCode.startsWith("SGST"):
                         SGST += amount;
+                        SGST_HC += amountHC;
+                        taxPercentage = (Number(tax.taxPercentage) || 0) * 2;
                         break;
-                      case "IGST":
+
+                      case taxCode.startsWith("IGST"):
                         IGST += amount;
+                        IGST_HC += amountHC;
+                        taxPercentage = Number(tax.taxPercentage) || 0;
+                        break;
+
+                      default:
                         break;
                     }
                   });
@@ -1223,8 +1481,12 @@ function rptInvoice() {
                 CGST,
                 SGST,
                 IGST,
+                CGST_HC,
+                SGST_HC,
+                IGST_HC,
                 taxableAmount,
                 taxPercentage,
+                taxableAmountFc,
               };
             });
 
@@ -1322,7 +1584,7 @@ function rptInvoice() {
         }}
       >
         {/* 70% left side */}
-        <div className="w-[85%] flex items-center">
+        <div className=" flex items-center" style={{ width: "85%" }}>
           <img
             src={`${baseUrlNext}${ImageUrl}`}
             alt="LOGO"
@@ -1333,10 +1595,57 @@ function rptInvoice() {
 
         <div className="w-[15%] flex justify-end items-start">
           {qrCodeDataUrl ? (
-            <img src={qrCodeDataUrl} alt="QR Code" height={350} width={350} />
+            <img
+              src={qrCodeDataUrl}
+              alt="QR Code"
+              className="w-full my-auto"
+              style={{ maxHeight: "130px", width: "100%" }}
+            />
           ) : (
             <p className="text-xs"></p>
           )}
+        </div>
+      </div>
+    );
+  };
+
+  const PurchaseCompanyImgModule = ({ data }) => {
+    const token = data[0]?.signedQrCode; // Get the QR code token from the data
+    const [qrCodeDataUrl, setQrCodeDataUrl] = useState(""); // State to hold QR code data URL
+
+    useEffect(() => {
+      const generateQRCode = async () => {
+        // Ensure token exists before generating QR code
+        if (token) {
+          try {
+            const dataUrl = await generateQRCodeDataUrl(token);
+            setQrCodeDataUrl(dataUrl);
+          } catch (error) {
+            console.error("Error generating QR code:", error);
+          }
+        }
+      };
+
+      generateQRCode(); // Call the function to generate the QR code
+    }, [token]); // Re-run the effect when the token changes
+
+    return (
+      <div
+        className="flex border-t border-l border-r border-black w-full"
+        style={{
+          borderTop: "1px solid #000",
+          borderRight: "1px solid #000",
+          borderLeft: "1px solid #000",
+          paddingTop: "5px",
+        }}
+      >
+        <div className=" flex items-center" style={{ width: "100%" }}>
+          <img
+            src={`${baseUrlNext}${ImageUrl}`}
+            alt="LOGO"
+            className="w-full my-auto"
+            style={{ maxHeight: "130px", width: "100%" }}
+          />
         </div>
       </div>
     );
@@ -1536,6 +1845,146 @@ function rptInvoice() {
     );
   };
 
+  const PurchaseInvoiceHeader = ({ data }) => {
+    return (
+      <div className="border-l border-r border-b border-black">
+        <div className="flex flex-grow w-full justify-center items-center">
+          <h1 className="text-black font-bold text-sm">
+            {data[0]?.invoiceHeading || ""}
+          </h1>
+        </div>
+        <div className="flex justify-between w-full p-2">
+          <div style={{ width: "25%" }}>
+            <p style={{ fontSize: "9px" }}>
+              <span className="font-bold">CIN No.:</span>{" "}
+              {data[0]?.ownCinNo || ""}
+            </p>
+          </div>
+          <div style={{ width: "20%" }}>
+            <p style={{ fontSize: "9px" }}>
+              <span className="font-bold">State:</span>{" "}
+              {data[0]?.ownState || ""}
+            </p>
+          </div>
+          <div style={{ width: "15%" }}>
+            <p style={{ fontSize: "9px" }}>
+              <span className="font-bold">State Code:</span>{" "}
+              {data[0]?.ownStateCode || ""}
+            </p>
+          </div>
+          <div style={{ width: "20%" }}>
+            <p style={{ fontSize: "9px" }}>
+              <span className="font-bold">GSTIN:</span>{" "}
+              {data[0]?.ownGstin || ""}
+            </p>
+          </div>
+          <div style={{ width: "20%" }}>
+            <p style={{ fontSize: "9px" }}>
+              <span className="font-bold">PAN No:</span>{" "}
+              {data[0]?.ownPanNo || ""}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const GeneralSalesInvoiceHeader = ({ data }) => {
+    return (
+      <div className="border border-black">
+        <div className="flex flex-grow w-full justify-center items-center p-1">
+          <h1 className="text-black font-bold text-sm  underline">
+            {data[0]?.invoiceHeading || "TAX INVOICE"}
+          </h1>
+        </div>
+        <div className="flex justify-between w-full p-2 border-t border-black">
+          <div style={{ width: "25%" }}>
+            <p style={{ fontSize: "9px" }}>
+              <span className="font-bold">State:</span>{" "}
+              {data[0]?.ownState || ""}
+            </p>
+          </div>
+          <div style={{ width: "25%" }}>
+            <p style={{ fontSize: "9px" }}>
+              <span className="font-bold">State Code:</span>{" "}
+              {data[0]?.ownStateCode || ""}
+            </p>
+          </div>
+          <div style={{ width: "25%" }}>
+            <p style={{ fontSize: "9px" }}>
+              <span className="font-bold">GSTIN:</span>{" "}
+              {data[0]?.ownGstin || ""}
+            </p>
+          </div>
+          <div style={{ width: "25%" }}>
+            <p style={{ fontSize: "9px" }}>
+              <span className="font-bold">PAN No:</span>{" "}
+              {data[0]?.ownPanNo || ""}
+            </p>
+          </div>
+        </div>
+        <div className="border-t border-black">
+          <div className="flex">
+            <div style={{ width: "100%" }}>
+              <p className="pl-2 pt-1 pb-1" style={{ fontSize: "9px" }}>
+                <span className="font-bold">IRN : </span>
+                {data[0]?.irn || ""}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const CreditNoteInvoiceHeader = ({ data }) => {
+    return (
+      <div className="border border-black">
+        <div className="flex flex-grow w-full justify-center items-center p-1">
+          <h1 className="text-black font-bold text-sm  underline">
+            {data[0]?.invoiceHeading || "CREDIT NOTE"}
+          </h1>
+        </div>
+        <div className="flex justify-between w-full p-2 border-t border-black">
+          <div style={{ width: "25%" }}>
+            <p style={{ fontSize: "9px" }}>
+              <span className="font-bold">State:</span>{" "}
+              {data[0]?.ownState || ""}
+            </p>
+          </div>
+          <div style={{ width: "25%" }}>
+            <p style={{ fontSize: "9px" }}>
+              <span className="font-bold">State Code:</span>{" "}
+              {data[0]?.ownStateCode || ""}
+            </p>
+          </div>
+          <div style={{ width: "25%" }}>
+            <p style={{ fontSize: "9px" }}>
+              <span className="font-bold">GSTIN:</span>{" "}
+              {data[0]?.ownGstin || ""}
+            </p>
+          </div>
+          <div style={{ width: "25%" }}>
+            <p style={{ fontSize: "9px" }}>
+              <span className="font-bold">PAN No:</span>{" "}
+              {data[0]?.ownPanNo || ""}
+            </p>
+          </div>
+        </div>
+        <div className="border-t border-black">
+          <div className="flex">
+            <div style={{ width: "100%" }}>
+              <p className="pl-2 pt-1 pb-1" style={{ fontSize: "9px" }}>
+                <span className="font-bold">IRN : </span>
+                {data[0]?.irn || ""}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const TgkTaxInvoiceHeader = ({ data }) => {
     console.log("TaxInvoiceHeader", data);
     console.log("reportIds", reportIds[0]);
@@ -1713,26 +2162,58 @@ function rptInvoice() {
   const TaxInvoiceBillingDetails = ({ data }) => {
     return (
       <div className="flex border-r border-l border-b border-black p-1">
-        <div style={{ fontSize: "9px", width: "40%" }}>
-          <div className="flex w-full">
-            <p className="font-bold" style={{ width: "40%" }}>
-              Billing Party Name{" "}
-            </p>
-            <p style={{ width: "60%" }}>: {data[0]?.party || ""}</p>
+        <div style={{ fontSize: "9px", width: "50%" }}>
+          <div
+            className="pt-1 w-full"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "100px 8px 1fr",
+              alignItems: "start",
+            }}
+          >
+            <div className="font-bold">Billing Party Name</div>
+
+            <div>:</div>
+
+            <div
+              style={{
+                paddingLeft: "4px",
+                textAlign: "left",
+                lineHeight: "1.25",
+                wordBreak: "break-word",
+                whiteSpace: "normal",
+              }}
+            >
+              {data[0]?.party || ""}
+            </div>
           </div>
-          <div className="flex pt-1 w-full">
-            <p className="font-bold" style={{ width: "40%" }}>
-              Address{" "}
-            </p>
-            <p style={{ width: "60%" }}>
-              : {data[0]?.billingPartyAddress || ""}
-            </p>
+
+          <div
+            className="pt-1 w-full"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "100px 8px 1fr",
+              alignItems: "start",
+            }}
+          >
+            <div className="font-bold">Address</div>
+
+            <div>:</div>
+
+            <div
+              style={{
+                paddingLeft: "4px",
+                textAlign: "left",
+                lineHeight: "1.25",
+                wordBreak: "break-word",
+                whiteSpace: "normal",
+              }}
+            >
+              {data[0]?.billingPartyAddress || ""}
+            </div>
           </div>
         </div>
-        <div
-          className="ps-1 pt-1 pb-2"
-          style={{ fontSize: "9px", width: "25%" }}
-        >
+        <div className="ps-1" style={{ fontSize: "9px", width: "20%" }}>
           <div className="flex w-full">
             <p className="font-bold" style={{ width: "35%" }}>
               PAN No.{" "}
@@ -1758,10 +2239,277 @@ function rptInvoice() {
             <p style={{ width: "65%" }}>: {data[0]?.partyGstin || ""}</p>
           </div>
         </div>
+        <div className="ps-1" style={{ fontSize: "9px", width: "20%" }}>
+          <div className="flex w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              Invoice No.{" "}
+            </p>
+            <p style={{ width: "65%" }}>: {data[0]?.invoiceNo || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              Invoice Date{" "}
+            </p>
+            <p style={{ width: "65%" }}>
+              : {formatDateToDDMMYYYY(data[0]?.invoiceDate) || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              Credit Period{" "}
+            </p>
+            <p style={{ width: "65%" }}>: {data[0]?.creditPeriod || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              Due Date{" "}
+            </p>
+            <p style={{ width: "65%" }}>
+              : {formatDateToDDMMYYYY(data[0]?.dueDate) || ""}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  const PurchaseInvoiceBillingDetails = ({ data }) => {
+    return (
+      <div className="flex  border-r border-l border-b border-black">
         <div
-          className="ps-2 pt-1 pb-2"
-          style={{ fontSize: "9px", width: "35%" }}
+          className="pl-1"
+          style={{
+            fontSize: "9px",
+            width: "60%",
+            borderRight: "1px solid black",
+          }}
         >
+          <div
+            className="pt-1 w-full"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "100px 8px 1fr",
+              alignItems: "start",
+            }}
+          >
+            <div className="font-bold">Billing Party Name</div>
+            <div>:</div>
+            <div
+              style={{
+                paddingLeft: "4px",
+                textAlign: "left",
+                lineHeight: "1.25",
+                wordBreak: "break-word",
+                whiteSpace: "normal",
+              }}
+            >
+              {data[0]?.party || ""}
+            </div>
+          </div>
+
+          <div
+            className="pt-1 w-full"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "100px 8px 1fr",
+              alignItems: "start",
+            }}
+          >
+            <div className="font-bold">Address</div>
+            <div>:</div>
+            <div
+              style={{
+                paddingLeft: "4px",
+                textAlign: "left",
+                lineHeight: "1.25",
+                wordBreak: "break-word",
+                whiteSpace: "normal",
+              }}
+            >
+              {data[0]?.billingPartyAddress || ""}
+            </div>
+          </div>
+
+          {/* State / State Code / GSTIN */}
+          <div
+            className="pt-1 w-full"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "30px 6px 1fr 70px 6px 55px 45px 6px 1fr",
+              alignItems: "start",
+              columnGap: "2px",
+              fontSize: "9px",
+              lineHeight: "1.25",
+            }}
+          >
+            <div className="font-bold">State</div>
+            <div>:</div>
+            <div>{data[0]?.partyState || ""}</div>
+
+            <div className="font-bold">State Code</div>
+            <div>:</div>
+            <div>{data[0]?.partyTaxStateCode || ""}</div>
+
+            <div className="font-bold">GSTIN</div>
+            <div>:</div>
+            <div>{data[0]?.partyGstin || ""}</div>
+          </div>
+        </div>
+        <div className="ps-1 " style={{ fontSize: "9px", width: "40%" }}>
+          <div className="flex w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              Invoice No.{" "}
+            </p>
+            <p style={{ width: "65%" }}>: {data[0]?.invoiceNo || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              Invoice Date{" "}
+            </p>
+            <p style={{ width: "65%" }}>
+              : {formatDateToDDMMYYYY(data[0]?.invoiceDate) || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              Credit Period{" "}
+            </p>
+            <p style={{ width: "65%" }}>: {data[0]?.creditPeriod || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              Due Date{" "}
+            </p>
+            <p style={{ width: "65%" }}>
+              : {formatDateToDDMMYYYY(data[0]?.dueDate) || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              Vendor No/Date{" "}
+            </p>
+            <p style={{ width: "65%" }}>
+              : {data[0]?.vendorInvoiceNo || ""} /{" "}
+              {formatDateToDDMMYYYY(data[0]?.vendorInvoiceDate) || ""}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const GeneralSalesInvoiceBillingDetails = ({ data }) => {
+    return (
+      <div className="flex border-r border-l border-b border-black p-1">
+        <div style={{ fontSize: "9px", width: "60%" }}>
+          <div className="flex w-full">
+            <p className="font-bold" style={{ width: "25%" }}>
+              Party Name:{" "}
+            </p>
+            <p style={{ width: "75%" }}>: {data[0]?.party || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "25%" }}>
+              Party Pan No.{" "}
+            </p>
+            <p style={{ width: "75%" }}>: {data[0]?.partyPanNo || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "25%" }}>
+              Address{" "}
+            </p>
+            <p className="flex w-full" style={{ width: "75%" }}>
+              : <p className="ps-1">{data[0]?.billingPartyAddress || ""}</p>
+            </p>
+          </div>
+          <div className="flex w-full">
+            <div className="flex pt-1 w-full">
+              <p className="font-bold" style={{ width: "25%" }}>
+                State{" "}
+              </p>
+              <p style={{ width: "75%" }}>: {data[0]?.partyState || ""}</p>
+            </div>
+            <div className="flex pt-1 w-full">
+              <p className="font-bold" style={{ width: "45%" }}>
+                State Code{" "}
+              </p>
+              <p style={{ width: "55%" }}>
+                : {data[0]?.partyTaxStateCode || ""}
+              </p>
+            </div>
+            <div className="flex pt-1 w-full">
+              <p className="font-bold" style={{ width: "25%" }}>
+                GSTIN{" "}
+              </p>
+              <p style={{ width: "75%" }}>: {data[0]?.partyGstin || ""}</p>
+            </div>
+          </div>
+        </div>
+        <div className="ps-2 pb-2" style={{ fontSize: "9px", width: "40%" }}>
+          <div className="flex w-full">
+            <p className="font-bold" style={{ width: "30%" }}>
+              Invoice No.{" "}
+            </p>
+            <p style={{ width: "70%" }}>: {data[0]?.invoiceNo || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "30%" }}>
+              Invoice Date{" "}
+            </p>
+            <p style={{ width: "70%" }}>
+              : {formatDateToDDMMYYYY(data[0]?.invoiceDate) || ""}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const CreditNoteBillingDetails = ({ data }) => {
+    return (
+      <div className="flex border-r border-l border-b border-black p-1">
+        <div style={{ fontSize: "9px", width: "40%" }}>
+          <div className="flex w-full">
+            <p className="font-bold" style={{ width: "38%" }}>
+              Billing Party Name{" "}
+            </p>
+            <p style={{ width: "62%" }}>: {data[0]?.party || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "38%" }}>
+              Address{" "}
+            </p>
+            <p className="flex w-full" style={{ width: "62%" }}>
+              : <p className="ps-1">{data[0]?.billingPartyAddress || ""}</p>
+            </p>
+          </div>
+        </div>
+        <div className="ps-1 pb-2" style={{ fontSize: "9px", width: "25%" }}>
+          <div className="flex w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              PAN No.{" "}
+            </p>
+            <p style={{ width: "65%" }}>: {data[0]?.partyPanNo || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              State{" "}
+            </p>
+            <p style={{ width: "65%" }}>: {data[0]?.partyState || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              State Code{" "}
+            </p>
+            <p style={{ width: "65%" }}>: {data[0]?.partyTaxStateCode || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              GSTIN{" "}
+            </p>
+            <p style={{ width: "65%" }}>: {data[0]?.partyGstin || ""}</p>
+          </div>
+        </div>
+        <div className="ps-2 pb-2" style={{ fontSize: "9px", width: "35%" }}>
           <div className="flex w-full">
             <p className="font-bold" style={{ width: "30%" }}>
               Invoice No.{" "}
@@ -1777,18 +2525,23 @@ function rptInvoice() {
             </p>
           </div>
           <div className="flex pt-1 w-full">
-            <p className="font-bold" style={{ width: "30%" }}>
+            <p className="font-bold" style={{ width: "25%" }}>
               Credit Period{" "}
             </p>
-            <p style={{ width: "70%" }}>: {data[0]?.creditPeriod || ""}</p>
-          </div>
-          <div className="flex pt-1 w-full">
-            <p className="font-bold" style={{ width: "30%" }}>
+            <p style={{ width: "25%" }}>: {data[0]?.creditPeriod || ""}</p>
+            <p className="font-bold" style={{ width: "25%" }}>
               Due Date{" "}
             </p>
-            <p style={{ width: "70%" }}>
+            <p style={{ width: "25%" }}>
               : {formatDateToDDMMYYYY(data[0]?.dueDate) || ""}
             </p>
+          </div>
+
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              Parent Invoice No{" "}
+            </p>
+            <p style={{ width: "65%" }}>: {data[0]?.parentInvoiceNo || ""}</p>
           </div>
         </div>
       </div>
@@ -2526,7 +3279,7 @@ function rptInvoice() {
     console.log("sizeType", sizeType);
     return (
       <div className="flex border-r border-l border-b border-black">
-        <div className="p-2" style={{ fontSize: "9px", width: "38%" }}>
+        <div className="p-1" style={{ fontSize: "9px", width: "38%" }}>
           {/* <div className="flex w-full">
             <p className="font-bold" style={{ width: "40%" }}>
               Job No. {" "}
@@ -2549,8 +3302,12 @@ function rptInvoice() {
             <p className="font-bold" style={{ width: "40%" }}>
               Vessel/Voy{" "}
             </p>
+            {/* <p style={{ width: "60%" }}>
+              : {data[0]?.jobVessel || ""} / {data[0]?.jobVoyageNo || ""}
+            </p> */}
+            {/* Vessel and  VoyageNo has been changes to BL vessel and voyage no as discussed with Nilay sir and shahnaz on date 21-05-2026 that it will come from */}
             <p style={{ width: "60%" }}>
-              : {data[0]?.vessel || ""} / {data[0]?.voyageNo || ""}
+              : {data[0]?.blVesselName || ""} / {data[0]?.voyageNo || ""}
             </p>
           </div>
           <div className="flex pt-1 w-full">
@@ -2565,21 +3322,34 @@ function rptInvoice() {
             </p>
             <p style={{ width: "60%" }}>: {data[0]?.pod || ""}</p>
           </div>
-          <div className="flex pt-1 w-full">
-            <p className="font-bold" style={{ width: "40%" }}>
-              Shipment Terms{" "}
-            </p>
-            <p style={{ width: "60%" }}>: {data[0]?.tradeTerms || ""}</p>
-          </div>
+          {clientId != 17 && (
+            <div className="flex pt-1 w-full">
+              <p className="font-bold" style={{ width: "40%" }}>
+                Shipment Terms{" "}
+              </p>
+              <p style={{ width: "60%" }}>
+                :{" "}
+                {clientId == 25
+                  ? data[0]?.deliveryType || ""
+                  : data[0]?.tradeTerms || ""}
+              </p>
+            </div>
+          )}
           <div className="flex pt-1 w-full">
             <p className="font-bold" style={{ width: "40%" }}>
               Place Of Supply{" "}
             </p>
             <p style={{ width: "60%" }}>: {data[0]?.placeOfSupply || ""}</p>
           </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Terminal{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.terminal || ""}</p>
+          </div>
         </div>
         <div
-          className="border-r border-black p-2"
+          className="border-r border-black p-1"
           style={{ fontSize: "9px", width: "22%" }}
         >
           {/* <div className="flex w-full">
@@ -2611,7 +3381,10 @@ function rptInvoice() {
               Date{" "}
             </p>
             <p style={{ width: "60%" }}>
-              : {formatDateToDDMMYYYY(data[0]?.arrivalDate) || ""}
+              :{" "}
+              {formatDateToDDMMYYYY(
+                clientId == 25 ? data[0]?.sobDate : data[0]?.arrivalDate,
+              ) || ""}
             </p>
           </div>
           <div className="flex pt-1 w-full">
@@ -2633,7 +3406,7 @@ function rptInvoice() {
             <p style={{ width: "60%" }}>: {sizeType || ""}</p>
           </div>
         </div>
-        <div className="p-2" style={{ fontSize: "9px", width: "40%" }}>
+        <div className="p-1" style={{ fontSize: "9px", width: "40%" }}>
           <div className="flex w-full">
             <p className="font-bold" style={{ width: "40%" }}>
               Shipper.{" "}
@@ -2688,6 +3461,84 @@ function rptInvoice() {
             <p style={{ width: "60%" }}>: {data[0]?.shipperRefNo || ""}</p>
           </div>
           <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "25%" }}>
+              Ex. Rate{" "}
+            </p>
+            <p style={{ width: "25%" }}>: {data[0]?.exchangeRate || ""}</p>
+            <p className="font-bold" style={{ width: "25%" }}>
+              Free Days{" "}
+            </p>
+            <p style={{ width: "25%" }}>: {data[0]?.freeDays || ""}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const DomesticInvoiceJobDetails = ({ data }) => {
+    const sizeType = (data?.[0]?.sizeTypeContainer ?? "").replaceAll("/", ", ");
+    return (
+      <div className="flex border-r border-l border-b border-black">
+        <div className="p-1" style={{ fontSize: "9px", width: "38%" }}>
+          <div className="flex w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Job No.{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.jobNo || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              FROM PORT{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.fromLocationId || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Size Type{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {sizeType || ""}</p>
+          </div>
+        </div>
+        <div
+          className="border-r border-black"
+          style={{ fontSize: "9px", width: "22%" }}
+        >
+          <div className="flex w-full invisible">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Date :
+            </p>
+            <p style={{ width: "60%" }}>
+              {formatDateToDDMMYYYY(data[0]?.jobDate) || ""}
+            </p>
+          </div>
+
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              TO PORT{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.toLocationId || ""}</p>
+          </div>
+        </div>
+        <div className="p-1" style={{ fontSize: "9px", width: "40%" }}>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Consignee{" "}
+            </p>
+            <p style={{ width: "60%" }}>
+              : {data[0]?.consignee || data[0]?.consigneeText || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Cargo Type{" "}
+            </p>
+            <p style={{ width: "60%" }}>
+              : {data[0]?.cargoType || ""}
+              {" / "}
+              {data[0]?.containerStatus || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
             <p className="font-bold" style={{ width: "40%" }}>
               Ex. Rate{" "}
             </p>
@@ -2727,7 +3578,7 @@ function rptInvoice() {
               Vessel/Voy{" "}
             </p>
             <p style={{ width: "60%" }}>
-              : {data[0]?.vessel || ""} / {data[0]?.voyageNo || ""}
+              : {data[0]?.jobVessel || ""} / {data[0]?.jobVoyageNo || ""}
             </p>
           </div>
           <div className="flex pt-1 w-full">
@@ -2854,8 +3705,9 @@ function rptInvoice() {
               No. of Pkg{" "}
             </p>
             <p style={{ width: "60%" }}>
-              : {data[0]?.blNoOfPackages || ""}{" "}
-              {data[0]?.packagingTypeCode || ""}
+              : {data[0]?.jobNoOfPackages || ""}{" "}
+              {data[0]?.jobTypeOfPackages || ""}
+              {/* change as told by tabish  as data comes from job not from invoice */}
             </p>
           </div>
           <div className="flex pt-1 w-full">
@@ -2869,6 +3721,108 @@ function rptInvoice() {
               Ex. Rate{" "}
             </p>
             <p style={{ width: "60%" }}>: {data[0]?.exchangeRate || ""}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const PurchaseInvoiceJobDetails = ({ data }) => {
+    const sizeType = (data?.[0]?.sizeTypeContainer ?? "").replaceAll("/", ", ");
+    console.log("sizeType", sizeType);
+    return (
+      <div className="flex border-r border-l border-b border-black">
+        <div
+          className="p-1"
+          style={{
+            fontSize: "9px",
+            width: "60%",
+            borderRight: "1px solid black",
+          }}
+        >
+          <div className="flex w-full">
+            <p className="font-bold" style={{ width: "20%" }}>
+              BL No.{" "}
+            </p>
+            <p style={{ width: "80%" }}>: {data[0]?.jobNo || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "20%" }}>
+              PLR{" "}
+            </p>
+            <p style={{ width: "80%" }}>: {data[0]?.plr || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "20%" }}>
+              POD{" "}
+            </p>
+            <p style={{ width: "80%" }}>: {data[0]?.pod || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "20%" }}>
+              AGENT{" "}
+            </p>
+            <p style={{ width: "80%" }}>:{data[0]?.agent || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "20%" }}>
+              TERMINAL{" "}
+            </p>
+            <p style={{ width: "80%" }}>
+              : {data[0]?.podTerminal || data[0]?.polTerminal || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "20%" }}>
+              From Date{" "}
+            </p>
+            <p style={{ width: "80%" }}>
+              : {formatDateToDDMMYYYY(data[0]?.fromDate) || ""}
+            </p>
+          </div>
+        </div>
+
+        <div className="p-1" style={{ fontSize: "9px", width: "40%" }}>
+          <div className="flex w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Vessel/Voy{" "}
+            </p>
+            <p className="font-bold" style={{ width: "60%" }}>
+              {" "}
+              : {data[0]?.blVesselName || ""} / {data[0]?.voyageNo || ""}{" "}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              POL{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.pol || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              FPD{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.fpd || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Agent Branch{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.AgentBranch || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Depot{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.depot || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              To Date{" "}
+            </p>
+            <p style={{ width: "60%" }}>
+              : {formatDateToDDMMYYYY(data[0]?.toDate) || ""}
+            </p>
           </div>
         </div>
       </div>
@@ -3613,14 +4567,18 @@ function rptInvoice() {
     );
     const gridRoundOfTotal = Number(gridTotal || 0).toFixed(2);
 
-    const totalAmountInWords =
-      clientId === 13 || clientId === 9
-        ? numberToWordsInIndianSystemWithOutPaisaAndRupees(
-          parseFloat(gridRoundOfTotal || 0),
-        )
-        : numberToWordsInIndianSystemUsingWithPaisaAndRupees(
-          parseFloat(gridRoundOfTotal || 0),
-        );
+    // const totalAmountInWords =
+    //   clientId === 13 || clientId === 9
+    //     ? numberToWordsInIndianSystemWithOutPaisaAndRupees(
+    //       parseFloat(gridRoundOfTotal || 0),
+    //     )
+    //     : numberToWordsInIndianSystemUsingWithPaisaAndRupees(
+    //       parseFloat(gridRoundOfTotal || 0),
+    //     );
+    const totalAmountInWords = numberToWordsInIndianAndUsaSystem(
+      parseFloat(gridRoundOfTotal || 0),
+      data?.[0]?.currency,
+    );
     //total calculate Start
     const chargeList = data?.[0]?.tblInvoiceCharge || [];
 
@@ -3778,9 +4736,9 @@ function rptInvoice() {
                       chargeData,
                       chargeData?.rate != null
                         ? Number(chargeData.rate).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
                         : "",
                       "",
                     )}
@@ -3814,12 +4772,12 @@ function rptInvoice() {
                       chargeData,
                       chargeData?.totalAmountHc != null
                         ? Number(chargeData.totalAmountHc).toLocaleString(
-                          "en-IN",
-                          {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          },
-                        )
+                            "en-IN",
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            },
+                          )
                         : "",
                       "",
                     )}
@@ -3854,9 +4812,9 @@ function rptInvoice() {
                       ? ""
                       : chargeData?.IGST != null
                         ? Number(chargeData.IGST).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
                         : ""}
                   </p>
                   <p
@@ -3867,9 +4825,9 @@ function rptInvoice() {
                       ? ""
                       : chargeData?.CGST != null
                         ? Number(chargeData.CGST).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
                         : ""}
                   </p>
                   <p
@@ -3880,18 +4838,18 @@ function rptInvoice() {
                       ? ""
                       : chargeData?.SGST != null
                         ? Number(chargeData.SGST).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
                         : ""}
                   </p>
 
                   <p className="pb-1 pr-1 text-right " style={{ width: "9%" }}>
                     {amount != null
                       ? Number(amount).toLocaleString("en-IN", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })
                       : ""}
                   </p>
                 </div>
@@ -3915,9 +4873,9 @@ function rptInvoice() {
               >
                 {finalTotals?.totalAmountHc != null
                   ? Number(finalTotals.totalAmountHc).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
                   : ""}
               </p>
               <p
@@ -3930,9 +4888,9 @@ function rptInvoice() {
               >
                 {finalTotals?.IGST != null
                   ? Number(finalTotals.IGST).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
                   : ""}
               </p>
               <p
@@ -3941,9 +4899,9 @@ function rptInvoice() {
               >
                 {finalTotals?.CGST != null
                   ? Number(finalTotals.CGST).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
                   : ""}
               </p>
               <p
@@ -3952,9 +4910,9 @@ function rptInvoice() {
               >
                 {finalTotals?.SGST != null
                   ? Number(finalTotals.SGST).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
                   : ""}
               </p>
               <p
@@ -3986,6 +4944,884 @@ function rptInvoice() {
         {showHsnGrid && index === totalPages - 1 && (
           <div>
             <TaxInvoiceHsnSummaryGrid hsnSac={hsnSac} data={data} />
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const formatAmountBlankIfZero = (value) => {
+    if (value === null || value === undefined || String(value).trim() === "") {
+      return "";
+    }
+
+    const num = Number(value);
+
+    if (!Number.isFinite(num) || num === 0) {
+      return "";
+    }
+
+    return num.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const toFiniteAmount = (value, fallback = 0) => {
+    if (value === null || value === undefined) return fallback;
+    const normalized =
+      typeof value === "string" ? value.replace(/,/g, "").trim() : value;
+    if (normalized === "") return fallback;
+    const num = Number(normalized);
+    return Number.isFinite(num) ? num : fallback;
+  };
+
+  const firstFiniteAmount = (...values) => {
+    for (const value of values) {
+      if (value === null || value === undefined) continue;
+      const normalized =
+        typeof value === "string" ? value.replace(/,/g, "").trim() : value;
+      if (normalized === "") continue;
+      const num = Number(normalized);
+      if (Number.isFinite(num)) return num;
+    }
+    return 0;
+  };
+
+  const getTaxAmountFromChargeTax = (
+    chargeData,
+    taxCodePrefix,
+    isHomeCurrency,
+  ) => {
+    const taxes = Array.isArray(chargeData?.tblInvoiceChargeTax)
+      ? chargeData.tblInvoiceChargeTax
+      : [];
+    const prefix = String(taxCodePrefix || "").toUpperCase();
+
+    return taxes.reduce((sum, tax) => {
+      const taxCode = String(tax?.taxCode || "")
+        .trim()
+        .toUpperCase();
+      if (!taxCode.startsWith(prefix)) return sum;
+
+      return (
+        sum +
+        firstFiniteAmount(
+          isHomeCurrency ? tax?.taxAmountHc : tax?.taxAmountFc,
+          isHomeCurrency ? tax?.taxAmountFc : tax?.taxAmountHc,
+        )
+      );
+    }, 0);
+  };
+
+  const getChargeTaxAmount = (chargeData, taxCodePrefix, isHomeCurrency) => {
+    const upperPrefix = String(taxCodePrefix || "").toUpperCase();
+    const directValue = isHomeCurrency
+      ? chargeData?.[upperPrefix]
+      : chargeData?.[`${upperPrefix}Fc`];
+    const directAmount = firstFiniteAmount(directValue);
+
+    if (directAmount !== 0) return directAmount;
+
+    return getTaxAmountFromChargeTax(chargeData, upperPrefix, isHomeCurrency);
+  };
+
+  const getChargeTaxableAmount = (chargeData, isHomeCurrency) => {
+    const qty = toFiniteAmount(chargeData?.qty);
+    const rate = toFiniteAmount(chargeData?.rate);
+    const exchangeRate = toFiniteAmount(chargeData?.exchangeRate, 1);
+    const calculatedAmount = qty * rate * (isHomeCurrency ? exchangeRate : 1);
+
+    return firstFiniteAmount(
+      isHomeCurrency ? chargeData?.taxableAmount : chargeData?.taxableAmountFc,
+      isHomeCurrency ? chargeData?.totalAmountHc : chargeData?.totalAmountFc,
+      isHomeCurrency ? chargeData?.totalAmount : chargeData?.totalAmountFc,
+      chargeData?.totalAmountFc,
+      calculatedAmount,
+    );
+  };
+
+  const getChargeFinancials = (chargeData, isHomeCurrency) => {
+    const taxableAmount = getChargeTaxableAmount(chargeData, isHomeCurrency);
+    const IGST = getChargeTaxAmount(chargeData, "IGST", isHomeCurrency);
+    const CGST = getChargeTaxAmount(chargeData, "CGST", isHomeCurrency);
+    const SGST = getChargeTaxAmount(chargeData, "SGST", isHomeCurrency);
+    const taxAmount = IGST + CGST + SGST;
+
+    return {
+      taxableAmount,
+      IGST,
+      CGST,
+      SGST,
+      taxAmount,
+      totalAmount: taxableAmount + taxAmount,
+    };
+  };
+
+  const getChargeTotals = (chargeList, isHomeCurrency) =>
+    (Array.isArray(chargeList) ? chargeList : []).reduce(
+      (acc, item) => {
+        const financials = getChargeFinancials(item, isHomeCurrency);
+        acc.taxableAmount += financials.taxableAmount;
+        acc.IGST += financials.IGST;
+        acc.CGST += financials.CGST;
+        acc.SGST += financials.SGST;
+        acc.totalAmount += financials.totalAmount;
+        return acc;
+      },
+      {
+        taxableAmount: 0,
+        IGST: 0,
+        CGST: 0,
+        SGST: 0,
+        totalAmount: 0,
+      },
+    );
+
+  const getCompactChargeGridMinHeightPx = (rowCount = 0) =>
+    Math.max(72, Number(rowCount || 0) * 18 + 42);
+
+  const TaxInvoiceChargeDetailsForTaxInvoiceReportFF = ({
+    data,
+    charge,
+    index,
+    hsnSac,
+    compactChargeGrid = false,
+    compactHsnGrid = false,
+  }) => {
+    const isCont = (row) => row?.__isContinuation === true;
+
+    const showVal = (row, v, fallback = "") =>
+      isCont(row) ? "" : (v ?? fallback);
+
+    const isHomeCurrency = Number(data?.[0]?.isHomeCurrency) === 1;
+    const chargeList = data?.[0]?.tblInvoiceCharge || [];
+    const chargeTotals = getChargeTotals(chargeList, isHomeCurrency);
+    const gridTotal = chargeTotals.totalAmount;
+    const gridRoundOfTotal = Number(gridTotal || 0).toFixed(2);
+
+    // const totalAmountInWords =
+    //   clientId === 13 || clientId === 9
+    //     ? numberToWordsInIndianSystemWithOutPaisaAndRupees(
+    //       parseFloat(gridRoundOfTotal || 0),
+    //     )
+    //     : numberToWordsInIndianSystemUsingWithPaisaAndRupees(
+    //       parseFloat(gridRoundOfTotal || 0),
+    //     );
+    const totalAmountInWords = numberToWordsInIndianAndUsaSystem(
+      parseFloat(gridRoundOfTotal || 0),
+      data?.[0]?.currency,
+    );
+
+    const currentPageLength = charge?.[index]?.length || 0;
+    const nextPageLength = charge?.[index + 1]?.length || 0;
+    const lastPageIndex = (charge?.length || 1) - 1;
+
+    const totalPages = charge?.length || 0;
+
+    const isLastPage =
+      index === lastPageIndex ||
+      (index === lastPageIndex - 1 && nextPageLength < 4);
+
+    const isSinglePage = (charge?.length || 0) === 1;
+
+    const defaultChargeGridHeight = isSinglePage ? "205px" : "350px";
+    const compactChargeGridMinHeight = `${getCompactChargeGridMinHeightPx(
+      currentPageLength,
+    )}px`;
+    const chargeGridStyle = compactChargeGrid
+      ? { minHeight: compactChargeGridMinHeight, overflow: "visible" }
+      : { height: defaultChargeGridHeight, overflow: "hidden" };
+
+    const showHsnGrid =
+      isLastPage || (currentPageLength > 4 && currentPageLength < 10);
+    const showChargeSummary = index === totalPages - 1;
+
+    return (
+      <>
+        {currentPageLength > 0 && (
+          <div
+            className="flex w-full border-black border-r border-l border-b text-center font-bold"
+            style={{ fontSize: "9px", width: "100%" }}
+          >
+            <p className="border-r border-black" style={{ width: "27%" }}>
+              DESCRIPTION
+            </p>
+            <p className="border-r border-black" style={{ width: "7%" }}>
+              HSN / SAC Code
+            </p>
+            <p className="border-r border-black" style={{ width: "5%" }}>
+              Size Type
+            </p>
+            <p className="border-r border-black" style={{ width: "3%" }}>
+              Qty
+            </p>
+            <p className="border-r border-black" style={{ width: "8%" }}>
+              Rate
+            </p>
+            <p className="border-r border-black" style={{ width: "4%" }}>
+              Curr
+            </p>
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              Ex. Rate
+            </p>
+            <p className="border-r border-black" style={{ width: "8%" }}>
+              Taxable Amount
+            </p>
+            <p className="border-r border-black" style={{ width: "5%" }}>
+              Tax Rate
+            </p>
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              IGST
+            </p>
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              CGST
+            </p>
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              SGST
+            </p>
+            <p className="text-center" style={{ width: "9%" }}>
+              Amount in {data?.[0]?.currency || ""}
+            </p>
+          </div>
+        )}
+
+        {currentPageLength > 0 && (
+          <div
+            className="border-black border-r border-l border-b"
+            style={chargeGridStyle}
+          >
+            {charge?.[index]?.map((chargeData, idx, array) => {
+              const cont = isCont(chargeData);
+              const financials = cont
+                ? null
+                : getChargeFinancials(chargeData, isHomeCurrency);
+
+              return (
+                <div
+                  key={idx}
+                  className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""}`}
+                  style={{ fontSize: "9px", width: "100%" }}
+                >
+                  <p
+                    className="pb-1 border-r border-black"
+                    style={{ width: "27%", paddingLeft: "2px" }}
+                  >
+                    {chargeData?.description || ""}
+                  </p>
+
+                  <p
+                    className=" border-r border-black text-center"
+                    style={{ width: "7%" }}
+                  >
+                    {showVal(chargeData, chargeData?.hsn, "")}{" "}
+                    {showVal(chargeData, chargeData?.sac, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 border-r border-black text-center"
+                    style={{ width: "5%" }}
+                  >
+                    {showVal(chargeData, chargeData?.size, "")}{" "}
+                    {showVal(chargeData, chargeData?.typeCode, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 border-r border-black text-center"
+                    style={{ width: "3%" }}
+                  >
+                    {showVal(chargeData, chargeData?.qty, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "8%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      chargeData?.rate != null
+                        ? Number(chargeData.rate).toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
+                        : "",
+                      "",
+                    )}
+                  </p>
+
+                  <p
+                    className="pb-1 border-r border-black text-center"
+                    style={{ width: "4%" }}
+                  >
+                    {showVal(chargeData, chargeData?.chargeCurrency, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "6%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      chargeData?.exchangeRate != null
+                        ? Number(chargeData.exchangeRate)
+                        : // ? Number(chargeData.exchangeRate).toFixed(2)
+                          "",
+                      "",
+                    )}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "8%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      formatAmountBlankIfZero(financials?.taxableAmount),
+                      "",
+                    )}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "5%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      (chargeData?.tblInvoiceChargeTax || [])
+                        .reduce(
+                          (sum, item) =>
+                            sum + (Number(item?.taxPercentage) || 0),
+                          0,
+                        )
+                        .toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }),
+                      "",
+                    )}
+                  </p>
+
+                  {/* ✅ IMPORTANT: remove "|| 0.00" fallback, and hide on continuation */}
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "6%" }}
+                  >
+                    {cont ? "" : formatAmountBlankIfZero(financials?.IGST)}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "6%" }}
+                  >
+                    {cont ? "" : formatAmountBlankIfZero(financials?.CGST)}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "6%" }}
+                  >
+                    {cont ? "" : formatAmountBlankIfZero(financials?.SGST)}
+                  </p>
+
+                  <p className="pb-1 pr-1 text-right " style={{ width: "9%" }}>
+                    {cont
+                      ? ""
+                      : formatAmountBlankIfZero(financials?.totalAmount)}
+                  </p>
+                </div>
+              );
+            })}
+
+            {showChargeSummary && (
+              <>
+                {/* Final row - Amount in Words kash */}
+                <div
+                  className="flex w-full border-black text-center font-bold"
+                  style={{ fontSize: "8px", width: "100%" }}
+                >
+                  <p
+                    className="border-t  border-r border-black text-right pr-1"
+                    style={{ width: "60%" }}
+                  >
+                    Total
+                  </p>
+                  <p
+                    className="border-t border-black text-right border-r pr-1"
+                    style={{ width: "8%" }}
+                  >
+                    {formatAmountBlankIfZero(chargeTotals?.taxableAmount)}
+                  </p>
+                  <p
+                    className="border-t border-black text-right border-r pr-1"
+                    style={{ width: "5%" }}
+                  ></p>
+                  <p
+                    className="border-t border-black text-right border-r pr-1"
+                    style={{ width: "6%" }}
+                  >
+                    {formatAmountBlankIfZero(chargeTotals?.IGST)}
+                  </p>
+                  <p
+                    className="border-t border-black text-right border-r pr-1"
+                    style={{ width: "6%" }}
+                  >
+                    {formatAmountBlankIfZero(chargeTotals?.CGST)}
+                  </p>
+                  <p
+                    className="border-t border-black text-right border-r pr-1"
+                    style={{ width: "6%" }}
+                  >
+                    {formatAmountBlankIfZero(chargeTotals?.SGST)}
+                  </p>
+                  <p
+                    className="border-t border-black text-right pr-1"
+                    style={{ width: "9%" }}
+                  >
+                    {Number(gridTotal ?? 0).toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+                {/* amountInWords */}
+                <div
+                  className={`flex w-full border-t border-black ${index != 0 ? "border-b" : ""} `}
+                  style={{ fontSize: "8px", width: "100%" }}
+                >
+                  <p
+                    className="pl-1 uppercase"
+                    style={{ width: "85%", paddingRight: "15px" }}
+                  >
+                    <span className="font-bold">Amount in Words </span>
+                    {data?.[0]?.currency || ""} {totalAmountInWords || ""}
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {showHsnGrid && index === totalPages - 1 && (
+          <div>
+            <TaxInvoiceHsnSummaryGridFF
+              hsnSac={hsnSac}
+              data={data}
+              compact={compactHsnGrid}
+            />
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const PurchaseInvoiceChargeDetailsForTaxInvoiceReportFF = ({
+    data,
+    charge,
+    index,
+    hsnSac,
+    compactChargeGrid = false,
+    compactHsnGrid = false,
+  }) => {
+    const isCont = (row) => row?.__isContinuation === true;
+
+    const showVal = (row, v, fallback = "") =>
+      isCont(row) ? "" : (v ?? fallback);
+
+    const toNum = (value) => {
+      if (value === null || value === undefined || value === "") return 0;
+      const num = Number(String(value).replace(/,/g, ""));
+      return Number.isFinite(num) ? num : 0;
+    };
+
+    const firstValue = (...values) => {
+      for (const v of values) {
+        if (v !== null && v !== undefined && v !== "") return v;
+      }
+      return "";
+    };
+
+    const fmtAmt = (value) => {
+      if (value === null || value === undefined || value === "") return "";
+      const num = Number(String(value).replace(/,/g, ""));
+      if (!Number.isFinite(num)) return "";
+      return num.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    };
+
+    const fmtQty = (value) => {
+      if (value === null || value === undefined || value === "") return "";
+      const num = Number(String(value).replace(/,/g, ""));
+      if (!Number.isFinite(num)) return value;
+      return num.toLocaleString("en-IN", {
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 3,
+      });
+    };
+
+    const getSizeType = (row) => {
+      const size = row?.size || "";
+      const typeCode = row?.typeCode || row?.type || "";
+
+      if (!size && !typeCode) return "/";
+      return `${size}/${typeCode}`;
+    };
+
+    const getStatus = (row) => {
+      return (
+        row?.containerStatus ||
+        row?.statusName ||
+        row?.containerStatusName ||
+        ""
+      );
+    };
+
+    const getAmountInChargeCurr = (row) =>
+      firstValue(
+        row?.amountInChargeCurrency,
+        row?.amountInChargeCurr,
+        row?.totalAmountFc,
+        row?.amountFc,
+        row?.taxableAmountFc,
+        row?.amount,
+      );
+
+    const getAmount = (row) =>
+      firstValue(row?.totalAmountFc, row?.taxableAmountFc, row?.amountFc);
+
+    const getAmountInINR = (row) =>
+      firstValue(
+        row?.totalAmountHc,
+        row?.amountHc,
+        row?.taxableAmountHc,
+        row?.totalAmountFc,
+        row?.taxableAmountFc,
+      );
+
+    const currentPageLength = charge?.[index]?.length || 0;
+    const nextPageLength = charge?.[index + 1]?.length || 0;
+    const lastPageIndex = (charge?.length || 1) - 1;
+    const totalPages = charge?.length || 0;
+
+    const isLastPage =
+      index === lastPageIndex ||
+      (index === lastPageIndex - 1 && nextPageLength < 4);
+
+    const showChargeSummary = index === totalPages - 1;
+
+    const invoiceData = data?.[0] || {};
+    const allCharges = invoiceData?.tblInvoiceCharge || [];
+
+    const totalAmtInChargeCurr = allCharges.reduce(
+      (sum, row) => sum + toNum(getAmountInChargeCurr(row)),
+      0,
+    );
+
+    const totalAmount = allCharges.reduce(
+      (sum, row) => sum + toNum(getAmount(row)),
+      0,
+    );
+
+    const totalAmountInINR = allCharges.reduce(
+      (sum, row) => sum + toNum(getAmountInINR(row)),
+      0,
+    );
+
+    const netAmount = toNum(invoiceData?.totalInvoiceAmountFc);
+    const tdsAmount = toNum(invoiceData?.tdsAmountFc);
+    const netAmountPayable = netAmount - tdsAmount;
+
+    const gridRoundOfTotal = Number(netAmountPayable || 0).toFixed(2);
+
+    const totalAmountInWords =
+      clientId === 13 || clientId === 9
+        ? numberToWordsInIndianSystemWithOutPaisaAndRupees(
+            parseFloat(gridRoundOfTotal || 0),
+          )
+        : numberToWordsInIndianSystemUsingWithPaisaAndRupees(
+            parseFloat(gridRoundOfTotal || 0),
+          );
+
+    return (
+      <>
+        {currentPageLength > 0 && (
+          <div
+            className="flex w-full border-black border-r border-l border-b text-center font-bold"
+            style={{
+              fontSize: "8px",
+              width: "100%",
+              lineHeight: "1.15",
+            }}
+          >
+            <p className="border-r border-black" style={{ width: "30%" }}>
+              Charge Name
+            </p>
+
+            <p className="border-r border-black" style={{ width: "7%" }}>
+              Size/Type
+            </p>
+
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              Status
+            </p>
+
+            <p className="border-r border-black" style={{ width: "8%" }}>
+              Cargo Type
+            </p>
+
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              QTY
+            </p>
+
+            <p className="border-r border-black" style={{ width: "7%" }}>
+              Rate
+            </p>
+
+            <p className="border-r border-black" style={{ width: "5%" }}>
+              Curr.
+            </p>
+
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              Ex.Rate
+            </p>
+
+            <p className="border-r border-black" style={{ width: "9%" }}>
+              Amt in
+              <br />
+              Chrg Curr.
+            </p>
+
+            <p className="border-r border-black" style={{ width: "8%" }}>
+              Amount in
+              <br />
+              HC
+            </p>
+
+            <p style={{ width: "8%" }}>
+              Amount
+              <br />
+              in INR
+            </p>
+          </div>
+        )}
+
+        {currentPageLength > 0 && (
+          <div
+            style={{
+              width: "100%",
+              height: "auto",
+              overflow: "visible",
+            }}
+          >
+            {charge?.[index]?.map((chargeData, idx) => {
+              const cont = isCont(chargeData);
+
+              return (
+                <div
+                  key={idx}
+                  className="flex w-full border-l border-r border-black"
+                  style={{
+                    fontSize: "8px",
+                    width: "100%",
+                    lineHeight: "1.15",
+                    minHeight: "17px",
+                  }}
+                >
+                  <p
+                    className="border-r border-black"
+                    style={{
+                      width: "30%",
+                      paddingLeft: "3px",
+                      textAlign: "left",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {chargeData?.description || ""}
+                  </p>
+
+                  <p
+                    className="border-r border-black text-center"
+                    style={{ width: "7%" }}
+                  >
+                    {showVal(chargeData, getSizeType(chargeData), "")}
+                  </p>
+
+                  <p
+                    className="border-r border-black text-center"
+                    style={{ width: "6%" }}
+                  >
+                    {showVal(chargeData, getStatus(chargeData), "")}
+                  </p>
+
+                  <p
+                    className="border-r border-black text-center"
+                    style={{ width: "8%" }}
+                  >
+                    {showVal(chargeData, chargeData?.cargoType, "")}
+                  </p>
+
+                  <p
+                    className="border-r border-black text-right pr-1"
+                    style={{ width: "6%" }}
+                  >
+                    {showVal(chargeData, fmtQty(chargeData?.qty), "")}
+                  </p>
+
+                  <p
+                    className="border-r border-black text-right pr-1"
+                    style={{ width: "7%" }}
+                  >
+                    {showVal(chargeData, fmtAmt(chargeData?.rate), "")}
+                  </p>
+
+                  <p
+                    className="border-r border-black text-center"
+                    style={{ width: "5%" }}
+                  >
+                    {showVal(chargeData, chargeData?.chargeCurrency, "")}
+                  </p>
+
+                  <p
+                    className="border-r border-black text-right pr-1"
+                    style={{ width: "6%" }}
+                  >
+                    {showVal(chargeData, fmtAmt(chargeData?.exchangeRate), "")}
+                  </p>
+
+                  <p
+                    className="border-r border-black text-right pr-1"
+                    style={{ width: "9%" }}
+                  >
+                    {cont ? "" : fmtAmt(getAmountInChargeCurr(chargeData))}
+                  </p>
+
+                  <p
+                    className="border-r border-black text-right pr-1"
+                    style={{ width: "8%" }}
+                  >
+                    {cont ? "" : fmtAmt(getAmount(chargeData))}
+                  </p>
+
+                  <p className="text-right pr-1" style={{ width: "8%" }}>
+                    {cont ? "" : fmtAmt(getAmountInINR(chargeData))}
+                  </p>
+                </div>
+              );
+            })}
+
+            {showChargeSummary && (
+              <>
+                <div
+                  className="flex w-full border-l border-r border-t border-black text-center font-bold"
+                  style={{
+                    fontSize: "9px",
+                    width: "100%",
+                    lineHeight: "2",
+                  }}
+                >
+                  <p
+                    className="border-r border-black text-center"
+                    style={{ width: "75%" }}
+                  >
+                    Total
+                  </p>
+
+                  <p
+                    className="border-r border-black text-right pr-1"
+                    style={{ width: "9%" }}
+                  >
+                    {fmtAmt(totalAmtInChargeCurr)}
+                  </p>
+
+                  <p
+                    className="border-r border-black text-right pr-1"
+                    style={{ width: "8%" }}
+                  >
+                    {fmtAmt(totalAmount)}
+                  </p>
+
+                  <p className="text-right pr-1" style={{ width: "8%" }}>
+                    {fmtAmt(totalAmountInINR)}
+                  </p>
+                </div>
+
+                <div
+                  className="flex w-full border-l border-r border-t border-black font-bold"
+                  style={{
+                    fontSize: "9px",
+                    width: "100%",
+                    lineHeight: "1.35",
+                    minHeight: "18px",
+                  }}
+                >
+                  <p className="pl-1" style={{ width: "75%" }}>
+                    NET Amount :
+                  </p>
+
+                  <p className="text-right pr-1" style={{ width: "25%" }}>
+                    {fmtAmt(netAmount)}
+                  </p>
+                </div>
+
+                <div
+                  className="flex w-full border-l border-r border-t border-black font-bold"
+                  style={{
+                    fontSize: "9px",
+                    width: "100%",
+                    lineHeight: "1.35",
+                    minHeight: "18px",
+                  }}
+                >
+                  <p className="pl-1" style={{ width: "75%" }}>
+                    TDS Amount :
+                  </p>
+
+                  <p className="text-right pr-1" style={{ width: "25%" }}>
+                    {fmtAmt(tdsAmount)}
+                  </p>
+                </div>
+
+                <div
+                  className="flex w-full border-l border-r border-t border-black font-bold"
+                  style={{
+                    fontSize: "9px",
+                    width: "100%",
+                    lineHeight: "1.35",
+                    minHeight: "18px",
+                  }}
+                >
+                  <p className="pl-1" style={{ width: "75%" }}>
+                    NET Amount Payable:
+                  </p>
+
+                  <p className="text-right pr-1" style={{ width: "25%" }}>
+                    {fmtAmt(netAmountPayable)}
+                  </p>
+                </div>
+
+                <div
+                  className="flex w-full border-l border-r border-t border-b border-black"
+                  style={{
+                    fontSize: "9px",
+                    width: "100%",
+                    lineHeight: "1.35",
+                    minHeight: "18px",
+                  }}
+                >
+                  <p className="pl-1 font-bold" style={{ width: "13%" }}>
+                    Amount in Words:
+                  </p>
+
+                  <p
+                    className="uppercase"
+                    style={{ width: "87%", paddingRight: "15px" }}
+                  >
+                    {invoiceData?.currency || ""} {totalAmountInWords || ""}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         )}
       </>
@@ -4028,26 +5864,31 @@ function rptInvoice() {
     );
     const gridRoundOfTotal = Number(gridTotal || 0).toFixed(2);
 
-    const totalAmountInWords =
-      clientId === 13 || clientId === 9
-        ? numberToWordsInIndianSystemWithOutPaisaAndRupees(
-          parseFloat(gridRoundOfTotal || 0),
-        )
-        : numberToWordsInIndianSystemUsingWithPaisaAndRupees(
-          parseFloat(gridRoundOfTotal || 0),
-        );
+    // const totalAmountInWords =
+    //   clientId === 13 || clientId === 9
+    //     ? numberToWordsInIndianSystemWithOutPaisaAndRupees(
+    //       parseFloat(gridRoundOfTotal || 0),
+    //     )
+    //     : numberToWordsInIndianSystemUsingWithPaisaAndRupees(
+    //       parseFloat(gridRoundOfTotal || 0),
+    //     );
+    const totalAmountInWords = numberToWordsInIndianAndUsaSystem(
+      parseFloat(gridRoundOfTotal || 0),
+      data?.[0]?.currency,
+    );
     const chargeList = data?.[0]?.tblInvoiceCharge || [];
 
     const totals = chargeList.reduce(
       (acc, item) => {
-        acc.totalAmountHc += Number(item?.totalAmountHc || 0);
+        //acc.totalAmountHc += Number(item?.totalAmountHc || 0);  as told by tejas
+        acc.totalAmountFc += Number(item?.totalAmountFc || 0);
         acc.IGST += Number(item?.IGST || 0);
         acc.CGST += Number(item?.CGST || 0);
         acc.SGST += Number(item?.SGST || 0);
         return acc;
       },
       {
-        totalAmountHc: 0,
+        totalAmountFc: 0,
         IGST: 0,
         CGST: 0,
         SGST: 0,
@@ -4055,7 +5896,7 @@ function rptInvoice() {
     );
 
     const finalTotals = {
-      totalAmountHc: totals.totalAmountHc.toFixed(2),
+      totalAmountFc: totals.totalAmountFc.toFixed(2),
       IGST: totals.IGST.toFixed(2),
       CGST: totals.CGST.toFixed(2),
       SGST: totals.SGST.toFixed(2),
@@ -4191,9 +6032,9 @@ function rptInvoice() {
                       chargeData,
                       chargeData?.rate != null
                         ? Number(chargeData.rate).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
                         : "",
                       "",
                     )}
@@ -4214,8 +6055,8 @@ function rptInvoice() {
                       chargeData,
                       chargeData?.exchangeRate != null
                         ? Number(chargeData.exchangeRate)
-                        // ? Number(chargeData.exchangeRate).toFixed(2)
-                        : "",
+                        : // ? Number(chargeData.exchangeRate).toFixed(2)
+                          "",
                       "",
                     )}
                   </p>
@@ -4226,14 +6067,14 @@ function rptInvoice() {
                   >
                     {showVal(
                       chargeData,
-                      chargeData?.totalAmountHc != null
-                        ? Number(chargeData.totalAmountHc).toLocaleString(
-                          "en-IN",
-                          {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          },
-                        )
+                      chargeData?.totalAmountFc != null
+                        ? Number(chargeData.totalAmountFc).toLocaleString(
+                            "en-IN",
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            },
+                          )
                         : "",
                       "",
                     )}
@@ -4268,9 +6109,9 @@ function rptInvoice() {
                       ? ""
                       : chargeData?.IGST != null
                         ? Number(chargeData.IGST).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
                         : ""}
                   </p>
                   <p
@@ -4281,9 +6122,9 @@ function rptInvoice() {
                       ? ""
                       : chargeData?.CGST != null
                         ? Number(chargeData.CGST).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
                         : ""}
                   </p>
                   <p
@@ -4294,18 +6135,18 @@ function rptInvoice() {
                       ? ""
                       : chargeData?.SGST != null
                         ? Number(chargeData.SGST).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
                         : ""}
                   </p>
 
                   <p className="pb-1 pr-1 text-right " style={{ width: "9%" }}>
                     {amount != null
                       ? Number(amount).toLocaleString("en-IN", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })
                       : ""}
                   </p>
                 </div>
@@ -4327,11 +6168,11 @@ function rptInvoice() {
                 className="border-t border-black text-right border-r pr-1"
                 style={{ width: "8%" }}
               >
-                {finalTotals?.totalAmountHc != null
-                  ? Number(finalTotals.totalAmountHc).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })
+                {finalTotals?.totalAmountFc != null
+                  ? Number(finalTotals.totalAmountFc).toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
                   : ""}
               </p>
               <p
@@ -4344,9 +6185,9 @@ function rptInvoice() {
               >
                 {finalTotals?.IGST != null
                   ? Number(finalTotals.IGST).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
                   : ""}
               </p>
               <p
@@ -4355,9 +6196,9 @@ function rptInvoice() {
               >
                 {finalTotals?.CGST != null
                   ? Number(finalTotals.CGST).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
                   : ""}
               </p>
               <p
@@ -4366,14 +6207,652 @@ function rptInvoice() {
               >
                 {finalTotals?.SGST != null
                   ? Number(finalTotals.SGST).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
                   : ""}
               </p>
               <p
                 className="border-t border-black text-right pr-1"
                 style={{ width: "9%" }}
+              >
+                {Number(gridTotal ?? 0).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </p>
+            </div>
+            {/* amountInWords */}
+            <div
+              className={`flex w-full border-t border-black ${index != 0 ? "border-b" : ""} `}
+              style={{ fontSize: "8px", width: "100%" }}
+            >
+              <p
+                className="pl-1 uppercase"
+                style={{ width: "85%", paddingRight: "15px" }}
+              >
+                <span className="font-bold">Amount in Words </span>
+                {data?.[0]?.currency || ""} {totalAmountInWords || ""}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {showHsnGrid && index === totalPages - 1 && (
+          <div>
+            <TaxInvoiceHsnSummaryGrid hsnSac={hsnSac} data={data} />
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const GeneralSalesInvoiceChargeDetailsForTaxInvoiceReport = ({
+    data,
+    charge,
+    index,
+    hsnSac,
+  }) => {
+    const isCont = (row) => row?.__isContinuation === true;
+
+    const showVal = (row, v, fallback = "") =>
+      isCont(row) ? "" : (v ?? fallback);
+
+    const isHomeCurrency = Number(data?.[0]?.isHomeCurrency) === 1;
+    const chargeList = data?.[0]?.tblInvoiceCharge || [];
+    const chargeTotals = getChargeTotals(chargeList, isHomeCurrency);
+    const gridTotal = chargeTotals.totalAmount;
+    const gridRoundOfTotal = Number(gridTotal || 0).toFixed(2);
+
+    // const totalAmountInWords =
+    //   clientId === 13 || clientId === 9
+    //     ? numberToWordsInIndianSystemWithOutPaisaAndRupees(
+    //       parseFloat(gridRoundOfTotal || 0),
+    //     )
+    //     : numberToWordsInIndianSystemUsingWithPaisaAndRupees(
+    //       parseFloat(gridRoundOfTotal || 0),
+    //     );
+    const totalAmountInWords = numberToWordsInIndianAndUsaSystem(
+      parseFloat(gridRoundOfTotal || 0),
+      data?.[0]?.currency,
+    );
+
+    const currentPageLength = charge?.[index]?.length || 0;
+    const nextPageLength = charge?.[index + 1]?.length || 0;
+    const lastPageIndex = (charge?.length || 1) - 1;
+
+    const totalPages = charge?.length || 0;
+
+    const isLastPage =
+      index === lastPageIndex ||
+      (index === lastPageIndex - 1 && nextPageLength < 4);
+
+    const isSinglePage = (charge?.length || 0) === 1;
+
+    const chargeGridHeight =
+      isChargesFinishedOnFirstPage === true ? "205px" : "350px";
+
+    const showHsnGrid =
+      isLastPage || (currentPageLength > 4 && currentPageLength < 10);
+
+    return (
+      <>
+        {currentPageLength > 0 && (
+          <div
+            className="flex w-full border-black border-r border-l border-b text-center font-bold"
+            style={{ fontSize: "9px", width: "100%" }}
+          >
+            <p className="border-r border-black" style={{ width: "27%" }}>
+              DESCRIPTION
+            </p>
+            <p className="border-r border-black" style={{ width: "7%" }}>
+              HSN / SAC Code
+            </p>
+            <p className="border-r border-black" style={{ width: "5%" }}>
+              Size Type
+            </p>
+            <p className="border-r border-black" style={{ width: "3%" }}>
+              Qty
+            </p>
+            <p className="border-r border-black" style={{ width: "8%" }}>
+              Rate
+            </p>
+            <p className="border-r border-black" style={{ width: "4%" }}>
+              Curr
+            </p>
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              Ex. Rate
+            </p>
+            <p className="border-r border-black" style={{ width: "8%" }}>
+              Taxable Amount
+            </p>
+            <p className="border-r border-black" style={{ width: "5%" }}>
+              Tax Rate
+            </p>
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              IGST
+            </p>
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              CGST
+            </p>
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              SGST
+            </p>
+            <p className="text-center" style={{ width: "9%" }}>
+              Amount in {data?.[0]?.currency || ""}
+            </p>
+          </div>
+        )}
+
+        {currentPageLength > 0 && (
+          <div
+            className="border-black border-r border-l border-b"
+            style={{ height: chargeGridHeight, overflow: "hidden" }}
+          >
+            {charge?.[index]?.map((chargeData, idx, array) => {
+              const cont = isCont(chargeData);
+              const financials = cont
+                ? null
+                : getChargeFinancials(chargeData, isHomeCurrency);
+
+              return (
+                <div
+                  key={idx}
+                  className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""}`}
+                  style={{ fontSize: "9px", width: "100%" }}
+                >
+                  <p
+                    className="pb-1 border-r border-black"
+                    style={{ width: "27%", paddingLeft: "2px" }}
+                  >
+                    {chargeData?.description || ""}
+                  </p>
+
+                  <p
+                    className=" border-r border-black text-center"
+                    style={{ width: "7%" }}
+                  >
+                    {showVal(chargeData, chargeData?.hsn, "")}{" "}
+                    {showVal(chargeData, chargeData?.sac, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 border-r border-black text-center"
+                    style={{ width: "5%" }}
+                  >
+                    {showVal(chargeData, chargeData?.size, "")}{" "}
+                    {showVal(chargeData, chargeData?.typeCode, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 border-r border-black text-center"
+                    style={{ width: "3%" }}
+                  >
+                    {showVal(chargeData, chargeData?.qty, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "8%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      chargeData?.rate != null
+                        ? Number(chargeData.rate).toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
+                        : "",
+                      "",
+                    )}
+                  </p>
+
+                  <p
+                    className="pb-1 border-r border-black text-center"
+                    style={{ width: "4%" }}
+                  >
+                    {showVal(chargeData, chargeData?.chargeCurrency, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "6%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      chargeData?.exchangeRate != null
+                        ? Number(chargeData.exchangeRate)
+                        : // ? Number(chargeData.exchangeRate).toFixed(2)
+                          "",
+                      "",
+                    )}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "8%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      formatAmountBlankIfZero(financials?.taxableAmount),
+                      "",
+                    )}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "5%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      (chargeData?.tblInvoiceChargeTax || [])
+                        .reduce(
+                          (sum, item) =>
+                            sum + (Number(item?.taxPercentage) || 0),
+                          0,
+                        )
+                        .toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }),
+                      "",
+                    )}
+                  </p>
+
+                  {/* ✅ IMPORTANT: remove "|| 0.00" fallback, and hide on continuation */}
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "6%" }}
+                  >
+                    {cont ? "" : formatAmountBlankIfZero(financials?.IGST)}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "6%" }}
+                  >
+                    {cont ? "" : formatAmountBlankIfZero(financials?.CGST)}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "6%" }}
+                  >
+                    {cont ? "" : formatAmountBlankIfZero(financials?.SGST)}
+                  </p>
+
+                  <p className="pb-1 pr-1 text-right " style={{ width: "9%" }}>
+                    {cont
+                      ? ""
+                      : formatAmountBlankIfZero(financials?.totalAmount)}
+                  </p>
+                </div>
+              );
+            })}
+
+            {/* Final row - Amount in Words kash */}
+            <div
+              className="flex w-full border-black text-center font-bold"
+              style={{ fontSize: "8px", width: "100%" }}
+            >
+              <p
+                className="border-t  border-r border-black text-right pr-1"
+                style={{ width: "60%" }}
+              >
+                Total
+              </p>
+              <p
+                className="border-t border-black text-right border-r pr-1"
+                style={{ width: "8%" }}
+              >
+                {formatAmountBlankIfZero(chargeTotals?.taxableAmount)}
+              </p>
+              <p
+                className="border-t border-black text-right border-r pr-1"
+                style={{ width: "5%" }}
+              ></p>
+              <p
+                className="border-t border-black text-right border-r pr-1"
+                style={{ width: "6%" }}
+              >
+                {formatAmountBlankIfZero(chargeTotals?.IGST)}
+              </p>
+              <p
+                className="border-t border-black text-right border-r pr-1"
+                style={{ width: "6%" }}
+              >
+                {formatAmountBlankIfZero(chargeTotals?.CGST)}
+              </p>
+              <p
+                className="border-t border-black text-right border-r pr-1"
+                style={{ width: "6%" }}
+              >
+                {formatAmountBlankIfZero(chargeTotals?.SGST)}
+              </p>
+              <p
+                className="border-t border-black text-right pr-1"
+                style={{ width: "9%" }}
+              >
+                {Number(gridTotal ?? 0).toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </p>
+            </div>
+            {/* amountInWords */}
+            <div
+              className={`flex w-full border-t border-black ${index != 0 ? "border-b" : ""} `}
+              style={{ fontSize: "8px", width: "100%" }}
+            >
+              <p
+                className="pl-1 uppercase"
+                style={{ width: "85%", paddingRight: "15px" }}
+              >
+                <span className="font-bold">Amount in Words </span>
+                {data?.[0]?.currency || ""} {totalAmountInWords || ""}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {showHsnGrid && index === totalPages - 1 && (
+          <div>
+            <TaxInvoiceHsnSummaryGrid hsnSac={hsnSac} data={data} />
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const GeneralSalesInvoiceChargeDetailsForTaxInvoiceReportBackup = ({
+    data,
+    charge,
+    index,
+    hsnSac,
+  }) => {
+    const isCont = (row) => row?.__isContinuation === true;
+
+    const showVal = (row, v, fallback = "") =>
+      isCont(row) ? "" : (v ?? fallback);
+
+    let totalAmount = 0;
+    (charge || []).forEach((group) => {
+      (group || []).forEach((item) => {
+        if (!isNaN(item?.totalAmount) && item?.totalAmount !== null) {
+          totalAmount += Number(item.totalAmount);
+        }
+      });
+    });
+
+    const gridTotal = (data?.[0]?.tblInvoiceCharge || []).reduce(
+      (acc, curr) => {
+        const qty = Number(curr?.qty || 0);
+        const rate = Number(curr?.rate || 0);
+        const exchangeRate = Number(curr?.exchangeRate || 1);
+        const IGST = Number(curr?.IGST || 0);
+        const CGST = Number(curr?.CGST || 0);
+        const SGST = Number(curr?.SGST || 0);
+
+        const rowTotal = qty * rate * exchangeRate + IGST + CGST + SGST;
+        return acc + rowTotal;
+      },
+      0,
+    );
+    const gridRoundOfTotal = Number(gridTotal || 0).toFixed(2);
+
+    // const totalAmountInWords =
+    //   clientId === 13 || clientId === 9
+    //     ? numberToWordsInIndianSystemWithOutPaisaAndRupees(
+    //       parseFloat(gridRoundOfTotal || 0),
+    //     )
+    //     : numberToWordsInIndianSystemUsingWithPaisaAndRupees(
+    //       parseFloat(gridRoundOfTotal || 0),
+    //     );
+    const totalAmountInWords = numberToWordsInIndianAndUsaSystem(
+      parseFloat(gridRoundOfTotal || 0),
+      data?.[0]?.currency,
+    );
+    const chargeList = data?.[0]?.tblInvoiceCharge || [];
+
+    const totals = chargeList.reduce(
+      (acc, item) => {
+        //acc.totalAmountHc += Number(item?.totalAmountHc || 0);  as told by tejas
+        acc.totalAmountFc += Number(item?.totalAmountFc || 0);
+        acc.IGST += Number(item?.IGST || 0);
+        acc.CGST += Number(item?.CGST || 0);
+        acc.SGST += Number(item?.SGST || 0);
+        return acc;
+      },
+      {
+        totalAmountFc: 0,
+        IGST: 0,
+        CGST: 0,
+        SGST: 0,
+      },
+    );
+
+    const finalTotals = {
+      totalAmountFc: totals.totalAmountFc.toFixed(2),
+      IGST: totals.IGST.toFixed(2),
+      CGST: totals.CGST.toFixed(2),
+      SGST: totals.SGST.toFixed(2),
+    };
+
+    const currentPageLength = charge?.[index]?.length || 0;
+    const nextPageLength = charge?.[index + 1]?.length || 0;
+    const lastPageIndex = (charge?.length || 1) - 1;
+
+    const totalPages = charge?.length || 0;
+
+    const isLastPage =
+      index === lastPageIndex ||
+      (index === lastPageIndex - 1 && nextPageLength < 4);
+
+    const isSinglePage = (charge?.length || 0) === 1;
+
+    const chargeGridHeight =
+      isChargesFinishedOnFirstPage === true ? "205px" : "350px";
+
+    const showHsnGrid =
+      isLastPage || (currentPageLength > 4 && currentPageLength < 10);
+
+    return (
+      <>
+        {currentPageLength > 0 && (
+          <div
+            className="flex w-full border-black border-r border-l border-b text-center font-bold"
+            style={{ fontSize: "9px", width: "100%" }}
+          >
+            <p className="border-r border-black" style={{ width: "27%" }}>
+              DESCRIPTION
+            </p>
+            <p className="border-r border-black" style={{ width: "9%" }}>
+              HSN / SAC Code
+            </p>
+            <p className="border-r border-black" style={{ width: "7%" }}>
+              Quantity (Units)
+            </p>
+            <p className="border-r border-black" style={{ width: "8%" }}>
+              Rate per Unit
+            </p>
+            <p className="border-r border-black" style={{ width: "7%" }}>
+              Curr
+            </p>
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              Ex. Rate
+            </p>
+            <p className="border-r border-black" style={{ width: "10%" }}>
+              Total Amt in Charge Curr
+            </p>
+            <p className="border-r border-black" style={{ width: "10%" }}>
+              Taxable Amount
+            </p>
+            <p className="text-center" style={{ width: "16%" }}>
+              Non-Taxable
+            </p>
+          </div>
+        )}
+
+        {currentPageLength > 0 && (
+          <div
+            className="border-black border-r border-l border-b"
+            style={{ height: chargeGridHeight, overflow: "hidden" }}
+          >
+            {charge?.[index]?.map((chargeData, idx, array) => {
+              const cont = isCont(chargeData);
+
+              const qty = cont ? 0 : Number(chargeData?.qty || 0);
+              const rate = cont ? 0 : Number(chargeData?.rate || 0);
+              const exr = cont ? 1 : Number(chargeData?.exchangeRate || 1);
+              const igst = cont ? 0 : Number(chargeData?.IGST || 0);
+              const cgst = cont ? 0 : Number(chargeData?.CGST || 0);
+              const sgst = cont ? 0 : Number(chargeData?.SGST || 0);
+
+              const amount = cont
+                ? ""
+                : (qty * rate * exr + igst + cgst + sgst).toFixed(2);
+
+              return (
+                <div
+                  key={idx}
+                  className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""}`}
+                  style={{ fontSize: "9px", width: "100%" }}
+                >
+                  <p
+                    className="pb-1 border-r border-black"
+                    style={{ width: "27%", paddingLeft: "2px" }}
+                  >
+                    {chargeData?.description || ""}
+                  </p>
+
+                  <p
+                    className=" border-r border-black text-center"
+                    style={{ width: "9%" }}
+                  >
+                    {showVal(chargeData, chargeData?.hsn, "")}{" "}
+                    {showVal(chargeData, chargeData?.sac, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 border-r border-black text-center"
+                    style={{ width: "7%" }}
+                  >
+                    {showVal(chargeData, chargeData?.qty, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "8%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      chargeData?.rate != null
+                        ? Number(chargeData.rate).toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
+                        : "",
+                      "",
+                    )}
+                  </p>
+
+                  <p
+                    className="pb-1 border-r border-black text-center"
+                    style={{ width: "7%" }}
+                  >
+                    {showVal(chargeData, chargeData?.chargeCurrency, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "6%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      chargeData?.exchangeRate != null
+                        ? Number(chargeData.exchangeRate)
+                        : // ? Number(chargeData.exchangeRate).toFixed(2)
+                          "",
+                      "",
+                    )}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "10%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      (chargeData?.tblInvoiceChargeTax || [])
+                        .reduce(
+                          (sum, item) =>
+                            sum + (Number(item?.taxPercentage) || 0),
+                          0,
+                        )
+                        .toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }),
+                      "",
+                    )}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "10%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      chargeData?.totalAmountFc != null
+                        ? Number(chargeData.totalAmountFc).toLocaleString(
+                            "en-IN",
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            },
+                          )
+                        : "",
+                      "",
+                    )}
+                  </p>
+
+                  <p className="pb-1 pr-1 text-right " style={{ width: "16%" }}>
+                    {amount != null
+                      ? Number(amount).toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })
+                      : ""}
+                  </p>
+                </div>
+              );
+            })}
+
+            {/* Final row - Amount in Words kash */}
+            <div
+              className="flex w-full border-black text-center font-bold"
+              style={{ fontSize: "8px", width: "100%" }}
+            >
+              <p
+                className="border-t  border-r border-black text-right pr-1"
+                style={{ width: "74%" }}
+              >
+                Total
+              </p>
+              <p
+                className="border-t border-black text-right border-r pr-1"
+                style={{ width: "10%" }}
+              >
+                {finalTotals?.totalAmountFc != null
+                  ? Number(finalTotals.totalAmountFc).toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
+                  : ""}
+              </p>
+              <p
+                className="border-t border-black text-right pr-1"
+                style={{ width: "16%" }}
               >
                 {Number(gridTotal ?? 0).toLocaleString("en-IN", {
                   minimumFractionDigits: 2,
@@ -4536,8 +7015,9 @@ function rptInvoice() {
               return (
                 <div
                   key={idx}
-                  className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
-                    }`}
+                  className={`flex w-full ${
+                    idx === array.length - 1 ? "border-b" : ""
+                  }`}
                   style={{ fontSize: "9px", width: "100%" }}
                 >
                   <p
@@ -4766,14 +7246,15 @@ function rptInvoice() {
           <div
             className="border-black border-r border-l"
             style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-          // style={{ height: chargeGridHeight, overflow: "hidden" }}
+            // style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {!chargeAtt?.length &&
               charge[index]?.map((chargeData, idx, array) => (
                 <div
                   key={idx}
-                  className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                    }`}
+                  className={`flex w-full ${
+                    idx === array.length - 1 ? "border-b border-black" : ""
+                  }`}
                   style={{ fontSize: "9px", width: "100%" }}
                 >
                   <p
@@ -4820,8 +7301,9 @@ function rptInvoice() {
               charge[index]?.map((chargeData, idx, array) => (
                 <div
                   key={idx}
-                  className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                    }`}
+                  className={`flex w-full ${
+                    idx === array.length - 1 ? "border-b border-black" : ""
+                  }`}
                   style={{ fontSize: "9px", width: "100%" }}
                 >
                   <p
@@ -4960,8 +7442,9 @@ function rptInvoice() {
                   {chargeAtt[index]?.map((chargeAttData, idx, array) => (
                     <div
                       key={idx}
-                      className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
-                        }`}
+                      className={`flex w-full ${
+                        idx === array.length - 1 ? "border-b" : ""
+                      }`}
                       style={{ fontSize: "9px", width: "100%" }}
                     >
                       <p
@@ -5134,13 +7617,14 @@ function rptInvoice() {
           <div
             className="border-black border-r border-l"
             style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-          // style={{ height: chargeGridHeight, overflow: "hidden" }}
+            // style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {charge[index]?.map((chargeData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                  }`}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b border-black" : ""
+                }`}
                 style={{ fontSize: "9px", width: "100%" }}
               >
                 <p
@@ -5318,13 +7802,14 @@ function rptInvoice() {
           <div
             className="border-black border-r border-l"
             style={{ maxheight: "540px", minHeight: "540px", height: "540px" }}
-          // style={{ height: chargeGridHeight, overflow: "hidden" }}
+            // style={{ height: chargeGridHeight, overflow: "hidden" }}
           >
             {charge[index]?.map((chargeData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b border-black" : ""
-                  }`}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b border-black" : ""
+                }`}
                 style={{ fontSize: "9px", width: "100%" }}
               >
                 <p
@@ -5607,7 +8092,7 @@ function rptInvoice() {
                   days.
                   <br />
                   f) Jurisdiction: Dispute if any shall be subject to the
-                  jurisdiction of Pune (India) Courts only.
+                  jurisdiction of Mumbai (India) Courts only.
                   <br />
                 </p>
               )}
@@ -5638,12 +8123,14 @@ function rptInvoice() {
     data,
     index,
     termsAndConditions,
+    totalPages,
+    compact = false,
   }) => {
     const companyName = data[0]?.company || "";
     const isSinglePage = charge.length === 1;
     //const chargeGridHeight = isSinglePage ? "120px" : "260px";
-    const chargeGridHeight =
-      isChargesFinishedOnFirstPage === true ? "120px" : "120px";
+    const chargeGridHeight = compact ? "72px" : "95px";
+    const termsLineHeight = compact ? 1.2 : 1.4;
     // Helper to turn a newline or array into a sequence of lines
     const renderTerms = (tc) => {
       if (Array.isArray(tc)) {
@@ -5673,11 +8160,11 @@ function rptInvoice() {
         >
           <div style={{ width: "70%" }}>
             <p className="font-bold">Terms And Condition :</p>
-            <p style={{ lineHeight: 1.4, fontSize: "8px" }}>
+            <p style={{ lineHeight: termsLineHeight, fontSize: "8px" }}>
               {termsAndConditions ? (
                 renderTerms(termsAndConditions)
               ) : (
-                <p style={{ lineHeight: 1.4, fontSize: "8px" }}>
+                <p style={{ lineHeight: termsLineHeight, fontSize: "8px" }}>
                   a) All payments should be in favour of {companyName}
                   <br />
                   b) If any discrepancy is noticed in the invoice, kindly inform
@@ -5694,7 +8181,7 @@ function rptInvoice() {
                   days.
                   <br />
                   f) Jurisdiction: Dispute if any shall be subject to the
-                  jurisdiction of Pune (India) Courts only.
+                  jurisdiction of Mumbai (India) Courts only.
                   <br />
                 </p>
               )}
@@ -5714,7 +8201,86 @@ function rptInvoice() {
           </div>
           <div style={{ width: "10%", fontSize: "8px" }}>
             Page {index + 1} of{" "}
-            {Math.ceil(data[0]?.tblInvoiceCharge?.length / itemsPerPage || 1)}
+            {totalPages ||
+              Math.ceil(data[0]?.tblInvoiceCharge?.length / itemsPerPage || 1)}
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  const PurchaseInvoiceTermsAndConditionForTaxInvoiceReport = ({
+    data,
+    index,
+    totalPages,
+    compact = false,
+  }) => {
+    const companyName = data?.[0]?.company || "";
+    const pageNo = index + 1;
+    const pageCount = totalPages || 1;
+
+    const termsBoxHeight = compact ? "105px" : "140px";
+
+    return (
+      <>
+        <div
+          className="border-r border-l border-b border-black"
+          style={{
+            fontSize: "8px",
+            height: termsBoxHeight,
+            width: "100%",
+            padding: "6px 8px 4px 8px",
+            position: "relative",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              left: "8px",
+              bottom: "4px",
+            }}
+          >
+            <p
+              className="font-bold"
+              style={{
+                marginBottom: compact ? "42px" : "62px",
+                fontSize: "8px",
+              }}
+            >
+              For {companyName}
+            </p>
+
+            <p
+              className="font-bold"
+              style={{
+                fontSize: "8px",
+                marginBottom: "8px",
+              }}
+            >
+              Authorised Signatory
+            </p>
+
+            <p
+              style={{
+                fontSize: "8px",
+                margin: 0,
+              }}
+            >
+              E &amp; O.E.
+            </p>
+          </div>
+
+          <div
+            className="font-bold"
+            style={{
+              position: "absolute",
+              right: "38px",
+              bottom: "8px",
+              fontSize: "8px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Page {pageNo} of {pageCount}
           </div>
         </div>
       </>
@@ -5779,7 +8345,7 @@ function rptInvoice() {
                   days.
                   <br />
                   f) Jurisdiction: Dispute if any shall be subject to the
-                  jurisdiction of Pune (India) Courts only.
+                  jurisdiction of Mumbai (India) Courts only.
                   <br />
                 </p>
               )}
@@ -6296,7 +8862,8 @@ function rptInvoice() {
   const TaxInvoiceHsnSummaryGrid = ({ hsnSac, data }) => {
     console.log("hsnSac=>", hsnSac);
     console.log("data=>", data);
-    const totals = hsnSac[0]?.reduce(
+    const hsnSacRows = (hsnSac || []).flat();
+    const totals = hsnSacRows.reduce(
       (acc, item) => {
         acc.CGST += item.CGST || 0;
         acc.SGST += item.SGST || 0;
@@ -6311,14 +8878,18 @@ function rptInvoice() {
       parseFloat(totals?.IGST || 0) +
       parseFloat(totals?.CGST || 0) +
       parseFloat(totals?.SGST || 0);
-    const totalTaxAmountInWords =
-      clientId === 13 || clientId === 9
-        ? numberToWordsInIndianSystemWithOutPaisaAndRupees(
-          parseFloat(totalTax || 0)
-        )
-        : numberToWordsInIndianSystemUsingWithPaisaAndRupees(
-          parseFloat(totalTax || 0)
-        );
+    // const totalTaxAmountInWords =
+    //   clientId === 13 || clientId === 9
+    //     ? numberToWordsInIndianSystemWithOutPaisaAndRupees(
+    //       parseFloat(totalTax || 0),
+    //     )
+    //     : numberToWordsInIndianSystemUsingWithPaisaAndRupees(
+    //       parseFloat(totalTax || 0),
+    //     );
+    const totalTaxAmountInWords = numberToWordsInIndianAndUsaSystem(
+      parseFloat(totalTax || 0),
+      data?.[0]?.currency,
+    );
     return (
       <>
         <div
@@ -6527,6 +9098,358 @@ function rptInvoice() {
             {data?.[0]?.currency || ""} {totalTaxAmountInWords || ""}
           </p>
         </div>
+      </>
+    );
+  };
+
+  const TaxInvoiceHsnSummaryGridFF = ({ hsnSac, data, compact = false }) => {
+    console.log("hsnSac=>", hsnSac);
+    console.log("data=>", data);
+    const isHomeCurrency = Number(data?.[0]?.isHomeCurrency) === 1;
+    const hsnSacRows = (hsnSac || []).flat();
+    const hsnBodyRows = compact ? 4 : 7;
+    const hsnBodyHeight = compact ? hsnBodyRows * 13 : 108;
+    const hsnGridHeightPx = compact
+      ? Number(data[0]?.isHomeCurrency) === 1
+        ? 94
+        : 108
+      : Number(data[0]?.isHomeCurrency) === 1
+        ? hsnGridHeight
+        : hsnGridHeightFF;
+    const totals = hsnSacRows.reduce(
+      (acc, item) => {
+        acc.CGST += item.CGST || 0;
+        acc.SGST += item.SGST || 0;
+        acc.IGST += item.IGST || 0;
+        acc.CGST_HC += item.CGST_HC || 0;
+        acc.SGST_HC += item.SGST_HC || 0;
+        acc.IGST_HC += item.IGST_HC || 0;
+        acc.taxableAmount += item.taxableAmount || 0;
+        acc.taxableAmountFc += item.taxableAmountFc || 0;
+        return acc;
+      },
+      {
+        CGST: 0,
+        SGST: 0,
+        IGST: 0,
+        CGST_HC: 0,
+        SGST_HC: 0,
+        IGST_HC: 0,
+        taxableAmount: 0,
+        taxableAmountFc: 0,
+      },
+    );
+
+    const totalTax =
+      parseFloat(totals?.IGST || 0) +
+      parseFloat(totals?.CGST || 0) +
+      parseFloat(totals?.SGST || 0);
+
+    const totalTax_HC =
+      parseFloat(totals?.IGST_HC || 0) +
+      parseFloat(totals?.CGST_HC || 0) +
+      parseFloat(totals?.SGST_HC || 0);
+
+    const totalHCInWords = numberToWordsInIndianAndUsaSystem(
+      parseFloat(totalTax_HC || 0),
+      "INR",
+    );
+
+    // const totalTaxAmountInWords =
+    //   clientId === 13 || clientId === 9
+    //     ? numberToWordsInIndianSystemWithOutPaisaAndRupees(
+    //       parseFloat(isHomeCurrency ? totalTax_HC : totalTax),
+    //     )
+    //     : numberToWordsInIndianSystemUsingWithPaisaAndRupees(
+    //       parseFloat(isHomeCurrency ? totalTax_HC : totalTax),
+    //     );
+    const totalTaxAmountInWords = numberToWordsInIndianAndUsaSystem(
+      parseFloat(isHomeCurrency ? totalTax_HC : totalTax),
+      data?.[0]?.currency,
+    );
+    return (
+      <>
+        <div
+          className="flex border-r border-l border-b border-black"
+          style={{
+            height: `${hsnGridHeightPx}px`,
+            overflow: "hidden",
+          }}
+        >
+          <div
+            className="border-r border-black"
+            style={{
+              width: "60%",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div
+              className="flex flex-between w-full font-bold text-center border-b border-black"
+              style={{ fontSize: "8px" }}
+            >
+              <p className="flex-1 p-1 border-r border-black">HSN / SAC</p>
+              <p className="flex-1 p-1 border-r border-black">Taxable Value</p>
+              <p className="flex-1 p-1 border-r border-black">Rate</p>
+              <p className="flex-1 p-1 border-r border-black">IGST</p>
+              <p className="flex-1 p-1 border-r border-black">CGST</p>
+              <p className="flex-1 p-1 border-r border-black">SGST</p>
+              <p className="flex-1 p-1">Tax Total</p>
+            </div>
+
+            {/* Table Body */}
+            <div style={{ height: `${hsnBodyHeight}px`, overflow: "hidden" }}>
+              {hsnSacRows.map((item, index) => (
+                <div
+                  key={`hsn-${index}`}
+                  className="flex flex-between w-full text-center"
+                  style={{ fontSize: "8px" }}
+                >
+                  <p className="flex-1 pb-1 border-r border-black">
+                    {item.sac || item.hsn || ""}
+                  </p>
+                  <p className="flex-1 pb-1 border-r text-right border-black">
+                    {formatAmountBlankIfZero(
+                      isHomeCurrency
+                        ? item?.taxableAmount
+                        : item?.taxableAmountFc,
+                    )}
+                  </p>
+                  <p className="flex-1 pb-1 border-r text-right border-black">
+                    {formatAmountBlankIfZero(item?.taxPercentage)}
+                  </p>
+                  <p className="flex-1 pb-1 border-r text-right border-black">
+                    {formatAmountBlankIfZero(
+                      isHomeCurrency ? item?.IGST_HC : item?.IGST,
+                    )}
+                  </p>
+
+                  <p className="flex-1 pb-1 border-r text-right border-black">
+                    {formatAmountBlankIfZero(
+                      isHomeCurrency ? item?.CGST_HC : item?.CGST,
+                    )}
+                  </p>
+
+                  <p className="flex-1 pb-1 border-r text-right border-black">
+                    {formatAmountBlankIfZero(
+                      isHomeCurrency ? item?.SGST_HC : item?.SGST,
+                    )}
+                  </p>
+                  <p className="flex-1 pb-1 text-right">
+                    {formatAmountBlankIfZero(
+                      isHomeCurrency
+                        ? Number(item?.IGST_HC || 0) +
+                            Number(item?.CGST_HC || 0) +
+                            Number(item?.SGST_HC || 0)
+                        : Number(item?.IGST || 0) +
+                            Number(item?.CGST || 0) +
+                            Number(item?.SGST || 0),
+                    )}
+                  </p>
+                </div>
+              ))}
+              {Array.from(
+                { length: Math.max(0, hsnBodyRows - hsnSacRows.length) },
+                (_, i) => (
+                  <div
+                    key={`empty-hsn-${i}`}
+                    className="flex flex-between w-full font-bold text-center"
+                    style={{ fontSize: "8px" }}
+                  >
+                    <p className="flex-1 pb-1 border-r border-black">&nbsp;</p>
+                    <p className="flex-1 pb-1 border-r border-black">&nbsp;</p>
+                    <p className="flex-1 pb-1 border-r border-black">&nbsp;</p>
+                    <p className="flex-1 pb-1 border-r border-black">&nbsp;</p>
+                    <p className="flex-1 pb-1 border-r border-black">&nbsp;</p>
+                    <p className="flex-1 pb-1 border-r border-black">&nbsp;</p>
+                    <p className="flex-1 pb-1">&nbsp;</p>
+                  </div>
+                ),
+              )}
+            </div>
+
+            <div
+              className="flex flex-between w-full font-bold text-right border-t border-black"
+              style={{ fontSize: "8px" }}
+            >
+              <p className="flex-1 p-1 border-r border-black">
+                Total ( {data[0]?.currency || ""} )
+              </p>
+              <p className="flex-1 p-1 border-r border-black">
+                {formatAmountBlankIfZero(
+                  isHomeCurrency
+                    ? totals?.taxableAmount
+                    : totals?.taxableAmountFc,
+                )}
+              </p>
+              <p className="flex-1 p-1 border-r border-black">{""}</p>
+              <p className="flex-1 p-1 border-r border-black">
+                {formatAmountBlankIfZero(
+                  isHomeCurrency ? totals?.IGST_HC : totals?.IGST,
+                )}
+              </p>
+              <p className="flex-1 p-1 border-r border-black">
+                {formatAmountBlankIfZero(
+                  isHomeCurrency ? totals?.CGST_HC : totals?.CGST,
+                )}
+              </p>
+              <p className="flex-1 p-1 border-r border-black">
+                {formatAmountBlankIfZero(
+                  isHomeCurrency ? totals?.SGST_HC : totals?.SGST,
+                )}
+              </p>
+              <p className="flex-1 p-1">
+                {formatAmountBlankIfZero(
+                  isHomeCurrency ? totalTax_HC : totalTax,
+                )}
+              </p>
+            </div>
+            {Number(data[0]?.isHomeCurrency) !== 1 && (
+              <div
+                className="flex flex-between w-full font-bold text-right border-t border-black"
+                style={{ fontSize: "8px" }}
+              >
+                <p className="flex-1 p-1 border-r border-black">
+                  Total ( INR )
+                </p>
+                <p className="flex-1 p-1 border-r border-black">
+                  {formatAmountBlankIfZero(totals?.taxableAmount)}
+                </p>
+                <p className="flex-1 p-1 border-r border-black">{""}</p>
+                <p className="flex-1 p-1 border-r border-black">
+                  {formatAmountBlankIfZero(totals?.IGST_HC)}
+                </p>
+                <p className="flex-1 p-1 border-r border-black">
+                  {formatAmountBlankIfZero(totals?.CGST_HC)}
+                </p>
+                <p className="flex-1 p-1 border-r border-black">
+                  {formatAmountBlankIfZero(totals?.SGST_HC)}
+                </p>
+                <p className="flex-1 p-1">
+                  {formatAmountBlankIfZero(totalTax_HC)}
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="p-1" style={{ width: "40%", fontSize: "7px" }}>
+            <p style={{ fontSize: "8px" }}>
+              In case of discrepancy in the invoice amount, please notify within
+              2 days.
+            </p>
+            <p
+              className="font-bold"
+              style={{ fontSize: "8px", paddingBottom: "3px" }}
+            >
+              All payment to be issued in favour of{" "}
+              {data[0]?.company || ""}{" "}
+            </p>
+            <p
+              className=" font-bold"
+              style={{ fontSize: "8px", paddingBottom: "2px" }}
+            >
+              For RTGS / NEFT Payment:
+            </p>
+            <div>
+              <div className="flex" style={{ width: "100%" }}>
+                <p
+                  className="font-bold"
+                  style={{ width: "30%", fontSize: "8px" }}
+                >
+                  BANK NAME :{" "}
+                </p>
+                <p
+                  className="font-bold"
+                  style={{ width: "70%", fontSize: "8px" }}
+                >
+                  {data[0]?.bankName || ""}
+                </p>
+              </div>
+              <div className="flex" style={{ width: "100%" }}>
+                <p
+                  className="font-bold"
+                  style={{ width: "30%", fontSize: "8px" }}
+                >
+                  BANK ADDRESS :{" "}
+                </p>
+                <p
+                  className="font-bold"
+                  style={{ width: "70%", fontSize: "8px" }}
+                >
+                  {data[0]?.bankAddress || ""}
+                </p>
+              </div>
+              <div className="flex" style={{ width: "100%" }}>
+                <p
+                  className="font-bold "
+                  style={{ fontSize: "8px", width: "30%" }}
+                >
+                  CURRENT A/C NO :{" "}
+                </p>
+                <p
+                  className="font-bold"
+                  style={{ fontSize: "8px", width: "70%" }}
+                >
+                  {data[0]?.bankAccountNo || ""}
+                </p>
+              </div>
+              <div className="flex" style={{ width: "100%" }}>
+                <p
+                  className="font-bold"
+                  style={{ fontSize: "8px", width: "30%" }}
+                >
+                  SWIFT CODE :{" "}
+                </p>
+                <p
+                  className="font-bold"
+                  style={{ fontSize: "8px", width: "70%" }}
+                >
+                  {data[0]?.bankSwiftCode || ""}
+                </p>
+              </div>
+              <div className="flex" style={{ width: "100%" }}>
+                <p
+                  className="font-bold"
+                  style={{ fontSize: "8px", width: "30%" }}
+                >
+                  IFSC CODE :{" "}
+                </p>
+                <p
+                  className="font-bold"
+                  style={{ fontSize: "8px", width: "70%" }}
+                >
+                  {data[0]?.bankIfscCode || ""}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          className="flex w-full border-l border-b border-r border-black"
+          style={{ fontSize: "9px", width: "100%" }}
+        >
+          <p
+            className="p-1 uppercase"
+            style={{ width: "85%", paddingRight: "15px", fontSize: "8px" }}
+          >
+            <span className="font-bold ">Tax Amount in Words </span>
+            {data?.[0]?.currency || ""} {totalTaxAmountInWords || ""}
+          </p>
+        </div>
+        {Number(data[0]?.isHomeCurrency) !== 1 && (
+          <div
+            className="flex w-full border-l border-b border-r border-black"
+            style={{ fontSize: "9px", width: "100%" }}
+          >
+            <p
+              className="p-1 uppercase"
+              style={{ width: "85%", paddingRight: "15px", fontSize: "8px" }}
+            >
+              <span className="font-bold ">Tax Amount in Words </span>
+              {"INR"} {totalHCInWords || ""}
+            </p>
+          </div>
+        )}
       </>
     );
   };
@@ -6978,7 +9901,7 @@ function rptInvoice() {
                   days.
                   <br />
                   f) Jurisdiction: Dispute if any shall be subject to the
-                  jurisdiction of Pune (India) Courts only.
+                  jurisdiction of Mumbai (India) Courts only.
                   <br />
                 </p>
               )}
@@ -7021,7 +9944,14 @@ function rptInvoice() {
       <TaxInvoiceBillingDetails data={data} />
       {index === 0 && <TaxInvoiceJobDetails data={data} />}
       <TaxInvoiceRemarks data={data} />
-      <TaxInvoiceChargeDetailsForTaxInvoiceReport
+      {/* <TaxInvoiceChargeDetailsForTaxInvoiceReport
+        data={data}
+        charge={invoiceChargeDataForTaxInvoice}
+        index={index}
+        hsnSac={hsnSac}
+      /> */}
+      {/* same grid for Tax invoice and tax invoice FF grid */}
+      <TaxInvoiceChargeDetailsForTaxInvoiceReportFF
         data={data}
         charge={invoiceChargeDataForTaxInvoice}
         index={index}
@@ -7064,7 +9994,7 @@ function rptInvoice() {
       <TaxInvoiceBillingDetails data={data} />
       {index === 0 && <TaxInvoiceJobDetailsFF data={data} />}
       <TaxInvoiceRemarks data={data} />
-      <TaxInvoiceChargeDetailsForTaxInvoiceReport
+      <TaxInvoiceChargeDetailsForTaxInvoiceReportFF
         data={data}
         charge={invoiceChargeDataForTaxInvoice}
         index={index}
@@ -7200,6 +10130,24 @@ function rptInvoice() {
       </div>
     </div>
   );
+
+  // const purchaseInvoiceWithoutCharges = (index) => (
+  //   <div>
+  //     <div className="mx-auto !text-black">
+  //       <CompanyImgModule data={data} />
+  //       <PurchaseInvoiceHeader data={data} />
+  //       <TaxInvoiceBillingDetails data={data} />
+  //       <TaxInvoiceJobDetails data={data} />
+  //       <TaxInvoiceSpacing />
+  //       <TaxInvoiceTermsAndCondition
+  //         data={data}
+  //         index={0}
+  //         // termsAndConditions={termsAndConditions}
+  //         termsAndConditions={data[0]?.termsConditionMst}
+  //       />
+  //     </div>
+  //   </div>
+  // );
 
   const ImportTaxInvoiceWithoutCharges = (index) => (
     <div>
@@ -7479,10 +10427,10 @@ function rptInvoice() {
     // compute once (before render or above your return)
     const lastAvailableIndex = Array.isArray(chargeAtt)
       ? chargeAtt.reduce(
-        (last, inner, idx) =>
-          Array.isArray(inner) && inner.length > 0 ? idx : last,
-        -1, // → -1 if none are non-empty
-      )
+          (last, inner, idx) =>
+            Array.isArray(inner) && inner.length > 0 ? idx : last,
+          -1, // → -1 if none are non-empty
+        )
       : -1;
 
     console.log("lastAvailableIndex", lastAvailableIndex);
@@ -7672,8 +10620,9 @@ function rptInvoice() {
             {currentChargeAtt.map((chargeAttData, idx, array) => (
               <div
                 key={idx}
-                className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""
-                  }`}
+                className={`flex w-full ${
+                  idx === array.length - 1 ? "border-b" : ""
+                }`}
                 style={{ fontSize: "9px", width: "100%", color: "black" }}
               >
                 <p
@@ -8625,8 +11574,9 @@ function rptInvoice() {
       const wholeWords = chunkToWords(whole);
       const decimalWords = decimals ? twoDigits(decimals) : "";
 
-      return `${wholeWords} ${currencyLabel}${decimals ? ` and ${decimalWords} Cents` : ""
-        } Only`;
+      return `${wholeWords} ${currencyLabel}${
+        decimals ? ` and ${decimalWords} Cents` : ""
+      } Only`;
     };
 
     // ✅ Totals for the summary box (Excl VAT + VAT + Total) for AED (HC) and USD (FC)
@@ -10357,7 +13307,7 @@ function rptInvoice() {
     );
   };
 
-  const HeadingGrid = ({ }) => {
+  const HeadingGrid = ({}) => {
     const containerDetails = data[0]?.tblInvoiceCharge;
 
     // One function: build "count X size+type" label(s) using `type` (not typeCode)
@@ -10779,7 +13729,7 @@ function rptInvoice() {
     );
   };
 
-  const HeadingGridYms = ({ }) => {
+  const HeadingGridYms = ({}) => {
     const containerDetails = data[0]?.tblInvoiceCharge;
 
     // One function: build "count X size+type" label(s) using `type` (not typeCode)
@@ -11201,7 +14151,7 @@ function rptInvoice() {
     );
   };
 
-  const SalesHeadingGridYms = ({ }) => {
+  const SalesHeadingGridYms = ({}) => {
     const containerDetails = data[0]?.tblInvoiceCharge;
 
     // One function: build "count X size+type" label(s) using `type` (not typeCode)
@@ -11338,8 +14288,7 @@ function rptInvoice() {
                 className="text-left text-black pt-0.5 pb-0.5"
                 style={{ fontSize: "9px", color: "black" }}
               >
-                {/* change this */}:{" "}
-                {data[0]?.blConsigneeName}
+                {/* change this */}: {data[0]?.blConsigneeName}
               </p>
             </td>
           </tr>
@@ -11810,7 +14759,7 @@ function rptInvoice() {
     );
   };
 
-  const BankDetailsGrid = ({ }) => {
+  const BankDetailsGrid = ({}) => {
     const banks = data[0]?.tblInvoiceBank ?? []; // or just use your array directly
 
     const hasValue = (v) =>
@@ -11877,8 +14826,9 @@ function rptInvoice() {
               <div
                 key={idx}
                 style={{ width: `${100 / banks?.length}%`, minWidth: 0 }}
-                className={`print:break-inside-avoid border-black ${isLast ? "" : "border-r"
-                  }`}
+                className={`print:break-inside-avoid border-black ${
+                  isLast ? "" : "border-r"
+                }`}
               >
                 <table
                   className="w-full text-[10px] text-black border-collapse"
@@ -11898,8 +14848,9 @@ function rptInvoice() {
                         )}
                         <td
                           // className=${p-1 break-words text-center}`
-                          className={`p-1 break-words ${isLast ? "text-center" : ""
-                            }`}
+                          className={`p-1 break-words ${
+                            isLast ? "text-center" : ""
+                          }`}
                           style={{ fontSize: "9px" }}
                           colSpan={isLast ? 2 : 1}
                         >
@@ -11917,7 +14868,7 @@ function rptInvoice() {
     );
   };
 
-  const SalesBankDetailsGrid = ({ }) => {
+  const SalesBankDetailsGrid = ({}) => {
     const banks = data[0]?.tblInvoiceBank ?? [];
 
     const hasValue = (v) =>
@@ -13652,8 +16603,8 @@ function rptInvoice() {
                 >
                   {item?.discountAmount
                     ? `${data[0]?.currency} ${parseFloat(
-                      item.discountAmount,
-                    ).toFixed(2)}`
+                        item.discountAmount,
+                      ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
                 <div
@@ -13668,8 +16619,8 @@ function rptInvoice() {
                 >
                   {item?.tblInvoiceChargeTax?.[0]?.taxAmountHc
                     ? `${data[0]?.currency} ${parseFloat(
-                      item.tblInvoiceChargeTax[0].taxAmountHc,
-                    ).toFixed(2)}`
+                        item.tblInvoiceChargeTax[0].taxAmountHc,
+                      ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
                 <div
@@ -13683,8 +16634,8 @@ function rptInvoice() {
                 >
                   {item?.totalAmount
                     ? `${data[0]?.currency} ${parseFloat(
-                      item.totalAmount,
-                    ).toFixed(2)}`
+                        item.totalAmount,
+                      ).toFixed(2)}`
                     : `${data[0]?.currency}  0.00`}
                 </div>
               </div>
@@ -13806,8 +16757,8 @@ function rptInvoice() {
             >
               {discountAmount
                 ? `${data[0]?.currency} ${parseFloat(discountAmount).toFixed(
-                  2,
-                )}`
+                    2,
+                  )}`
                 : `${data[0]?.currency}  0.00`}
             </td>
           </tr>
@@ -13836,8 +16787,8 @@ function rptInvoice() {
             >
               {grossTotalAmount
                 ? `${data[0]?.currency} ${parseFloat(grossTotalAmount).toFixed(
-                  2,
-                )}`
+                    2,
+                  )}`
                 : `${data[0]?.currency}  0.00`}
             </td>
           </tr>
@@ -14212,9 +17163,9 @@ function rptInvoice() {
           const amount =
             typeof amountRaw === "number"
               ? amountRaw.toLocaleString("en-IN", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })
               : safe(amountRaw);
 
           return (
@@ -14801,6 +17752,1067 @@ function rptInvoice() {
       </>
     );
   };
+
+  const generalInvoice = (index) => (
+    <div
+      style={{
+        height: "290mm",
+        position: "relative",
+        boxSizing: "border-box",
+        overflow: "hidden",
+        color: "black",
+        paddingBottom: "18mm", // space for footer
+      }}
+    >
+      <CompanyImgModule data={data} />
+      <GeneralSalesInvoiceHeader data={data} />
+      <GeneralSalesInvoiceBillingDetails data={data} />
+      <TaxInvoiceRemarks data={data} />
+      <GeneralSalesInvoiceChargeDetailsForTaxInvoiceReport
+        data={data}
+        charge={generalSalesInvoicePrint}
+        index={index}
+        hsnSac={hsnSac}
+      />
+      {index === 0 && (
+        <TaxInvoiceTermsAndConditionForTaxInvoiceReport
+          data={data}
+          index={index}
+          termsAndConditions={data[0]?.termsConditionMst}
+        />
+      )}
+      {/* Footer fixed at bottom of A4 */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+        }}
+      >
+        <FooterModule />
+      </div>
+    </div>
+  );
+
+  const creditPrint = (index) => (
+    <div
+      style={{
+        height: "290mm",
+        position: "relative",
+        boxSizing: "border-box",
+        overflow: "hidden",
+        color: "black",
+        paddingBottom: "18mm", // space for footer
+      }}
+    >
+      <CompanyImgModule data={data} />
+      <CreditNoteInvoiceHeader data={data} />
+      <CreditNoteBillingDetails data={data} />
+      <TaxInvoiceJobDetails data={data} />
+      <TaxInvoiceRemarks data={data} />
+      <TaxInvoiceChargeDetailsForTaxInvoiceReportFF
+        data={data}
+        charge={generalSalesInvoicePrint}
+        index={index}
+        hsnSac={hsnSac}
+      />
+      {index === 0 && (
+        <TaxInvoiceTermsAndConditionForTaxInvoiceReport
+          data={data}
+          index={index}
+          termsAndConditions={data[0]?.termsConditionMst}
+        />
+      )}
+      {/* Footer fixed at bottom of A4 */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+        }}
+      >
+        <FooterModule />
+      </div>
+    </div>
+  );
+
+  const toTaxInvoiceContainerNumber = (value) => {
+    if (value === null || value === undefined || value === "") return null;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  const formatTaxInvoiceContainerAmount = (value) => {
+    const num = toTaxInvoiceContainerNumber(value);
+    if (num === null) return "";
+
+    return num.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const getTaxInvoiceContainerDetailRows = (invoiceData) => {
+    const invoice = invoiceData?.[0] || {};
+
+    return (invoice?.tblInvoiceCharge || []).flatMap(
+      (chargeData, chargeIndex) =>
+        (chargeData?.tblInvoiceChargeDetails || []).map(
+          (detailData, detailIndex) => {
+            const days = toTaxInvoiceContainerNumber(detailData?.noOfDays);
+            const rate = toTaxInvoiceContainerNumber(detailData?.rate);
+            const qty = toTaxInvoiceContainerNumber(detailData?.qty) ?? 1;
+            const exchangeRate =
+              toTaxInvoiceContainerNumber(detailData?.exchangeRate) ??
+              toTaxInvoiceContainerNumber(chargeData?.exchangeRate) ??
+              toTaxInvoiceContainerNumber(invoice?.exchangeRate) ??
+              1;
+            const calculatedAmount =
+              days !== null && rate !== null ? days * rate * qty : null;
+            const detailAmount =
+              calculatedAmount ??
+              toTaxInvoiceContainerNumber(detailData?.amountFc) ??
+              toTaxInvoiceContainerNumber(detailData?.amountHc);
+            const chargeCurrency = String(
+              chargeData?.chargeCurrency || detailData?.currency || "USD",
+            ).toUpperCase();
+            const isInrCharge = chargeCurrency === "INR";
+            const amountUsd = isInrCharge ? null : detailAmount;
+            const amountInr =
+              detailAmount === null
+                ? null
+                : isInrCharge
+                  ? detailAmount
+                  : detailAmount * exchangeRate;
+
+            return {
+              ...detailData,
+              amountInr,
+              amountUsd,
+              detailIndex,
+              chargeIndex,
+            };
+          },
+        ),
+    );
+  };
+
+  const taxInvoiceContainerDetailGridMetrics = {
+    firstPageAvailableMm: 42,
+    continuationPageAvailableMm: 190,
+    headerHeightMm: 6,
+    rowHeightMm: 4.2,
+    grandTotalHeightMm: 5,
+    termsHeightMm: 31,
+    compactSummaryRecoveryMm: 18,
+  };
+
+  const getTaxInvoiceContainerFirstDetailAvailableMm = ({
+    chargePageCount = 0,
+    lastChargePageRowCount = 0,
+    compactSummary = false,
+  } = {}) => {
+    const compactSummaryRecoveryMm = compactSummary
+      ? taxInvoiceContainerDetailGridMetrics.compactSummaryRecoveryMm
+      : 0;
+
+    if (chargePageCount <= 1) {
+      return (
+        taxInvoiceContainerDetailGridMetrics.firstPageAvailableMm +
+        compactSummaryRecoveryMm
+      );
+    }
+
+    const compactChargeGridHeightPx = getCompactChargeGridMinHeightPx(
+      lastChargePageRowCount,
+    );
+    const recoveredHeightMm = Math.max(
+      0,
+      (350 - compactChargeGridHeightPx) * 0.264583,
+    );
+
+    return Math.min(
+      96,
+      taxInvoiceContainerDetailGridMetrics.firstPageAvailableMm +
+        recoveredHeightMm +
+        compactSummaryRecoveryMm,
+    );
+  };
+
+  const getTaxInvoiceContainerDetailCapacity = ({
+    pageType,
+    includeGrandTotal = false,
+    includeTerms = false,
+    availableHeightMm: customAvailableHeightMm,
+  }) => {
+    const {
+      firstPageAvailableMm,
+      continuationPageAvailableMm,
+      headerHeightMm,
+      rowHeightMm,
+      grandTotalHeightMm,
+      termsHeightMm,
+    } = taxInvoiceContainerDetailGridMetrics;
+
+    const availableHeightMm =
+      customAvailableHeightMm ??
+      (pageType === "first"
+        ? firstPageAvailableMm
+        : continuationPageAvailableMm);
+    const reservedHeightMm =
+      headerHeightMm +
+      (includeGrandTotal ? grandTotalHeightMm : 0) +
+      (includeTerms ? termsHeightMm : 0);
+
+    return Math.max(
+      0,
+      Math.floor((availableHeightMm - reservedHeightMm) / rowHeightMm),
+    );
+  };
+
+  const buildTaxInvoiceContainerDetailPages = (
+    rows = [],
+    { firstPageAvailableMm } = {},
+  ) => {
+    if (!rows.length) return [];
+
+    const firstPageCapacity = getTaxInvoiceContainerDetailCapacity({
+      pageType: "first",
+      availableHeightMm: firstPageAvailableMm,
+    });
+    const firstPageCapacityWithTerms = getTaxInvoiceContainerDetailCapacity({
+      pageType: "first",
+      availableHeightMm: firstPageAvailableMm,
+      includeGrandTotal: true,
+      includeTerms: true,
+    });
+    const continuationPageCapacity = getTaxInvoiceContainerDetailCapacity({
+      pageType: "continuation",
+    });
+    const finalContinuationPageCapacity = getTaxInvoiceContainerDetailCapacity({
+      pageType: "continuation",
+      includeGrandTotal: true,
+      includeTerms: true,
+    });
+
+    if (rows.length <= firstPageCapacityWithTerms) {
+      return [
+        {
+          rows,
+          showGrandTotal: true,
+          showTermsAndCondition: true,
+          canAppendToChargePage: true,
+        },
+      ];
+    }
+
+    if (rows.length <= firstPageCapacity) {
+      return [
+        {
+          rows,
+          showGrandTotal: true,
+          showTermsAndCondition: true,
+          canAppendToChargePage: false,
+        },
+      ];
+    }
+
+    const detailPages = [
+      {
+        rows: rows.slice(0, firstPageCapacity),
+        showGrandTotal: false,
+        showTermsAndCondition: false,
+        canAppendToChargePage: true,
+      },
+    ];
+    let remainingRows = rows.slice(firstPageCapacity);
+
+    if (remainingRows.length > finalContinuationPageCapacity) {
+      while (remainingRows.length > finalContinuationPageCapacity) {
+        const rowsToTake = Math.min(
+          continuationPageCapacity,
+          remainingRows.length - 1,
+        );
+
+        detailPages.push({
+          rows: remainingRows.slice(0, rowsToTake),
+          showGrandTotal: false,
+          showTermsAndCondition: false,
+          canAppendToChargePage: false,
+        });
+        remainingRows = remainingRows.slice(rowsToTake);
+      }
+    }
+
+    if (remainingRows.length > 0) {
+      detailPages.push({
+        rows: remainingRows,
+        showGrandTotal: true,
+        showTermsAndCondition: true,
+        canAppendToChargePage: false,
+      });
+    }
+
+    return detailPages;
+  };
+
+  const TaxInvoiceContainerDetailsGrid = ({
+    rows = [],
+    allRows = rows,
+    showGrandTotal = true,
+  }) => {
+    if (rows.length === 0) return null;
+
+    const totalUsd = allRows.reduce(
+      (sum, row) => sum + (toTaxInvoiceContainerNumber(row?.amountUsd) || 0),
+      0,
+    );
+    const totalInr = allRows.reduce(
+      (sum, row) => sum + (toTaxInvoiceContainerNumber(row?.amountInr) || 0),
+      0,
+    );
+    const cellBaseStyle = {
+      height: "100%",
+      display: "flex",
+      alignItems: "center",
+      boxSizing: "border-box",
+      margin: 0,
+      overflow: "hidden",
+      lineHeight: 1,
+      minWidth: 0,
+      paddingBottom: 0,
+      paddingTop: 0,
+      whiteSpace: "nowrap",
+    };
+    const centerCellStyle = (width) => ({
+      ...cellBaseStyle,
+      width,
+      justifyContent: "center",
+      paddingLeft: "1mm",
+      paddingRight: "1mm",
+      textAlign: "center",
+    });
+    const rightCellStyle = (width) => ({
+      ...cellBaseStyle,
+      width,
+      justifyContent: "flex-end",
+      paddingLeft: "1mm",
+      paddingRight: "1mm",
+      textAlign: "right",
+    });
+
+    return (
+      <div className="border-l border-r border-t border-b border-black">
+        <div
+          className="flex w-full border-b border-black text-center font-bold"
+          style={{
+            fontSize: "8px",
+            width: "100%",
+            height: `${taxInvoiceContainerDetailGridMetrics.headerHeightMm}mm`,
+            alignItems: "stretch",
+            overflow: "hidden",
+          }}
+        >
+          <p className="border-r border-black" style={centerCellStyle("20%")}>
+            Container No.
+          </p>
+          <p className="border-r border-black" style={centerCellStyle("13%")}>
+            From Date
+          </p>
+          <p className="border-r border-black" style={centerCellStyle("13%")}>
+            To Date
+          </p>
+          <p className="border-r border-black" style={centerCellStyle("10%")}>
+            NO of Day's
+          </p>
+          <p className="border-r border-black" style={centerCellStyle("10%")}>
+            Rate
+          </p>
+          <p className="border-r border-black" style={centerCellStyle("17%")}>
+            Total Amount (USD)
+          </p>
+          <p style={centerCellStyle("17%")}>Total Amount (INR)</p>
+        </div>
+
+        {rows.map((detailData) => (
+          <div
+            key={`${detailData?.id || detailData?.detailIndex}-${detailData?.chargeIndex}`}
+            className="flex w-full border-b border-black text-center"
+            style={{
+              fontSize: "8px",
+              width: "100%",
+              height: `${taxInvoiceContainerDetailGridMetrics.rowHeightMm}mm`,
+              alignItems: "stretch",
+              overflow: "hidden",
+            }}
+          >
+            <p className="border-r border-black" style={centerCellStyle("20%")}>
+              {detailData?.containerNo || ""}
+            </p>
+            <p className="border-r border-black" style={centerCellStyle("13%")}>
+              {detailData?.fromDate || ""}
+            </p>
+            <p className="border-r border-black" style={centerCellStyle("13%")}>
+              {detailData?.toDate || ""}
+            </p>
+            <p className="border-r border-black" style={centerCellStyle("10%")}>
+              {detailData?.noOfDays ?? ""}
+            </p>
+            <p className="border-r border-black" style={rightCellStyle("10%")}>
+              {formatTaxInvoiceContainerAmount(detailData?.rate)}
+            </p>
+            <p className="border-r border-black" style={rightCellStyle("17%")}>
+              {formatTaxInvoiceContainerAmount(detailData?.amountUsd)}
+            </p>
+            <p style={rightCellStyle("17%")}>
+              {formatTaxInvoiceContainerAmount(detailData?.amountInr)}
+            </p>
+          </div>
+        ))}
+
+        {showGrandTotal && (
+          <div
+            className="flex w-full font-bold text-right"
+            style={{
+              fontSize: "8px",
+              width: "100%",
+              height: `${taxInvoiceContainerDetailGridMetrics.grandTotalHeightMm}mm`,
+              alignItems: "stretch",
+              overflow: "hidden",
+            }}
+          >
+            <p className="border-r border-black" style={rightCellStyle("66%")}>
+              Grand Total
+            </p>
+            <p className="border-r border-black" style={rightCellStyle("17%")}>
+              {formatTaxInvoiceContainerAmount(totalUsd)}
+            </p>
+            <p style={rightCellStyle("17%")}>
+              {formatTaxInvoiceContainerAmount(totalInr)}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const taxInvoiceContainer = ({
+    index,
+    containerDetailRows = [],
+    allContainerDetailRows = [],
+    showContainerDetailGrandTotal = true,
+    showTermsAndCondition = false,
+    compactContainerSummary = false,
+    totalPages,
+  }) => (
+    <div
+      style={{
+        height: "290mm",
+        position: "relative",
+        boxSizing: "border-box",
+        overflow: "hidden",
+        color: "black",
+        paddingBottom: compactContainerSummary ? "8mm" : "18mm", // space for footer
+      }}
+    >
+      <CompanyImgModule data={data} />
+      <TaxInvoiceHeader data={data} />
+      <TaxInvoiceBillingDetails data={data} />
+      {index === 0 && <TaxInvoiceJobDetails data={data} />}
+      <TaxInvoiceRemarks data={data} />
+      {/* <TaxInvoiceChargeDetailsForTaxInvoiceReport
+        data={data}
+        charge={invoiceChargeDataForTaxInvoice}
+        index={index}
+        hsnSac={hsnSac}
+      /> */}
+      {/* same grid for Tax invoice and tax invoice FF grid */}
+      <TaxInvoiceChargeDetailsForTaxInvoiceReportFF
+        data={data}
+        charge={invoiceChargeDataForTaxInvoice}
+        index={index}
+        hsnSac={hsnSac}
+        compactChargeGrid={
+          index === (invoiceChargeDataForTaxInvoice?.length || 1) - 1
+        }
+        compactHsnGrid={compactContainerSummary}
+      />
+      {containerDetailRows.length > 0 && (
+        <TaxInvoiceContainerDetailsGrid
+          rows={containerDetailRows}
+          allRows={allContainerDetailRows}
+          showGrandTotal={showContainerDetailGrandTotal}
+        />
+      )}
+      {showTermsAndCondition && (
+        <TaxInvoiceTermsAndConditionForTaxInvoiceReport
+          data={data}
+          index={index}
+          termsAndConditions={data[0]?.termsConditionMst}
+          compact={compactContainerSummary}
+          totalPages={totalPages}
+        />
+      )}
+      {/* Footer fixed at bottom of A4 */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+        }}
+      >
+        <FooterModule />
+      </div>
+    </div>
+  );
+
+  const taxInvoiceContainerDetailContinuation = ({
+    pageIndex,
+    containerDetailRows = [],
+    allContainerDetailRows = [],
+    showContainerDetailGrandTotal = true,
+    showTermsAndCondition = false,
+    totalPages,
+  }) => (
+    <div
+      style={{
+        height: "290mm",
+        position: "relative",
+        boxSizing: "border-box",
+        overflow: "hidden",
+        color: "black",
+        paddingBottom: "18mm",
+      }}
+    >
+      <CompanyImgModule data={data} />
+      <TaxInvoiceHeader data={data} />
+      <TaxInvoiceBillingDetails data={data} />
+      <TaxInvoiceRemarks data={data} />
+      <TaxInvoiceContainerDetailsGrid
+        rows={containerDetailRows}
+        allRows={allContainerDetailRows}
+        showGrandTotal={showContainerDetailGrandTotal}
+      />
+      {showTermsAndCondition && (
+        <TaxInvoiceTermsAndConditionForTaxInvoiceReport
+          data={data}
+          index={pageIndex}
+          termsAndConditions={data[0]?.termsConditionMst}
+          totalPages={totalPages}
+        />
+      )}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+        }}
+      >
+        <FooterModule />
+      </div>
+    </div>
+  );
+
+  const domesticInvoice = (index) => (
+    <div
+      style={{
+        height: "290mm",
+        position: "relative",
+        boxSizing: "border-box",
+        overflow: "hidden",
+        color: "black",
+        paddingBottom: "18mm", // space for footer
+      }}
+    >
+      <CompanyImgModule data={data} />
+      <TaxInvoiceHeader data={data} />
+      <TaxInvoiceBillingDetails data={data} />
+      {index === 0 && <DomesticInvoiceJobDetails data={data} />}
+      <TaxInvoiceRemarks data={data} />
+      {/* <TaxInvoiceChargeDetailsForTaxInvoiceReport
+        data={data}
+        charge={invoiceChargeDataForTaxInvoice}
+        index={index}
+        hsnSac={hsnSac}
+      /> */}
+      {/* same grid for Tax invoice and tax invoice FF grid */}
+      <TaxInvoiceChargeDetailsForTaxInvoiceReportFF
+        data={data}
+        charge={invoiceChargeDataForTaxInvoice}
+        index={index}
+        hsnSac={hsnSac}
+      />
+      {index === 0 && (
+        <TaxInvoiceTermsAndConditionForTaxInvoiceReport
+          data={data}
+          index={index}
+          termsAndConditions={data[0]?.termsConditionMst}
+        />
+      )}
+      {/* Footer fixed at bottom of A4 */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+        }}
+      >
+        <FooterModule />
+      </div>
+    </div>
+  );
+
+  const buildPurchaseInvoiceAttachmentPages = (
+    invoiceData,
+    rowsPerPage = 18,
+  ) => {
+    const charges = Array.isArray(invoiceData?.tblInvoiceCharge)
+      ? invoiceData.tblInvoiceCharge
+      : [];
+
+    const pages = [];
+    let currentPage = [];
+    let currentCount = 0;
+
+    const pushPage = () => {
+      if (currentPage.length > 0) {
+        pages.push(currentPage);
+        currentPage = [];
+        currentCount = 0;
+      }
+    };
+
+    charges.forEach((chargeData) => {
+      const details = Array.isArray(chargeData?.tblInvoiceChargeDetails)
+        ? chargeData.tblInvoiceChargeDetails
+        : [];
+
+      if (!details.length) return;
+
+      const rows = details.map((row, idx) => ({
+        ...row,
+        __srNo: idx + 1,
+      }));
+
+      let start = 0;
+
+      while (start < rows.length) {
+        if (currentCount > 0 && currentCount + 4 > rowsPerPage) {
+          pushPage();
+        }
+
+        const availableRows = Math.max(rowsPerPage - currentCount - 3, 1);
+        const chunk = rows.slice(start, start + availableRows);
+        const isLastChunk = start + availableRows >= rows.length;
+
+        currentPage.push({
+          chargeData,
+          rows: chunk,
+          showTotal: isLastChunk,
+        });
+
+        currentCount += 2 + chunk.length + (isLastChunk ? 1 : 0);
+        start += chunk.length;
+
+        if (currentCount >= rowsPerPage) {
+          pushPage();
+        }
+      }
+    });
+
+    pushPage();
+
+    return pages;
+  };
+
+  const PurchaseInvoiceAttachmentSheet = ({ data, pageGroups }) => {
+    const invoiceData = data?.[0] || {};
+
+    const toNum = (value) => {
+      if (value === null || value === undefined || value === "") return 0;
+      const num = Number(String(value).replace(/,/g, ""));
+      return Number.isFinite(num) ? num : 0;
+    };
+
+    const fmtAmt = (value) => {
+      if (value === null || value === undefined || value === "") return "";
+      const num = Number(String(value).replace(/,/g, ""));
+      if (!Number.isFinite(num)) return "";
+      return num.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    };
+
+    const firstValue = (...values) => {
+      for (const v of values) {
+        if (v !== null && v !== undefined && v !== "") return v;
+      }
+      return "";
+    };
+
+    const getSizeType = (row, chargeData) => {
+      const size = firstValue(row?.size, chargeData?.size);
+      const typeCode = firstValue(
+        row?.typeCode,
+        row?.type,
+        chargeData?.typeCode,
+        chargeData?.type,
+      );
+
+      if (!size && !typeCode) return "";
+      return `${size || ""}${size || typeCode ? " / " : ""}${typeCode || ""}`;
+    };
+
+    const getVesselVoyage = (row) => {
+      const vessel = firstValue(
+        row?.vessel,
+        row?.vesselName,
+        invoiceData?.vessel,
+        invoiceData?.jobVessel,
+        invoiceData?.podVesselName,
+        invoiceData?.blVesselName,
+      );
+
+      const voyage = firstValue(
+        row?.voyageNo,
+        row?.voyage,
+        invoiceData?.voyageNo,
+        invoiceData?.jobVoyageNo,
+        invoiceData?.podVoyageName,
+        invoiceData?.blVoyageNo,
+      );
+
+      return [vessel, voyage].filter(Boolean).join(" / ");
+    };
+
+    const getBlNo = (row) =>
+      firstValue(
+        row?.blNo,
+        row?.hblNo,
+        row?.mblNo,
+        invoiceData?.blNo,
+        invoiceData?.hblNo,
+        invoiceData?.mblNo,
+      );
+
+    const cellBase = {
+      padding: "2px 3px",
+      lineHeight: "1.2",
+      wordBreak: "break-word",
+    };
+
+    return (
+      <div
+        style={{
+          height: "290mm",
+          position: "relative",
+          boxSizing: "border-box",
+          overflow: "hidden",
+          color: "black",
+        }}
+      >
+        <PurchaseCompanyImgModule data={data} />
+
+        <div style={{ marginTop: "4px" }}>
+          {pageGroups.map((section, sectionIndex) => {
+            const chargeData = section?.chargeData || {};
+            const rows = section?.rows || [];
+
+            const chargeTotalHome = (
+              chargeData?.tblInvoiceChargeDetails || []
+            ).reduce((sum, row) => sum + toNum(row?.amountHc), 0);
+
+            return (
+              <div
+                key={sectionIndex}
+                style={{
+                  width: "100%",
+                  marginBottom: "8px",
+                  fontSize: "8px",
+                }}
+              >
+                <div
+                  className="font-bold"
+                  style={{
+                    display: "flex",
+                    width: "100%",
+                    padding: "2px 3px",
+                    fontSize: "8px",
+                  }}
+                >
+                  <span style={{ width: "85px" }}>Charge Name:</span>
+                  <span>{chargeData?.description || ""}</span>
+                </div>
+
+                <div
+                  className="border-l border-t border-black"
+                  style={{
+                    width: "100%",
+                    fontSize: "8px",
+                  }}
+                >
+                  <div
+                    className="flex w-full text-center font-bold"
+                    style={{
+                      width: "100%",
+                      lineHeight: "1.15",
+                    }}
+                  >
+                    <p
+                      className="border-r border-b border-black"
+                      style={{ ...cellBase, width: "5%" }}
+                    >
+                      Sr No.
+                    </p>
+                    <p
+                      className="border-r border-b border-black"
+                      style={{ ...cellBase, width: "13%" }}
+                    >
+                      Vessel / Voyage
+                    </p>
+                    <p
+                      className="border-r border-b border-black"
+                      style={{ ...cellBase, width: "8%" }}
+                    >
+                      Size/Type
+                    </p>
+                    <p
+                      className="border-r border-b border-black"
+                      style={{ ...cellBase, width: "12%" }}
+                    >
+                      Container No
+                    </p>
+                    <p
+                      className="border-r border-b border-black"
+                      style={{ ...cellBase, width: "15%" }}
+                    >
+                      BL No
+                    </p>
+                    <p
+                      className="border-r border-b border-black"
+                      style={{ ...cellBase, width: "5%" }}
+                    >
+                      Qty
+                    </p>
+                    <p
+                      className="border-r border-b border-black"
+                      style={{ ...cellBase, width: "5%" }}
+                    >
+                      No of Days
+                    </p>
+                    <p
+                      className="border-r border-b border-black"
+                      style={{ ...cellBase, width: "8%" }}
+                    >
+                      Rate
+                    </p>
+                    <p
+                      className="border-r border-b border-black"
+                      style={{ ...cellBase, width: "4%" }}
+                    >
+                      Curr
+                    </p>
+                    <p
+                      className="border-r border-b border-black"
+                      style={{ ...cellBase, width: "6%" }}
+                    >
+                      Ex.Rate
+                    </p>
+                    <p
+                      className="border-r border-b border-black"
+                      style={{ ...cellBase, width: "11%" }}
+                    >
+                      Amount in Inv. Curr.
+                    </p>
+                    <p
+                      className="border-r border-b border-black"
+                      style={{ ...cellBase, width: "8%" }}
+                    >
+                      Amount in Home Curr.
+                    </p>
+                  </div>
+
+                  {rows.map((row, rowIndex) => (
+                    <div
+                      key={rowIndex}
+                      className="flex w-full"
+                      style={{
+                        width: "100%",
+                        minHeight: "26px",
+                        lineHeight: "1.2",
+                      }}
+                    >
+                      <p
+                        className="border-r border-b border-black text-center"
+                        style={{ ...cellBase, width: "5%" }}
+                      >
+                        {row?.__srNo || ""}
+                      </p>
+                      <p
+                        className="border-r border-b border-black"
+                        style={{ ...cellBase, width: "13%" }}
+                      >
+                        {getVesselVoyage(row)}
+                      </p>
+                      <p
+                        className="border-r border-b border-black text-center"
+                        style={{ ...cellBase, width: "8%" }}
+                      >
+                        {getSizeType(row, chargeData)}
+                      </p>
+                      <p
+                        className="border-r border-b border-black"
+                        style={{ ...cellBase, width: "12%" }}
+                      >
+                        {row?.containerNo || ""}
+                      </p>
+                      <p
+                        className="border-r border-b border-black"
+                        style={{ ...cellBase, width: "15%" }}
+                      >
+                        {getBlNo(row)}
+                      </p>
+                      <p
+                        className="border-r border-b border-black text-center"
+                        style={{ ...cellBase, width: "5%" }}
+                      >
+                        {row?.qty ?? ""}
+                      </p>
+                      <p
+                        className="border-r border-b border-black text-center"
+                        style={{ ...cellBase, width: "5%" }}
+                      >
+                        {row?.noOfDays ?? ""}
+                      </p>
+                      <p
+                        className="border-r border-b border-black text-right"
+                        style={{ ...cellBase, width: "8%" }}
+                      >
+                        {fmtAmt(row?.rate)}
+                      </p>
+                      <p
+                        className="border-r border-b border-black text-center"
+                        style={{ ...cellBase, width: "4%" }}
+                      >
+                        {firstValue(
+                          row?.currency,
+                          chargeData?.chargeCurrency,
+                          invoiceData?.currency,
+                        )}
+                      </p>
+                      <p
+                        className="border-r border-b border-black text-right"
+                        style={{ ...cellBase, width: "6%" }}
+                      >
+                        {fmtAmt(
+                          firstValue(
+                            row?.exchangeRate,
+                            chargeData?.exchangeRate,
+                          ),
+                        )}
+                      </p>
+                      <p
+                        className="border-r border-b border-black text-right"
+                        style={{ ...cellBase, width: "11%" }}
+                      >
+                        {fmtAmt(row?.amountFc)}
+                      </p>
+                      <p
+                        className="border-r border-b border-black text-right"
+                        style={{ ...cellBase, width: "8%" }}
+                      >
+                        {fmtAmt(row?.amountHc)}
+                      </p>
+                    </div>
+                  ))}
+
+                  {section?.showTotal && (
+                    <div
+                      className="flex w-full font-bold"
+                      style={{
+                        width: "100%",
+                      }}
+                    >
+                      <p
+                        className="border-r border-b border-black text-right"
+                        style={{
+                          ...cellBase,
+                          width: "92%",
+                        }}
+                      >
+                        {rows.length || ""}
+                      </p>
+                      <p
+                        className="border-r border-b border-black text-right"
+                        style={{
+                          ...cellBase,
+                          width: "8%",
+                        }}
+                      >
+                        {fmtAmt(chargeTotalHome)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const purchaseInvoice = (index, totalPages) => (
+    <div
+      style={{
+        height: "290mm",
+        position: "relative",
+        boxSizing: "border-box",
+        overflow: "hidden",
+        color: "black",
+        paddingBottom: "18mm",
+      }}
+    >
+      <PurchaseCompanyImgModule data={data} />
+      <PurchaseInvoiceHeader data={data} />
+      <PurchaseInvoiceBillingDetails data={data} />
+
+      {index === 0 && <PurchaseInvoiceJobDetails data={data} />}
+
+      <PurchaseInvoiceChargeDetailsForTaxInvoiceReportFF
+        data={data}
+        charge={purchaseInvoicePrint}
+        index={index}
+        hsnSac={hsnSac}
+      />
+
+      {index === 0 && (
+        <PurchaseInvoiceTermsAndConditionForTaxInvoiceReport
+          data={data}
+          index={index}
+          totalPages={totalPages}
+          termsAndConditions={data[0]?.termsConditionMst}
+        />
+      )}
+
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+        }}
+      >
+        <FooterModule />
+      </div>
+    </div>
+  );
 
   return (
     <main>
@@ -16483,6 +20495,397 @@ function rptInvoice() {
                   </div>
                 </>
               );
+            case "General Sales Invoice Print":
+              return (
+                <div
+                  ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                  id="GeneralSalesInvoice"
+                >
+                  {generalSalesInvoicePrint?.length > 0 &&
+                    generalSalesInvoicePrint.map((_, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          width: "210mm",
+                          height: "297mm",
+                          margin: "auto",
+                          boxSizing: "border-box",
+                          pageBreakAfter:
+                            i < generalSalesInvoicePrint.length - 1
+                              ? "always"
+                              : "auto",
+                          padding: "5mm",
+                          display: "flex",
+                          flexDirection: "column",
+                          marginBottom: "22px",
+                        }}
+                        className="bgTheme removeFontSize"
+                      >
+                        <div
+                          style={{
+                            flex: 1,
+                            width: "100%",
+                            boxSizing: "border-box",
+                            fontFamily: "Arial, sans-serif",
+                          }}
+                        >
+                          {generalInvoice(i)}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              );
+            case "CreditNote Print":
+              return (
+                <div
+                  ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                  id="CreditNotePrint1"
+                >
+                  {creditNotePrint1?.length > 0 &&
+                    creditNotePrint1.map((_, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          width: "210mm",
+                          height: "297mm",
+                          margin: "auto",
+                          boxSizing: "border-box",
+                          pageBreakAfter:
+                            i < creditNotePrint1.length - 1 ? "always" : "auto",
+                          padding: "5mm",
+                          display: "flex",
+                          flexDirection: "column",
+                          marginBottom: "22px",
+                        }}
+                        className="bgTheme removeFontSize"
+                      >
+                        <div
+                          style={{
+                            flex: 1,
+                            width: "100%",
+                            boxSizing: "border-box",
+                            fontFamily: "Arial, sans-serif",
+                          }}
+                        >
+                          {creditPrint(i)}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              );
+            case "Domestic Invoice":
+              return (
+                <>
+                  <div
+                    ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                    id="TaxInvoice"
+                  >
+                    {invoiceChargeDataForTaxInvoice?.length > 0 ? (
+                      // Render taxInvoice if there are charges
+                      Array.from({
+                        length: invoiceChargeDataForTaxInvoice?.length,
+                      }).map((_, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            width: "210mm",
+                            height: "297mm",
+                            margin: "auto",
+                            boxSizing: "border-box",
+                            pageBreakAfter:
+                              index < data[0]?.tblInvoiceCharge?.length - 1
+                                ? "always"
+                                : "auto",
+                            padding: "5mm",
+                            display: "flex",
+                            flexDirection: "column",
+                            marginBottom: "22px",
+                          }}
+                          className="bgTheme removeFontSize"
+                        >
+                          <div
+                            style={{
+                              flex: 1,
+                              width: "100%",
+                              boxSizing: "border-box",
+                              fontFamily: "Arial sans-serif !important",
+                            }}
+                          >
+                            {domesticInvoice(index)}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      // Render taxInvoiceWithoutCharges if there are no charges
+                      <div
+                        style={{
+                          width: "210mm",
+                          height: "297mm",
+                          margin: "auto",
+                          boxSizing: "border-box",
+                          padding: "5mm",
+                          display: "flex",
+                          flexDirection: "column",
+                          marginBottom: "22px",
+                        }}
+                        className="bgTheme removeFontSize"
+                      >
+                        <div
+                          style={{
+                            flex: 1,
+                            width: "100%",
+                            boxSizing: "border-box",
+                            fontFamily: "Arial sans-serif !important",
+                          }}
+                        >
+                          {taxInvoiceWithoutCharges()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            case "Purchase Invoice": {
+              const mainPages =
+                purchaseInvoicePrint && purchaseInvoicePrint.length > 0
+                  ? purchaseInvoicePrint
+                  : [[]];
+
+              const purchaseAttachmentPages =
+                buildPurchaseInvoiceAttachmentPages(data?.[0], 32);
+
+              const totalPrintablePages =
+                mainPages.length + purchaseAttachmentPages.length;
+
+              return (
+                <div
+                  ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                  id="TaxInvoice"
+                >
+                  {mainPages.map((_, i) => (
+                    <div
+                      key={`purchase-main-${i}`}
+                      style={{
+                        width: "210mm",
+                        height: "297mm",
+                        margin: "auto",
+                        boxSizing: "border-box",
+                        pageBreakAfter:
+                          i < mainPages.length - 1 ||
+                          purchaseAttachmentPages.length > 0
+                            ? "always"
+                            : "auto",
+                        padding: "5mm",
+                        display: "flex",
+                        flexDirection: "column",
+                        marginBottom: "22px",
+                      }}
+                      className="bgTheme removeFontSize"
+                    >
+                      <div
+                        style={{
+                          flex: 1,
+                          width: "100%",
+                          boxSizing: "border-box",
+                          fontFamily: "Arial, sans-serif",
+                        }}
+                      >
+                        {purchaseInvoice(i, totalPrintablePages)}
+                      </div>
+                    </div>
+                  ))}
+
+                  {purchaseAttachmentPages.map((pageGroups, attIndex) => (
+                    <div
+                      key={`purchase-attachment-${attIndex}`}
+                      style={{
+                        width: "210mm",
+                        height: "297mm",
+                        margin: "auto",
+                        boxSizing: "border-box",
+                        pageBreakAfter:
+                          attIndex < purchaseAttachmentPages.length - 1
+                            ? "always"
+                            : "auto",
+                        padding: "5mm",
+                        display: "flex",
+                        flexDirection: "column",
+                        marginBottom: "22px",
+                      }}
+                      className="bgTheme removeFontSize"
+                    >
+                      <div
+                        style={{
+                          flex: 1,
+                          width: "100%",
+                          boxSizing: "border-box",
+                          fontFamily: "Arial, sans-serif",
+                        }}
+                      >
+                        <PurchaseInvoiceAttachmentSheet
+                          data={data}
+                          pageGroups={pageGroups}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            }
+            case "Tax Invoice Container": {
+              const containerDetailRows =
+                getTaxInvoiceContainerDetailRows(data);
+              const hasContainerDetailRows = containerDetailRows.length > 0;
+              const chargePageCount =
+                invoiceChargeDataForTaxInvoice?.length || 0;
+              const lastChargePageRowCount =
+                invoiceChargeDataForTaxInvoice?.[chargePageCount - 1]?.length ||
+                0;
+              const firstPageAvailableMm =
+                getTaxInvoiceContainerFirstDetailAvailableMm({
+                  chargePageCount,
+                  lastChargePageRowCount,
+                  compactSummary: hasContainerDetailRows,
+                });
+              const containerDetailPages = buildTaxInvoiceContainerDetailPages(
+                containerDetailRows,
+                {
+                  firstPageAvailableMm,
+                },
+              );
+              const shouldAppendFirstContainerDetailPage =
+                containerDetailPages.length > 0 &&
+                containerDetailPages[0]?.canAppendToChargePage === true;
+              const appendedContainerDetailPageCount =
+                shouldAppendFirstContainerDetailPage ? 1 : 0;
+              const totalPages =
+                chargePageCount +
+                Math.max(
+                  containerDetailPages.length -
+                    appendedContainerDetailPageCount,
+                  0,
+                );
+
+              return (
+                <>
+                  <div
+                    ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                    id="TaxInvoice"
+                  >
+                    {invoiceChargeDataForTaxInvoice?.length > 0 ? (
+                      // Render taxInvoice if there are charges
+                      Array.from({
+                        length: totalPages,
+                      }).map((_, pageIndex) => {
+                        const isChargePage = pageIndex < chargePageCount;
+                        const isLastChargePage =
+                          pageIndex === chargePageCount - 1;
+                        const detailPageIndex =
+                          pageIndex -
+                          chargePageCount +
+                          appendedContainerDetailPageCount;
+                        const containerDetailPage =
+                          shouldAppendFirstContainerDetailPage &&
+                          isLastChargePage
+                            ? containerDetailPages[0]
+                            : !isChargePage
+                              ? containerDetailPages[detailPageIndex]
+                              : null;
+                        const containerDetailRowsForPage =
+                          containerDetailPage?.rows || [];
+                        const isLastPage = pageIndex === totalPages - 1;
+                        const showTermsAndCondition =
+                          containerDetailPage?.showTermsAndCondition ||
+                          (containerDetailPages.length === 0 && isLastPage);
+                        const compactContainerSummary =
+                          shouldAppendFirstContainerDetailPage &&
+                          isLastChargePage;
+
+                        return (
+                          <div
+                            key={pageIndex}
+                            style={{
+                              width: "210mm",
+                              height: "297mm",
+                              margin: "auto",
+                              boxSizing: "border-box",
+                              pageBreakAfter:
+                                pageIndex < totalPages - 1 ? "always" : "auto",
+                              padding: "5mm",
+                              display: "flex",
+                              flexDirection: "column",
+                              marginBottom: "22px",
+                            }}
+                            className="bgTheme removeFontSize"
+                          >
+                            <div
+                              style={{
+                                flex: 1,
+                                width: "100%",
+                                boxSizing: "border-box",
+                                fontFamily: "Arial sans-serif !important",
+                              }}
+                            >
+                              {isChargePage
+                                ? taxInvoiceContainer({
+                                    index: pageIndex,
+                                    containerDetailRows:
+                                      containerDetailRowsForPage,
+                                    allContainerDetailRows: containerDetailRows,
+                                    showContainerDetailGrandTotal:
+                                      containerDetailPage?.showGrandTotal ||
+                                      false,
+                                    showTermsAndCondition,
+                                    compactContainerSummary,
+                                    totalPages,
+                                  })
+                                : taxInvoiceContainerDetailContinuation({
+                                    pageIndex,
+                                    containerDetailRows:
+                                      containerDetailRowsForPage,
+                                    allContainerDetailRows: containerDetailRows,
+                                    showContainerDetailGrandTotal:
+                                      containerDetailPage?.showGrandTotal ||
+                                      false,
+                                    showTermsAndCondition,
+                                    totalPages,
+                                  })}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      // Render taxInvoiceWithoutCharges if there are no charges
+                      <div
+                        style={{
+                          width: "210mm",
+                          height: "297mm",
+                          margin: "auto",
+                          boxSizing: "border-box",
+                          padding: "5mm",
+                          display: "flex",
+                          flexDirection: "column",
+                          marginBottom: "22px",
+                        }}
+                        className="bgTheme removeFontSize"
+                      >
+                        <div
+                          style={{
+                            flex: 1,
+                            width: "100%",
+                            boxSizing: "border-box",
+                            fontFamily: "Arial sans-serif !important",
+                          }}
+                        >
+                          {taxInvoiceWithoutCharges()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            }
+
             default:
               return null;
           }

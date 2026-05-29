@@ -213,6 +213,14 @@ function rptWarehouse() {
                     {data && data?.poNo}
                   </td>
                 </tr>
+                <tr>
+                  <th align="left" style={thStyle}>
+                    Container No.:
+                  </th>
+                  <td align="left" style={tdStyle}>
+                    {data && data?.containerNo}
+                  </td>
+                </tr>
               </table>
             </td>
             <td width="51%" valign="top">
@@ -2153,7 +2161,7 @@ function rptWarehouse() {
                   className="text-black font-normal"
                   style={{ fontSize: "9px" }}
                 >
-                    {item.itemName || ""}
+                  {item.itemName || ""}
                 </p>
               </td>
 
@@ -2163,7 +2171,7 @@ function rptWarehouse() {
                   className="text-black font-normal text-center"
                   style={{ fontSize: "9px" }}
                 >
-                 {item.itemTypeName || ""}
+                  {item.itemTypeName || ""}
                 </p>
               </td>
 

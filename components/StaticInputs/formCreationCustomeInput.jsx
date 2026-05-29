@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable */
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import styles from "@/components/common.module.css";
 import TextField from "@mui/material/TextField";
@@ -123,10 +124,9 @@ export default function CustomeInputFields({
         [`${field.fieldname}multiselect`]: value,
       });
       console.log("value", value);
-      
+
       formattedValue = value.map((item) => item.value).join(",");
       console.log("formattedValue", formattedValue);
-      
     }
     // Update the state or context with the new value
     Object.assign(updatedValues, {
@@ -171,7 +171,7 @@ export default function CustomeInputFields({
           pageNo,
           inputValueForDataFetch,
           values?.[field.fieldname],
-          "first"
+          "first",
         );
       } else if (
         field.controlname.toLowerCase() === "dropdown" ||
@@ -184,7 +184,7 @@ export default function CustomeInputFields({
           pageNo,
           inputValueForDataFetch,
           values?.[field.fieldname],
-          "first"
+          "first",
         );
       }
 
@@ -219,7 +219,7 @@ export default function CustomeInputFields({
           pageNo,
           inputValueForDataFetch,
           values[field.fieldname],
-          "first"
+          "first",
         );
       } else if (
         field.controlname.toLowerCase() === "dropdown" ||
@@ -247,7 +247,7 @@ export default function CustomeInputFields({
         let variableValue = eval(variableName); // Note: This is potentially unsafe, use with caution
         inputString = inputString.replace(
           new RegExp("\\${" + variableName + "}", "g"),
-          variableValue
+          variableValue,
         );
       }
       return inputString;
@@ -276,9 +276,8 @@ export default function CustomeInputFields({
         if (isNextPageNull) {
           return false;
         } else {
-          const apiResponse = await dynamicDropDownFieldsDataCreateForm(
-            requestData
-          );
+          const apiResponse =
+            await dynamicDropDownFieldsDataCreateForm(requestData);
           if (apiResponse.success == false) {
             return false;
           }
@@ -350,10 +349,10 @@ export default function CustomeInputFields({
           pageNo,
           searchValue,
           values?.[field.fieldname],
-          "search"
+          "search",
         );
       }, 50),
-      []
+      [],
     ); // 50ms debounce time
 
     const handleInputChange = (newInputValue) => {
@@ -531,8 +530,8 @@ export default function CustomeInputFields({
                   inputValueChange.length > 0
                     ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-75 opacity-100" // Label moves to the top
                     : inputValueChange.length == 0 || !values[field.fieldname]
-                    ? "top-[calc(100%-1.2rem)] opacity-100"
-                    : "" // Label sits at the bottom, emulating a placeholder
+                      ? "top-[calc(100%-1.2rem)] opacity-100"
+                      : "" // Label sits at the bottom, emulating a placeholder
                 }`}
                 style={{ fontSize: "var(--inputFontSize)" }}
               >
@@ -588,7 +587,7 @@ export default function CustomeInputFields({
                     field.fieldname == "controlname" ||
                     field.fieldname == "type"
                       ? item.value == values?.[field.fieldname]
-                      : item.label === values?.[field.fieldname]
+                      : item.label === values?.[field.fieldname],
                   ) || null
                 }
                 noOptionsMessage={() => "No records found"}
@@ -656,15 +655,15 @@ export default function CustomeInputFields({
         return (
           <LightTooltip title={field.yourlabel}>
             <div className="relative ">
-            <p
+              <p
                 className={` absolute left-[11px] z-[1] px-2 transition-all duration-200 ${
                   showLabel ||
                   values?.[field.fieldname] ||
                   inputValueChange.length > 0
                     ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-75 opacity-100" // Label moves to the top
                     : inputValueChange.length == 0 || !values[field.fieldname]
-                    ? "top-[calc(100%-1.2rem)] opacity-100"
-                    : "" // Label sits at the bottom, emulating a placeholder
+                      ? "top-[calc(100%-1.2rem)] opacity-100"
+                      : "" // Label sits at the bottom, emulating a placeholder
                 }`}
                 style={{ fontSize: "var(--inputFontSize)" }}
               >
@@ -699,8 +698,6 @@ export default function CustomeInputFields({
                 placeholder=""
                 options={dropDownValues}
                 className={`w-[12rem] ${styles.inputField}  `}
-
-
                 components={{
                   MenuList: (props) => (
                     <CustomMenuList
@@ -718,12 +715,12 @@ export default function CustomeInputFields({
                 // }}
                 value={
                   values?.[`${field.fieldname}multiselect`] ||
-                    dropDownValues?.length > 0
+                  dropDownValues?.length > 0
                     ? dropDownValues?.filter((value) =>
-                      values?.[`${field.fieldname}`]
-                        ?.split(",")
-                        ?.includes(value.value.toString())
-                    )
+                        values?.[`${field.fieldname}`]
+                          ?.split(",")
+                          ?.includes(value.value.toString()),
+                      )
                     : [] || []
                 }
                 noOptionsMessage={() =>
@@ -992,7 +989,7 @@ export default function CustomeInputFields({
                               } else {
                                 // Remove value from array
                                 updatedValues = updatedValues.filter(
-                                  (val) => val !== item.value
+                                  (val) => val !== item.value,
                                 );
                               }
                               handleChange(updatedValues.join(","), field);
@@ -1299,6 +1296,11 @@ export default function CustomeInputFields({
                 </span>
               }
               ampm={false}
+              format={
+                dateFormat === "" || dateFormat === null
+                  ? "DD-MM-YYYY HH:mm:ss"
+                  : `${dateFormat} HH:mm:ss`
+              }
               viewRenderers={{
                 hours: renderTimeViewClock,
                 minutes: renderTimeViewClock,

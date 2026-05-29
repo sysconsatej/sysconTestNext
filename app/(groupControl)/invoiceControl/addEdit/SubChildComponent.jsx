@@ -7,14 +7,21 @@ import CustomeInputFields from "@/components/Inputs/customeInputFields";
 import IconButton from "@mui/material/IconButton";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
-import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
+import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import HoverIcon from "@/components/HoveredIcons/HoverIcon";
-import { refreshIcon, revertHover, saveIcon, saveIconHover, addLogo, plusIconHover } from "@/assets";
+import {
+  refreshIcon,
+  revertHover,
+  saveIcon,
+  saveIconHover,
+  addLogo,
+  plusIconHover,
+} from "@/assets";
 import LightTooltip from "@/components/Tooltip/customToolTip";
 import EditSubChildComponent from "@/app/(groupControl)/invoiceControl/addEdit/EditSubChildComponent";
 import PropTypes from "prop-types";
@@ -70,7 +77,7 @@ function onSubmitFunctionCall(
   values,
   setStateVariable,
   childName,
-  childIndex
+  childIndex,
 ) {
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
@@ -99,7 +106,7 @@ function onSubmitFunctionCall(
         values,
         setStateVariable,
         childName,
-        childIndex
+        childIndex,
       });
       return result;
       // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
@@ -113,9 +120,8 @@ function onDeleteFunctionCall(
   formControlData,
   childName,
   childIndex,
-  index
+  index,
 ) {
-
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
   console.log(functionData, "functionData");
@@ -142,7 +148,7 @@ function onDeleteFunctionCall(
         formControlData,
         childName,
         childIndex,
-        valuesIndex: index
+        valuesIndex: index,
       });
       return result;
       // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
@@ -176,8 +182,6 @@ SubChildComponent.propTypes = {
   setSubChildViewData: PropTypes.any,
   formControlData: PropTypes.any,
   setFormControlData: PropTypes.any,
-
-
 };
 
 export default function SubChildComponent({
@@ -210,13 +214,10 @@ export default function SubChildComponent({
   const isSubChildAddHidden = isConfigFlagEnabled(subChild?.isAddHide);
   const isSubChildDeleteHidden = isConfigFlagEnabled(subChild?.isDeleteHide);
   const [hideSubChildInputs, setHideSubChildInputs] = useState(
-    isSubChildAddHidden
+    row[subChild?.tableName]?.length === undefined ||
+      row[subChild?.tableName]?.length === 0
       ? true
-      : expandAll
-      ? row[subChild?.tableName] && row[subChild?.tableName]?.length === 0
-        ? false
-        : true
-      : false
+      : false,
   );
   const [subChildObject, setSubChildObject] = useState({});
   const [renderedData, setRenderedData] = useState([]);
@@ -229,9 +230,7 @@ export default function SubChildComponent({
   const [isGridEdit, setIsGridEdit] = useState(false);
   const [copyChildValueObj, setCopyChildValueObj] = useState([]);
   const [columnTotals, setColumnTotals] = useState({ tableName: "" });
-
-
-
+  const [dummyData, setDummyData] = useState([]);
 
   const handleFieldSubChildrenValuesChange = (updatedValues) => {
     setSubChildObject((prev) => ({ ...prev, ...updatedValues }));
@@ -256,7 +255,7 @@ export default function SubChildComponent({
           feild.isRequired &&
           (!Object.prototype.hasOwnProperty.call(
             subChildObject,
-            feild.fieldname
+            feild.fieldname,
           ) ||
             subChildObject[feild.fieldname].toString().trim() === "")
         ) {
@@ -267,7 +266,6 @@ export default function SubChildComponent({
       try {
         if (subChild.functionOnSubmit && subChild.functionOnSubmit !== null) {
           for (const fun of subChild?.functionOnSubmit.split(";") || []) {
-
             let updatedData = onSubmitFunctionCall(
               fun,
               newState,
@@ -275,7 +273,7 @@ export default function SubChildComponent({
               subChildObject,
               setSubChildObject,
               childName,
-              childIndex
+              childIndex,
             );
             if (updatedData?.alertShow == true) {
               // if (updatedData.type == "success") {
@@ -315,15 +313,16 @@ export default function SubChildComponent({
           isChecked: true,
           indexValue: Math.floor(Math.random() * 100),
         });
+      } else {
+        tmpData[childName][childIndex][subChild.tableName] = [
+          {
+            ...subChildObject,
+            isChecked: true,
+            indexValue: Math.floor(Math.random() * 100),
+          },
+        ];
       }
-      else {
-        tmpData[childName][childIndex][subChild.tableName] = [{
-          ...subChildObject,
-          isChecked: true,
-          indexValue: Math.floor(Math.random() * 100),
-        }];
-      }
-      console.log("tmpData", tmpData);
+
       setNewState((pre) => {
         if (JSON.stringify(pre) === JSON.stringify(tmpData)) return pre;
         return { ...pre, ...tmpData };
@@ -368,9 +367,10 @@ export default function SubChildComponent({
     const lastIndex = renderedData.length + 10;
     const newData = newState[childName][childIndex][subChild.tableName]?.slice(
       renderedData.length,
-      lastIndex
+      lastIndex,
     );
     setRenderedData((prevData) => [...prevData, ...newData]);
+    setDummyData((prevData) => [...prevData, ...newData]);
   };
 
   // Function to calculate totals for a single row
@@ -385,12 +385,12 @@ export default function SubChildComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-              const parsedValue =
-                typeof row[item.fieldname] === "number"
-                  ? row[item.fieldname]
-                  : parseFloat(row[item.fieldname] || 0);
-              return isNaN(parsedValue) ? sum : sum + parsedValue;
-            }, 0) // Calculate sum for 's' type
+                const parsedValue =
+                  typeof row[item.fieldname] === "number"
+                    ? row[item.fieldname]
+                    : parseFloat(row[item.fieldname] || 0);
+                return isNaN(parsedValue) ? sum : sum + parsedValue;
+              }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -403,10 +403,13 @@ export default function SubChildComponent({
 
   useEffect(() => {
     setRenderedData(
-      newState[childName]?.[childIndex]?.[subChild.tableName]?.slice(0, 10)
+      newState[childName]?.[childIndex]?.[subChild.tableName]?.slice(0, 10),
+    );
+    setDummyData(
+      newState[childName]?.[childIndex]?.[subChild.tableName]?.slice(0, 10),
     );
     calculateTotalForRow(
-      newState[childName]?.[childIndex]?.[subChild.tableName]
+      newState[childName]?.[childIndex]?.[subChild.tableName],
     );
   }, [newState]);
 
@@ -424,7 +427,7 @@ export default function SubChildComponent({
             formControlData,
             childName,
             childIndex,
-            indexValue
+            indexValue,
           );
           if (updatedData?.newState) {
             tmpData = { ...tmpData, ...updatedData.newState };
@@ -433,12 +436,9 @@ export default function SubChildComponent({
       }
 
       // immutably remove the record
-      tmpData[childName][childIndex][subChild.tableName] =
-        tmpData[childName][childIndex][subChild.tableName].filter(
-          (_, i) => i !== indexValue
-        );
-
-      console.log("tmpData", tmpData);
+      tmpData[childName][childIndex][subChild.tableName] = tmpData[childName][
+        childIndex
+      ][subChild.tableName].filter((_, i) => i !== indexValue);
 
       // directly set state
       setNewState(tmpData);
@@ -452,7 +452,6 @@ export default function SubChildComponent({
       toast.error(error.message);
     }
   };
-
 
   // eslint-disable-next-line no-unused-vars
   const removeSubChildRecordFromInsert = (id, index) => {
@@ -507,9 +506,10 @@ export default function SubChildComponent({
     const filterFunction = (searchValue, columnKey) => {
       if (!searchValue.trim()) {
         setInputVisible(false);
-        setSubmitNewState(originalData);
-        return setNewState(originalData);
+        setSubmitNewState(dummyData);
+        return setRenderedData(dummyData);
       }
+
       const lowercasedInput = searchValue.toLowerCase();
       const filtered = newState[childName][childIndex][
         subChild.tableName
@@ -532,33 +532,12 @@ export default function SubChildComponent({
           return columnValue.includes(lowercasedInput);
         }
       });
+
       if (filtered.length === 0) {
         toast.error("No matching records found.");
         return;
       }
-
-      setNewState((prevState) => ({
-        ...prevState,
-        [childName]: [
-          ...prevState[childName].slice(0, childIndex),
-          {
-            ...prevState[childName][childIndex],
-            [subChild.tableName]: filtered,
-          },
-          ...prevState[childName].slice(childIndex + 1),
-        ],
-      }));
-      setSubmitNewState((prevState) => ({
-        ...prevState,
-        [childName]: [
-          ...prevState[childName].slice(0, childIndex),
-          {
-            ...prevState[childName][childIndex],
-            [subChild.tableName]: filtered,
-          },
-          ...prevState[childName].slice(childIndex + 1),
-        ],
-      }));
+      setRenderedData(filtered);
       setInputVisible(false);
       setPrevSearchInput(searchValue);
     };
@@ -631,7 +610,6 @@ export default function SubChildComponent({
     if (sortedColumn === columnId) {
       setIsAscending(!isAscending);
       sortJSON(renderedData, columnId, !isAscending ? "asc" : "desc");
-
     } else {
       // If a different column is clicked, update the sortedColumn state and set sorting order to ascending
       setSortedColumn(columnId);
@@ -753,13 +731,13 @@ export default function SubChildComponent({
     setNewState((prev) => {
       const nextChildRows = Array.isArray(prev?.[childName])
         ? prev[childName].map((childRow, idx) =>
-          idx === childIndex
-            ? {
-              ...childRow,
-              [tableName]: copyChildValueObj[tableName]?.[0] || [],
-            }
-            : childRow
-        )
+            idx === childIndex
+              ? {
+                  ...childRow,
+                  [tableName]: copyChildValueObj[tableName]?.[0] || [],
+                }
+              : childRow,
+          )
         : prev?.[childName];
 
       return {
@@ -770,13 +748,13 @@ export default function SubChildComponent({
     setSubmitNewState((prev) => {
       const nextChildRows = Array.isArray(prev?.[childName])
         ? prev[childName].map((childRow, idx) =>
-          idx === childIndex
-            ? {
-              ...childRow,
-              [tableName]: copyChildValueObj[tableName]?.[0] || [],
-            }
-            : childRow
-        )
+            idx === childIndex
+              ? {
+                  ...childRow,
+                  [tableName]: copyChildValueObj[tableName]?.[0] || [],
+                }
+              : childRow,
+          )
         : prev?.[childName];
 
       return {
@@ -848,12 +826,8 @@ export default function SubChildComponent({
   return (
     <>
       {/* Input field integration */}
-        <div
-        key={index}
-        style={{ width: "100%" }}
-      >
-        {!isSubChildAddHidden &&
-          (row[subChild?.tableName]?.length == 0 || !hideSubChildInputs) && (
+      <div key={index} style={{ width: "100%" }}>
+        {hideSubChildInputs && (
           <div className=" my-3 flex justify-between ">
             <CustomeInputFields
               key={index}
@@ -874,8 +848,6 @@ export default function SubChildComponent({
               setFormControlData={setFormControlData}
               setStateVariable={setSubChildObject}
               callSaveFunctionOnLastTab={() => {
-                console.log("subChildObject", subChildObject);
-
                 subChildButtonDataHandler(subChildObject, subChild, true);
               }}
             />
@@ -909,7 +881,10 @@ export default function SubChildComponent({
 
         {row[subChild.tableName] && row[subChild.tableName]?.length > 0 && (
           <div
-            style={{ marginTop: subChild.isHideGridHeader === true ? '0rem' : '1.25rem' }}
+            style={{
+              marginTop:
+                subChild.isHideGridHeader === true ? "0rem" : "1.25rem",
+            }}
           >
             <TableContainer
               component={Paper}
@@ -917,7 +892,8 @@ export default function SubChildComponent({
               onScroll={handleScroll}
               className={`${styles.pageBackground} ${styles.thinScrollBar}`}
               sx={{
-                height: row[subChild.tableName]?.length > 10 ? "250px" : "250px",
+                height:
+                  row[subChild.tableName]?.length > 10 ? "250px" : "250px",
                 overflowY: "auto",
               }}
             >
@@ -927,11 +903,11 @@ export default function SubChildComponent({
                 stickyHeader
                 sx={{ overflowY: "auto" }}
               >
-
                 <TableHead>
-                  {subChild.isHideGridHeader === true ? "" :
+                  {subChild.isHideGridHeader === true ? (
+                    ""
+                  ) : (
                     <TableRow>
-
                       {subChild.fields
                         .filter((elem) => elem.isGridView)
                         .map((item, index) => (
@@ -949,24 +925,25 @@ export default function SubChildComponent({
                             {!isView &&
                               !isSubChildAddHidden &&
                               index === 0 &&
-                              (hideSubChildInputs || row[subChild?.tableName].length > 0) && (
-
-                              <HoverIcon
-                                defaultIcon={addLogo}
-                                hoverIcon={plusIconHover}
-
-                                altText={"Add"}
-                                title={"Add"}
-                                onClick={() => {
-                                  hideSubChildInputComponent()
-                                }}
-                              />
-                            )}
+                              (hideSubChildInputs ||
+                                row[subChild?.tableName].length > 0) && (
+                                <HoverIcon
+                                  defaultIcon={addLogo}
+                                  hoverIcon={plusIconHover}
+                                  altText={"Add"}
+                                  title={"Add"}
+                                  onClick={() => {
+                                    hideSubChildInputComponent();
+                                  }}
+                                />
+                              )}
 
                             <span
                               className={`${styles.labelText}`}
                               onClick={() => handleSortBy(item.fieldname)}
-                              style={{ paddingLeft: isGridEdit ? '0px' : '0px' }}
+                              style={{
+                                paddingLeft: isGridEdit ? "0px" : "0px",
+                              }}
                             >
                               {item.yourlabel}
                             </span>
@@ -994,7 +971,7 @@ export default function SubChildComponent({
                                         onClick={() => {
                                           gridEditSaveFunction(
                                             subChild.tableName,
-                                            subChild
+                                            subChild,
                                           );
                                         }}
                                       />
@@ -1008,7 +985,9 @@ export default function SubChildComponent({
                                           ...gridSubChildIconStyles,
                                         }}
                                         onClick={() => {
-                                          gridEditCloseFunction(subChild.tableName);
+                                          gridEditCloseFunction(
+                                            subChild.tableName,
+                                          );
                                         }}
                                       />
                                     </LightTooltip>
@@ -1031,7 +1010,8 @@ export default function SubChildComponent({
                             </span>
                           </TableCell>
                         ))}
-                    </TableRow>}
+                    </TableRow>
+                  )}
                 </TableHead>
 
                 <TableBody className="relative">
@@ -1098,13 +1078,12 @@ export default function SubChildComponent({
                                   ...totalSumChildStyle,
                                   paddingLeft: index === 0 ? "29px" : "0px",
                                 }}
-
                               >
                                 <div className="relative ">
                                   <div className={`${childTableRowStyles} `}>
                                     {(field.type === "number" ||
                                       field.type === "decimal") &&
-                                      field.gridTotal
+                                    field.gridTotal
                                       ? columnTotals[field.fieldname]
                                       : ""}
                                   </div>

@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable */
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "@/app/app.module.css";
@@ -93,6 +94,8 @@ export default function AddEditFormControll() {
   // aakash-y code starts here
   const [labelName, setLabelName] = useState("");
 
+  console.log("newState =>", newState);
+
   const getLabelValue = (label) => {
     setLabelName(label);
   };
@@ -120,7 +123,7 @@ export default function AddEditFormControll() {
           const missingField = Object.entries(fields).find(
             // eslint-disable-next-line no-unused-vars
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -161,7 +164,7 @@ export default function AddEditFormControll() {
           const missingField = Object.entries(fields).find(
             // eslint-disable-next-line no-unused-vars
             ([, { isRequired, fieldname, yourlabel }]) =>
-              isRequired && !newState[fieldname]
+              isRequired && !newState[fieldname],
           );
 
           if (missingField) {
@@ -209,7 +212,7 @@ export default function AddEditFormControll() {
     // Sort each group by 'sectionOrder'
     Object.keys(groupedFields).forEach((section) => {
       groupedFields[section].sort(
-        (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0)
+        (a, b) => (a.sectionOrder || 0) - (b.sectionOrder || 0),
       );
     });
 
@@ -561,7 +564,7 @@ function ChildAccordianComponent({
     const lastIndex = renderedData.length + 10;
     const newData = newState[section.tableName]?.slice(
       renderedData.length,
-      lastIndex
+      lastIndex,
     );
     setRenderedData((prevData) => [...prevData, ...newData]);
     setDummyData((prevData) => [...prevData, ...newData]);
@@ -573,21 +576,80 @@ function ChildAccordianComponent({
     setChildObject(Object);
   };
 
-  const childButtonHandler = (section) => {
+  // const childButtonHandler = (section) => {
+  //   if (isChildAccordionOpen) {
+  //     setClickCount((prevCount) => prevCount + 1);
+  //   }
+
+  //   inputFieldsVisible == false && setInputFieldsVisible((prev) => !prev);
+  //   if (inputFieldsVisible) {
+  //     for (var feild of section.fields) {
+  //       if (
+  //         feild.isRequired &&
+  //         (!Object.prototype.hasOwnProperty.call(
+  //           childObject,
+  //           feild.fieldname,
+  //         ) ||
+  //           childObject[feild.fieldname].trim() === "")
+  //       ) {
+  //         toast.error(`Value for ${feild.yourlabel} is missing or empty.`);
+  //         return;
+  //       }
+  //     }
+
+  //     toast.dismiss();
+  //     const tmpData = { ...newState };
+  //     const subChild = section.subChild?.reduce((obj, item) => {
+  //       obj[item.tableName] = [];
+  //       return obj;
+  //     }, {});
+  //     if (typeof subChild == "object") {
+  //       Object.assign(subChild, childObject);
+  //     }
+
+  //     if (hasBlackValues(childObject)) {
+  //       return;
+  //     }
+  //     tmpData[section.tableName].push({
+  //       ...childObject,
+  //       // ...subChild,
+  //       indexValue: tmpData[section.tableName].length,
+  //     });
+  //     setNewState(tmpData);
+  //     setDummyData(tmpData);
+  //     setRenderedData(newState[section.tableName]);
+  //     setChildObject({});
+  //     setInputFieldsVisible((prev) => !prev);
+  //   }
+  // };
+
+  function isConfigFlagEnabled(value) {
+    if (value === true || value === 1 || value === "1") return true;
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      return ["true", "yes", "y", "t"].includes(normalized);
+    }
+    return false;
+  }
+
+  const childButtonHandler = (section, indexValue, islastTab) => {
+    if (isConfigFlagEnabled(section?.isAddHide)) return;
+    //    console.log("childButtonHandler", section);
     if (isChildAccordionOpen) {
       setClickCount((prevCount) => prevCount + 1);
     }
 
     inputFieldsVisible == false && setInputFieldsVisible((prev) => !prev);
     if (inputFieldsVisible) {
+      let Data = { ...childObject };
       for (var feild of section.fields) {
         if (
           feild.isRequired &&
           (!Object.prototype.hasOwnProperty.call(
             childObject,
-            feild.fieldname
+            feild.fieldname,
           ) ||
-            childObject[feild.fieldname].trim() === "")
+            childObject[feild.fieldname]?.trim() === "")
         ) {
           toast.error(`Value for ${feild.yourlabel} is missing or empty.`);
           return;
@@ -595,28 +657,114 @@ function ChildAccordianComponent({
       }
 
       toast.dismiss();
-      const tmpData = { ...newState };
-      // const subChild = section.subChild?.reduce((obj, item) => {
-      //   obj[item.tableName] = [];
-      //   return obj;
-      // }, {});
-      // if (typeof subChild == "object") {
-      //   Object.assign(subChild, childObject);
-      // }
+      try {
+        if (section.functionOnSubmit && section.functionOnSubmit !== null) {
+          let functonsArray = section.functionOnSubmit?.trim().split(";");
+          //          console.log("functonsArray", functonsArray);
 
-      if (hasBlackValues(childObject)) {
+          // let Data = { ...childObject }
+          for (const fun of functonsArray) {
+            if (typeof onSubmitValidation[fun] == "function") {
+            }
+
+            let updatedData = onSubmitFunctionCall(
+              fun,
+              newState,
+              formControlData,
+              Data,
+              setChildObject,
+            );
+            if (updatedData?.alertShow == true) {
+              // if (updatedData.type == "success") {
+              //   toast.success(updatedData.message);
+
+              // }
+              // else {
+              // toast.error(updatedData.message);
+              setParaText(updatedData.message);
+              setIsError(true);
+              setOpenModal((prev) => !prev);
+              setTypeofModal("onCheck");
+              // setClearFlag({
+              //   isClear: true,
+              //   fieldName: result.fieldName,
+              // });
+              // }
+            }
+            if (updatedData) {
+              Data = updatedData.values;
+              setNewState((prevState) => {
+                return {
+                  ...prevState,
+                  ...updatedData?.newState,
+                };
+              });
+              setSubmitNewState((prevState) => {
+                return {
+                  ...prevState,
+                  ...updatedData?.newState,
+                };
+              });
+            }
+          }
+          //          console.log("childButtonHandler", Data);
+
+          // setChildObject((prevObject) => {
+          //   return { ...prevObject, ...Data }; // Merge new data into childObject
+          // });
+          // section?.functionOnSubmit
+          //   .split(";")
+          //   .forEach((e) => onSubmitFunctionCall(e, childObject));
+        }
+      } catch (error) {
+        return toast.error(error.message);
+      }
+
+      // try {
+      //   if (typeof onSubmitValidation[section.functionOnSubmit] == "function") {
+      //   onSubmitValidation?.[section.functionOnSubmit]({
+      //     ...childObject})
+      //   }
+      // } catch (error) {
+      //  return toast.error(error.message);
+      // }
+      const tmpData = { ...newState };
+      const subChild = section?.subChild?.reduce((obj, item) => {
+        obj[item.tableName] = [];
+        return obj;
+      }, {});
+      Object.assign(subChild, Data);
+      if (hasBlackValues(subChild)) {
         return;
       }
-      tmpData[section.tableName].push({
-        ...childObject,
-        // ...subChild,
-        indexValue: tmpData[section.tableName].length,
-      });
-      setNewState(tmpData);
-      setDummyData(tmpData);
-      setRenderedData(newState[section.tableName]);
+      const currentRows = Array.isArray(tmpData[section.tableName])
+        ? tmpData[section.tableName]
+        : [];
+      const nextRows = [
+        ...currentRows,
+        {
+          ...subChild,
+          isChecked: true,
+          indexValue: currentRows.length,
+        },
+      ];
+      const nextState = {
+        ...tmpData,
+        [section.tableName]: nextRows,
+      };
+
+      setNewState(nextState);
+      //setSubmitNewState(nextState);
+      //setOriginalData(nextState);
+      setRenderedData(nextRows?.slice(0, 10));
       setChildObject({});
       setInputFieldsVisible((prev) => !prev);
+      if (islastTab == true) {
+        setTimeout(() => {
+          setInputFieldsVisible((prev) => !prev);
+        }, 3);
+      }
+      // islastTab == true &&
     }
   };
 
@@ -632,7 +780,7 @@ function ChildAccordianComponent({
     setNewState((prevState) => {
       const newStateCopy = { ...prevState };
       const updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx !== index
+        (_, idx) => idx !== index,
       );
       newStateCopy[section.tableName] = updatedData;
       console.log("updatedData", updatedData);
@@ -645,7 +793,7 @@ function ChildAccordianComponent({
     setDummyData((prevState) => {
       const newStateCopy = { ...prevState };
       const updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx !== index
+        (_, idx) => idx !== index,
       );
       newStateCopy[section.tableName] = updatedData;
       if (updatedData.length === 0) {
@@ -913,8 +1061,8 @@ function ChildAccordianComponent({
       const right = Math.round(
         Math.floor(
           tableRef.current?.getBoundingClientRect()?.width +
-          tableRef.current?.scrollLeft
-        )
+            tableRef.current?.scrollLeft,
+        ),
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
         setTableBodyWidth(`${right - 70}`);
@@ -1013,7 +1161,7 @@ function ChildAccordianComponent({
                   defaultIcon={addLogo}
                   hoverIcon={plusIconHover}
                   altText={"Add"}
-                  title={"Add"}
+                  title={"Add C"}
                   onClick={() => {
                     childButtonHandler(section, indexValue);
                   }}
@@ -1104,7 +1252,7 @@ function ChildAccordianComponent({
                                       event,
                                       field.fieldname,
                                       section,
-                                      section.fields
+                                      section.fields,
                                     )
                                   } // Add the right-click handler here
                                 >
@@ -1113,11 +1261,11 @@ function ChildAccordianComponent({
                                       defaultIcon={addLogo}
                                       hoverIcon={plusIconHover}
                                       altText={"Add"}
-                                      title={"Add"}
+                                      title={"Add B"}
                                       onClick={() => {
                                         inputFieldsVisible == false &&
                                           setInputFieldsVisible(
-                                            (prev) => !prev
+                                            (prev) => !prev,
                                           );
                                       }}
                                     />
@@ -1127,7 +1275,7 @@ function ChildAccordianComponent({
                                     onClick={() =>
                                       handleSortBy(
                                         field.fieldname,
-                                        section.fields
+                                        section.fields,
                                       )
                                     }
                                   >

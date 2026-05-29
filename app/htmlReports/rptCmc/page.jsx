@@ -273,7 +273,7 @@ export default function RptIGM() {
             theadHeight -
             pageNoHeight -
             safetyBuffer) /
-          rowHeight,
+            rowHeight,
         ),
       );
 
@@ -286,7 +286,7 @@ export default function RptIGM() {
             footerHeight -
             pageNoHeight -
             safetyBuffer) /
-          rowHeight,
+            rowHeight,
         ),
       );
 
@@ -501,6 +501,16 @@ export default function RptIGM() {
           >
             DTD. {formatDateToYMD(data?.[0]?.igmDate || "")}
           </p>
+          <p
+            style={{
+              color: "black",
+              fontSize: "10px",
+              fontWeight: "bold",
+              marginLeft: "5px",
+            }}
+          >
+            ETA. {formatDateToYMD(data?.[0]?.eta || "")}
+          </p>
         </div>
 
         <div style={{ textAlign: "center", marginTop: "10px" }}>
@@ -681,15 +691,15 @@ export default function RptIGM() {
               As Agents
             </p>
           </div>
-
-          <div>
+          {/* as discused with himanshu on date 22-05-2026 */}
+          {/* <div>
             <p style={{ color: "black", fontSize: "10px", fontWeight: "bold" }}>
               Supdt. of Customs (CMFC)
             </p>
             <p style={{ color: "black", fontSize: "10px", fontWeight: "bold" }}>
               For AC / Dy. Commissioner of Customs (CMFC)
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     );

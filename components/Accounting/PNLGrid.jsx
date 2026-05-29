@@ -98,6 +98,15 @@ const PNLGrid = forwardRef(
           ? window.location.origin.replace(/\/$/, "")
           : "";
 
+      const isBalanceSheetDetail =
+        selectedRadio === "D" && selectedRadioType === "B";
+      const isProfitLossDetail =
+        selectedRadio === "D" && selectedRadioType === "P";
+
+      const glNameRedirectUrl = isProfitLossDetail
+        ? `${appBaseUrl}/dynamicReports?menuName=993`
+        : `${appBaseUrl}/dynamicReports?menuName=993`;
+
       return (
         <BalanceDetailedGrid
           ref={innerGridRef}
@@ -108,8 +117,8 @@ const PNLGrid = forwardRef(
           reportType={selectedRadioType}
           grossProfit={balanceSheetData[0]?.grossProfit}
           toggle={toggle}
-          enableGlNameClick={selectedRadio === "D" && selectedRadioType === "B"}
-          glNameRedirectUrl={`${appBaseUrl}/accountingReports/TrialBalanceNew`}
+          enableGlNameClick={isBalanceSheetDetail || isProfitLossDetail}
+          glNameRedirectUrl={glNameRedirectUrl}
         />
       );
     }

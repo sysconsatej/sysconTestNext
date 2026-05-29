@@ -173,7 +173,7 @@ export default function FormCreationGridInputFields({
           pageNo,
           inputValueForDataFetch,
           values?.[field.fieldname],
-          "first"
+          "first",
         );
       } else if (
         field.controlname.toLowerCase() === "dropdown" ||
@@ -203,7 +203,7 @@ export default function FormCreationGridInputFields({
       pageNo,
       inputValueForDataFetch,
       value,
-      type
+      type,
     ) {
       console.log("type", type, "field", field);
       const requestData = {
@@ -271,11 +271,11 @@ export default function FormCreationGridInputFields({
           pageNo,
           searchValue,
           values?.[field.fieldname],
-          "search"
+          "search",
         );
         // fetchData(searchValue); // Uncomment this line to call your fetch function
       }, 50),
-      []
+      [],
     ); // 50ms debounce time
     const handleInputChange = (newInputValue) => {
       debouncedFetch(newInputValue);
@@ -514,7 +514,7 @@ export default function FormCreationGridInputFields({
                   }
                   value={
                     dropDownValues.find(
-                      (item) => item.label === values[field.fieldname]
+                      (item) => item.label === values[field.fieldname],
                     ) || null
                   }
                   noOptionsMessage={() => "No records found"}
@@ -914,7 +914,7 @@ export default function FormCreationGridInputFields({
                               } else {
                                 // Remove value from array
                                 updatedValues = updatedValues.filter(
-                                  (val) => val !== item.id.toString()
+                                  (val) => val !== item.id.toString(),
                                 );
                               }
                               handleChange(updatedValues.join(","), field); // Join array into a string when updating
@@ -1115,7 +1115,7 @@ export default function FormCreationGridInputFields({
                     return formControlValidation?.[field.functionOnBlur](
                       state,
                       field.fieldname,
-                      e.target.value
+                      e.target.value,
                     );
                   });
               }}
@@ -1184,7 +1184,7 @@ export default function FormCreationGridInputFields({
                     return formControlValidation?.[field.functionOnBlur](
                       state,
                       field.fieldname,
-                      e.target.value
+                      e.target.value,
                     );
                   });
               }}
@@ -1227,6 +1227,11 @@ export default function FormCreationGridInputFields({
                 setIsFocused(false);
               }}
               ampm={false}
+              format={
+                dateFormat === "" || dateFormat === null
+                  ? "DD-MM-YYYY HH:mm:ss"
+                  : `${dateFormat} HH:mm:ss`
+              }
               viewRenderers={{
                 hours: renderTimeViewClock,
                 minutes: renderTimeViewClock,
@@ -1253,7 +1258,7 @@ export default function FormCreationGridInputFields({
                     return formControlValidation?.[field.functionOnBlur](
                       state,
                       field.fieldname,
-                      e.target.value
+                      e.target.value,
                     );
                   });
               }}

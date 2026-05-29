@@ -1303,3 +1303,71 @@ export const checkDuplicateCharge = async ({
   }
 };
 
+export const setJobContainer = async (obj) => {
+  const {
+    args = "",
+    values = {},
+    fieldName,
+    newState = {},
+    setStateVariable,
+  } = obj;
+
+  try {
+    const { clientId } = getUserDetails();
+    const jobNumbers = newState?.tblJob?.map((item) => `'${item?.masterJobIddropdown?.[0]?.label}'`).join(","); 
+
+    const RequestBody = {
+      columns: `jc.*,
+                row_number() over(order by jc.id) - 1 indexValue,
+                (select jc.sizeId as value, ms.name as label for json path) as sizeIddropdown,
+                (select jc.containerStatusId as value, mc.name as label for json path) as containerStatusIddropdown,
+                (select jc.typeId as value, mt.name as label for json path) as typeIddropdown,
+                (select jc.tareWtUnitId as value, mtw.name as label for json path) as tareWtUnitIddropdown,
+                (select jc.WtUnitId as value, mw.name as label for json path) as WtUnitIddropdown,
+                (select jc.volumeUnitId as value, mv.name as label for json path) as volumeUnitIddropdown,
+                (select jc.refTempUnitId as value, mr.name as label for json path) as refTempUnitIddropdown,
+                (select jc.dimensionUnitId as value, md.name as label for json path) as dimensionUnitIddropdown,
+                (select jc.transporterId as value, mtp.name as label for json path) as transporterIddropdown
+                `,
+      tableName: `tblJobContainer jc
+         left join tblMasterData ms on ms.id = jc.sizeId and ms.status = 1
+         left join tblMasterData mc on mc.id = jc.containerStatusId and mc.status = 1
+         left join tblMasterData mt on mt.id = jc.typeId and mt.status = 1
+         left join tblMasterData mtw on mtw.id = jc.tareWtUnitId and mtw.status = 1
+         left join tblMasterData mw on mw.id = jc.WtUnitId and mw.status = 1
+         left join tblMasterData mv on mv.id = jc.volumeUnitId and mv.status = 1
+         left join tblMasterData mr on mr.id = jc.refTempUnitId and mr.status = 1
+         left join tblMasterData md on md.id = jc.dimensionUnitId and md.status = 1
+         left join tblMasterData mtp on mtp.id = jc.transporterId and mtp.status = 1
+        join tblJob j on j.id = jc.jobId and j.status = 1
+        `,
+      whereCondition: `j.jobNo in (${jobNumbers}) and jc.status = 1`,
+      clientIdCondition: `j.clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+    };
+
+
+    const { data } = await fetchReportData(RequestBody);
+
+    const updatedValues = {
+      ...newState,
+      tblJobContainer: data,
+    };
+
+    return {
+      type: "success",
+      result: true,
+      message: "Job Container fetched successfully.",
+      values: values,
+      newState: updatedValues,
+    };
+  } catch (error) {
+    console.error("Error in setJobContainer:", error);
+
+    return {
+      type: "error",
+      result: false,
+      message: "Error while updating setJobContainer.",
+    };
+  }
+};
+

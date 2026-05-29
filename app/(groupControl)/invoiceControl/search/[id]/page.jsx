@@ -202,6 +202,118 @@ function onSubmitFunctionCall(
   }
 }
 
+
+const getInvoiceChargeCurrencyId = (row = {}) => {
+  if (row?.currencyId !== null && row?.currencyId !== undefined && row?.currencyId !== "") {
+    return row.currencyId;
+  }
+
+  if (Array.isArray(row?.currencyIddropdown) && row.currencyIddropdown[0]?.value !== undefined) {
+    return row.currencyIddropdown[0].value;
+  }
+
+  if (Array.isArray(row?.currencyIdDropdown) && row.currencyIdDropdown[0]?.value !== undefined) {
+    return row.currencyIdDropdown[0].value;
+  }
+
+  return null;
+};
+
+const isSameCurrencyId = (a, b) => {
+  if (a === null || a === undefined || a === "") return false;
+  if (b === null || b === undefined || b === "") return false;
+  return String(a) === String(b);
+};
+
+const applyExchangeRateToSameCurrencyRows = (
+  rows = [],
+  changedCurrencyId,
+  changedExchangeRate,
+) => {
+  if (!Array.isArray(rows) || rows.length === 0) return rows;
+
+  if (
+    changedExchangeRate === undefined ||
+    changedExchangeRate === null ||
+    changedExchangeRate === ""
+  ) {
+    return rows;
+  }
+
+  let hasChanges = false;
+
+  const updatedRows = rows.map((row) => {
+    const rowCurrencyId = getInvoiceChargeCurrencyId(row);
+
+    if (!isSameCurrencyId(rowCurrencyId, changedCurrencyId)) {
+      return row;
+    }
+
+    if (String(row?.exchangeRate ?? "") === String(changedExchangeRate ?? "")) {
+      return row;
+    }
+
+    hasChanges = true;
+
+    return {
+      ...row,
+      exchangeRate: changedExchangeRate,
+    };
+  });
+
+  return hasChanges ? updatedRows : rows;
+};
+
+const findChangedInvoiceChargeExchangeRate = (oldRows = [], newRows = []) => {
+  if (!Array.isArray(oldRows) || !Array.isArray(newRows)) return null;
+
+  for (let i = 0; i < newRows.length; i++) {
+    const oldRow = oldRows[i] || {};
+    const newRow = newRows[i] || {};
+
+    const oldExchangeRate = oldRow?.exchangeRate;
+    const newExchangeRate = newRow?.exchangeRate;
+
+    if (
+      newExchangeRate !== undefined &&
+      newExchangeRate !== null &&
+      newExchangeRate !== "" &&
+      String(oldExchangeRate ?? "") !== String(newExchangeRate ?? "")
+    ) {
+      const currencyId = getInvoiceChargeCurrencyId(newRow);
+
+      if (currencyId !== null && currencyId !== undefined && currencyId !== "") {
+        return {
+          currencyId,
+          exchangeRate: newExchangeRate,
+        };
+      }
+    }
+  }
+
+  return null;
+};
+
+const getInvoiceChargeStableKey = (row = {}, index = 0) => {
+  const currencyId = getInvoiceChargeCurrencyId(row);
+
+  return [
+    row?.id ?? "",
+    row?.chargeId ?? row?.chargeIddropdown?.[0]?.value ?? "",
+    row?.description ?? "",
+    row?.blId ?? row?.blIddropdown?.[0]?.value ?? "",
+    row?.sizeId ?? row?.sizeIddropdown?.[0]?.value ?? "",
+    row?.typeId ?? row?.typeIddropdown?.[0]?.value ?? "",
+    row?.containerTransactionId ?? "",
+    row?.containerRepairId ?? "",
+    currencyId ?? "",
+    row?.indexValue ?? index,
+  ]
+    .map((value) => String(value ?? ""))
+    .join("|");
+};
+
+
 export default function AddEditFormControll() {
   const { push } = useRouter();
   const dispatch = useDispatch();
@@ -253,11 +365,17 @@ export default function AddEditFormControll() {
   const [isFormSaved, setIsFormSaved] = useState(false);
   const { clientId } = getUserDetails();
   const [invoiceRoundOff, setInvoiceRoundOff] = useState("N");
+  const [voucherAllocDeleteTick, setVoucherAllocDeleteTick] = useState(0);
   const [parentFieldDataInArray, setParentFieldDataInArray] = useState([]);
   const [actionFieldNames, setActionFieldNames] = useState([]);
   const prevVisibleRef = useRef({});
   const prevHiddenRef = useRef({});
   console.log("uriDecodedMenu.menuName", uriDecodedMenu?.menuName);
+  const [currencyLoading, setCurrencyLoading] = useState(true);
+  const homeCurrencyRef = useRef(null);
+  const prevInvoiceChargeRowsRef = useRef(null);
+  const isSyncingInvoiceChargeExchangeRateRef = useRef(false);
+  const chargeTaxRequestSeqRef = useRef(0);
 
   const isVoucherDrivenForm = () => {
     const menuName = String(uriDecodedMenu?.menuName ?? "").toLowerCase();
@@ -410,6 +528,24 @@ export default function AddEditFormControll() {
     return value;
   }
 
+
+  const isBlankValue = (value) =>
+    value === undefined || value === null || value === "";
+
+  const withRequiredCurrency = (stateObj = {}) => {
+    const resolvedCurrency = isBlankValue(stateObj?.currencyId)
+      ? homeCurrencyRef.current ?? null
+      : stateObj.currencyId;
+
+    return {
+      ...stateObj,
+      currencyId: resolvedCurrency,
+      // exchangeRate: isBlankValue(stateObj?.exchangeRate)
+      //   ? "1.00"
+      //   : stateObj.exchangeRate,
+    };
+  };
+
   // code ends here
 
   const handleFileAndUpdateState = (file, updateState) => {
@@ -466,14 +602,14 @@ export default function AddEditFormControll() {
         if (value instanceof File) {
           handleFileAndUpdateState(value, (jsonData) => {
             setNewState((prev) => {
-              const next = { ...prev, [key]: jsonData };
+              const next = withRequiredCurrency({ ...prev, [key]: jsonData });
               setSubmitNewState(next);
               return next;
             });
           });
         } else {
           setNewState((prev) => {
-            const next = { ...prev, [key]: value };
+            const next = withRequiredCurrency({ ...prev, [key]: value });
             setSubmitNewState(next);
             return next;
           });
@@ -481,7 +617,7 @@ export default function AddEditFormControll() {
       });
     } else {
       setNewState((prev) => {
-        const next = { ...prev, ...updatedValues };
+        const next = withRequiredCurrency({ ...prev, ...updatedValues });
         setSubmitNewState(next);
         return next;
       });
@@ -560,15 +696,17 @@ export default function AddEditFormControll() {
               getCopyDetails.data[0][data.toTableName];
           }
         });
-        return {
+        return withRequiredCurrency({
           ...prevState,
           ...dataToCopy,
-        };
+        });
       });
-      setSubmitNewState((prevState) => ({
-        ...prevState,
-        ...getCopyDetails.data[0],
-      }));
+      setSubmitNewState((prevState) =>
+        withRequiredCurrency({
+          ...prevState,
+          ...getCopyDetails.data[0],
+        }),
+      );
 
       setKeysTovalidate(getCopyDetails.keyToValidate.fieldsMaping);
     } catch (error) {
@@ -645,7 +783,10 @@ export default function AddEditFormControll() {
         }
         try {
           const cleanData = replaceNullStrings(
-            { ...newState, menuId: selectedMenuId },
+            {
+              ...withRequiredCurrency(newState),
+              menuId: selectedMenuId,
+            },
             ChildTableName,
           );
           if (uriDecodedMenu?.menuName == "Journal Voucher") {
@@ -831,7 +972,10 @@ export default function AddEditFormControll() {
         // return; // Exit the function if a value is missing
         try {
           const cleanData = replaceNullStrings(
-            { ...newState, menuId: selectedMenuId },
+            {
+              ...withRequiredCurrency(newState),
+              menuId: selectedMenuId,
+            },
             ChildTableName,
           );
           setIsFormSaved(true);
@@ -918,7 +1062,10 @@ export default function AddEditFormControll() {
         }
         try {
           const cleanData = replaceNullStrings(
-            { ...newState, menuId: selectedMenuId },
+            {
+              ...withRequiredCurrency(newState),
+              menuId: selectedMenuId,
+            },
             ChildTableName,
           );
           if (uriDecodedMenu?.menuName == "") {
@@ -995,7 +1142,10 @@ export default function AddEditFormControll() {
 
       try {
         const cleanData = replaceNullStrings(
-          { ...newState, menuId: selectedMenuId },
+          {
+            ...withRequiredCurrency(newState),
+            menuId: selectedMenuId,
+          },
           ChildTableName,
         );
 
@@ -1958,55 +2108,38 @@ export default function AddEditFormControll() {
 
       // -------------------------------------------------------
       // 6) Final state setup exactly like your old logic
+      //    Important: do not overwrite home currency with null
       // -------------------------------------------------------
-      setNewState((prev) => {
-        return {
-          ...prev,
+      const buildInitialFormState = (prev = {}) => {
+        const merged = {
+          ...(prev || {}),
           ...Obj,
           ...tempnewState,
+        };
+
+        return {
+          ...withRequiredCurrency(merged),
           attachment: [],
           menuID: uriDecodedMenu.id,
           isNoGenerate: apiResponseData.isNoGenerate,
         };
-      });
+      };
 
-      setSubmitNewState((prev) => {
-        return {
-          ...prev,
-          ...Obj,
-          ...tempnewState,
-          attachment: [],
-          menuID: uriDecodedMenu.id,
-          isNoGenerate: apiResponseData.isNoGenerate,
-        };
-      });
-
-      setOriginalData((prev) => {
-        return {
-          ...prev,
+      const buildOriginalFormState = (prev = {}) => {
+        const merged = {
+          ...(prev || {}),
           ...Obj,
           ...tempnewState,
         };
-      });
 
-      setInitialState((prev) => {
-        return {
-          ...prev,
-          ...Obj,
-          ...tempnewState,
-        };
-      });
+        return withRequiredCurrency(merged);
+      };
 
-      setFirstState((prev) => {
-        return {
-          ...prev,
-          ...Obj,
-          ...tempnewState,
-          attachment: [],
-          menuID: uriDecodedMenu.id,
-          isNoGenerate: apiResponseData.isNoGenerate,
-        };
-      });
+      setNewState(buildInitialFormState);
+      setSubmitNewState(buildInitialFormState);
+      setOriginalData(buildOriginalFormState);
+      setInitialState(buildOriginalFormState);
+      setFirstState(buildInitialFormState);
 
       //setChildsFields(apiResponseData.child || apiResponseData.children || []);
       const showChildTds =
@@ -2558,12 +2691,75 @@ export default function AddEditFormControll() {
   }, [newState?.tblInvoiceCharge, newState?.tblInvoiceCharge?.length, invoiceRoundOff]);
   //till here 
 
+  async function homeCurrency() {
+    try {
+      setCurrencyLoading(true);
+
+      const { companyId } = getUserDetails();
+
+      const request = {
+        columns: "currencyId",
+        tableName: "tblCompanyParameter",
+        whereCondition: `companyId=${companyId}`,
+        clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+      };
+
+      const response = await fetchReportData(request);
+      const data = response?.data || [];
+      const currency = data?.[0]?.currencyId;
+
+      console.log("Home Currency Response:", response);
+      console.log("Home Currency:", currency);
+
+      if (currency !== undefined && currency !== null && currency !== "") {
+        homeCurrencyRef.current = currency;
+
+        const applyCurrency = (prev = {}) => {
+          const updated = {
+            ...(prev || {}),
+            currencyId: isBlankValue(prev?.currencyId)
+              ? currency
+              : prev.currencyId,
+            // exchangeRate: isBlankValue(prev?.exchangeRate)
+            //   ? "1.00"
+            //   : prev.exchangeRate,
+          };
+
+          console.log("Updated state with home currency:", updated);
+          return updated;
+        };
+
+        setNewState(applyCurrency);
+        setSubmitNewState(applyCurrency);
+        setInitialState(applyCurrency);
+        setFirstState(applyCurrency);
+      }
+
+      return currency;
+    } catch (error) {
+      console.error("Error in homeCurrency:", error);
+      return null;
+    } finally {
+      setCurrencyLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    homeCurrency();
+  }, []);
   const recalculateAllChargeTaxes = async () => {
-    const charges = newState?.tblInvoiceCharge || [];
+    const charges = Array.isArray(newState?.tblInvoiceCharge)
+      ? newState.tblInvoiceCharge
+      : [];
+
     if (!charges.length) return;
 
-    const updatedCharges = await Promise.all(
-      charges.map(async (charge) => {
+    const requestSeq = ++chargeTaxRequestSeqRef.current;
+
+    const taxResults = await Promise.all(
+      charges.map(async (charge, index) => {
+        const rowKey = getInvoiceChargeStableKey(charge, index);
+
         const requestData = {
           chargeId: charge?.chargeId,
           invoiceDate: moment(newState?.invoiceDate).format("YYYY-MM-DD"),
@@ -2575,10 +2771,10 @@ export default function AddEditFormControll() {
           customerId: newState?.billingPartyId,
           ownStateId: newState?.ownStateId,
           formControlId: newState?.menuID,
-          totalAmount: charge?.totalAmount,
-          totalAmountFc: charge?.totalAmountFc,
+          totalAmount: charge?.totalAmountHc || charge?.totalAmount || 0,
+          totalAmountFc: charge?.totalAmountFc || 0,
           sacCodeId: charge?.sacId,
-          totalAmountHc: charge?.totalAmountHc || charge?.totalAmount,
+          totalAmountHc: charge?.totalAmountHc || charge?.totalAmount || 0,
           taxType: newState?.taxType || "G",
           companyId: getUserDetails().companyId,
           branchId: getUserDetails().branchId,
@@ -2589,21 +2785,71 @@ export default function AddEditFormControll() {
           billingPartyBranch: newState?.billingPartyBranchId,
           billingPartyState: newState?.billingPartyStateId,
           voucherTypeId: newState?.voucherTypeId,
+          isTaxApplicable: charge?.taxApplicable,
         };
 
         const res = await getTaxDetails(requestData);
 
         return {
-          ...charge,
+          index,
+          rowKey,
           tblInvoiceChargeTax: res?.tblTax || [],
         };
       })
     );
 
-    setNewState((prev) => ({
-      ...prev,
-      tblInvoiceCharge: updatedCharges,
-    }));
+    // Ignore older async tax responses. This prevents old rows/rates from
+    // overwriting the latest exchangeRate changes.
+    if (requestSeq !== chargeTaxRequestSeqRef.current) return;
+
+    const applyLatestTaxes = (prev) => {
+      const currentRows = Array.isArray(prev?.tblInvoiceCharge)
+        ? prev.tblInvoiceCharge
+        : [];
+
+      if (!currentRows.length) return prev;
+
+      const taxByKey = new Map(
+        taxResults.map((item) => [item.rowKey, item.tblInvoiceChargeTax])
+      );
+      const taxByIndex = new Map(
+        taxResults.map((item) => [item.index, item.tblInvoiceChargeTax])
+      );
+
+      let hasChanges = false;
+
+      const updatedRows = currentRows.map((charge, index) => {
+        const rowKey = getInvoiceChargeStableKey(charge, index);
+        const nextTax = taxByKey.has(rowKey)
+          ? taxByKey.get(rowKey)
+          : taxByIndex.get(index);
+
+        if (!nextTax) return charge;
+
+        if (
+          JSON.stringify(charge?.tblInvoiceChargeTax || []) ===
+          JSON.stringify(nextTax || [])
+        ) {
+          return charge;
+        }
+
+        hasChanges = true;
+        return {
+          ...charge,
+          tblInvoiceChargeTax: nextTax,
+        };
+      });
+
+      return hasChanges
+        ? {
+          ...prev,
+          tblInvoiceCharge: updatedRows,
+        }
+        : prev;
+    };
+
+    setNewState(applyLatestTaxes);
+    setSubmitNewState(applyLatestTaxes);
   };
 
   const chargeTaxRecalcDependency = JSON.stringify(
@@ -2637,46 +2883,289 @@ export default function AddEditFormControll() {
     chargeTaxRecalcDependency,
   ]);
 
-  // useEffect(() => {
-  //   if (!Array.isArray(newState?.tblInvoiceCharge)) return;
+  useEffect(() => {
+    // Run exchange-rate sync + amount recalculation for all clients.
+    const rows = Array.isArray(newState?.tblInvoiceCharge)
+      ? newState.tblInvoiceCharge
+      : null;
 
-  //   const updatedCharges = newState.tblInvoiceCharge.map((item) => {
-  //     const qty = parseFloat(item.qty) || 0;
-  //     const rate = parseFloat(item.rate) || 0;
-  //     const exchangeRate = parseFloat(item.exchangeRate) || 0;
-  //     const noOfDays = parseFloat(item.noOfDays);
+    if (!rows) {
+      prevInvoiceChargeRowsRef.current = null;
+      return;
+    }
 
-  //     const effectiveNoOfDays = isNaN(noOfDays) || noOfDays <= 0 ? 1 : noOfDays;
+    // This flag skips only the render caused by this same effect,
+    // so it will not create an infinite loop.
+    if (isSyncingInvoiceChargeExchangeRateRef.current) {
+      isSyncingInvoiceChargeExchangeRateRef.current = false;
+      prevInvoiceChargeRowsRef.current = rows;
+      return;
+    }
 
-  //     const totalAmountFc = qty * rate * effectiveNoOfDays;
-  //     const totalAmount = totalAmountFc * exchangeRate;
+    const toNum = (value) => {
+      if (value === null || value === undefined || value === "") return 0;
+      const num = Number(String(value).replace(/,/g, ""));
+      return Number.isFinite(num) ? num : 0;
+    };
 
-  //     if (
-  //       Number(item.totalAmountFc) === Number(totalAmountFc.toFixed(2)) &&
-  //       Number(item.totalAmountHc) === Number(totalAmount.toFixed(2))
-  //     ) {
-  //       return item; // no change
-  //     }
+    const toFixed2 = (value) => {
+      const num = Number(value) || 0;
+      return num.toFixed(2);
+    };
 
-  //     return {
-  //       ...item,
-  //       totalAmountFc: totalAmountFc.toFixed(2),
-  //       totalAmountHc: totalAmount.toFixed(2),
-  //     };
-  //   });
+    const parentExchangeRateRaw = toNum(newState?.exchangeRate);
+    const parentExchangeRate = parentExchangeRateRaw > 0 ? parentExchangeRateRaw : 1;
 
-  //   if (
-  //     JSON.stringify(updatedCharges) !==
-  //     JSON.stringify(newState.tblInvoiceCharge)
-  //   ) {
-  //     setNewState((prev) => ({
-  //       ...prev,
-  //       tblInvoiceCharge: updatedCharges,
-  //     }));
-  //   }
-  // }, [newState?.tblInvoiceCharge]);
-  
+    const recalculateTaxRows = (taxRows = [], totalAmountFc, totalAmountHc) => {
+      if (!Array.isArray(taxRows)) return [];
 
+      return taxRows.map((tax) => {
+        const taxPercentage = toNum(tax?.taxPercentage);
+
+        if (taxPercentage <= 0) return tax;
+
+        const nextTaxAmountFc = toFixed2((toNum(totalAmountFc) * taxPercentage) / 100);
+        const nextTaxAmountHc = toFixed2((toNum(totalAmountHc) * taxPercentage) / 100);
+
+        if (
+          String(tax?.taxAmountFc ?? "") === String(nextTaxAmountFc) &&
+          String(tax?.taxAmountHc ?? "") === String(nextTaxAmountHc)
+        ) {
+          return tax;
+        }
+
+        return {
+          ...tax,
+          taxAmountFc: nextTaxAmountFc,
+          taxAmountHc: nextTaxAmountHc,
+        };
+      });
+    };
+
+    const recalculateTdsRows = (tdsRows = [], totalAmountFc, totalAmountHc) => {
+      if (!Array.isArray(tdsRows)) return [];
+
+      return tdsRows.map((tds) => {
+        const tdsPercentage = toNum(tds?.tdsPercentage);
+
+        if (tdsPercentage <= 0) return tds;
+
+        const nextTdsAmountFc = toFixed2((toNum(totalAmountFc) * tdsPercentage) / 100);
+        const nextTdsAmountHc = toFixed2((toNum(totalAmountHc) * tdsPercentage) / 100);
+
+        if (
+          String(tds?.tdsAmountFc ?? "") === String(nextTdsAmountFc) &&
+          String(tds?.tdsAmountHc ?? "") === String(nextTdsAmountHc)
+        ) {
+          return tds;
+        }
+
+        return {
+          ...tds,
+          tdsAmountFc: nextTdsAmountFc,
+          tdsAmountHc: nextTdsAmountHc,
+        };
+      });
+    };
+
+    const calculateUpdatedCharges = (charges = []) => {
+      if (!Array.isArray(charges)) return charges;
+
+      let hasChanges = false;
+
+      const updatedCharges = charges.map((item) => {
+        const qty = toNum(item?.qty);
+        const rate = toNum(item?.rate);
+
+        const exchangeRateRaw = toNum(item?.exchangeRate);
+        const exchangeRate = exchangeRateRaw > 0 ? exchangeRateRaw : 0;
+
+        const noOfDaysRaw = toNum(item?.noOfDays);
+        const effectiveNoOfDays = noOfDaysRaw <= 0 ? 1 : noOfDaysRaw;
+
+        const totalAmountFcValue = qty * rate * effectiveNoOfDays * exchangeRate;
+        const totalAmountHcValue = totalAmountFcValue * parentExchangeRate;
+
+        const nextTotalAmountFc = toFixed2(totalAmountFcValue);
+        const nextTotalAmountHc = toFixed2(totalAmountHcValue);
+
+        const nextTaxRows = recalculateTaxRows(
+          item?.tblInvoiceChargeTax,
+          nextTotalAmountFc,
+          nextTotalAmountHc,
+        );
+
+        const nextTdsRows = recalculateTdsRows(
+          item?.tblInvoiceChargeTds,
+          nextTotalAmountFc,
+          nextTotalAmountHc,
+        );
+
+        const isSame =
+          String(item?.totalAmountFc ?? "") === String(nextTotalAmountFc) &&
+          String(item?.totalAmountHc ?? "") === String(nextTotalAmountHc) &&
+          String(item?.totalAmount ?? "") === String(nextTotalAmountHc) &&
+          JSON.stringify(item?.tblInvoiceChargeTax || []) ===
+            JSON.stringify(nextTaxRows || []) &&
+          JSON.stringify(item?.tblInvoiceChargeTds || []) ===
+            JSON.stringify(nextTdsRows || []);
+
+        if (isSame) return item;
+
+        hasChanges = true;
+
+        return {
+          ...item,
+          totalAmountFc: nextTotalAmountFc,
+          totalAmountHc: nextTotalAmountHc,
+          totalAmount: nextTotalAmountHc,
+          tblInvoiceChargeTax: nextTaxRows,
+          tblInvoiceChargeTds: nextTdsRows,
+        };
+      });
+
+      return hasChanges ? updatedCharges : charges;
+    };
+
+    const previousRows = prevInvoiceChargeRowsRef.current;
+
+    const changedInfo =
+      previousRows === null
+        ? null
+        : findChangedInvoiceChargeExchangeRate(previousRows, rows);
+
+    const applyExchangeSyncAndAmountCalculation = (stateObj = {}) => {
+      const currentRows = Array.isArray(stateObj?.tblInvoiceCharge)
+        ? stateObj.tblInvoiceCharge
+        : [];
+
+      if (!currentRows.length) return stateObj;
+
+      const exchangeSyncedRows = changedInfo
+        ? applyExchangeRateToSameCurrencyRows(
+            currentRows,
+            changedInfo.currencyId,
+            changedInfo.exchangeRate,
+          )
+        : currentRows;
+
+      const calculatedRows = calculateUpdatedCharges(exchangeSyncedRows);
+
+      if (calculatedRows === currentRows) return stateObj;
+
+      return {
+        ...stateObj,
+        tblInvoiceCharge: calculatedRows,
+      };
+    };
+
+    const nextStatePreview = applyExchangeSyncAndAmountCalculation(newState);
+    const nextRowsPreview = nextStatePreview?.tblInvoiceCharge || rows;
+
+    prevInvoiceChargeRowsRef.current = nextRowsPreview;
+
+    if (nextRowsPreview === rows) return;
+
+    isSyncingInvoiceChargeExchangeRateRef.current = true;
+
+    setNewState(applyExchangeSyncAndAmountCalculation);
+    setSubmitNewState(applyExchangeSyncAndAmountCalculation);
+  }, [newState?.tblInvoiceCharge, newState?.exchangeRate]);
+
+
+  const [amtRecReadOnly, setAmtRecReadOnly] = useState(false);
+  const [amtRecFCReadOnly, setAmtRecFCReadOnly] = useState(false);
+
+  async function voucherCalculationBaseonCurrency() {
+    try {
+      const { companyId } = getUserDetails();
+      const { currencyId, exchangeRate } = newState || {};
+
+      if (!currencyId) {
+        setAmtRecReadOnly(false);
+        setAmtRecFCReadOnly(false);
+        return;
+      }
+
+      const request = {
+        columns: "currencyId",
+        tableName: "tblCompanyParameter",
+        whereCondition: `companyId=${companyId}`,
+        clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+      };
+
+      const response = await fetchReportData(request);
+      const data = response?.data || [];
+      const homeCurrencyId = data?.[0]?.currencyId;
+
+      if (!homeCurrencyId) {
+        setAmtRecReadOnly(false);
+        setAmtRecFCReadOnly(false);
+        return;
+      }
+
+      const toNum = (value) => {
+        if (value === null || value === undefined || value === "") return 0;
+
+        const num = Number(String(value).replace(/,/g, ""));
+        return Number.isFinite(num) ? num : 0;
+      };
+
+      const to2 = (n) => {
+        const x = Number(n) || 0;
+        const v = Math.round((x + Number.EPSILON) * 100) / 100;
+        return Object.is(v, -0) ? "0.00" : v.toFixed(2);
+      };
+
+      const homeCurrency = String(homeCurrencyId || "");
+      const selectedCurrency = String(currencyId || "");
+
+      const isForeignCurrency = homeCurrency !== selectedCurrency;
+
+      setAmtRecReadOnly(isForeignCurrency);
+      setAmtRecFCReadOnly(!isForeignCurrency);
+
+      setNewState((prev) => {
+        if (isForeignCurrency) {
+          const safeAmtRecFC = toNum(prev?.amtRecFC ?? 0);
+          const safeExchangeRate = toNum(prev?.exchangeRate || exchangeRate || 1);
+
+          const calculatedAmtRec = to2(safeAmtRecFC * safeExchangeRate);
+
+          if (String(prev?.amtRec ?? "") === calculatedAmtRec) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            amtRec: calculatedAmtRec,
+          };
+        }
+
+        const safeAmtRec = toNum(prev?.amtRec ?? 0);
+        const calculatedAmtRecFC = to2(safeAmtRec);
+
+        if (String(prev?.amtRecFC ?? "") === calculatedAmtRecFC) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          amtRecFC: calculatedAmtRecFC,
+        };
+      });
+    } catch (error) {
+      console.error("Error in voucherCalculationBaseonCurrency:", error);
+    }
+  }
+
+  useEffect(() => {
+    voucherCalculationBaseonCurrency();
+  }, [
+    newState?.currencyId,
+    newState?.exchangeRate,
+    newState?.amtRecFC,
+  ]);
   function onLoadFunctionCall(
     functionData,
     formControlData,
@@ -2710,6 +3199,9 @@ export default function AddEditFormControll() {
           formControlData,
           setFormControlData,
           setStateVariable,
+          isEditMode:false,
+          parentFieldDataInArray,
+          setParentFieldDataInArray
         });
         if (updatedValues) {
           // toast.success("Function called successfully");
@@ -2767,237 +3259,476 @@ export default function AddEditFormControll() {
             tempNewState[fieldname] = controlDefaultValue;
           }
         });
-        setNewState((prev) => ({
-          ...prev,
-          ...tempNewState,
-          attachment: [],
-          menuID: uriDecodedMenu.id,
-        }));
-        setSubmitNewState((prev) => ({
-          ...prev,
-          ...tempNewState,
-          attachment: [],
-          menuID: uriDecodedMenu.id,
-        }));
-        setOriginalData((prev) => ({ ...prev, ...tempNewState }));
-        setInitialState((prev) => ({ ...prev, ...tempNewState }));
+        const buildLoadedState = (prev = {}) =>
+          withRequiredCurrency({
+            ...prev,
+            ...tempNewState,
+            attachment: [],
+            menuID: uriDecodedMenu.id,
+          });
+
+        const buildLoadedOriginalState = (prev = {}) =>
+          withRequiredCurrency({
+            ...prev,
+            ...tempNewState,
+          });
+
+        setNewState(buildLoadedState);
+        setSubmitNewState(buildLoadedState);
+        setOriginalData(buildLoadedOriginalState);
+        setInitialState(buildLoadedOriginalState);
       }
     }
   }, [isDataLoaded, formControlData]);
 
-  const allocPrevRef = useRef("");
-  const allocInternalUpdateRef = useRef(false);
+ 
+const allocPrevRef = useRef("");
+const allocInternalUpdateRef = useRef(false);
+const allocHydrateRef = useRef(true);
+const allocParentLedgerSnapshotRef = useRef("");
+const allocVoucherTypeRef = useRef("");
 
-  useEffect(() => {
-    const voucherTypeId = String(newState?.voucherTypeId ?? "");
-    if (!["8", "9", "12"].includes(voucherTypeId)) {
-      return;
+// ✅ ADDED: used to detect whether user changed HC or FC amount manually
+const allocAmountEditSnapshotRef = useRef({});
+
+const forceVoucherAllocationRecalcAfterDelete = () => {
+  allocPrevRef.current = "";
+  allocInternalUpdateRef.current = false;
+  allocHydrateRef.current = false;
+  allocParentLedgerSnapshotRef.current = "";
+  allocAmountEditSnapshotRef.current = {};
+
+  setVoucherAllocDeleteTick((prev) => prev + 1);
+};
+
+useEffect(() => {
+  const voucherTypeId = String(newState?.voucherTypeId ?? "");
+
+  if (!["8", "9", "11", "12"].includes(voucherTypeId)) {
+    return;
+  }
+
+  if (allocVoucherTypeRef.current !== voucherTypeId) {
+    allocVoucherTypeRef.current = voucherTypeId;
+    allocPrevRef.current = "";
+    allocInternalUpdateRef.current = false;
+    allocHydrateRef.current = true;
+    allocParentLedgerSnapshotRef.current = "";
+    allocAmountEditSnapshotRef.current = {};
+  }
+
+  // ✅ voucherTypeId 8 and 11 should work like voucherTypeId 9 for row allocation.
+  // ✅ No debit/credit swap needed for 8 or 11.
+  const shouldSwapDrCr = false;
+
+  const toNum = (v) => {
+    if (v === null || v === undefined || v === "") return 0;
+    const n = Number(String(v).replace(/,/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+  const asStr2 = (n) =>
+    n === null || n === undefined || n === "" ? "" : round2(n).toFixed(2);
+
+  const asNum2 = (n) => round2(n);
+
+  const clamp0 = (n) => Math.max(0, round2(n));
+
+  const isTrueValue = (value) =>
+    value === true ||
+    value === 1 ||
+    value === "1" ||
+    String(value).toLowerCase() === "true" ||
+    String(value).toLowerCase() === "y";
+
+  const isSameAmount = (a, b) =>
+    Math.abs(round2(toNum(a)) - round2(toNum(b))) < 0.01;
+
+  const getHomeCurrencyId = () => {
+    const homeCurrency = homeCurrencyRef?.current;
+
+    return (
+      homeCurrency?.[0]?.currencyId ??
+      homeCurrency?.[0]?.id ??
+      homeCurrency?.currencyId ??
+      homeCurrency?.id ??
+      homeCurrency ??
+      newState?.homeCurrencyId ??
+      newState?.homeCurrency ??
+      null
+    );
+  };
+
+  const getRowCurrencyId = (row = {}) =>
+    row?.currencyId ?? row?.currencyID ?? row?.currency ?? null;
+
+  const getRowExchangeRate = (row = {}) => {
+    const rate = toNum(row?.exchangeRate ?? newState?.exchangeRate ?? 1);
+    return rate > 0 ? rate : 1;
+  };
+
+  const isForeignCurrencyRow = (row = {}) => {
+    const homeCurrencyId = getHomeCurrencyId();
+    const rowCurrencyId = getRowCurrencyId(row);
+
+    if (
+      homeCurrencyId === null ||
+      homeCurrencyId === undefined ||
+      homeCurrencyId === "" ||
+      rowCurrencyId === null ||
+      rowCurrencyId === undefined ||
+      rowCurrencyId === ""
+    ) {
+      return false;
     }
 
-    const shouldSwapDrCr = voucherTypeId === "8";
+    return String(homeCurrencyId) !== String(rowCurrencyId);
+  };
 
-    const toNum = (v) => {
-      if (v === null || v === undefined || v === "") return 0;
-      const n = Number(String(v).replace(/,/g, ""));
-      return Number.isFinite(n) ? n : 0;
-    };
+  // ✅ FC balance to HC balance
+  // balanceAmount = balanceAmountFc * exchangeRate
+  const getConvertedBalanceHC = (row = {}, balanceFcValue, fallbackHcValue) => {
+    if (!isForeignCurrencyRow(row)) {
+      return round2(toNum(fallbackHcValue));
+    }
 
-    const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+    return round2(toNum(balanceFcValue) * getRowExchangeRate(row));
+  };
 
-    const asStr2 = (n) =>
-      n === null || n === undefined || n === "" ? "" : round2(n).toFixed(2);
+  // ✅ HC amount to FC amount
+  // creditAmountFc = creditAmount / exchangeRate
+  // debitAmountFc = debitAmount / exchangeRate
+  const getConvertedAmountFC = (row = {}, hcValue, fallbackFcValue) => {
+    if (!isForeignCurrencyRow(row)) {
+      return round2(toNum(fallbackFcValue));
+    }
 
-    const asNum2 = (n) => round2(n);
+    const rate = getRowExchangeRate(row);
 
-    const clamp0 = (n) => Math.max(0, round2(n));
+    if (rate <= 0) {
+      return round2(toNum(fallbackFcValue));
+    }
 
-    const isTdsApplicable =
-      newState?.tdsApplicable === true ||
-      newState?.tdsApplicable === "true" ||
-      newState?.tdsApplicable === 1 ||
-      newState?.tdsApplicable === "1";
+    return round2(toNum(hcValue) / rate);
+  };
 
-    const stateToLogic = (debitValue, creditValue) => {
-      if (shouldSwapDrCr) {
-        return {
-          debit: round2(toNum(creditValue)),
-          credit: round2(toNum(debitValue)),
-        };
-      }
+  // ✅ FC amount to HC amount
+  // creditAmount = creditAmountFc * exchangeRate
+  // debitAmount = debitAmountFc * exchangeRate
+  const getConvertedAmountHC = (row = {}, fcValue, fallbackHcValue) => {
+    if (!isForeignCurrencyRow(row)) {
+      return round2(toNum(fallbackHcValue));
+    }
 
+    return round2(toNum(fcValue) * getRowExchangeRate(row));
+  };
+
+  const firstPositiveNum = (...values) => {
+    for (const value of values) {
+      const n = toNum(value);
+      if (n > 0) return n;
+    }
+    return 0;
+  };
+
+  // ✅ TDS should calculate on LOWEST of Balance Amount and Invoice Amount.
+  // ✅ If invoice amount is not available, fallback to balance amount.
+  const getTdsBaseAmount = (row, originalBalanceValue, isFC = false) => {
+    const balanceValue = clamp0(originalBalanceValue);
+
+    const invoiceValue = clamp0(
+      firstPositiveNum(
+        ...(isFC
+          ? [
+              row?.invoiceAmountFc,
+              row?.invoiceAmountFC,
+              row?.billAmountFc,
+              row?.billAmountFC,
+              row?.invoiceAmount,
+              row?.billAmount,
+            ]
+          : [row?.invoiceAmount, row?.billAmount])
+      )
+    );
+
+    if (invoiceValue > 0) {
+      return round2(Math.min(balanceValue, invoiceValue));
+    }
+
+    return balanceValue;
+  };
+
+  const isDebitMinusCreditPlusVoucher = ["8", "11"].includes(voucherTypeId);
+
+  const isTdsApplicable =
+    newState?.tdsApplicable === true ||
+    newState?.tdsApplicable === "true" ||
+    newState?.tdsApplicable === 1 ||
+    newState?.tdsApplicable === "1";
+
+  const stateToLogic = (debitValue, creditValue) => {
+    if (shouldSwapDrCr) {
       return {
-        debit: round2(toNum(debitValue)),
-        credit: round2(toNum(creditValue)),
+        debit: round2(toNum(creditValue)),
+        credit: round2(toNum(debitValue)),
       };
+    }
+
+    return {
+      debit: round2(toNum(debitValue)),
+      credit: round2(toNum(creditValue)),
     };
+  };
 
-    const logicToStateHC = (debitValue, creditValue) => {
-      if (shouldSwapDrCr) {
-        return {
-          debitAmount: asStr2(creditValue),
-          creditAmount: asStr2(debitValue),
-        };
-      }
-
+  const logicToStateHC = (debitValue, creditValue) => {
+    if (shouldSwapDrCr) {
       return {
-        debitAmount: asStr2(debitValue),
-        creditAmount: asStr2(creditValue),
+        debitAmount: asStr2(creditValue),
+        creditAmount: asStr2(debitValue),
       };
+    }
+
+    return {
+      debitAmount: asStr2(debitValue),
+      creditAmount: asStr2(creditValue),
     };
+  };
 
-    const logicToStateFC = (debitValue, creditValue) => {
-      if (shouldSwapDrCr) {
-        return {
-          debitAmountFc: asStr2(creditValue),
-          creditAmountFc: asStr2(debitValue),
-        };
-      }
-
+  const logicToStateFC = (debitValue, creditValue) => {
+    if (shouldSwapDrCr) {
       return {
-        debitAmountFc: asStr2(debitValue),
-        creditAmountFc: asStr2(creditValue),
+        debitAmountFc: asStr2(creditValue),
+        creditAmountFc: asStr2(debitValue),
       };
+    }
+
+    return {
+      debitAmountFc: asStr2(debitValue),
+      creditAmountFc: asStr2(creditValue),
     };
+  };
 
-    const normalizeOriginalBalance = ({
-      originalValue,
-      balanceValue,
-      creditValue,
-      debitValue,
-    }) => {
-      if (
-        originalValue !== null &&
-        originalValue !== undefined &&
-        originalValue !== ""
-      ) {
-        return round2(toNum(originalValue));
-      }
+  const normalizeOriginalBalanceFC = ({
+    originalValue,
+    balanceValue,
+    creditValue,
+    debitValue,
+  }) => {
+    if (
+      originalValue !== null &&
+      originalValue !== undefined &&
+      originalValue !== ""
+    ) {
+      return round2(toNum(originalValue));
+    }
 
-      const logical = stateToLogic(debitValue, creditValue);
-      return round2(toNum(balanceValue) + logical.credit - logical.debit);
+    const logical = stateToLogic(debitValue, creditValue);
+    return round2(toNum(balanceValue) + logical.credit - logical.debit);
+  };
+
+  const normalizeOriginalBalance = ({
+    row,
+    originalValue,
+    balanceValue,
+    balanceFcValue,
+    creditValue,
+    debitValue,
+  }) => {
+    if (
+      originalValue !== null &&
+      originalValue !== undefined &&
+      originalValue !== ""
+    ) {
+      return round2(toNum(originalValue));
+    }
+
+    const logical = stateToLogic(debitValue, creditValue);
+    const fallbackHC = round2(
+      toNum(balanceValue) + logical.credit - logical.debit
+    );
+
+    return getConvertedBalanceHC(row, balanceFcValue, fallbackHC);
+  };
+
+  const getLedgerKey = (ledger, index) =>
+    ledger?.voucherLedgerId != null
+      ? String(ledger.voucherLedgerId)
+      : String(ledger?.indexValue ?? index);
+
+  const getDetailKey = (row, index) =>
+    row?.voucherOutstandingId != null
+      ? String(row.voucherOutstandingId)
+      : String(row?.indexValue ?? index);
+
+  const hasHCAmount = (row) =>
+    toNum(row?.debitAmount) > 0 || toNum(row?.creditAmount) > 0;
+
+  const hasFCAmount = (row) =>
+    toNum(row?.debitAmountFc) > 0 || toNum(row?.creditAmountFc) > 0;
+
+  const getManualDetailAlloc = (row) => {
+    const checked = isTrueValue(row?.isChecked);
+
+    return {
+      hc: !!row?.__manualAllocHC || (checked && hasHCAmount(row)),
+      fc: !!row?.__manualAllocFC || (checked && hasFCAmount(row)),
     };
+  };
 
-    const getLedgerKey = (ledger, index) =>
-      ledger?.voucherLedgerId != null
-        ? String(ledger.voucherLedgerId)
-        : String(ledger?.indexValue ?? index);
+  const hasParentLedgerAmount = (ledger) =>
+    toNum(ledger?.debitAmount) > 0 ||
+    toNum(ledger?.creditAmount) > 0 ||
+    toNum(ledger?.debitAmountFc) > 0 ||
+    toNum(ledger?.creditAmountFc) > 0;
 
-    const getManualLedgerTds = (ledger) => ({
-      hc: isTdsApplicable
-        ? round2(toNum(ledger?.tdsAmtHC ?? ledger?.tdsAmount))
-        : 0,
-      fc: isTdsApplicable
-        ? round2(toNum(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc))
-        : 0,
-    });
+  const hasCheckedThirdLevelRows = (ledger) => {
+    const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+      ? ledger.tblVoucherLedgerDetails
+      : [];
 
-    const getManualDetailAlloc = (row) => ({
-      hc: !!row?.__manualAllocHC,
-      fc: !!row?.__manualAllocFC,
-    });
+    return details.some(
+      (row) => isTrueValue(row?.isChecked) || isTrueValue(row?.ispreChecked)
+    );
+  };
 
-    const getDetailKey = (row, index) =>
-      row?.voucherOutstandingId != null
-        ? String(row.voucherOutstandingId)
-        : String(row?.indexValue ?? index);
+  const getParentOnlyLedgerSnapshot = (ledgerRows) =>
+    JSON.stringify(
+      (Array.isArray(ledgerRows) ? ledgerRows : [])
+        .map((ledger, ledgerIndex) => {
+          const hasCheckedThirdLevel = hasCheckedThirdLevelRows(ledger);
 
-    const makeSnapshot = (
-      ledgerRows,
-      balanceAmtHc,
-      balanceAmtFc,
-      tdsAmt,
-      tdsAmtFC
-    ) =>
-      JSON.stringify({
-        balanceAmtHc: asStr2(balanceAmtHc),
-        balanceAmtFc: asStr2(balanceAmtFc),
-        tdsAmt: asStr2(tdsAmt),
-        tdsAmtFC: asStr2(tdsAmtFC),
-        ledgers: ledgerRows.map((ledger, ledgerIndex) => ({
-          k: getLedgerKey(ledger, ledgerIndex),
-          d: asStr2(ledger?.debitAmount),
-          df: asStr2(ledger?.debitAmountFc),
-          cr: asStr2(ledger?.creditAmount),
-          crf: asStr2(ledger?.creditAmountFc),
-          th: asStr2(ledger?.tdsAmtHC),
-          tf: asStr2(ledger?.tdsAmtFC),
-          ta: asStr2(ledger?.tdsAmount),
-          taf: asStr2(ledger?.tdsAmountFc),
-          child: !!ledger?.isChildChecked,
-          rows: (Array.isArray(ledger?.tblVoucherLedgerDetails)
-            ? ledger.tblVoucherLedgerDetails
-            : []
-          ).map((row, rowIndex) => ({
-            k: getDetailKey(row, rowIndex),
-            c: !!row?.isChecked,
-            neg: !!row?.__isNegRow,
-            mh: !!row?.__manualAllocHC,
-            mf: !!row?.__manualAllocFC,
-            ob: asStr2(row?.__origBalHC),
-            obf: asStr2(row?.__origBalFC),
-            d: asStr2(row?.debitAmount),
-            df: asStr2(row?.debitAmountFc),
-            cr: asStr2(row?.creditAmount),
-            crf: asStr2(row?.creditAmountFc),
-            b: asStr2(row?.balanceAmount),
-            bf: asStr2(row?.balanceAmountFc),
-            t: asStr2(row?.tdsAmount),
-            tf: asStr2(row?.tdsAmountFc),
-          })),
+          if (hasCheckedThirdLevel) return null;
+
+          return {
+            k: getLedgerKey(ledger, ledgerIndex),
+            checked: isTrueValue(ledger?.isChecked),
+            d: asStr2(ledger?.debitAmount),
+            df: asStr2(ledger?.debitAmountFc),
+            cr: asStr2(ledger?.creditAmount),
+            crf: asStr2(ledger?.creditAmountFc),
+            th: asStr2(ledger?.tdsAmtHC ?? ledger?.tdsAmount),
+            tf: asStr2(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc),
+          };
+        })
+        .filter(Boolean)
+    );
+
+  const getManualLedgerTds = (ledger) => ({
+    hc: isTdsApplicable
+      ? round2(toNum(ledger?.tdsAmtHC ?? ledger?.tdsAmount ?? 0))
+      : 0,
+    fc: isTdsApplicable
+      ? round2(toNum(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc ?? 0))
+      : 0,
+  });
+
+  const makeSnapshot = (
+    ledgerRows,
+    balanceAmtHc,
+    balanceAmtFc,
+    tdsAmt,
+    tdsAmtFC
+  ) =>
+    JSON.stringify({
+      balanceAmtHc: asStr2(balanceAmtHc),
+      balanceAmtFc: asStr2(balanceAmtFc),
+      tdsAmt: asStr2(tdsAmt),
+      tdsAmtFC: asStr2(tdsAmtFC),
+      ledgers: ledgerRows.map((ledger, ledgerIndex) => ({
+        k: getLedgerKey(ledger, ledgerIndex),
+        d: asStr2(ledger?.debitAmount),
+        df: asStr2(ledger?.debitAmountFc),
+        cr: asStr2(ledger?.creditAmount),
+        crf: asStr2(ledger?.creditAmountFc),
+        th: asStr2(ledger?.tdsAmtHC),
+        tf: asStr2(ledger?.tdsAmtFC),
+        ta: asStr2(ledger?.tdsAmount),
+        taf: asStr2(ledger?.tdsAmountFc),
+        child: isTrueValue(ledger?.isChildChecked),
+        rows: (Array.isArray(ledger?.tblVoucherLedgerDetails)
+          ? ledger.tblVoucherLedgerDetails
+          : []
+        ).map((row, rowIndex) => ({
+          k: getDetailKey(row, rowIndex),
+          c: isTrueValue(row?.isChecked),
+          neg: !!row?.__isNegRow,
+          mh: !!row?.__manualAllocHC,
+          mf: !!row?.__manualAllocFC,
+          fh: !!row?.__fcDerivedFromHC,
+          hf: !!row?.__hcDerivedFromFC,
+          ob: asStr2(row?.__origBalHC),
+          obf: asStr2(row?.__origBalFC),
+          d: asStr2(row?.debitAmount),
+          df: asStr2(row?.debitAmountFc),
+          cr: asStr2(row?.creditAmount),
+          crf: asStr2(row?.creditAmountFc),
+          b: asStr2(row?.balanceAmount),
+          bf: asStr2(row?.balanceAmountFc),
+          t: asStr2(row?.tdsAmount),
+          tf: asStr2(row?.tdsAmountFc),
+          inv: asStr2(row?.invoiceAmount),
+          invf: asStr2(row?.invoiceAmountFc),
+          cid: String(getRowCurrencyId(row) ?? ""),
+          ex: asStr2(row?.exchangeRate),
         })),
-      });
+      })),
+    });
 
-    const getSignedDisplayDelta = (debitValue, creditValue) =>
-      round2(toNum(debitValue) - toNum(creditValue));
+  const getSignedDisplayDelta = (debitValue, creditValue) =>
+    round2(toNum(debitValue) - toNum(creditValue));
 
-    const getEffectiveDisplayTotals = (ledgerRows) => {
-      return ledgerRows.reduce(
-        (acc, ledger) => {
-          const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
-            ? ledger.tblVoucherLedgerDetails
-            : [];
+  const getEffectiveDisplayTotals = (ledgerRows) => {
+    return ledgerRows.reduce(
+      (acc, ledger) => {
+        const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+          ? ledger.tblVoucherLedgerDetails
+          : [];
 
-          if (details.length && ledger?.isChildChecked) {
-            details.forEach((row) => {
-              acc.hc = round2(
-                acc.hc +
+        if (details.length && isTrueValue(ledger?.isChildChecked)) {
+          details.forEach((row) => {
+            acc.hc = round2(
+              acc.hc +
                 getSignedDisplayDelta(row?.debitAmount, row?.creditAmount)
-              );
-              acc.fc = round2(
-                acc.fc +
+            );
+
+            acc.fc = round2(
+              acc.fc +
                 getSignedDisplayDelta(
                   row?.debitAmountFc,
                   row?.creditAmountFc
                 )
-              );
-            });
-          } else {
-            acc.hc = round2(
-              acc.hc +
-              getSignedDisplayDelta(ledger?.debitAmount, ledger?.creditAmount)
             );
-            acc.fc = round2(
-              acc.fc +
+          });
+        } else {
+          acc.hc = round2(
+            acc.hc +
+              getSignedDisplayDelta(ledger?.debitAmount, ledger?.creditAmount)
+          );
+
+          acc.fc = round2(
+            acc.fc +
               getSignedDisplayDelta(
                 ledger?.debitAmountFc,
                 ledger?.creditAmountFc
               )
-            );
-          }
+          );
+        }
 
-          return acc;
-        },
-        { hc: 0, fc: 0 }
-      );
-    };
+        return acc;
+      },
+      { hc: 0, fc: 0 }
+    );
+  };
 
-    const hasLedgers =
-      Array.isArray(newState?.tblVoucherLedger) &&
-      newState.tblVoucherLedger.length > 0;
+  const hasLedgers =
+    Array.isArray(newState?.tblVoucherLedger) &&
+    newState.tblVoucherLedger.length > 0;
 
-    const ledgers = hasLedgers
-      ? newState.tblVoucherLedger
-      : [
+  const ledgers = hasLedgers
+    ? newState.tblVoucherLedger
+    : [
         {
           __virtual: true,
           tblVoucherLedgerDetails: Array.isArray(
@@ -3008,372 +3739,768 @@ export default function AddEditFormControll() {
         },
       ];
 
-    const allDetails = ledgers.flatMap((ledger) =>
-      Array.isArray(ledger?.tblVoucherLedgerDetails)
-        ? ledger.tblVoucherLedgerDetails
-        : []
+  const getRowEditKey = (ledger, ledgerIndex, row, rowIndex) =>
+    `${getLedgerKey(ledger, ledgerIndex)}__${getDetailKey(row, rowIndex)}`;
+
+  const makeAmountEditSnapshot = (ledgerRows) => {
+    const snap = {};
+
+    (Array.isArray(ledgerRows) ? ledgerRows : []).forEach(
+      (ledger, ledgerIndex) => {
+        const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+          ? ledger.tblVoucherLedgerDetails
+          : [];
+
+        details.forEach((row, rowIndex) => {
+          const key = getRowEditKey(ledger, ledgerIndex, row, rowIndex);
+
+          snap[key] = {
+            debitAmount: asStr2(row?.debitAmount),
+            creditAmount: asStr2(row?.creditAmount),
+            debitAmountFc: asStr2(row?.debitAmountFc),
+            creditAmountFc: asStr2(row?.creditAmountFc),
+          };
+        });
+      }
     );
 
-    if (!allDetails.length && !hasLedgers) {
-      allocPrevRef.current = "";
+    return snap;
+  };
+
+  const getAmountEditDirection = (editKey, row = {}) => {
+    if (!isForeignCurrencyRow(row)) return "";
+
+    const prev = allocAmountEditSnapshotRef.current?.[editKey];
+
+    if (prev) {
+      const hcChanged =
+        !isSameAmount(prev.debitAmount, row?.debitAmount) ||
+        !isSameAmount(prev.creditAmount, row?.creditAmount);
+
+      const fcChanged =
+        !isSameAmount(prev.debitAmountFc, row?.debitAmountFc) ||
+        !isSameAmount(prev.creditAmountFc, row?.creditAmountFc);
+
+      if (fcChanged && !hcChanged) return "FC_TO_HC";
+      if (hcChanged && !fcChanged) return "HC_TO_FC";
+    }
+
+    if (isTrueValue(row?.__hcDerivedFromFC)) return "FC_TO_HC";
+    if (isTrueValue(row?.__fcDerivedFromHC)) return "HC_TO_FC";
+
+    const manual = getManualDetailAlloc(row);
+    const hc = stateToLogic(row?.debitAmount, row?.creditAmount);
+    const fc = stateToLogic(row?.debitAmountFc, row?.creditAmountFc);
+    const rate = getRowExchangeRate(row);
+
+    const fcHasValue = fc.debit > 0 || fc.credit > 0;
+    const hcHasValue = hc.debit > 0 || hc.credit > 0;
+
+    if (manual.fc && fcHasValue && rate > 0) {
+      const expectedDebitHC = round2(fc.debit * rate);
+      const expectedCreditHC = round2(fc.credit * rate);
+
+      if (
+        !isSameAmount(hc.debit, expectedDebitHC) ||
+        !isSameAmount(hc.credit, expectedCreditHC)
+      ) {
+        return "FC_TO_HC";
+      }
+    }
+
+    if (manual.hc && hcHasValue && rate > 0) {
+      const expectedDebitFC = round2(hc.debit / rate);
+      const expectedCreditFC = round2(hc.credit / rate);
+
+      if (
+        !isSameAmount(fc.debit, expectedDebitFC) ||
+        !isSameAmount(fc.credit, expectedCreditFC)
+      ) {
+        return "HC_TO_FC";
+      }
+    }
+
+    return "";
+  };
+
+  const parentOnlyLedgerSnapshot = getParentOnlyLedgerSnapshot(ledgers);
+
+  const hasParentOnlyLedgerChange =
+    parentOnlyLedgerSnapshot !== "[]" &&
+    allocParentLedgerSnapshotRef.current !== "" &&
+    allocParentLedgerSnapshotRef.current !== parentOnlyLedgerSnapshot;
+
+  const hasParentLedgerRowsForCalculation = ledgers.some((ledger) => {
+    const noThirdLevelChecked = !hasCheckedThirdLevelRows(ledger);
+
+    return (
+      noThirdLevelChecked &&
+      (isTrueValue(ledger?.isChecked) || hasParentLedgerAmount(ledger))
+    );
+  });
+
+  const currentSnapshot = makeSnapshot(
+    ledgers,
+    newState?.balanceAmtHc,
+    newState?.balanceAmtFc,
+    newState?.tdsAmt,
+    newState?.tdsAmtFC
+  );
+
+  if (allocInternalUpdateRef.current) {
+    if (currentSnapshot === allocPrevRef.current) {
+      allocInternalUpdateRef.current = false;
+      allocAmountEditSnapshotRef.current = makeAmountEditSnapshot(ledgers);
       return;
     }
 
-    const currentSnapshot = makeSnapshot(
-      ledgers,
-      newState?.balanceAmtHc,
-      newState?.balanceAmtFc,
-      newState?.tdsAmt,
-      newState?.tdsAmtFC
-    );
+    allocInternalUpdateRef.current = false;
+  }
 
-    if (allocInternalUpdateRef.current) {
-      if (currentSnapshot === allocPrevRef.current) {
-        allocInternalUpdateRef.current = false;
-        return;
-      }
-      allocInternalUpdateRef.current = false;
+  const baseBalanceHC = round2(
+    toNum(newState?.amtRec ?? 0) +
+      toNum(newState?.bcAmt ?? newState?.bankCharges ?? 0)
+  );
+
+  const baseBalanceFC = round2(
+    toNum(newState?.amtRecFC ?? 0) +
+      toNum(
+        newState?.bcAmtFC ??
+          newState?.bankChargesFC ??
+          newState?.bankCharges ??
+          0
+      )
+  );
+
+  let remainingHC = baseBalanceHC;
+  let remainingFC = baseBalanceFC;
+
+  const nextLedgers = ledgers.map((ledger, ledgerIndex) => {
+    const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+      ? ledger.tblVoucherLedgerDetails
+      : [];
+
+    if (!details.length) {
+      const manualHC = stateToLogic(ledger?.debitAmount, ledger?.creditAmount);
+      const manualFC = stateToLogic(
+        ledger?.debitAmountFc,
+        ledger?.creditAmountFc
+      );
+
+      remainingHC = round2(remainingHC - manualHC.credit + manualHC.debit);
+      remainingFC = round2(remainingFC - manualFC.credit + manualFC.debit);
+
+      const manualLedgerTds = getManualLedgerTds(ledger);
+
+      return {
+        ...ledger,
+        isChildChecked: false,
+        tdsAmtHC: manualLedgerTds.hc,
+        tdsAmtFC: manualLedgerTds.fc,
+        tdsAmount: manualLedgerTds.hc,
+        tdsAmountFc: manualLedgerTds.fc,
+      };
     }
 
-    const baseBalanceHC = round2(
-      toNum(newState?.amtRec ?? 0) + toNum(newState?.bankCharges ?? 0)
-    );
+    const hasExistingCheckedHC = details.some((row) => {
+      if (!isTrueValue(row?.isChecked)) return false;
 
-    const baseBalanceFC = round2(
-      toNum(newState?.amtRecFC ?? 0) + toNum(newState?.bankCharges ?? 0)
-    );
+      const manual = getManualDetailAlloc(row);
 
-    let remainingHC = baseBalanceHC;
-    let remainingFC = baseBalanceFC;
+      return isTrueValue(row?.ispreChecked) || manual.hc;
+    });
 
-    const nextLedgers = ledgers.map((ledger) => {
-      const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
-        ? ledger.tblVoucherLedgerDetails
-        : [];
+    const hasExistingCheckedFC = details.some((row) => {
+      if (!isTrueValue(row?.isChecked)) return false;
 
-      if (!details.length) {
-        const manualHC = stateToLogic(ledger?.debitAmount, ledger?.creditAmount);
-        const manualFC = stateToLogic(
-          ledger?.debitAmountFc,
-          ledger?.creditAmountFc
-        );
-        const manualLedgerTds = getManualLedgerTds(ledger);
+      const manual = getManualDetailAlloc(row);
 
-        remainingHC = round2(remainingHC - manualHC.credit + manualHC.debit);
-        remainingFC = round2(remainingFC - manualFC.credit + manualFC.debit);
+      return isTrueValue(row?.ispreChecked) || manual.fc;
+    });
 
-        return {
-          ...ledger,
-          isChildChecked: false,
-          tdsAmtHC: manualLedgerTds.hc,
-          tdsAmtFC: manualLedgerTds.fc,
-          tdsAmount: manualLedgerTds.hc,
-          tdsAmountFc: manualLedgerTds.fc,
-        };
+    const hasNewCheckedHC = details.some((row) => {
+      if (!isTrueValue(row?.isChecked) || isTrueValue(row?.ispreChecked)) {
+        return false;
       }
 
-      let isChildChecked = false;
+      const manual = getManualDetailAlloc(row);
+      return !manual.hc;
+    });
 
-      const nextDetails = details.map((row) => {
-        const isChecked = !!row?.isChecked;
-        if (isChecked) isChildChecked = true;
+    const hasNewCheckedFC = details.some((row) => {
+      if (!isTrueValue(row?.isChecked) || isTrueValue(row?.ispreChecked)) {
+        return false;
+      }
 
-        const origBalHC = normalizeOriginalBalance({
-          originalValue: row?.__origBalHC,
-          balanceValue: row?.balanceAmount,
-          creditValue: row?.creditAmount,
-          debitValue: row?.debitAmount,
-        });
+      const manual = getManualDetailAlloc(row);
+      return !manual.fc;
+    });
 
-        const origBalFC = normalizeOriginalBalance({
+    const currentBalanceHC = clamp0(
+      toNum(newState?.balanceAmtHc ?? newState?.balanceAmt ?? 0)
+    );
+
+    const currentBalanceFC = clamp0(
+      toNum(newState?.balanceAmtFc ?? newState?.balanceAmtFC ?? 0)
+    );
+
+    const useCurrentRemainingHC = hasExistingCheckedHC && hasNewCheckedHC;
+    const useCurrentRemainingFC = hasExistingCheckedFC && hasNewCheckedFC;
+
+    if (useCurrentRemainingHC) {
+      remainingHC = currentBalanceHC;
+    }
+
+    if (useCurrentRemainingFC) {
+      remainingFC = currentBalanceFC;
+    }
+
+    let isChildChecked = false;
+
+    const nextDetails = details.map((row, rowIndex) => {
+      const isPreChecked = isTrueValue(row?.ispreChecked);
+      const isChecked = isTrueValue(row?.isChecked);
+      const shouldFreezePreCheckedRow = isPreChecked && isChecked;
+
+      const editKey = getRowEditKey(ledger, ledgerIndex, row, rowIndex);
+      const amountEditDirection = getAmountEditDirection(editKey, row);
+
+      if (shouldFreezePreCheckedRow) {
+        isChildChecked = true;
+
+        const origBalFC = normalizeOriginalBalanceFC({
           originalValue: row?.__origBalFC,
           balanceValue: row?.balanceAmountFc,
           creditValue: row?.creditAmountFc,
           debitValue: row?.debitAmountFc,
         });
 
-        const isNegativeRow = origBalHC < 0 || origBalFC < 0;
-        const manualAlloc = getManualDetailAlloc(row);
-        const manualAllocHC = isChecked && manualAlloc.hc;
-        const manualAllocFC = isChecked && manualAlloc.fc;
-
-        let logicalDebitHC = 0;
-        let logicalCreditHC = 0;
-        let logicalDebitFC = 0;
-        let logicalCreditFC = 0;
-
-        let balanceHC = origBalHC;
-        let balanceFC = origBalFC;
-
-        if (isChecked) {
-          if (manualAllocHC) {
-            const manualHC = stateToLogic(row?.debitAmount, row?.creditAmount);
-            logicalDebitHC = clamp0(manualHC.debit);
-            logicalCreditHC = clamp0(manualHC.credit);
-            balanceHC = round2(origBalHC - logicalCreditHC + logicalDebitHC);
-            remainingHC = round2(
-              remainingHC - logicalCreditHC + logicalDebitHC
-            );
-          } else if (origBalHC < 0) {
-            logicalDebitHC = round2(Math.abs(origBalHC));
-            balanceHC = 0;
-            remainingHC = round2(remainingHC + logicalDebitHC);
-          } else if (origBalHC > 0) {
-            logicalCreditHC = clamp0(Math.min(remainingHC, origBalHC));
-            balanceHC = round2(origBalHC - logicalCreditHC);
-            remainingHC = round2(remainingHC - logicalCreditHC);
-          } else {
-            balanceHC = 0;
-          }
-
-          if (manualAllocFC) {
-            const manualFC = stateToLogic(
-              row?.debitAmountFc,
-              row?.creditAmountFc
-            );
-            logicalDebitFC = clamp0(manualFC.debit);
-            logicalCreditFC = clamp0(manualFC.credit);
-            balanceFC = round2(origBalFC - logicalCreditFC + logicalDebitFC);
-            remainingFC = round2(
-              remainingFC - logicalCreditFC + logicalDebitFC
-            );
-          } else if (origBalFC < 0) {
-            logicalDebitFC = round2(Math.abs(origBalFC));
-            balanceFC = 0;
-            remainingFC = round2(remainingFC + logicalDebitFC);
-          } else if (origBalFC > 0) {
-            logicalCreditFC = clamp0(Math.min(remainingFC, origBalFC));
-            balanceFC = round2(origBalFC - logicalCreditFC);
-            remainingFC = round2(remainingFC - logicalCreditFC);
-          } else {
-            balanceFC = 0;
-          }
-        }
-
-        const hcState = logicToStateHC(logicalDebitHC, logicalCreditHC);
-        const fcState = logicToStateFC(logicalDebitFC, logicalCreditFC);
-
-        const rowTdsHC =
-          !isChecked || !isTdsApplicable
-            ? 0
-            : round2((origBalHC < 0 ? logicalDebitHC : logicalCreditHC) * 0.02);
-
-        const rowTdsFC =
-          !isChecked || !isTdsApplicable
-            ? 0
-            : round2((origBalFC < 0 ? logicalDebitFC : logicalCreditFC) * 0.02);
+        const origBalHC = normalizeOriginalBalance({
+          row,
+          originalValue: row?.__origBalHC,
+          balanceValue: row?.balanceAmount,
+          balanceFcValue: origBalFC,
+          creditValue: row?.creditAmount,
+          debitValue: row?.debitAmount,
+        });
 
         return {
           ...row,
-          __isNegRow: isNegativeRow,
+          __isNegRow: origBalHC < 0 || origBalFC < 0,
           __origBalHC: origBalHC,
           __origBalFC: origBalFC,
-          __manualAllocHC: manualAllocHC,
-          __manualAllocFC: manualAllocFC,
-          debitAmount: hcState.debitAmount,
-          debitAmountFc: fcState.debitAmountFc,
-          creditAmount: hcState.creditAmount,
-          creditAmountFc: fcState.creditAmountFc,
-          balanceAmount: asNum2(isChecked ? balanceHC : origBalHC),
-          balanceAmountFc: asNum2(isChecked ? balanceFC : origBalFC),
-          tdsAmount: asNum2(rowTdsHC),
-          tdsAmountFc: asNum2(rowTdsFC),
+          __fcDerivedFromHC: !!row?.__fcDerivedFromHC,
+          __hcDerivedFromFC: !!row?.__hcDerivedFromFC,
+          tdsAmount: asNum2(row?.tdsAmount),
+          tdsAmountFc: asNum2(row?.tdsAmountFc),
         };
-      });
-
-      const ledgerTdsTotalHC = round2(
-        nextDetails.reduce((acc, row) => acc + toNum(row?.tdsAmount), 0)
-      );
-
-      const ledgerTdsTotalFC = round2(
-        nextDetails.reduce((acc, row) => acc + toNum(row?.tdsAmountFc), 0)
-      );
-
-      const parentLogicHC = nextDetails.reduce(
-        (acc, row) => {
-          const x = stateToLogic(row?.debitAmount, row?.creditAmount);
-          acc.debit += x.debit;
-          acc.credit += x.credit;
-          return acc;
-        },
-        { debit: 0, credit: 0 }
-      );
-
-      const parentLogicFC = nextDetails.reduce(
-        (acc, row) => {
-          const x = stateToLogic(row?.debitAmountFc, row?.creditAmountFc);
-          acc.debit += x.debit;
-          acc.credit += x.credit;
-          return acc;
-        },
-        { debit: 0, credit: 0 }
-      );
-
-      const prevStateHC = {
-        debitAmount:
-          ledger?.debitAmount ?? asStr2(toNum(ledger?.debitAmount)),
-        creditAmount:
-          ledger?.creditAmount ?? asStr2(toNum(ledger?.creditAmount)),
-      };
-
-      const prevStateFC = {
-        debitAmountFc:
-          ledger?.debitAmountFc ?? asStr2(toNum(ledger?.debitAmountFc)),
-        creditAmountFc:
-          ledger?.creditAmountFc ?? asStr2(toNum(ledger?.creditAmountFc)),
-      };
-
-      const parentStateHC = logicToStateHC(
-        round2(parentLogicHC.debit),
-        round2(parentLogicHC.credit)
-      );
-
-      const parentStateFC = logicToStateFC(
-        round2(parentLogicFC.debit),
-        round2(parentLogicFC.credit)
-      );
-
-      const nextDebitHC = !isChildChecked
-        ? prevStateHC.debitAmount
-        : parentStateHC.debitAmount;
-
-      const nextCreditHC = !isChildChecked
-        ? prevStateHC.creditAmount
-        : parentStateHC.creditAmount;
-
-      const nextDebitFC = !isChildChecked
-        ? prevStateFC.debitAmountFc
-        : parentStateFC.debitAmountFc;
-
-      const nextCreditFC = !isChildChecked
-        ? prevStateFC.creditAmountFc
-        : parentStateFC.creditAmountFc;
-
-      const manualLedgerTds = getManualLedgerTds(ledger);
-      const nextLedgerTdsHC = !isChildChecked
-        ? manualLedgerTds.hc
-        : ledgerTdsTotalHC;
-      const nextLedgerTdsFC = !isChildChecked
-        ? manualLedgerTds.fc
-        : ledgerTdsTotalFC;
-
-      if (!isChildChecked) {
-        const nextLogicHC = stateToLogic(nextDebitHC, nextCreditHC);
-        const nextLogicFC = stateToLogic(nextDebitFC, nextCreditFC);
-
-        remainingHC = round2(
-          remainingHC - nextLogicHC.credit + nextLogicHC.debit
-        );
-        remainingFC = round2(
-          remainingFC - nextLogicFC.credit + nextLogicFC.debit
-        );
       }
 
+      if (isChecked) isChildChecked = true;
+
+      const origBalFC = normalizeOriginalBalanceFC({
+        originalValue: row?.__origBalFC,
+        balanceValue: row?.balanceAmountFc,
+        creditValue: row?.creditAmountFc,
+        debitValue: row?.debitAmountFc,
+      });
+
+      const origBalHC = normalizeOriginalBalance({
+        row,
+        originalValue: row?.__origBalHC,
+        balanceValue: row?.balanceAmount,
+        balanceFcValue: origBalFC,
+        creditValue: row?.creditAmount,
+        debitValue: row?.debitAmount,
+      });
+
+      const isNegativeRow = origBalHC < 0 || origBalFC < 0;
+
+      const manualAlloc = getManualDetailAlloc(row);
+      const manualAllocHC = isChecked && manualAlloc.hc;
+      const manualAllocFC = isChecked && manualAlloc.fc;
+
+      let logicalDebitHC = 0;
+      let logicalCreditHC = 0;
+      let logicalDebitFC = 0;
+      let logicalCreditFC = 0;
+
+      let balanceHC = origBalHC;
+      let balanceFC = origBalFC;
+
+      let rowTdsAmountHC = 0;
+      let rowTdsAmountFC = 0;
+
+      let shouldDeriveFCFromHC = false;
+      let shouldDeriveHCFromFC = false;
+
+      if (isChecked) {
+        shouldDeriveFCFromHC =
+          amountEditDirection === "HC_TO_FC" &&
+          manualAllocHC &&
+          isForeignCurrencyRow(row);
+
+        shouldDeriveHCFromFC =
+          amountEditDirection === "FC_TO_HC" &&
+          manualAllocFC &&
+          isForeignCurrencyRow(row);
+
+        if (isTdsApplicable && manualAllocHC && useCurrentRemainingHC) {
+          rowTdsAmountHC = round2(toNum(row?.tdsAmount));
+        } else {
+          const canCalculateTdsHC =
+            isTdsApplicable &&
+            origBalHC > 0 &&
+            (manualAllocHC ? !useCurrentRemainingHC : remainingHC > 0);
+
+          if (canCalculateTdsHC) {
+            const tdsBaseHC = getTdsBaseAmount(row, origBalHC, false);
+
+            rowTdsAmountHC = round2(tdsBaseHC * 0.02);
+            remainingHC = round2(remainingHC + rowTdsAmountHC);
+          }
+        }
+
+        if (manualAllocHC) {
+          const manualHC = stateToLogic(row?.debitAmount, row?.creditAmount);
+
+          logicalDebitHC = clamp0(manualHC.debit);
+          logicalCreditHC = clamp0(manualHC.credit);
+          balanceHC = round2(origBalHC - logicalCreditHC + logicalDebitHC);
+
+          if (!useCurrentRemainingHC) {
+            remainingHC = round2(
+              remainingHC - logicalCreditHC + logicalDebitHC
+            );
+          }
+        } else if (origBalHC < 0) {
+          if (isDebitMinusCreditPlusVoucher) {
+            const allocatableHC = clamp0(
+              Math.min(Math.abs(origBalHC), remainingHC)
+            );
+
+            logicalDebitHC = round2(allocatableHC);
+            balanceHC = round2(origBalHC + allocatableHC);
+            remainingHC = round2(remainingHC - allocatableHC);
+          } else {
+            logicalDebitHC = round2(Math.abs(origBalHC));
+            balanceHC = 0;
+            remainingHC = round2(remainingHC + logicalDebitHC);
+          }
+        } else if (origBalHC > 0) {
+          logicalCreditHC = clamp0(Math.min(remainingHC, origBalHC));
+          balanceHC = round2(origBalHC - logicalCreditHC);
+          remainingHC = round2(remainingHC - logicalCreditHC);
+        } else {
+          balanceHC = 0;
+        }
+
+        const effectiveManualAllocFC =
+          manualAllocFC || shouldDeriveFCFromHC || shouldDeriveHCFromFC;
+
+        if (isTdsApplicable && effectiveManualAllocFC && useCurrentRemainingFC) {
+          rowTdsAmountFC = round2(toNum(row?.tdsAmountFc));
+        } else {
+          const canCalculateTdsFC =
+            isTdsApplicable &&
+            origBalFC > 0 &&
+            (effectiveManualAllocFC ? !useCurrentRemainingFC : remainingFC > 0);
+
+          if (canCalculateTdsFC) {
+            const tdsBaseFC = getTdsBaseAmount(row, origBalFC, true);
+
+            rowTdsAmountFC = round2(tdsBaseFC * 0.02);
+            remainingFC = round2(remainingFC + rowTdsAmountFC);
+          }
+        }
+
+        if (shouldDeriveFCFromHC) {
+          logicalDebitFC = clamp0(
+            getConvertedAmountFC(row, logicalDebitHC, logicalDebitFC)
+          );
+
+          logicalCreditFC = clamp0(
+            getConvertedAmountFC(row, logicalCreditHC, logicalCreditFC)
+          );
+
+          balanceFC = round2(origBalFC - logicalCreditFC + logicalDebitFC);
+
+          if (!useCurrentRemainingFC) {
+            remainingFC = round2(
+              remainingFC - logicalCreditFC + logicalDebitFC
+            );
+          }
+        } else if (manualAllocFC || shouldDeriveHCFromFC) {
+          const manualFC = stateToLogic(
+            row?.debitAmountFc,
+            row?.creditAmountFc
+          );
+
+          logicalDebitFC = clamp0(manualFC.debit);
+          logicalCreditFC = clamp0(manualFC.credit);
+          balanceFC = round2(origBalFC - logicalCreditFC + logicalDebitFC);
+
+          if (!useCurrentRemainingFC) {
+            remainingFC = round2(
+              remainingFC - logicalCreditFC + logicalDebitFC
+            );
+          }
+        } else if (origBalFC < 0) {
+          if (isDebitMinusCreditPlusVoucher) {
+            const allocatableFC = clamp0(
+              Math.min(Math.abs(origBalFC), remainingFC)
+            );
+
+            logicalDebitFC = round2(allocatableFC);
+            balanceFC = round2(origBalFC + allocatableFC);
+            remainingFC = round2(remainingFC - allocatableFC);
+          } else {
+            logicalDebitFC = round2(Math.abs(origBalFC));
+            balanceFC = 0;
+            remainingFC = round2(remainingFC + logicalDebitFC);
+          }
+        } else if (origBalFC > 0) {
+          logicalCreditFC = clamp0(Math.min(remainingFC, origBalFC));
+          balanceFC = round2(origBalFC - logicalCreditFC);
+          remainingFC = round2(remainingFC - logicalCreditFC);
+        } else {
+          balanceFC = 0;
+        }
+
+        // ✅ IMPORTANT:
+        // If user changed FC amount manually,
+        // then calculate HC amount from FC * exchangeRate.
+        // Example: creditAmountFc 20 * exchangeRate 95 = creditAmount 1900.
+        if (shouldDeriveHCFromFC) {
+          const oldLogicalDebitHC = logicalDebitHC;
+          const oldLogicalCreditHC = logicalCreditHC;
+
+          logicalDebitHC = clamp0(
+            getConvertedAmountHC(row, logicalDebitFC, logicalDebitHC)
+          );
+
+          logicalCreditHC = clamp0(
+            getConvertedAmountHC(row, logicalCreditFC, logicalCreditHC)
+          );
+
+          balanceHC = round2(origBalHC - logicalCreditHC + logicalDebitHC);
+
+          if (!useCurrentRemainingHC) {
+            remainingHC = round2(
+              remainingHC +
+                oldLogicalCreditHC -
+                oldLogicalDebitHC -
+                logicalCreditHC +
+                logicalDebitHC
+            );
+          }
+        }
+      }
+
+      const hcState = logicToStateHC(logicalDebitHC, logicalCreditHC);
+      const fcState = logicToStateFC(logicalDebitFC, logicalCreditFC);
+
+      const finalBalanceFC = asNum2(isChecked ? balanceFC : origBalFC);
+
+      const finalBalanceHC = asNum2(
+        getConvertedBalanceHC(
+          row,
+          finalBalanceFC,
+          isChecked ? balanceHC : origBalHC
+        )
+      );
+
       return {
-        ...ledger,
-        isChildChecked,
-        tblVoucherLedgerDetails: nextDetails,
-        debitAmount: nextDebitHC,
-        creditAmount: nextCreditHC,
-        debitAmountFc: nextDebitFC,
-        creditAmountFc: nextCreditFC,
-        tdsAmtHC: nextLedgerTdsHC,
-        tdsAmtFC: nextLedgerTdsFC,
-        tdsAmount: nextLedgerTdsHC,
-        tdsAmountFc: nextLedgerTdsFC,
+        ...row,
+        __isNegRow: isNegativeRow,
+        __origBalHC: origBalHC,
+        __origBalFC: origBalFC,
+
+        // ✅ If HC is derived from FC, don't treat HC as manually entered.
+        // ✅ If FC is derived from HC, don't treat FC as manually entered.
+        __manualAllocHC: shouldDeriveHCFromFC ? false : manualAllocHC,
+        __manualAllocFC: shouldDeriveFCFromHC ? false : manualAllocFC,
+
+        // ✅ Direction flags
+        __fcDerivedFromHC: shouldDeriveFCFromHC,
+        __hcDerivedFromFC: shouldDeriveHCFromFC,
+
+        debitAmount: hcState.debitAmount,
+        creditAmount: hcState.creditAmount,
+        debitAmountFc: fcState.debitAmountFc,
+        creditAmountFc: fcState.creditAmountFc,
+
+        balanceAmount: finalBalanceHC,
+        balanceAmountFc: finalBalanceFC,
+
+        tdsAmount: asNum2(rowTdsAmountHC),
+        tdsAmountFc: asNum2(rowTdsAmountFC),
       };
     });
 
-    const nextTdsAmtHC = round2(
-      nextLedgers.reduce(
-        (acc, ledger) => acc + toNum(ledger?.tdsAmtHC ?? ledger?.tdsAmount),
-        0
-      )
+    const ledgerTdsTotalHC = round2(
+      nextDetails.reduce((acc, row) => acc + toNum(row?.tdsAmount), 0)
     );
 
-    const nextTdsAmtFC = round2(
-      nextLedgers.reduce(
-        (acc, ledger) => acc + toNum(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc),
-        0
-      )
+    const ledgerTdsTotalFC = round2(
+      nextDetails.reduce((acc, row) => acc + toNum(row?.tdsAmountFc), 0)
     );
 
-    const displayTotals = getEffectiveDisplayTotals(nextLedgers);
-
-    const nextBalanceAmtHc = shouldSwapDrCr
-      ? asStr2(baseBalanceHC + displayTotals.hc)
-      : asStr2(remainingHC);
-
-    const nextBalanceAmtFc = shouldSwapDrCr
-      ? asStr2(baseBalanceFC + displayTotals.fc)
-      : asStr2(remainingFC);
-
-    const nextSnapshot = makeSnapshot(
-      nextLedgers,
-      nextBalanceAmtHc,
-      nextBalanceAmtFc,
-      nextTdsAmtHC,
-      nextTdsAmtFC
+    const parentLogicHC = nextDetails.reduce(
+      (acc, row) => {
+        const x = stateToLogic(row?.debitAmount, row?.creditAmount);
+        acc.debit = round2(acc.debit + x.debit);
+        acc.credit = round2(acc.credit + x.credit);
+        return acc;
+      },
+      { debit: 0, credit: 0 }
     );
 
-    if (
-      nextSnapshot === currentSnapshot ||
-      allocPrevRef.current === nextSnapshot
-    ) {
-      allocPrevRef.current = nextSnapshot;
-      return;
+    const parentLogicFC = nextDetails.reduce(
+      (acc, row) => {
+        const x = stateToLogic(row?.debitAmountFc, row?.creditAmountFc);
+        acc.debit = round2(acc.debit + x.debit);
+        acc.credit = round2(acc.credit + x.credit);
+        return acc;
+      },
+      { debit: 0, credit: 0 }
+    );
+
+    const parentStateHC = logicToStateHC(
+      round2(parentLogicHC.debit),
+      round2(parentLogicHC.credit)
+    );
+
+    const parentStateFC = logicToStateFC(
+      round2(parentLogicFC.debit),
+      round2(parentLogicFC.credit)
+    );
+
+    const zeroStateHC = logicToStateHC(0, 0);
+    const zeroStateFC = logicToStateFC(0, 0);
+
+    const isClearingLastChildSelection =
+      details.length > 0 &&
+      isTrueValue(ledger?.isChildChecked) &&
+      !isChildChecked;
+
+    const shouldUseParentLedgerAmount =
+      !isChildChecked &&
+      !isClearingLastChildSelection &&
+      hasParentLedgerAmount(ledger);
+
+    const parentLedgerManualHC = stateToLogic(
+      ledger?.debitAmount,
+      ledger?.creditAmount
+    );
+
+    const parentLedgerManualFC = stateToLogic(
+      ledger?.debitAmountFc,
+      ledger?.creditAmountFc
+    );
+
+    const parentLedgerStateHC = logicToStateHC(
+      round2(parentLedgerManualHC.debit),
+      round2(parentLedgerManualHC.credit)
+    );
+
+    const parentLedgerStateFC = logicToStateFC(
+      round2(parentLedgerManualFC.debit),
+      round2(parentLedgerManualFC.credit)
+    );
+
+    const nextDebitHC = isChildChecked
+      ? parentStateHC.debitAmount
+      : shouldUseParentLedgerAmount
+        ? parentLedgerStateHC.debitAmount
+        : zeroStateHC.debitAmount;
+
+    const nextCreditHC = isChildChecked
+      ? parentStateHC.creditAmount
+      : shouldUseParentLedgerAmount
+        ? parentLedgerStateHC.creditAmount
+        : zeroStateHC.creditAmount;
+
+    const nextDebitFC = isChildChecked
+      ? parentStateFC.debitAmountFc
+      : shouldUseParentLedgerAmount
+        ? parentLedgerStateFC.debitAmountFc
+        : zeroStateFC.debitAmountFc;
+
+    const nextCreditFC = isChildChecked
+      ? parentStateFC.creditAmountFc
+      : shouldUseParentLedgerAmount
+        ? parentLedgerStateFC.creditAmountFc
+        : zeroStateFC.creditAmountFc;
+
+    const manualLedgerTds = getManualLedgerTds(ledger);
+
+    const nextLedgerTdsHC = isChildChecked
+      ? ledgerTdsTotalHC
+      : manualLedgerTds.hc;
+
+    const nextLedgerTdsFC = isChildChecked
+      ? ledgerTdsTotalFC
+      : manualLedgerTds.fc;
+
+    if (shouldUseParentLedgerAmount) {
+      const nextLogicHC = stateToLogic(nextDebitHC, nextCreditHC);
+      const nextLogicFC = stateToLogic(nextDebitFC, nextCreditFC);
+
+      remainingHC = round2(remainingHC - nextLogicHC.credit + nextLogicHC.debit);
+      remainingFC = round2(remainingFC - nextLogicFC.credit + nextLogicFC.debit);
     }
 
+    return {
+      ...ledger,
+      isChecked: isClearingLastChildSelection ? false : ledger?.isChecked,
+      isChildChecked,
+
+      tblVoucherLedgerDetails: nextDetails,
+
+      debitAmount: nextDebitHC,
+      creditAmount: nextCreditHC,
+      debitAmountFc: nextDebitFC,
+      creditAmountFc: nextCreditFC,
+
+      tdsAmtHC: nextLedgerTdsHC,
+      tdsAmtFC: nextLedgerTdsFC,
+      tdsAmount: nextLedgerTdsHC,
+      tdsAmountFc: nextLedgerTdsFC,
+    };
+  });
+
+  const nextTdsAmtHC = round2(
+    nextLedgers.reduce(
+      (acc, ledger) => acc + toNum(ledger?.tdsAmtHC ?? ledger?.tdsAmount),
+      0
+    )
+  );
+
+  const nextTdsAmtFC = round2(
+    nextLedgers.reduce(
+      (acc, ledger) => acc + toNum(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc),
+      0
+    )
+  );
+
+  const displayTotals = getEffectiveDisplayTotals(nextLedgers);
+
+  const nextBalanceAmtHc = isDebitMinusCreditPlusVoucher
+    ? asStr2(clamp0(baseBalanceHC - displayTotals.hc))
+    : shouldSwapDrCr
+      ? asStr2(clamp0(baseBalanceHC + displayTotals.hc))
+      : asStr2(clamp0(remainingHC));
+
+  const nextBalanceAmtFc = isDebitMinusCreditPlusVoucher
+    ? asStr2(clamp0(baseBalanceFC - displayTotals.fc))
+    : shouldSwapDrCr
+      ? asStr2(clamp0(baseBalanceFC + displayTotals.fc))
+      : asStr2(clamp0(remainingFC));
+
+  const nextSnapshot = makeSnapshot(
+    nextLedgers,
+    nextBalanceAmtHc,
+    nextBalanceAmtFc,
+    nextTdsAmtHC,
+    nextTdsAmtFC
+  );
+
+  const nextParentOnlyLedgerSnapshot = getParentOnlyLedgerSnapshot(nextLedgers);
+
+  if (
+    nextSnapshot === currentSnapshot ||
+    allocPrevRef.current === nextSnapshot
+  ) {
     allocPrevRef.current = nextSnapshot;
-    allocInternalUpdateRef.current = true;
+    allocParentLedgerSnapshotRef.current = nextParentOnlyLedgerSnapshot;
+    allocAmountEditSnapshotRef.current = makeAmountEditSnapshot(nextLedgers);
+    return;
+  }
 
-    setNewState((prevState) => {
-      if (hasLedgers) {
-        return {
-          ...prevState,
-          tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
-          balanceAmtHc: nextBalanceAmtHc,
-          balanceAmtFc: nextBalanceAmtFc,
-          tdsAmt: nextTdsAmtHC,
-          tdsAmtFC: nextTdsAmtFC,
-          tdsAmount: nextTdsAmtHC,
-          tdsAmountFc: nextTdsAmtFC,
-        };
-      }
+  allocPrevRef.current = nextSnapshot;
+  allocParentLedgerSnapshotRef.current = nextParentOnlyLedgerSnapshot;
+  allocAmountEditSnapshotRef.current = makeAmountEditSnapshot(nextLedgers);
+  allocInternalUpdateRef.current = true;
 
+  setNewState((prevState) => {
+    if (hasLedgers) {
       return {
         ...prevState,
-        tblVoucherLedgerDetails:
-          nextLedgers[0]?.tblVoucherLedgerDetails || [],
+        tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
         balanceAmtHc: nextBalanceAmtHc,
         balanceAmtFc: nextBalanceAmtFc,
+        balanceAmt: nextBalanceAmtHc,
+        balanceAmtFC: nextBalanceAmtFc,
         tdsAmt: nextTdsAmtHC,
         tdsAmtFC: nextTdsAmtFC,
         tdsAmount: nextTdsAmtHC,
         tdsAmountFc: nextTdsAmtFC,
       };
-    });
+    }
 
-    setSubmitNewState((prevState) => ({
+    return {
       ...prevState,
+      tblVoucherLedgerDetails: nextLedgers[0]?.tblVoucherLedgerDetails || [],
       balanceAmtHc: nextBalanceAmtHc,
       balanceAmtFc: nextBalanceAmtFc,
+      balanceAmt: nextBalanceAmtHc,
+      balanceAmtFC: nextBalanceAmtFc,
       tdsAmt: nextTdsAmtHC,
       tdsAmtFC: nextTdsAmtFC,
       tdsAmount: nextTdsAmtHC,
       tdsAmountFc: nextTdsAmtFC,
-    }));
-  }, [
-    newState?.voucherTypeId,
-    newState?.amtRec,
-    newState?.amtRecFC,
-    newState?.bankCharges,
-    newState?.tdsApplicable,
-    newState?.tdsAmt,
-    newState?.tdsAmtFC,
-    JSON.stringify(newState?.tblVoucherLedger),
-    JSON.stringify(newState?.tblVoucherLedgerDetails),
-  ]);
+    };
+  });
+
+  setSubmitNewState((prevState) => {
+    if (hasLedgers) {
+      return {
+        ...prevState,
+        tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
+        balanceAmtHc: nextBalanceAmtHc,
+        balanceAmtFc: nextBalanceAmtFc,
+        balanceAmt: nextBalanceAmtHc,
+        balanceAmtFC: nextBalanceAmtFc,
+        tdsAmt: nextTdsAmtHC,
+        tdsAmtFC: nextTdsAmtFC,
+        tdsAmount: nextTdsAmtHC,
+        tdsAmountFc: nextTdsAmtFC,
+      };
+    }
+
+    return {
+      ...prevState,
+      tblVoucherLedgerDetails: nextLedgers[0]?.tblVoucherLedgerDetails || [],
+      balanceAmtHc: nextBalanceAmtHc,
+      balanceAmtFc: nextBalanceAmtFc,
+      balanceAmt: nextBalanceAmtHc,
+      balanceAmtFC: nextBalanceAmtFc,
+      tdsAmt: nextTdsAmtHC,
+      tdsAmtFC: nextTdsAmtFC,
+      tdsAmount: nextTdsAmtHC,
+      tdsAmountFc: nextTdsAmtFC,
+    };
+  });
+}, [
+  newState?.voucherTypeId,
+  newState?.amtRec,
+  newState?.amtRecFC,
+  newState?.bankCharges,
+  newState?.bankChargesFC,
+  newState?.bcAmt,
+  newState?.bcAmtFC,
+  newState?.tdsApplicable,
+  newState?.tdsAmt,
+  newState?.tdsAmtFC,
+  newState?.tdsAmount,
+  newState?.tdsAmountFc,
+  newState?.currencyId,
+  newState?.exchangeRate,
+  JSON.stringify(newState?.tblVoucherLedger),
+  JSON.stringify(newState?.tblVoucherLedgerDetails),
+  voucherAllocDeleteTick,
+]);
   return (
     <div className={`h-screen relative`}>
       <form onSubmit={handleButtonClick.handleSubmit}>
@@ -3420,6 +4547,8 @@ export default function AddEditFormControll() {
                   formControlData={formControlData}
                   setFormControlData={setFormControlData}
                   getLabelValue={getLabelValue}
+                  amtRecReadOnly={amtRecReadOnly}
+                  amtRecFCReadOnly={amtRecFCReadOnly}
                 />
               )}
             </React.Fragment>
@@ -3448,6 +4577,7 @@ export default function AddEditFormControll() {
                 formControlData={formControlData}
                 setFormControlData={setFormControlData}
                 getLabelValue={getLabelValue}
+                onVoucherAllocationDelete={forceVoucherAllocationRecalcAfterDelete}
               />
             </div>
           ))}
@@ -3478,6 +4608,8 @@ export default function AddEditFormControll() {
                   parentTableName={tableName}
                   formControlData={formControlData}
                   setFormControlData={setFormControlData}
+                  amtRecReadOnly={amtRecReadOnly}
+                  amtRecFCReadOnly={amtRecFCReadOnly}
                 />
               )}
             </div>
@@ -3550,6 +4682,8 @@ ParentAccordianComponent.propTypes = {
   formControlData: PropTypes.any,
   setFormControlData: PropTypes.any,
   getLabelValue: PropTypes.any,
+  amtRecReadOnly: PropTypes.bool,
+  amtRecFCReadOnly: PropTypes.bool,
 };
 
 function ParentAccordianComponent({
@@ -3572,6 +4706,8 @@ function ParentAccordianComponent({
   formControlData,
   setFormControlData,
   getLabelValue,
+  amtRecReadOnly = false,
+  amtRecFCReadOnly = false,
 }) {
   const [isParentAccordionOpen, setIsParentAccordionOpen] = useState(false);
   useEffect(() => {
@@ -3632,7 +4768,58 @@ function ParentAccordianComponent({
       };
     });
   }
+  const PAYMENT_AMOUNT_PARENT_FIELDS = new Set(["amtRec", "amtRecFC"]);
 
+  const getUpdatedInputFieldData = (fields = []) => {
+    return (fields || []).map((field) => {
+      const fieldName =
+        field?.fieldname ||
+        field?.fieldName ||
+        field?.name ||
+        field?.columnName;
+
+      if (!PAYMENT_AMOUNT_PARENT_FIELDS.has(fieldName)) {
+        return field;
+      }
+
+      // Foreign currency:
+      // amtRec disable, amtRecFC editable
+      if (fieldName === "amtRec" && amtRecReadOnly) {
+        return {
+          ...field,
+          isEditable: false,
+          isEditAble: false,
+          isCopyEditable: false,
+          isEditableMode: "b",
+          disabled: true,
+          readOnly: true,
+          isDisabled: true,
+        };
+      }
+
+      if (fieldName === "amtRecFC" && amtRecFCReadOnly) {
+        return {
+          ...field,
+          isEditable: false,
+          isEditAble: false,
+          isCopyEditable: false,
+          isEditableMode: "b",
+          disabled: true,
+          readOnly: true,
+          isDisabled: true,
+        };
+      }
+
+      // Keep previous logic for editable case
+      return {
+        ...field,
+        isEditable: field?.isEditable,
+        isEditAble: field?.isEditAble,
+        isCopyEditable: field?.isCopyEditable,
+        isEditableMode: field?.isEditableMode,
+      };
+    });
+  };
   return (
     <React.Fragment key={indexValue}>
       <Accordion
@@ -3669,7 +4856,8 @@ function ParentAccordianComponent({
         >
           <div className="">
             <CustomeInputFields
-              inputFieldData={parentsFields[section]}
+              //inputFieldData={parentsFields[section]}
+              inputFieldData={getUpdatedInputFieldData(parentsFields[section])}
               values={newState}
               onValuesChange={handleFieldValuesChange}
               handleFieldValuesChange2={handleFieldValuesChange2}
@@ -3713,6 +4901,7 @@ ChildAccordianComponent.propTypes = {
   formControlData: PropTypes.any,
   setFormControlData: PropTypes.any,
   getLabelValue: PropTypes.any,
+  onVoucherAllocationDelete: PropTypes.func,
 };
 function ChildAccordianComponent({
   section,
@@ -3732,6 +4921,7 @@ function ChildAccordianComponent({
   formControlData,
   setFormControlData,
   getLabelValue,
+  onVoucherAllocationDelete,
 }) {
   const tableRef = useRef(null);
   const [clickCount, setClickCount] = useState(0);
@@ -4166,37 +5356,62 @@ function ChildAccordianComponent({
 
   const deleteChildRecord = (index) => {
     if (isChildDeleteHidden) return;
+
+    const tableNameLower = String(section?.tableName || "").toLowerCase();
+
+    const isVoucherAllocationTable =
+      tableNameLower === "tblvoucherledger" ||
+      tableNameLower === "tblvoucherledgerdetails";
+
+    if (isVoucherAllocationTable) {
+      onVoucherAllocationDelete?.();
+    }
+
+    const removeByIndexAndReIndex = (rows = []) => {
+      return (Array.isArray(rows) ? rows : [])
+        .filter((_, idx) => idx !== index)
+        .map((item, idx) => ({
+          ...item,
+          indexValue: idx,
+        }));
+    };
+
     setNewState((prevState) => {
       const newStateCopy = { ...prevState };
-      const updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx !== index,
+      const updatedData = removeByIndexAndReIndex(
+        newStateCopy?.[section.tableName],
       );
+
       newStateCopy[section.tableName] = updatedData;
+
       if (updatedData.length === 0) {
         setInputFieldsVisible((prev) => !prev);
       }
+
       return newStateCopy;
     });
+
     setSubmitNewState((prevState) => {
       const newStateCopy = { ...prevState };
-      const updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx !== index,
+      const updatedData = removeByIndexAndReIndex(
+        newStateCopy?.[section.tableName],
       );
+
       newStateCopy[section.tableName] = updatedData;
-      if (updatedData.length === 0) {
-        setInputFieldsVisible((prev) => !prev);
-      }
+
       return newStateCopy;
     });
+
     setOriginalData((prevState) => {
+      if (!prevState) return prevState;
+
       const newStateCopy = { ...prevState };
-      const updatedData = newStateCopy[section.tableName]?.filter(
-        (_, idx) => idx !== index,
+      const updatedData = removeByIndexAndReIndex(
+        newStateCopy?.[section.tableName],
       );
+
       newStateCopy[section.tableName] = updatedData;
-      // if (updatedData?.length === 0) {
-      //   setInputFieldsVisible((prev) => !prev);
-      // }
+
       return newStateCopy;
     });
   };
@@ -4724,10 +5939,9 @@ function ChildAccordianComponent({
         <AccordionDetails
           className={`${styles.pageBackground} flex   relative  `}
           sx={{
-            height:
-              (newState?.[section.tableName]?.length || clickCount) === 0
-                ? "2.5rem"
-                : "auto",
+            height: newState[section.tableName]?.length <= 0 && !inputFieldsVisible
+              ? "3.5rem"
+              : "auto",
             padding: inputFieldsVisible ? "0" : "0",
             width: "100%",
           }}
@@ -4735,7 +5949,7 @@ function ChildAccordianComponent({
           <div key={indexValue} className=" w-full ">
             {/* Icon Button on the right */}
             <div className="absolute top-1 right-[-3px] flex  justify-end">
-              {!isChildAddHidden && clickCount === 0 && (
+              {!isChildAddHidden && !inputFieldsVisible && (
                 <HoverIcon
                   defaultIcon={addLogo}
                   hoverIcon={plusIconHover}
@@ -4749,7 +5963,7 @@ function ChildAccordianComponent({
             </div>
 
             {/* Custom Input Fields in the middle */}
-            {!isChildAddHidden && inputFieldsVisible && (
+            {!isChildAddHidden && inputFieldsVisible && !isGridEdit && (
               <div
                 className={` overflow-hidden  flex    items-start gap-4 mt-[0.5rem] ml-[1rem] mb-[0.5rem]  justify-between`}
               >
@@ -4796,8 +6010,6 @@ function ChildAccordianComponent({
                     title={"Save"}
                     onClick={() => {
                       childButtonHandler(section, indexValue);
-                      //syncAllExchangeRatesByCurrency();
-                      lockExchangeRateFirstWins();
                     }}
                   />
                 </div>
@@ -5083,7 +6295,7 @@ function ChildAccordianComponent({
                 </>
               )}
           </div>
-        </AccordionDetails>
+        </AccordionDetails>:
       </Accordion>
     </>
   );

@@ -989,498 +989,760 @@ export default function AddEditFormControll({ reportData }) {
       }
     },
     handleExportToExcel: async () => {
-      if (isDefaultDataShow === false && outputFileFormat === "Excel") {
-        const filterCondition = null;
-        const fetchData = await fetchDynamicReportSpData(
-          spName,
-          filterCondition,
-        );
-        console.log("fetchData =>>", fetchData);
-        console.log("fetchData =>>", fetchData.data.length);
+      const workbook = new ExcelJS.Workbook();
 
-        const workbook = new ExcelJS.Workbook();
+      let fileName =
+        isDefaultDataShow === false && outputFileFormat === "Excel"
+          ? `${spName || "Report"}.xlsx`
+          : `${reportName || "Report"}.xlsx`;
 
-        // Iterate over each dataset in fetchData
-        if (fetchData && fetchData.data.length > 0) {
-          fetchData.data.forEach((outerArray, index) => {
-            // Since the data is doubly nested, iterate through the outer array
-            outerArray.forEach((dataset) => {
-              // Assuming dataset structure like { tblCompanyCode: [{code: 'AMC'}] }
-              const key = Object.keys(dataset)[0]; // e.g., 'tblCompanyCode'
-              const data = dataset[key]; // This is the array of data
+      const safeString = (value, fallback = "") => {
+        if (value === null || value === undefined) return fallback;
+        return String(value);
+      };
 
-              // Create a unique worksheet name using the key and the index
-              //const worksheetName = `${key}_${index + 1}`;
-              const worksheetName = `${key}`;
-              const worksheet = workbook.addWorksheet(worksheetName);
+      const safeFileName = (name) => {
+        const cleaned = safeString(name, "Report")
+          .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_")
+          .trim();
 
-              if (data.length > 0) {
-                // Create headers from the keys of the first item in the array
-                const headers = Object.keys(data[0]);
-                worksheet.addRow(headers); // Adding header row
+        return cleaned || "Report";
+      };
 
-                // Add data rows
-                data.forEach((item) => {
-                  const row = headers.map((header) => item[header] || ""); // Map each header to its corresponding value in the item
-                  worksheet.addRow(row);
-                });
-              }
-            });
-          });
+      const sanitizeWorksheetName = (name) => {
+        const cleaned = safeString(name, "Sheet")
+          .replace(/[\[\]\*\/\\\?\:]/g, "_")
+          .trim();
 
-          // Write workbook to buffer and trigger file download
-          const buffer = await workbook.xlsx.writeBuffer();
-          const blob = new Blob([buffer], { type: "application/octet-stream" });
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = `${spName}.xlsx`;
-          link.click();
-        } else {
-          console.log("No data available to export.");
+        return (cleaned || "Sheet").slice(0, 31);
+      };
+
+      const getUniqueWorksheetName = (baseName) => {
+        const existingNames = new Set(workbook.worksheets.map((ws) => ws.name));
+        let safeName = sanitizeWorksheetName(baseName);
+        let finalName = safeName;
+        let counter = 1;
+
+        while (existingNames.has(finalName)) {
+          const suffix = `_${counter}`;
+          finalName = `${safeName.slice(0, 31 - suffix.length)}${suffix}`;
+          counter += 1;
         }
-      } else {
-        const cleanColorCode = (color) =>
-          color.startsWith("#") ? color.slice(1) : color;
-        let cleanedRowColors = Object.values(rowColorsForExcel).map((color) => {
-          // Clean the color code (remove "#" if present)
-          const cleanedColor = cleanColorCode(color);
 
-          // Replace "transparent" with "FFFFFF"
-          return cleanedColor === "transparent" ? "FFFFFF" : cleanedColor;
+        return finalName;
+      };
+
+      const normalizeArgb = (color) => {
+        if (!color) return "FFFFFF";
+
+        const value = String(color).trim();
+
+        if (!value || value.toLowerCase() === "transparent") return "FFFFFF";
+
+        const cleaned = value.startsWith("#") ? value.slice(1) : value;
+
+        if (/^[0-9a-fA-F]{6}$/.test(cleaned)) return cleaned.toUpperCase();
+        if (/^[0-9a-fA-F]{8}$/.test(cleaned)) return cleaned.toUpperCase();
+
+        return "FFFFFF";
+      };
+
+      /*
+    IMPORTANT:
+    Do not parse or rebuild date values.
+    Whatever date value comes from API/data will be written directly.
+    Example:
+    API value: "11/04/2026"
+    Excel value: "11/04/2026"
+  */
+      const DATE_HEADER_REGEX =
+        /(?:^|[\s_/-])(date|dt|eta|etd|ata|atd)(?:$|[\s_/-])/i;
+
+      const isDateColumnHeader = (header) => {
+        return DATE_HEADER_REGEX.test(String(header || ""));
+      };
+
+      const getDirectDateValue = (value) => {
+        if (value === null || value === undefined) return "";
+        return String(value);
+      };
+
+      const safeCellValue = (value) => {
+        if (value === null || value === undefined) return "";
+
+        if (typeof value === "object") {
+          try {
+            return JSON.stringify(value);
+          } catch {
+            return "";
+          }
+        }
+
+        return value;
+      };
+
+      const safeExcelValue = (value, header = "") => {
+        if (value === null || value === undefined) return "";
+
+        if (isDateColumnHeader(header)) {
+          return getDirectDateValue(value);
+        }
+
+        if (typeof value === "object") {
+          try {
+            return JSON.stringify(value);
+          } catch {
+            return "";
+          }
+        }
+
+        return value;
+      };
+
+      const applyDateColumnTextFormat = (
+        worksheet,
+        headers,
+        startRow = 1,
+        endRow = worksheet.rowCount,
+      ) => {
+        headers.forEach((header, index) => {
+          if (!isDateColumnHeader(header)) return;
+
+          const colNumber = index + 1;
+
+          for (let rowNumber = startRow; rowNumber <= endRow; rowNumber += 1) {
+            const cell = worksheet.getRow(rowNumber).getCell(colNumber);
+
+            if (cell.value !== null && cell.value !== undefined) {
+              cell.value = String(cell.value);
+            }
+
+            // Keep exact value and stop Excel from auto-changing date.
+            cell.numFmt = "@";
+          }
+        });
+      };
+
+      const styleHeaderRow = (row) => {
+        row.font = { bold: true };
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "D3D3D3" },
+          };
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+          cell.alignment = {
+            vertical: "middle",
+            horizontal: "center",
+            wrapText: true,
+          };
+        });
+      };
+
+      const styleNormalRow = (row, fillColor = "FFFFFF") => {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: normalizeArgb(fillColor) },
+          };
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+          cell.alignment = {
+            vertical: "middle",
+            horizontal: "center",
+            wrapText: true,
+          };
+        });
+      };
+
+      const addInfoSheet = (title, message) => {
+        const worksheet = workbook.addWorksheet(getUniqueWorksheetName(title));
+        worksheet.columns = [{ width: 40 }, { width: 80 }];
+
+        const titleRow = worksheet.addRow([title]);
+        titleRow.font = { bold: true, size: 14 };
+        worksheet.mergeCells(`A${titleRow.number}:B${titleRow.number}`);
+
+        worksheet.addRow([]);
+        worksheet.addRow(["Message", message || "No data available."]);
+        worksheet.addRow(["Generated On", String(new Date())]);
+
+        worksheet.eachRow((row) => {
+          row.eachCell((cell) => {
+            cell.alignment = {
+              vertical: "middle",
+              horizontal: "left",
+              wrapText: true,
+            };
+            cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" },
+            };
+          });
+        });
+      };
+
+      const downloadWorkbook = async () => {
+        if (!workbook.worksheets.length) {
+          addInfoSheet("No Data", "No data available to export.");
+        }
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         });
 
-        if (!reportCalled) {
-          toast.error("Please generate the report first.");
-          return;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = safeFileName(fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+        }, 1000);
+      };
+
+      const tryAddHeaderImage = async (worksheet) => {
+        try {
+          if (!imageUrl) {
+            worksheet.addRow(["Logo not available"]);
+            return false;
+          }
+
+          const response = await fetch(imageUrl);
+
+          if (!response.ok) {
+            throw new Error(
+              `Image request failed with status ${response.status}`,
+            );
+          }
+
+          const contentType = response.headers.get("content-type") || "";
+          const arrayBuffer = await response.arrayBuffer();
+
+          if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+            throw new Error("Image file is empty.");
+          }
+
+          let extension = "png";
+
+          if (contentType.includes("jpeg") || contentType.includes("jpg")) {
+            extension = "jpeg";
+          } else if (contentType.includes("png")) {
+            extension = "png";
+          }
+
+          const imageId = workbook.addImage({
+            buffer: arrayBuffer,
+            extension,
+          });
+
+          worksheet.addImage(imageId, {
+            tl: { col: 0, row: 0 },
+            ext: { width: 1000, height: 100 },
+          });
+
+          worksheet.addRow([]);
+          worksheet.addRow([]);
+          worksheet.addRow([]);
+          worksheet.addRow([]);
+
+          return true;
+        } catch (imageError) {
+          console.warn("Excel header image skipped:", imageError);
+
+          const row = worksheet.addRow(["Logo not available"]);
+          row.font = { italic: true, color: { argb: "666666" } };
+          worksheet.mergeCells(`A${row.number}:B${row.number}`);
+
+          worksheet.addRow([]);
+
+          return false;
+        }
+      };
+
+      const fetchReportCriteriaFields = async () => {
+        try {
+          const requestBody = {
+            columns: "rfl.yourlabel,rfl.fieldname,rfl.controlname",
+            tableName:
+              "tblMenuReportMapping mrm left join tblReportCriteria rc on rc.id = mrm.reportCriteriaId left join tblReportCriteriaList rfl on rfl.reportCriteriaId = mrm.reportCriteriaId",
+            whereCondition: `mrm.menuId = ${search} and mrm.status = 1 and rc.status = 1`,
+            clientIdCondition: `rfl.status = 1 FOR JSON PATH`,
+          };
+
+          const data = await fetchReportData(requestBody);
+
+          if (!Array.isArray(data?.data)) return [];
+
+          return data.data.filter((x) => x?.fieldname && x?.yourlabel);
+        } catch (error) {
+          console.warn("Report criteria fetch failed:", error);
+          return [];
+        }
+      };
+
+      const fetchControlName = async (controlNameId) => {
+        try {
+          if (!controlNameId) return "";
+
+          const controlNameRequestBody = {
+            columns: "name",
+            tableName: "tblMasterData",
+            whereCondition: `id=${controlNameId}`,
+            clientIdCondition: `status = 1 FOR JSON PATH`,
+          };
+
+          const controlData = await fetchReportData(controlNameRequestBody);
+          return controlData?.data?.[0]?.name || "";
+        } catch (error) {
+          console.warn("Control name fetch failed:", error);
+          return "";
+        }
+      };
+
+      const buildFilterRows = async () => {
+        const fields = await fetchReportCriteriaFields();
+
+        if (!fields.length) return [];
+
+        const labelValueObject = {};
+
+        for (const field of fields) {
+          const fieldname = field.fieldname;
+          const yourlabel = field.yourlabel;
+          const controlNameData = await fetchControlName(field.controlname);
+
+          labelValueObject[yourlabel] = {
+            fieldname,
+            controlname: controlNameData,
+            value: null,
+          };
         }
 
-        const requestBody = {
-          columns: "rfl.yourlabel,rfl.fieldname,rfl.controlname",
-          tableName:
-            "tblMenuReportMapping mrm left join tblReportCriteria rc on rc.id = mrm.reportCriteriaId left join tblReportCriteriaList rfl on rfl.reportCriteriaId = mrm.reportCriteriaId",
-          whereCondition: `mrm.menuId = ${search} and mrm.status = 1 and rc.status = 1`,
-          clientIdCondition: `rfl.status = 1 FOR JSON PATH`,
-        };
+        Object.keys(labelValueObject).forEach((label) => {
+          const fieldname = labelValueObject[label].fieldname;
+          const controlName = labelValueObject[label].controlname;
 
-        try {
-          const data = await fetchReportData(requestBody);
-          if (data?.data?.length > 0) {
-            const fields = data.data; // Directly assigning the array
-            const labelValueObject = {};
+          if (
+            newState &&
+            Object.prototype.hasOwnProperty.call(newState, fieldname)
+          ) {
+            let value = newState[fieldname];
 
-            for (const field of fields) {
-              const key = field.fieldname; // Access fieldname properly
-              const controlName = field.controlname;
-              const yourlabel = field.yourlabel;
-              const controlNameRequestBody = {
-                columns: "name",
-                tableName: "tblMasterData",
-                whereCondition: `id=${controlName}`,
-                clientIdCondition: `status = 1 FOR JSON PATH`,
-              };
+            if (controlName === "date" && value) {
+              value = getDirectDateValue(value);
+            } else if (controlName === "dropdown") {
+              const dropdownValue = newState?.[`${fieldname}dropdown`];
 
-              try {
-                const controlData = await fetchReportData(
-                  controlNameRequestBody,
+              if (Array.isArray(dropdownValue)) {
+                const selectedOption = dropdownValue.find(
+                  (option) => String(option.value) === String(value),
                 );
-                if (controlData?.data?.length > 0) {
-                  const controlNameData = controlData.data[0].name;
-                  labelValueObject[yourlabel] = {
-                    fieldname: key,
-                    controlname: controlNameData,
-                    value: null,
-                  };
-                }
-              } catch (error) {
-                console.error("Error fetching control name data:", error);
+
+                if (selectedOption) value = selectedOption.label;
+              } else if (
+                dropdownValue &&
+                typeof dropdownValue === "object" &&
+                Object.prototype.hasOwnProperty.call(dropdownValue, "label")
+              ) {
+                value = dropdownValue.label;
               }
             }
 
-            // Match and update values from newState
-            for (const label in labelValueObject) {
-              const fieldname = labelValueObject[label].fieldname;
-              const controlName = labelValueObject[label].controlname;
-
-              if (newState.hasOwnProperty(fieldname)) {
-                let value = newState[fieldname];
-
-                if (controlName === "date" && value) {
-                  const date = new Date(value);
-                  value = date.toLocaleDateString("en-GB");
-                } else if (
-                  controlName === "dropdown" &&
-                  newState[`${fieldname}dropdown`]
-                ) {
-                  const dropdownArray = newState[`${fieldname}dropdown`];
-                  const selectedOption = dropdownArray.find(
-                    (option) => option.value === value,
-                  );
-                  if (selectedOption) value = selectedOption.label;
-                }
-
-                if (value) labelValueObject[label].value = value;
-              }
+            if (
+              value !== null &&
+              value !== undefined &&
+              String(value).trim() !== ""
+            ) {
+              labelValueObject[label].value = value;
             }
+          }
+        });
 
-            const fieldsArray = Object.entries(labelValueObject)
-              .filter(([key, obj]) => obj.value !== null) // Filter out objects where value is null
-              .map(([key, obj]) => ({
-                label: key,
-                value: obj.value,
+        return Object.entries(labelValueObject)
+          .filter(([_, obj]) => obj.value !== null)
+          .map(([label, obj]) => ({
+            label,
+            value: obj.value,
+          }));
+      };
+
+      const ID_HEADER_BLOCKLIST =
+        /(?:\b|_)(id|no|number|code|ref|invoice|container|sb|hbl|mbl|bl|phone|mobile|gst|pan)(?:\b|_)/i;
+
+      const isPureNumber = (value) => {
+        if (value === null || value === undefined) return false;
+
+        const str = String(value).trim().replace(/,/g, "");
+        return /^-?\d+(\.\d+)?$/.test(str);
+      };
+
+      const isLongIntegerIdLike = (value) => {
+        if (value === null || value === undefined) return false;
+
+        const str = String(value).trim().replace(/,/g, "");
+        return /^\d+$/.test(str) && str.length >= 7;
+      };
+
+      const shouldTotalColumn = (header, columnData) => {
+        if (ID_HEADER_BLOCKLIST.test(String(header || ""))) return false;
+
+        const nonEmpty = columnData.filter(
+          (value) =>
+            value !== null &&
+            value !== undefined &&
+            String(value).trim() !== "",
+        );
+
+        if (!nonEmpty.length) return false;
+
+        const longIntCount = nonEmpty.filter(isLongIntegerIdLike).length;
+
+        if (longIntCount / nonEmpty.length >= 0.6) return false;
+
+        return nonEmpty.some(isPureNumber);
+      };
+
+      try {
+        fileName = safeFileName(fileName);
+
+        if (isDefaultDataShow === false && outputFileFormat === "Excel") {
+          let fetchData = null;
+
+          try {
+            fetchData = await fetchDynamicReportSpData(spName, filterCondition);
+          } catch (error) {
+            console.error("Dynamic SP data fetch failed:", error);
+            addInfoSheet(
+              "Export Error",
+              "Report data could not be fetched. Excel generated with error details.",
+            );
+          }
+
+          const mainData = Array.isArray(fetchData?.data) ? fetchData.data : [];
+
+          if (!mainData.length) {
+            addInfoSheet("No Data", "No data available to export.");
+          }
+
+          mainData.forEach((outerArray, outerIndex) => {
+            const datasets = Array.isArray(outerArray)
+              ? outerArray
+              : [outerArray];
+
+            datasets.forEach((dataset, datasetIndex) => {
+              if (!dataset || typeof dataset !== "object") return;
+
+              const key = Object.keys(dataset)[0];
+
+              if (!key) return;
+
+              const rawData = dataset[key];
+              const data = Array.isArray(rawData)
+                ? rawData
+                : rawData && typeof rawData === "object"
+                  ? [rawData]
+                  : [];
+
+              const worksheetName =
+                mainData.length > 1
+                  ? `${key}_${outerIndex + 1}_${datasetIndex + 1}`
+                  : key;
+
+              const worksheet = workbook.addWorksheet(
+                getUniqueWorksheetName(worksheetName),
+              );
+
+              if (!data.length) {
+                worksheet.addRow(["No data available"]);
+                worksheet.columns = [{ width: 40 }];
+                return;
+              }
+
+              const firstObject =
+                data.find((item) => item && typeof item === "object") || {};
+
+              const headers = Object.keys(firstObject);
+
+              if (!headers.length) {
+                worksheet.addRow(["No data available"]);
+                worksheet.columns = [{ width: 40 }];
+                return;
+              }
+
+              const headerRow = worksheet.addRow(headers);
+              styleHeaderRow(headerRow);
+
+              data.forEach((item) => {
+                const rowData = headers.map((header) =>
+                  safeExcelValue(item?.[header], header),
+                );
+
+                const row = worksheet.addRow(rowData);
+                styleNormalRow(row);
+              });
+
+              worksheet.columns = headers.map(() => ({
+                width: 22,
               }));
 
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet("Report");
-
-            // Add an image if required
-            const response = await fetch(imageUrl);
-            const arrayBuffer = await response.arrayBuffer();
-            const imageId = workbook.addImage({
-              buffer: Buffer.from(arrayBuffer),
-              extension: "jpg",
+              applyDateColumnTextFormat(
+                worksheet,
+                headers,
+                headerRow.number + 1,
+                worksheet.rowCount,
+              );
             });
-            worksheet.addImage(imageId, {
-              tl: { col: 0, row: 0 },
-              ext: { width: 500, height: 100 },
-            });
+          });
+        } else {
+          if (!reportCalled) {
+            toast.error("Please generate the report first.");
 
-            // Spacer rows for the image
-            worksheet.addRow([]);
-            worksheet.addRow([]);
-            worksheet.addRow([]);
-            worksheet.addRow([]);
+            addInfoSheet(
+              "Validation",
+              "Please generate the report first. Excel file generated with this validation message.",
+            );
+          } else {
+            const worksheet = workbook.addWorksheet(
+              getUniqueWorksheetName("Report"),
+            );
 
-            // Add "Report Name" row with styling
+            await tryAddHeaderImage(worksheet);
+
             const reportNameRow = worksheet.addRow([
-              `Report Name: ${reportName}`,
+              `Report Name: ${reportName || ""}`,
             ]);
-            reportNameRow.font = { bold: true, color: { argb: "FFFFFF" } };
+
+            reportNameRow.font = {
+              bold: true,
+              color: { argb: "FFFFFF" },
+            };
             reportNameRow.fill = {
               type: "pattern",
               pattern: "solid",
               fgColor: { argb: "0766AD" },
             };
+
             worksheet.mergeCells(
               `A${reportNameRow.number}:B${reportNameRow.number}`,
             );
-            worksheet.addRow([]);
-
-            // Add `fieldsArray` data (label and value pairs)
-            fieldsArray.forEach((field) => {
-              const row = worksheet.addRow([field.label, field.value]);
-              row.eachCell((cell, colIndex) => {
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: colIndex % 2 === 1 ? "DDDDDD" : "FFFFFF" },
-                };
-                cell.font = { bold: colIndex === 1 };
-                cell.alignment = { vertical: "middle", horizontal: "center" };
-                cell.border = {
-                  top: { style: "thin" },
-                  left: { style: "thin" },
-                  bottom: { style: "thin" },
-                  right: { style: "thin" },
-                };
-              });
-            });
 
             worksheet.addRow([]);
 
-            // Add header row
-            const headerRow = worksheet.addRow(gridHeader.map((g) => g.label));
-            headerRow.font = { bold: true };
-            headerRow.eachCell((cell) => {
-              cell.fill = {
-                type: "pattern",
-                pattern: "solid",
-                fgColor: { argb: "D3D3D3" },
-              };
-              cell.border = {
-                top: { style: "thin" },
-                left: { style: "thin" },
-                bottom: { style: "thin" },
-                right: { style: "thin" },
-              };
-            });
+            const fieldsArray = await buildFilterRows();
 
-            const dataToExport = paginatedData.map((row) =>
-              gridHeader.map((header) => {
-                const gridItem = grid.find(
-                  (g) => g.id === parseInt(header.fieldname),
-                );
-                if (!gridItem) {
-                  console.warn(
-                    `No grid item found for fieldname: ${header.fieldname}`,
-                  );
-                }
-                let value = row[gridItem?.fieldname] ?? ""; // Use nullish coalescing
-                if (typeof value === "string" && isValidDate(value)) {
-                  value = moment(value).format("DD-MM-YYYY");
-                }
-                return value;
-              }),
-            );
-            // Group rows based on `groupingDepth`
-            for (let colIndex = 0; colIndex <= groupingDepth; colIndex++) {
-              let previousValue = null;
-              dataToExport.forEach((row) => {
-                if (row[colIndex] === previousValue) {
-                  row[colIndex] = ""; // Replace duplicate value with an empty string
-                } else {
-                  previousValue = row[colIndex];
-                }
+            if (fieldsArray.length) {
+              fieldsArray.forEach((field) => {
+                const row = worksheet.addRow([
+                  safeCellValue(field.label),
+                  safeCellValue(field.value),
+                ]);
+
+                row.eachCell((cell, colIndex) => {
+                  cell.fill = {
+                    type: "pattern",
+                    pattern: "solid",
+                    fgColor: {
+                      argb: colIndex % 2 === 1 ? "DDDDDD" : "FFFFFF",
+                    },
+                  };
+                  cell.font = { bold: colIndex === 1 };
+                  cell.alignment = {
+                    vertical: "middle",
+                    horizontal: "center",
+                    wrapText: true,
+                  };
+                  cell.border = {
+                    top: { style: "thin" },
+                    left: { style: "thin" },
+                    bottom: { style: "thin" },
+                    right: { style: "thin" },
+                  };
+                });
               });
+
+              worksheet.addRow([]);
             }
 
-            worksheet.columns = gridHeader.map((header) => {
-              // Set a default width or use a custom logic to determine width for each column
-              return { width: 20 }; // You can adjust the width value (e.g., 30 or 40) as needed
-            });
+            const safeGridHeader = Array.isArray(gridHeader)
+              ? gridHeader.filter(
+                  (header) => header?.label || header?.fieldname,
+                )
+              : [];
 
-            // Add data rows with styles and grouping
-            dataToExport.forEach((rowData, rowIndex) => {
-              const row = worksheet.addRow(rowData);
-              row.eachCell((cell) => {
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: {
-                    argb: `${cleanedRowColors[rowIndex] || "FFFFFF"}`,
-                  },
-                };
-                cell.border = {
-                  top: { style: "thin" },
-                  left: { style: "thin" },
-                  bottom: { style: "thin" },
-                  right: { style: "thin" },
-                };
-                cell.alignment = {
-                  vertical: "middle",
-                  horizontal: "center",
-                  wrapText: true,
-                };
+            if (!safeGridHeader.length) {
+              addInfoSheet(
+                "No Headers",
+                "Grid headers are missing, so report data could not be written.",
+              );
+            } else {
+              const excelHeaders = safeGridHeader.map(
+                (header) => header.label || header.fieldname,
+              );
+
+              const headerRow = worksheet.addRow(excelHeaders);
+
+              styleHeaderRow(headerRow);
+
+              const sourceRowsRaw =
+                sortedCount === 1 ? firstExcelData : exportToExcelSortedData;
+
+              const sourceRows = Array.isArray(sourceRowsRaw)
+                ? sourceRowsRaw
+                : [];
+
+              const dataToExport = sourceRows.map((row) =>
+                safeGridHeader.map((header) => {
+                  const key = header?.fieldname;
+
+                  if (!key) return "";
+
+                  const headerLabel = header?.label || header?.fieldname || "";
+                  const value = row?.[key] ?? "";
+
+                  return safeExcelValue(value, headerLabel);
+                }),
+              );
+
+              if (!dataToExport.length) {
+                const row = worksheet.addRow(["No data available"]);
+                row.font = { italic: true };
+              }
+
+              const safeGroupingDepth = Number.isFinite(Number(groupingDepth))
+                ? Number(groupingDepth)
+                : -1;
+
+              for (
+                let colIndex = 0;
+                colIndex <= safeGroupingDepth;
+                colIndex++
+              ) {
+                let previousValue = null;
+
+                dataToExport.forEach((row) => {
+                  if (row[colIndex] === previousValue) {
+                    row[colIndex] = previousValue;
+                  } else {
+                    previousValue = row[colIndex];
+                  }
+                });
+              }
+
+              const cleanedRowColors =
+                rowColorsForExcel && typeof rowColorsForExcel === "object"
+                  ? Object.values(rowColorsForExcel).map(normalizeArgb)
+                  : [];
+
+              dataToExport.forEach((rowData, rowIndex) => {
+                const row = worksheet.addRow(rowData);
+                styleNormalRow(row, cleanedRowColors[rowIndex] || "FFFFFF");
               });
-            });
 
-            const grandTotalRow = worksheet.addRow(
-              gridHeader.map((header, colIndex) => {
-                if (colIndex === 0) return "Grand Total";
+              worksheet.columns = safeGridHeader.map(() => ({
+                width: 20,
+              }));
 
-                // Check if the current column should be totaled (e.g., is numeric)
-                const isNumericColumn = !isNaN(
-                  dataToExport
-                    .map((row) => parseFloat(row[colIndex]))
-                    .find((val) => !isNaN(val)),
+              applyDateColumnTextFormat(
+                worksheet,
+                excelHeaders,
+                headerRow.number + 1,
+                worksheet.rowCount,
+              );
+
+              if (isDisplayGrandTotal && dataToExport.length) {
+                const grandTotalRow = worksheet.addRow(
+                  safeGridHeader.map((header, colIndex) => {
+                    if (colIndex === 0) return "Grand Total";
+
+                    const headerLabel =
+                      header?.label || header?.fieldname || "";
+                    const columnData = dataToExport.map((row) => row[colIndex]);
+
+                    if (!shouldTotalColumn(headerLabel, columnData)) return "";
+
+                    const total = columnData.reduce((acc, value) => {
+                      if (!isPureNumber(value) || isLongIntegerIdLike(value)) {
+                        return acc;
+                      }
+
+                      const numberValue = parseFloat(
+                        String(value).replace(/,/g, ""),
+                      );
+
+                      return Number.isNaN(numberValue)
+                        ? acc
+                        : acc + numberValue;
+                    }, 0);
+
+                    return total.toFixed(2);
+                  }),
                 );
 
-                if (isNumericColumn) {
-                  const columnData = dataToExport.map((row) => {
-                    const value = parseFloat(row[colIndex]);
-                    return isNaN(value) ? 0 : value; // Replace invalid numbers with 0
-                  });
-
-                  const columnTotal = columnData.reduce(
-                    (acc, num) => acc + num,
-                    0,
-                  );
-                  return columnTotal.toFixed(2); // Return total formatted to two decimal places
-                }
-
-                // If not numeric, leave the cell blank
-                return "";
-              }),
-            );
-
-            // Style the grand total row
-            grandTotalRow.eachCell((cell, colIndex) => {
-              cell.fill = {
-                type: "pattern",
-                pattern: "solid",
-                fgColor: { argb: "DDDDDD" },
-              };
-              cell.font = { bold: true };
-              cell.alignment = {
-                vertical: "middle",
-                horizontal: colIndex === 0 ? "left" : "center",
-              };
-              cell.border = {
-                top: { style: "thin" },
-                left: { style: "thin" },
-                bottom: { style: "thin" },
-                right: { style: "thin" },
-              };
-            });
-
-            // Save the file
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], {
-              type: "application/octet-stream",
-            });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `${reportName}.xlsx`;
-            link.click();
-
-            toast.success("Excel file exported successfully!");
-          } else {
-            console.error("No data returned or data structure is invalid");
+                grandTotalRow.eachCell((cell, colIndex) => {
+                  cell.fill = {
+                    type: "pattern",
+                    pattern: "solid",
+                    fgColor: { argb: "DDDDDD" },
+                  };
+                  cell.font = { bold: true };
+                  cell.alignment = {
+                    vertical: "middle",
+                    horizontal: colIndex === 1 ? "left" : "center",
+                    wrapText: true,
+                  };
+                  cell.border = {
+                    top: { style: "thin" },
+                    left: { style: "thin" },
+                    bottom: { style: "thin" },
+                    right: { style: "thin" },
+                  };
+                });
+              }
+            }
           }
-        } catch (error) {
-          console.error("Error:", error);
-          toast.error("Failed to export to Excel.");
+        }
+
+        await downloadWorkbook();
+        toast.success("Excel file exported successfully!");
+      } catch (error) {
+        console.error("Excel export failed:", error);
+
+        try {
+          addInfoSheet(
+            "Export Error",
+            error?.message ||
+              "Something went wrong while generating Excel. File generated with error details.",
+          );
+
+          await downloadWorkbook();
+
+          toast.error(
+            "Excel generated with some errors. Please check the exported file.",
+          );
+        } catch (downloadError) {
+          console.error("Excel download failed:", downloadError);
+          toast.error("Failed to export Excel.");
         }
       }
-    },
-    handleExportToExcelDataOnly: async () => {
-      if (!reportCalled) {
-        toast.error("Please generate report first");
-        return;
-      }
-
-      // Extract header labels from the grid
-      const headerLabels = grid.map((g) => g.label);
-
-      // Convert tableData to a format suitable for Excel
-      const dataToExport = tableData.map((row) => {
-        return headerLabels.map((label) => {
-          const gridItem = grid.find((g) => g.label === label);
-          let value = row[gridItem.fieldname];
-
-          // Format date if applicable
-          if (typeof value === "string" && isValidDate(value)) {
-            value = moment(value).format("DD-MM-YYYY");
-          }
-
-          return value !== undefined ? value : "";
-        });
-      });
-
-      // Calculate totals row
-      const totalsRow = headerLabels.map((label, index) => {
-        if (index === 0) return "Grand Total";
-
-        let total = 0;
-        dataToExport.forEach((row) => {
-          const value = row[index];
-          if (typeof value === "number") {
-            total += value;
-          }
-        });
-
-        return total || "";
-      });
-
-      // Add totals row to the data
-      dataToExport.push(totalsRow);
-
-      // Create a new workbook and add a worksheet
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("Sheet1");
-
-      // Fetch and add the image
-      const response = await fetch(imageUrl);
-      const arrayBuffer = await response.arrayBuffer();
-      const imageId = workbook.addImage({
-        buffer: Buffer.from(arrayBuffer),
-        extension: "jpg",
-      });
-
-      worksheet.addImage(imageId, {
-        tl: { col: 0, row: 0 },
-        ext: { width: 500, height: 100 },
-      });
-
-      // Add some empty rows after the image to position the header
-      worksheet.addRow([]);
-      worksheet.addRow([]);
-      worksheet.addRow([]);
-      worksheet.addRow([]);
-      worksheet.addRow([]);
-
-      // Add headers with styles
-      const headerRow = worksheet.addRow(headerLabels);
-      headerRow.eachCell((cell) => {
-        cell.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "0766AD" }, // Set header background color to #0766AD
-        };
-        cell.font = { bold: true, color: { argb: "FFFFFF" } }; // Set font color to white
-        cell.alignment = { horizontal: "center", vertical: "center" };
-        cell.border = {
-          top: { style: "thin" },
-          left: { style: "thin" },
-          bottom: { style: "thin" },
-          right: { style: "thin" },
-        };
-      });
-
-      // Add data rows
-      dataToExport.forEach((dataRow, rowIndex) => {
-        const row = worksheet.addRow(dataRow);
-        row.eachCell((cell) => {
-          cell.alignment = { horizontal: "center", vertical: "center" };
-          cell.border = {
-            top: { style: "thin" },
-            left: { style: "thin" },
-            bottom: { style: "thin" },
-            right: { style: "thin" },
-          };
-        });
-
-        // Apply specific styling to the totals row
-        if (rowIndex === dataToExport.length - 1) {
-          // Check if it's the last row (totals row)
-          row.eachCell((cell) => {
-            cell.fill = {
-              type: "pattern",
-              pattern: "solid",
-              fgColor: { argb: "EEEEEE" }, // Set background color to #EEEEEE
-            };
-            cell.font = { bold: true }; // Optionally make the font bold for the totals row
-            cell.border = {
-              top: { style: "thick", color: { argb: "000000" } }, // Darker top border
-              left: { style: "thick", color: { argb: "000000" } }, // Darker left border
-              bottom: { style: "thick", color: { argb: "000000" } }, // Darker bottom border
-              right: { style: "thick", color: { argb: "000000" } }, // Darker right border
-            };
-          });
-        }
-      });
-
-      // Adjust column widths dynamically based on the content
-      worksheet.columns.forEach((column, colIndex) => {
-        let maxLength = 0;
-        column.eachCell({ includeEmpty: true }, (cell) => {
-          const cellLength = cell.value ? cell.value.toString().length : 0;
-          if (cellLength > maxLength) {
-            maxLength = cellLength;
-          }
-        });
-
-        const headerLength = headerLabels[colIndex].length;
-        column.width = Math.max(headerLength, maxLength) + 2; // Add some padding
-      });
-
-      // Ensure all cells, including empty ones, have borders
-      worksheet.eachRow((row) => {
-        row.eachCell({ includeEmpty: true }, (cell) => {
-          cell.border = {
-            top: { style: "thin" },
-            left: { style: "thin" },
-            bottom: { style: "thin" },
-            right: { style: "thin" },
-          };
-        });
-      });
-
-      // Save the workbook
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      saveAs(blob, `${reportName}.xlsx`);
     },
     handleExportToPDF: async () => {
       if (!reportCalled) {
@@ -2624,6 +2886,58 @@ export default function AddEditFormControll({ reportData }) {
       localStorage.setItem("selectedIgmRecordId", selectedReportIds || "");
 
       const url = `/htmlReports/rptIGM?reportId=1396`;
+      if (url) {
+        window.open(url, "_blank");
+      } else {
+        console.error(
+          "Unable to open the report: URL or ID is not defined.",
+          report,
+        );
+      }
+
+      const filterConditionWithoutDropdowns =
+        removeDropdownFields(filterCondition);
+      const updatedCondition = {
+        ...filterConditionWithoutDropdowns,
+        companyId,
+        branchId,
+        financialYear,
+        userId,
+        clientId,
+      };
+      const json = {
+        ...updatedCondition,
+        data: selectedRows,
+      };
+      const response = await saveEditedReport({
+        json,
+        spName: saveSpName,
+      });
+      if (response.success === true) {
+        return;
+        //toast.success(response.message);
+      }
+      //toast.error(response.message);
+    },
+    handleGenerateCargoManifestReport: async () => {
+      let selectedReportIds = null;
+      if (selectedIds.length > 0) {
+        selectedReportIds = selectedIds.map((row) => row?.id).join(",");
+      } else {
+        toast.error("Please select at least one row.");
+        return;
+      }
+      // setOpenPrintModal((prev) => !prev);
+      // setSubmittedMenuId(search);
+      // setSubmittedRecordId(selectedReportIds);
+
+      sessionStorage.setItem(
+        "selectedReportIds",
+        JSON.stringify("Cargo Manifest Report"),
+      );
+      localStorage.setItem("selectedIgmRecordId", selectedReportIds || "");
+
+      const url = `/htmlReports/rptCargoManifest?reportId=1432`;
       if (url) {
         window.open(url, "_blank");
       } else {

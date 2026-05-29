@@ -42,15 +42,158 @@ const fmtDate = (d) => {
   return dt.toLocaleDateString("en-GB");
 };
 
+const parseMaybeJson = (value) => {
+  if (typeof value !== "string") return value;
+
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+
+  if (
+    !trimmed.startsWith("[") &&
+    !trimmed.startsWith("{") &&
+    !trimmed.startsWith('"')
+  ) {
+    return value;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+
+    if (typeof parsed === "string") {
+      const inner = parsed.trim();
+      if (inner.startsWith("[") || inner.startsWith("{")) {
+        return JSON.parse(inner);
+      }
+    }
+
+    return parsed;
+  } catch {
+    return value;
+  }
+};
+
+const normalizeArrayValue = (value) => {
+  const parsed = parseMaybeJson(value);
+  if (Array.isArray(parsed)) return parsed;
+  if (parsed && typeof parsed === "object") return [parsed];
+  return [];
+};
+
+const hasLedgerShape = (value) => {
+  const parsed = parseMaybeJson(value);
+  if (!parsed || typeof parsed !== "object") return false;
+
+  return (
+    parsed.glName !== undefined ||
+    parsed.GlName !== undefined ||
+    parsed.GLName !== undefined ||
+    parsed.glData !== undefined ||
+    parsed.GlData !== undefined ||
+    parsed.GLData !== undefined
+  );
+};
+
+const unwrapLedgerPayload = (value) => {
+  const parsed = parseMaybeJson(value);
+
+  if (Array.isArray(parsed)) return parsed;
+
+  if (!parsed || typeof parsed !== "object") return [];
+
+  if (Array.isArray(parsed.data)) return parsed.data;
+  if (Array.isArray(parsed.recordset)) return parsed.recordset;
+  if (Array.isArray(parsed.result)) return parsed.result;
+
+  if (hasLedgerShape(parsed)) return [parsed];
+
+  // ✅ SQL can sometimes return JSON in an unnamed/default column.
+  // Check every property value and unwrap the first value that looks like
+  // [{ glName: [...], glData: [...] }].
+  for (const val of Object.values(parsed)) {
+    const next = parseMaybeJson(val);
+
+    if (Array.isArray(next)) {
+      const found = next.find((x) => hasLedgerShape(x));
+      if (found) return next;
+    }
+
+    if (hasLedgerShape(next)) return [next];
+
+    if (next && typeof next === "object") {
+      if (Array.isArray(next.data)) return next.data;
+      if (Array.isArray(next.recordset)) return next.recordset;
+      if (Array.isArray(next.result)) return next.result;
+    }
+  }
+
+  return [parsed];
+};
+
+const normalizeLedgerBlocks = (ledgerData) => {
+  const rawBlocks = unwrapLedgerPayload(ledgerData);
+
+  return rawBlocks
+    .map((item) => {
+      const block = parseMaybeJson(item);
+      if (!block || typeof block !== "object") return null;
+
+      const glName = normalizeArrayValue(
+        block.glName ?? block.GlName ?? block.GLName,
+      );
+
+      const glData = normalizeArrayValue(
+        block.glData ?? block.GlData ?? block.GLData,
+      );
+
+      return {
+        ...block,
+        glName,
+        glData,
+      };
+    })
+    .filter((block) => {
+      if (!block) return false;
+
+      // ✅ IMPORTANT:
+      // Earlier logic required glData.length > 0, so the complete table was
+      // hidden when only opening/closing balance existed.
+      // Keep the block when glName exists, even if glData is empty.
+      return (
+        (Array.isArray(block.glName) && block.glName.length > 0) ||
+        (Array.isArray(block.glData) && block.glData.length > 0)
+      );
+    });
+};
+
 export default function LedgerDetailedReport({
   ledgerData,
   ledgerLocalForeignRadio,
   toggle,
 }) {
-  const raw = Array.isArray(ledgerData) ? ledgerData : [];
-  const blocks = raw.filter((b) => Array.isArray(b?.glData) && b.glData.length);
+  const blocks = normalizeLedgerBlocks(ledgerData);
 
   const isLocal = String(ledgerLocalForeignRadio || "L").toUpperCase() === "L";
+
+  const handleVoucherRedirect = (row) => {
+    if (!row?.menuId && !row?.recordId) return;
+
+    const queryString = encodeURIComponent(
+      JSON.stringify({
+        id: row?.recordId,
+        menuName: row?.menuId,
+        isCopy: false,
+        isView: false,
+      }),
+    );
+
+    const url = `/invoiceControl/addEdit//${queryString}`;
+    window.open(url, "_blank");
+  };
+
+        // const appBaseUrl =
+        // typeof window !== "undefined"
+        //   ? window.location.origin.replace(/\/$/, "")
+        //   : "";
 
   if (!blocks.length) {
     return (
@@ -285,76 +428,115 @@ export default function LedgerDetailedReport({
                   </TableHead>
 
                   <TableBody>
-                    {rowsWithBalance.map((r, i) => (
-                      <TableRow
-                        key={r?.id ?? i}
-                        sx={{
-                          transition: "background-color 0.15s ease-in-out",
-                          "&:hover": {
-                            backgroundColor: "rgba(126,155,207,0.12)",
-                          },
-                        }}
-                      >
-                        <TableCell align="left">{r?.voucherNo || ""}</TableCell>
-                        <TableCell align="left">
-                          {fmtDate(r?.voucherDate)}
-                        </TableCell>
-                        <TableCell align="left">
-                          {r?.voucherType || ""}
-                        </TableCell>
-                        <TableCell align="left">
-                          {r?.referenceNo || ""}
-                        </TableCell>
-                        <TableCell align="left">
-                          {fmtDate(r?.referenceDate)}
-                        </TableCell>
-
-                        <TableCell
-                          align="left"
+                    {rowsWithBalance.length > 0 ? (
+                      rowsWithBalance.map((r, i) => (
+                        <TableRow
+                          key={r?.id ?? i}
                           sx={{
-                            maxWidth: 360,
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
+                            transition: "background-color 0.15s ease-in-out",
+                            "&:hover": {
+                              backgroundColor: "rgba(126,155,207,0.12)",
+                            },
                           }}
-                          title={r?.narration || ""}
                         >
-                          {r?.narration || ""}
-                        </TableCell>
+                          <TableCell align="left">
+                            {r?.voucherNo ? (
+                              <span
+                                onClick={() => handleVoucherRedirect(r)}
+                                style={{
+                                  cursor: "pointer",
+                                  fontWeight: 500,
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = "#1976d2";
+                                  e.currentTarget.style.textDecoration =
+                                    "underline";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = "inherit";
+                                  e.currentTarget.style.textDecoration = "none";
+                                }}
+                              >
+                                {r.voucherNo}
+                              </span>
+                            ) : (
+                              ""
+                            )}
+                          </TableCell>
+                          <TableCell align="left">
+                            {fmtDate(r?.voucherDate)}
+                          </TableCell>
+                          <TableCell align="left">
+                            {r?.voucherType || ""}
+                          </TableCell>
+                          <TableCell align="left">
+                            {r?.referenceNo || ""}
+                          </TableCell>
+                          <TableCell align="left">
+                            {fmtDate(r?.referenceDate)}
+                          </TableCell>
 
-                        {isLocal ? (
-                          <>
-                            <TableCell align="right">
-                              {fmt(r?.debitAmountHC)}
-                            </TableCell>
-                            <TableCell align="right">
-                              {fmt(r?.creditAmountHC)}
-                            </TableCell>
-                            <TableCell align="right">
-                              {fmt(r?.__balance)}
-                            </TableCell>
-                            <TableCell align="left">
-                              {r?.currencyCode || ""}
-                            </TableCell>
-                          </>
-                        ) : (
-                          <>
-                            <TableCell align="right">
-                              {fmt(r?.debitAmountFc)}
-                            </TableCell>
-                            <TableCell align="right">
-                              {fmt(r?.creditAmountFc)}
-                            </TableCell>
-                            <TableCell align="right">
-                              {fmt(r?.__balance)}
-                            </TableCell>
-                            <TableCell align="left">
-                              {r?.currencyCode || ""}
-                            </TableCell>
-                          </>
-                        )}
+                          <TableCell
+                            align="left"
+                            sx={{
+                              maxWidth: 360,
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                            title={r?.narration || ""}
+                          >
+                            {r?.narration || ""}
+                          </TableCell>
+
+                          {isLocal ? (
+                            <>
+                              <TableCell align="right">
+                                {fmt(r?.debitAmountHC)}
+                              </TableCell>
+                              <TableCell align="right">
+                                {fmt(r?.creditAmountHC)}
+                              </TableCell>
+                              <TableCell align="right">
+                                {fmt(r?.__balance)}
+                              </TableCell>
+                              <TableCell align="left">
+                                {r?.currencyCode || ""}
+                              </TableCell>
+                            </>
+                          ) : (
+                            <>
+                              <TableCell align="right">
+                                {fmt(r?.debitAmountFc)}
+                              </TableCell>
+                              <TableCell align="right">
+                                {fmt(r?.creditAmountFc)}
+                              </TableCell>
+                              <TableCell align="right">
+                                {fmt(r?.__balance)}
+                              </TableCell>
+                              <TableCell align="left">
+                                {r?.currencyCode || ""}
+                              </TableCell>
+                            </>
+                          )}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          align="center"
+                          sx={{
+                            fontWeight: 700,
+                            color: "var(--tableRowTextColor)",
+                            backgroundColor: "rgba(126,155,207,0.04)",
+                          }}
+                        >
+                          No transactions found for this ledger.
+                        </TableCell>
                       </TableRow>
-                    ))}
+                    )}
 
                     {/* ✅ TOTAL ROW (ABOVE CLOSING) */}
                     <TableRow

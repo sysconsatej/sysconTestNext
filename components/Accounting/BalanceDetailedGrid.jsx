@@ -511,7 +511,6 @@ const BalanceDetailedGrid = forwardRef(
 
       const isClickableGlName =
         enableGlNameClick &&
-        reportType === "B" &&
         isDetailMode &&
         isLeaf &&
         !hasSpecial &&

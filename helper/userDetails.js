@@ -5,8 +5,11 @@ export const getUserDetails = () => {
 
   if (!ISSERVER) {
     const storedUserData = localStorage.getItem("userData");
+    if (!storedUserData) return {};
     const decryptedData = decrypt(storedUserData);
+    if (!decryptedData) return {};
     const userData = JSON.parse(decryptedData);
+    if (!userData || userData.length === 0) return {};
     const clientCode = userData[0].clientCode;
     const clientId = userData[0].clientId;
     const emailId = userData[0].emailId;

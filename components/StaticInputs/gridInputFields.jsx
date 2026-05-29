@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable */
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import styles from "@/components/common.module.css";
 import TextField from "@mui/material/TextField";
@@ -175,7 +176,7 @@ export default function GridInputFields({
           pageNo,
           inputValueForDataFetch,
           values?.[field?.fieldname],
-          "first"
+          "first",
         );
       } else if (
         field?.controlname?.toLowerCase() === "dropdown" ||
@@ -268,11 +269,11 @@ export default function GridInputFields({
           pageNo,
           searchValue,
           values?.[field?.fieldname],
-          "search"
+          "search",
         );
         // fetchData(searchValue); // Uncomment this line to call your fetch function
       }, 50),
-      []
+      [],
     ); // 50ms debounce time
     const handleInputChange = (newInputValue) => {
       debouncedFetch(newInputValue);
@@ -574,7 +575,7 @@ export default function GridInputFields({
                   value={
                     dropDownValues.find(
                       (item) =>
-                        item.value === parseInt(values[field?.fieldname])
+                        item.value === parseInt(values[field?.fieldname]),
                     ) || null
                   }
                   noOptionsMessage={() => "No records found"}
@@ -669,7 +670,7 @@ export default function GridInputFields({
                         return formControlValidation?.[field?.functionOnBlur](
                           state,
                           field?.fieldname,
-                          e.target.value
+                          e.target.value,
                         );
                       });
 
@@ -1029,7 +1030,7 @@ export default function GridInputFields({
                     return formControlValidation?.[field?.functionOnBlur](
                       state,
                       field?.fieldname,
-                      e.target.value
+                      e.target.value,
                     );
                   });
 
@@ -1265,7 +1266,7 @@ export default function GridInputFields({
 
                             console.log(
                               "multiCallFunctions",
-                              multiCallFunctions
+                              multiCallFunctions,
                             );
 
                             multiCallFunctions.forEach((funcCall) => {
@@ -1330,7 +1331,7 @@ export default function GridInputFields({
 
                             console.log(
                               "multiCallFunctions",
-                              multiCallFunctions
+                              multiCallFunctions,
                             );
 
                             multiCallFunctions.forEach((funcCall) => {
@@ -1433,7 +1434,7 @@ export default function GridInputFields({
                               } else {
                                 // Remove value from array
                                 updatedValues = updatedValues.filter(
-                                  (val) => val !== item.id.toString()
+                                  (val) => val !== item.id.toString(),
                                 );
                               }
                               handleChange(updatedValues.join(","), field); // Join array into a string when updating
@@ -1452,7 +1453,7 @@ export default function GridInputFields({
 
                                 console.log(
                                   "multiCallFunctions",
-                                  multiCallFunctions
+                                  multiCallFunctions,
                                 );
 
                                 multiCallFunctions.forEach((funcCall) => {
@@ -1515,7 +1516,7 @@ export default function GridInputFields({
 
                                 console.log(
                                   "multiCallFunctions",
-                                  multiCallFunctions
+                                  multiCallFunctions,
                                 );
 
                                 multiCallFunctions.forEach((funcCall) => {
@@ -1848,7 +1849,7 @@ export default function GridInputFields({
                     return formControlValidation?.[field?.functionOnBlur](
                       state,
                       field?.fieldname,
-                      e.target.value
+                      e.target.value,
                     );
                   });
 
@@ -2022,7 +2023,7 @@ export default function GridInputFields({
                     return formControlValidation?.[field?.functionOnBlur](
                       state,
                       field?.fieldname,
-                      e.target.value
+                      e.target.value,
                     );
                   });
 
@@ -2115,6 +2116,11 @@ export default function GridInputFields({
                 setIsFocused(false);
               }}
               ampm={false}
+              format={
+                dateFormat === "" || dateFormat === null
+                  ? "DD-MM-YYYY HH:mm:ss"
+                  : `${dateFormat} HH:mm:ss`
+              }
               viewRenderers={{
                 hours: renderTimeViewClock,
                 minutes: renderTimeViewClock,
@@ -2196,7 +2202,7 @@ export default function GridInputFields({
                     return formControlValidation?.[field?.functionOnBlur](
                       state,
                       field?.fieldname,
-                      e.target.value
+                      e.target.value,
                     );
                   });
 

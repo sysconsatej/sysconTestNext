@@ -57,6 +57,17 @@ function rptQuotation() {
   }, []);
 
   useEffect(() => {
+    const selectedReports = Array.isArray(reportIds) ? reportIds : [];
+    const isSeaQuotationPrint = selectedReports.some((reportId) =>
+      ["Quotation Sea Print", "Quotation Sea Print FSA"].includes(reportId),
+    );
+
+    if (isSeaQuotationPrint) {
+      setPrintOrientation("portrait");
+    }
+  }, [reportIds]);
+
+  useEffect(() => {
     const fetchdata = async () => {
       const id = searchParams.get("recordId");
       if (id != null) {
@@ -1046,13 +1057,13 @@ function rptQuotation() {
         >
           <thead>
             <tr className="bg-gray-300">
-              <th className="text-center border-black border-b border-r pb-2">
+              <th className="text-center border-black border-b border-r">
                 Size / Type
               </th>
-              <th className="text-center border-black border-b border-r pt-2 pb-2">
+              <th className="text-center border-black border-b border-r">
                 Qty
               </th>
-              <th className="text-center border-black border-b border-r pt-2 pb-2">
+              <th className="text-center border-black border-b border-r">
                 Gross Weight
               </th>
             </tr>
@@ -3683,8 +3694,10 @@ Operator/ Airport Authority or any other third party.
 
     return (
       <div className="mt-1 flex flex-wrap headerTable">
-        <div className="text-xs w-full">
-          <h3 className="mt-0 font-bold">Terms & Conditions :</h3>
+        <div className="w-full" style={{ fontSize: "9px" }}>
+          <h3 className="mt-0 font-bold" style={{ fontSize: "12px" }}>
+            Terms & Conditions :
+          </h3>
           {termsArray.map((term, index) => (
             <p key={index} className="mt-2 font-bold">
               {term}
@@ -3692,10 +3705,10 @@ Operator/ Airport Authority or any other third party.
           ))}
         </div>
         <div className="mt-1">
-          <p className="mt-2">
+          <p className="mt-2" style={{ fontSize: "9px" }}>
             <strong>Thanks and Best Regards.</strong>
           </p>
-          <p>
+          <p style={{ fontSize: "9px" }}>
             <strong>For {companyName}</strong>
           </p>
         </div>
@@ -5530,27 +5543,33 @@ Operator/ Airport Authority or any other third party.
     return (
       <div className="flex flex-wrap">
         <div className="w-1/2 px-2">
-          <table className="mt-1 text-left text-xs">
+          <table className="mt-1 text-left" style={{ fontSize: "9px" }}>
             <tbody>
               <tr>
-                <th className="pr-8">Customer: </th>
-                <td className="pl-5">
+                <th className="pr-8" style={{ fontSize: "9px" }}>
+                  Customer:{" "}
+                </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].customerName !== ""
                     ? data[0].customerName
                     : ""}
                 </td>
               </tr>
               <tr className="mt-2">
-                <th className="pr-8">ATTN:</th>
-                <td className="pl-5">
+                <th className="pr-8" style={{ fontSize: "9px" }}>
+                  ATTN:
+                </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].customerPerson !== ""
                     ? data[0].customerPerson
                     : ""}
                 </td>
               </tr>
               <tr className="mt-2">
-                <th className="pr-8">Sales Person:</th>
-                <td className="pl-5">
+                <th className="pr-8" style={{ fontSize: "9px" }}>
+                  Sales Person:
+                </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data &&
                   data.length > 0 &&
                   data[0].salesExecutivePerson !== ""
@@ -5562,23 +5581,33 @@ Operator/ Airport Authority or any other third party.
           </table>
         </div>
         <div className="w-1/2 px-2">
-          <table className="mt-1 ml-20 text-left text-xs">
+          <table className="mt-1 ml-20 text-left" style={{ fontSize: "9px" }}>
             <tbody>
               <tr>
-                <th className="pr-5">Quotation No:</th>
-                <td className="pl-5">
+                <th className="pr-5" style={{ fontSize: "9px" }}>
+                  Quotation No:
+                </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].rateRequestNo !== ""
                     ? data[0].rateRequestNo
                     : ""}
                 </td>
               </tr>
               <tr>
-                <th className="pr-5">Dated:</th>
-                <td className="pl-5">{DatesFormat}</td>
+                <th className="pr-5" style={{ fontSize: "9px" }}>
+                  Dated:
+                </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
+                  {DatesFormat}
+                </td>
               </tr>
               <tr>
-                <th className="pr-5">Handled By:</th>
-                <td className="pl-5">{userName}</td>
+                <th className="pr-5" style={{ fontSize: "9px" }}>
+                  Handled By:
+                </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
+                  {userName}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -5594,27 +5623,27 @@ Operator/ Airport Authority or any other third party.
     return (
       <div className="mt-1 flex flex-wrap">
         <div className="w-1/2 px-2">
-          <table className="mt-1 text-left text-xs">
+          <table className="mt-1 text-left " style={{ fontSize: "9px" }}>
             <tbody>
               <tr>
-                <th>Shipper:</th>
-                <td className="pl-5">
+                <th style={{ fontSize: "9px" }}>Shipper:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].shipperName !== ""
                     ? data[0].shipperName
                     : ""}
                 </td>
               </tr>
               <tr>
-                <th>Pickup Address:</th>
-                <td className="pl-5">
+                <th style={{ fontSize: "9px" }}>Pickup Address:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].pickupAddress !== ""
                     ? data[0].pickupAddress
                     : ""}
                 </td>
               </tr>
               <tr>
-                <th>Trade Terms:</th>
-                <td className="pl-5">
+                <th style={{ fontSize: "9px" }}>Trade Terms:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].pickupAddress !== ""
                     ? data[0].tradeTerms
                     : ""}
@@ -5624,27 +5653,27 @@ Operator/ Airport Authority or any other third party.
           </table>
         </div>
         <div className="w-1/2 px-2">
-          <table className="mt-1 ml-20 text-left text-xs">
+          <table className="mt-1 ml-20 text-left" style={{ fontSize: "9px" }}>
             <tbody>
               <tr>
-                <th>Consignee:</th>
-                <td className="pl-5">
+                <th style={{ fontSize: "9px" }}>Consignee:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].consName !== ""
                     ? data[0].consigneeText
                     : ""}
                 </td>
               </tr>
               <tr>
-                <th>Delivery Address:</th>
-                <td className="pl-5">
+                <th style={{ fontSize: "9px" }}>Delivery Address:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].deliveryAddress !== ""
                     ? data[0].deliveryAddress
                     : ""}
                 </td>
               </tr>
               <tr>
-                <th>Validity From:</th>
-                <td className="pl-5">
+                <th style={{ fontSize: "9px" }}>Validity From:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].validityFrom
                     ? new Date(data[0].validityFrom).toLocaleDateString(
                         "en-GB",
@@ -5699,14 +5728,17 @@ Operator/ Airport Authority or any other third party.
     return (
       <div>
         <div
-          className="flex flex-wrap bg-gray-300 justify-center items-center mt-5 text-xs w-full tableBg"
+          className="flex flex-wrap bg-gray-300 justify-center items-center mt-2 text-xs w-full tableBg"
           style={{
             borderTop: "1px solid black",
             borderRight: "1px solid black",
             borderLeft: "1px solid black",
+            fontSize: "9px",
           }}
         >
-          <th className="mt-1 mb-3">Shipment Details</th>
+          <th className="font-bold " style={{ fontSize: "9px" }}>
+            Shipment Details
+          </th>
         </div>
         <div
           className=" flex flex-wrap "
@@ -5714,38 +5746,39 @@ Operator/ Airport Authority or any other third party.
             borderTop: "1px solid black",
             borderRight: "1px solid black",
             borderLeft: "1px solid black",
+            fontSize: "9px",
           }}
         >
-          <div className="w-1/3 px-2 border-r border-black">
-            <table className=" mt-1 text-left text-xs">
-              <tr>
-                <th>POR: </th>
-                <td className="pl-5">
+          <div className="w-1/3 px-1 border-r border-black">
+            <table className="text-left" style={{ fontSize: "9px" }}>
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>POR: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].plrName !== ""
                     ? data[0].plrName
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th>FPD: </th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>FPD: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].fpdName !== ""
                     ? data[0].fpdName
                     : ""}
                 </td>
               </tr>
 
-              <tr>
-                <th>Cargo Type: </th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Cargo Type: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].cargoType !== ""
                     ? data[0].cargoType
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th>Origin Rate:</th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Origin Rate:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].originFreeDays !== ""
                     ? data[0].originFreeDays
                     : ""}
@@ -5761,31 +5794,35 @@ Operator/ Airport Authority or any other third party.
               </tr>
             </table>
           </div>
-          <div className="w-1/3 px-2 border-r border-black">
-            <table className="mt-1 text-left text-xs">
-              <tr>
-                <th>POL:</th>
-                <td className="pl-5">
+          <div className="w-1/3 px-1 border-r border-black">
+            <table className="mt-1 text-left" style={{ fontSize: "9px" }}>
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>POL:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].polName !== ""
                     ? data[0].polName
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th>EST Date:</th>
-                <td className="pl-5">{expectedSailDate}</td>
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>EST Date:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
+                  {expectedSailDate}
+                </td>
               </tr>
-              <tr>
-                <th>Commodity:</th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Commodity:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].commodity !== ""
                     ? data[0].commodity
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th className="pb-3">Destination Rate:</th>
-                <td className="pl-5 pb-3">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }} className="pb-3">
+                  Destination Rate:
+                </th>
+                <td className="pl-5 pb-3" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].destinationFreeDays !== ""
                     ? data[0].destinationFreeDays
                     : ""}
@@ -5803,19 +5840,19 @@ Operator/ Airport Authority or any other third party.
               </tr>
             </table>
           </div>
-          <div className="w-1/3 px-2">
-            <table className="mt-1 text-left text-xs">
-              <tr>
-                <th>POD: </th>
-                <td className="pl-5">
+          <div className="w-1/3 px-1">
+            <table className="mt-1 text-left" style={{ fontSize: "9px" }}>
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>POD: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].podName !== ""
                     ? data[0].podName
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th>Gross Weight:</th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Gross Weight:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].cargoWt !== ""
                     ? data[0].cargoWt
                     : ""}{" "}
@@ -5824,17 +5861,17 @@ Operator/ Airport Authority or any other third party.
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th>Shipment Type: </th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Shipment Type: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].natureOfCargoName !== ""
                     ? data[0].natureOfCargoName
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th>Validity To: </th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Validity To: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].validityTo
                     ? new Date(data[0].validityTo).toLocaleDateString("en-GB", {
                         day: "numeric",
@@ -5848,7 +5885,7 @@ Operator/ Airport Authority or any other third party.
           </div>
         </div>
         <div className="text-xs w-full" style={{ border: "1px solid black" }}>
-          <th className="pt-2 pb-3">
+          <th className="pl-2" style={{ fontSize: "9px" }}>
             Remarks:{" "}
             {data && data.length > 0 && data[0].remarks !== ""
               ? data[0].remarks
@@ -5913,35 +5950,35 @@ Operator/ Airport Authority or any other third party.
           }}
         >
           <div className="w-1/3 px-2 border-r border-black">
-            <table className=" mt-1 text-left text-xs">
-              <tr>
-                <th>POR: </th>
-                <td className="pl-5">
+            <table className=" mt-1 text-left" style={{ fontSize: "9px" }}>
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>POR: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].plrName !== ""
                     ? data[0].plrName
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th>FPD: </th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>FPD: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].fpdName !== ""
                     ? data[0].fpdName
                     : ""}
                 </td>
               </tr>
 
-              <tr>
-                <th>Cargo Type: </th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Cargo Type: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].cargoType !== ""
                     ? data[0].cargoType
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th>Origin Rate:</th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Origin Rate:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].originFreeDays !== ""
                     ? data[0].originFreeDays
                     : ""}
@@ -5958,37 +5995,39 @@ Operator/ Airport Authority or any other third party.
                   {"per day"}
                 </td>
               </tr>
-              <tr>
-                <th>Carrier: </th>
-                <td className="pl-5"></td>
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Carrier: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}></td>
               </tr>
             </table>
           </div>
           <div className="w-1/3 px-2 border-r border-black">
-            <table className="mt-1 text-left text-xs">
-              <tr>
-                <th>POL:</th>
-                <td className="pl-5">
+            <table className="mt-1 text-left" style={{ fontSize: "9px" }}>
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>POL:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].polName !== ""
                     ? data[0].polName
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th>EST Date:</th>
-                <td className="pl-5">{expectedSailDate}</td>
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>EST Date:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
+                  {expectedSailDate}
+                </td>
               </tr>
-              <tr>
-                <th>Commodity:</th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Commodity:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].commodity !== ""
                     ? data[0].commodity
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th>Destination Rate:</th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Destination Rate:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].destinationFreeDays !== ""
                     ? data[0].destinationFreeDays
                     : ""}
@@ -6007,9 +6046,11 @@ Operator/ Airport Authority or any other third party.
                   {"per day"}
                 </td>
               </tr>
-              <tr>
-                <th className="pb-3">Principal: </th>
-                <td className="pl-5 pb-3">
+              <tr style={{ fontSize: "9px" }}>
+                <th className="pb-3" style={{ fontSize: "9px" }}>
+                  Principal:
+                </th>
+                <td className="pl-5 pb-3" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].mloName !== ""
                     ? data[0].mloName
                     : ""}
@@ -6018,18 +6059,18 @@ Operator/ Airport Authority or any other third party.
             </table>
           </div>
           <div className="w-1/3 px-2">
-            <table className="mt-1 text-left text-xs">
-              <tr>
-                <th>POD: </th>
-                <td className="pl-5">
+            <table className="mt-1 text-left" style={{ fontSize: "9px" }}>
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>POD: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].podName !== ""
                     ? data[0].podName
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th>Gross Weight:</th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Gross Weight:</th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].cargoWt !== ""
                     ? data[0].cargoWt
                     : ""}{" "}
@@ -6038,17 +6079,17 @@ Operator/ Airport Authority or any other third party.
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th>Shipment Type: </th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Shipment Type: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].natureOfCargoName !== ""
                     ? data[0].natureOfCargoName
                     : ""}
                 </td>
               </tr>
-              <tr>
-                <th>Validity To: </th>
-                <td className="pl-5">
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Validity To: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].validityTo
                     ? new Date(data[0].validityTo).toLocaleDateString("en-GB", {
                         day: "numeric",
@@ -6061,8 +6102,11 @@ Operator/ Airport Authority or any other third party.
             </table>
           </div>
         </div>
-        <div className="text-xs w-full" style={{ border: "1px solid black" }}>
-          <th className="pt-2 pb-3">
+        <div
+          className="text-xs w-full"
+          style={{ border: "1px solid black", fontSize: "9px" }}
+        >
+          <th className="pt-2 pb-3" style={{ fontSize: "9px" }}>
             Remarks:{" "}
             {data && data.length > 0 && data[0].remarks !== ""
               ? data[0].remarks
@@ -6079,18 +6123,27 @@ Operator/ Airport Authority or any other third party.
     return (
       <div className="mt-1 flex flex-wrap headerTable headerTable">
         <table
-          className="mt-0.5 text-left text-xs"
-          style={{ border: "1px solid black", width: "50%" }}
+          className="mt-0.5 text-left"
+          style={{ border: "1px solid black", width: "50%", fontSize: "9px" }}
         >
           <thead>
             <tr className="bg-gray-300">
-              <th className="text-center border-black border-b border-r pb-2">
+              <th
+                className="text-center border-black border-b border-r"
+                style={{ fontSize: "9px" }}
+              >
                 Size / Type
               </th>
-              <th className="text-center border-black border-b border-r pt-2 pb-2">
+              <th
+                className="text-center border-black border-b border-r"
+                style={{ fontSize: "9px" }}
+              >
                 Qty
               </th>
-              <th className="text-center border-black border-b border-r pt-2 pb-2">
+              <th
+                className="text-center border-black border-b border-r"
+                style={{ fontSize: "9px" }}
+              >
                 Gross Weight
               </th>
             </tr>
@@ -6098,15 +6151,24 @@ Operator/ Airport Authority or any other third party.
           <tbody>
             {rateRequestQty.map((item, index) => (
               <tr key={`item-${index}`}>
-                <td className="text-center border-black border-b border-r pt-2 pb-3">
+                <td
+                  className="text-center border-black border-b border-r pt-1 pb-1"
+                  style={{ fontSize: "9px" }}
+                >
                   {`${item?.sizeName || ""} / ${item?.typeName || ""}`}
                 </td>
-                <td className="text-center border-black border-b border-r pt-2 pb-3">
+                <td
+                  className="text-center border-black border-b border-r pt-1 pb-1"
+                  style={{ fontSize: "9px" }}
+                >
                   {item.qty && item.qty !== ""
                     ? parseFloat(item.qty).toFixed(2)
                     : ""}
                 </td>
-                <td className="text-center border-black border-b border-r pt-2 pb-3">
+                <td
+                  className="text-center border-black border-b border-r pt-1 pb-1"
+                  style={{ fontSize: "9px" }}
+                >
                   {/* {item.qty && item.wtUnitName !== '' ? item.wtUnitName : ''} */}
                   {`${item?.cargoWt ? item.cargoWt : ""} ${
                     item?.wtUnitName ? item.wtUnitName : ""
@@ -6174,34 +6236,64 @@ Operator/ Airport Authority or any other third party.
         >
           <thead>
             <tr className="bg-gray-300">
-              <th className="text-center border-black border-b border-r pt-2">
+              <th
+                className="text-center border-black border-b border-r pt-1"
+                style={{ fontSize: "9px" }}
+              >
                 Charge Description
               </th>
-              <th className="text-center border-black border-b border-r pt-2">
+              <th
+                className="text-center border-black border-b border-r pt-1"
+                style={{ fontSize: "9px" }}
+              >
                 Size/Type
               </th>
-              <th className="text-center border-black border-b border-r pt-2">
+              <th
+                className="text-center border-black border-b border-r pt-1"
+                style={{ fontSize: "9px" }}
+              >
                 Qty
               </th>
-              <th className="text-center border-black border-b border-r pt-2">
+              <th
+                className="text-center border-black border-b border-r pt-1"
+                style={{ fontSize: "9px" }}
+              >
                 Curr
               </th>
-              <th className="text-center border-black border-b border-r pt-2">
+              <th
+                className="text-center border-black border-b border-r pt-1"
+                style={{ fontSize: "9px" }}
+              >
                 Ex. Rate
               </th>
-              <th className="text-center border-black border-b border-r pt-2">
+              <th
+                className="text-center border-black border-b border-r pt-1"
+                style={{ fontSize: "9px" }}
+              >
                 Rate
               </th>
-              <th className="text-center border-black border-b border-r pt-2">
+              <th
+                className="text-center border-black border-b border-r pt-1"
+                style={{ fontSize: "9px" }}
+              >
                 Amount
               </th>
-              <th className="text-center border-black border-b border-r pt-2">
+              <th
+                className="text-center border-black border-b border-r pt-1"
+                style={{ fontSize: "9px" }}
+              >
                 Tax Amount
               </th>
-              <th className="text-center border-black border-b border-r pt-2">
+              <th
+                className="text-center border-black border-b border-r pt-1"
+                style={{ fontSize: "9px" }}
+              >
                 Total Amount
               </th>
-              <th className="text-center border-black border-b border-r pt-2">
+              <th
+                className="text-center border-black border-b border-r pt-1"
+                style={{ fontSize: "9px" }}
+              >
                 Remarks:
               </th>
             </tr>
@@ -6214,12 +6306,19 @@ Operator/ Airport Authority or any other third party.
                 <tr key={`item-${index}`}>
                   <td
                     className="px-3 border-black border-b border-r py-px"
-                    style={{ maxWidth: "150px", overflowWrap: "break-word" }}
+                    style={{
+                      maxWidth: "150px",
+                      overflowWrap: "break-word",
+                      fontSize: "9px",
+                    }}
                   >
                     {`${item.chargeDescription || ""}`}
                   </td>
 
-                  <td className="text-left border-black border-b border-r py-px">
+                  <td
+                    className="text-left border-black border-b border-r py-px"
+                    style={{ fontSize: "9px" }}
+                  >
                     {item.sizeName &&
                     item.sizeName !== "" &&
                     item.sizeName !== "null"
@@ -6232,49 +6331,70 @@ Operator/ Airport Authority or any other third party.
                       ? item.typeName
                       : ""}
                   </td>
-                  <td className="text-right border-black border-b border-r py-px">
+                  <td
+                    className="text-right border-black border-b border-r py-px"
+                    style={{ fontSize: "9px" }}
+                  >
                     {typeof item.qty === "number" &&
                     item.qty !== null &&
                     item.qty !== ""
                       ? item.qty.toFixed(2)
                       : ""}
                   </td>
-                  <td className="text-right border-black border-b border-r py-px">
+                  <td
+                    className="text-right border-black border-b border-r py-px"
+                    style={{ fontSize: "9px" }}
+                  >
                     {item.sellCurrency &&
                     item.sellCurrency !== "" &&
                     item.sellCurrency !== "null"
                       ? item.sellCurrency
                       : ""}
                   </td>
-                  <td className="text-left border-black border-b border-r py-px">
+                  <td
+                    className="text-left border-black border-b border-r py-px"
+                    style={{ fontSize: "9px" }}
+                  >
                     {typeof item.sellExchangeRate === "number" &&
                     item.sellExchangeRate !== null &&
                     item.sellExchangeRate !== ""
                       ? item.sellExchangeRate.toFixed(2)
                       : ""}
                   </td>
-                  <td className="text-right border-black border-b border-r py-px">
+                  <td
+                    className="text-right border-black border-b border-r py-px"
+                    style={{ fontSize: "9px" }}
+                  >
                     {typeof item.sellRate === "number" &&
                     item.sellRate !== null &&
                     item.sellRate !== ""
                       ? item.sellRate.toFixed(2)
                       : ""}
                   </td>
-                  <td className="text-right border-black border-b border-r py-px">
+                  <td
+                    className="text-right border-black border-b border-r py-px"
+                    style={{ fontSize: "9px" }}
+                  >
                     {typeof item.sellAmount === "number" &&
                     item.sellAmount !== null &&
                     item.sellAmount !== ""
                       ? item.sellAmount.toFixed(2)
                       : ""}
                   </td>
-                  <td className="text-right border-black border-b border-r py-px">
+                  <td
+                    className="text-right border-black border-b border-r py-px"
+                    style={{ fontSize: "9px" }}
+                  >
                     {typeof item.sellTaxAmount === "number" &&
                     item.sellTaxAmount !== null &&
                     item.sellTaxAmount !== ""
                       ? item.sellTaxAmount.toFixed(2)
                       : ""}
                   </td>
-                  <td className="text-right border-black border-b border-r py-px">
+                  <td
+                    className="text-right border-black border-b border-r py-px"
+                    style={{ fontSize: "9px" }}
+                  >
                     {typeof item.sellTotalAmount === "number" &&
                     item.sellTotalAmount !== null &&
                     item.sellTotalAmount !== ""
@@ -6283,7 +6403,11 @@ Operator/ Airport Authority or any other third party.
                   </td>
                   <td
                     className="text-left border-black border-b border-r py-px"
-                    style={{ maxWidth: "150px", overflowWrap: "break-word" }}
+                    style={{
+                      maxWidth: "150px",
+                      overflowWrap: "break-word",
+                      fontSize: "9px",
+                    }}
                   >
                     {item.remarks &&
                     item.remarks !== "" &&
@@ -6303,25 +6427,55 @@ Operator/ Airport Authority or any other third party.
                 const subtotal = subtotals[item.sellCurrency];
                 rows.push(
                   <tr key={`subtotal-${item.sellCurrency}`}>
-                    <td className="border-black border-b border-r font-bold py-px">
+                    <td
+                      className="border-black border-b border-r font-bold py-px"
+                      style={{ fontSize: "9px" }}
+                    >
                       Total ({item.sellCurrency}):
                     </td>
-                    <td className="text-center border-black border-b border-r"></td>
-                    <td className="text-center border-black border-b border-r"></td>
-                    <td className="text-center border-black border-b border-r"></td>
-                    <td className="text-center border-black border-b border-r"></td>
-                    <td className="text-center border-black border-b border-r"></td>
-                    <td className="text-right border-black border-b border-r font-bold py-px">
+                    <td
+                      className="text-center border-black border-b border-r"
+                      style={{ fontSize: "9px" }}
+                    ></td>
+                    <td
+                      className="text-center border-black border-b border-r"
+                      style={{ fontSize: "9px" }}
+                    ></td>
+                    <td
+                      className="text-center border-black border-b border-r"
+                      style={{ fontSize: "9px" }}
+                    ></td>
+                    <td
+                      className="text-center border-black border-b border-r"
+                      style={{ fontSize: "9px" }}
+                    ></td>
+                    <td
+                      className="text-center border-black border-b border-r"
+                      style={{ fontSize: "9px" }}
+                    ></td>
+                    <td
+                      className="text-right border-black border-b border-r font-bold py-px"
+                      style={{ fontSize: "9px" }}
+                    >
                       {subtotal?.amount.toFixed(2)} ({item.sellCurrency})
                     </td>
-                    <td className="text-right border-black border-b border-r font-bold py-px">
+                    <td
+                      className="text-right border-black border-b border-r font-bold py-px"
+                      style={{ fontSize: "9px" }}
+                    >
                       {subtotal?.taxAmount.toFixed(2)}({item.sellCurrency})
                     </td>
-                    <td className="text-right border-black border-b border-r font-bold py-px">
+                    <td
+                      className="text-right border-black border-b border-r font-bold py-px"
+                      style={{ fontSize: "9px" }}
+                    >
                       {subtotal?.totalAmount.toFixed(2)}({item.sellCurrency}
                       ){" "}
                     </td>
-                    <td className="text-center border-black border-b border-r"></td>
+                    <td
+                      className="text-center border-black border-b border-r"
+                      style={{ fontSize: "9px" }}
+                    ></td>
                   </tr>,
                 );
               }
@@ -6331,7 +6485,7 @@ Operator/ Airport Authority or any other third party.
         </table>
         <div
           className="mt-2 flex flex-wrap"
-          style={{ width: "100%", marginTop: "5px" }}
+          style={{ width: "100%", marginTop: "5px", fontSize: "9px" }}
         >
           <div
             className="text-xs w-full flex justify-between"
@@ -6339,10 +6493,16 @@ Operator/ Airport Authority or any other third party.
               borderTop: "1px solid black",
               borderRight: "1px solid black",
               borderLeft: "1px solid black",
+              fontSize: "9px",
             }}
           >
-            <div className="mt-2 font-bold py-px">Grand Total:</div>
-            <div className="mt-2 mr-10 font-bold py-px">
+            <div className="mt-2 font-bold py-px" style={{ fontSize: "9px" }}>
+              Grand Total:
+            </div>
+            <div
+              className="mt-2 mr-10 font-bold py-px"
+              style={{ fontSize: "9px" }}
+            >
               {grandTotal.toFixed(2)}
             </div>
           </div>
@@ -6350,8 +6510,13 @@ Operator/ Airport Authority or any other third party.
             className="text-xs w-full flex justify-between"
             style={{ border: "1px solid black" }}
           >
-            <div className="mt-2 font-bold py-px">Amount in Words:</div>
-            <div className="mt-2 font-bold py-px flex-grow text-left">
+            <div className="mt-2 font-bold py-px" style={{ fontSize: "9px" }}>
+              Amount in Words:
+            </div>
+            <div
+              className="mt-2 font-bold py-px flex-grow text-left"
+              style={{ fontSize: "9px" }}
+            >
               {capitalizeFirstLetters(grandTotalInWords)} ONLY
             </div>
           </div>
@@ -7523,20 +7688,34 @@ Operator/ Airport Authority or any other third party.
       if (isNewVendor && lastVendor !== null) {
         // Insert Total Row before switching to new vendor
         vendorRows.push(
-          <tr key={`total-${lastVendor}`} className="bg-gray-300 font-semibold">
+          <tr
+            key={`total-${lastVendor}`}
+            className="bg-gray-300 font-semibold"
+            style={{ fontSize: "9px" }}
+          >
             <td
-              className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
+              className="text-right border-black border-b border-r  pt-1 pb-1 pe-2"
               colSpan="6"
+              style={{ fontSize: "9px" }}
             >
               Total ({currency})
             </td>
-            <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+            <td
+              className="text-right border-black border-b border-r  pt-1 pb-1 pe-2"
+              style={{ fontSize: "9px" }}
+            >
               {totalAmount.toFixed(2)}
             </td>
-            <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+            <td
+              className="text-right border-black border-b border-r  pt-1 pb-1 pe-2"
+              style={{ fontSize: "9px" }}
+            >
               {totalTotalAmount.toFixed(2)}
             </td>
-            <td className="border-black border-b border-r pt-2 pb-2"></td>
+            <td
+              className="border-black border-b border-r  pt-1 pb-1"
+              style={{ fontSize: "9px" }}
+            ></td>
           </tr>,
         );
 
@@ -7548,9 +7727,14 @@ Operator/ Airport Authority or any other third party.
       if (isNewVendor) {
         // Push vendor name row before adding new charges
         vendorRows.push(
-          <tr key={`vendor-${item.vendorName}`} className="bg-gray-200">
+          <tr
+            key={`vendor-${item.vendorName}`}
+            className="bg-gray-200"
+            style={{ fontSize: "9px" }}
+          >
             <td
-              className="text-left font-semibold border-black border-b border-r pt-2 pb-2 ps-4"
+              style={{ fontSize: "10px" }}
+              className="text-left font-semibold border-black border-b border-r  ps-4"
               colSpan="9"
             >
               {item.vendorName}
@@ -7567,33 +7751,64 @@ Operator/ Airport Authority or any other third party.
 
       vendorRows.push(
         <tr key={`charge-${index}`}>
-          <td className="border-black border-b border-r pt-2 pb-3 ps-4">
+          <td
+            className="border-black border-b border-r  pt-1 pb-1 ps-4"
+            style={{
+              maxWidth: "150px",
+              overflowWrap: "break-word",
+              fontSize: "9px",
+            }}
+          >
             {item.chargeDescription || ""}
           </td>
-          <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+          <td
+            className="border-black border-b border-r  pt-1 pb-1 ps-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sizeName} / {item.typeName} / {item.tankType}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r  pt-1 pb-1 pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.qty && item.qty !== ""
               ? parseFloat(item.qty).toFixed(2)
               : 0.0}
           </td>
-          <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+          <td
+            className="border-black border-b border-r  pt-1 pb-1 ps-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellCurrencyName || ""}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r  pt-1 pb-1 pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellExchangeRate || 0.0}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellRate || 0.0}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellAmountHc || 0.0}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellTotalAmount || 0.0}
           </td>
-          <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+          <td
+            className="border-black border-b border-r pt-1 pb-1 ps-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.remarks || ""}
           </td>
         </tr>,
@@ -7608,18 +7823,28 @@ Operator/ Airport Authority or any other third party.
           className="bg-gray-300 font-semibold"
         >
           <td
-            className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
+            className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+            style={{ fontSize: "9px" }}
             colSpan="6"
           >
             Total ({currency})
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+          <td
+            className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {totalAmount.toFixed(2)}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+          <td
+            className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {totalTotalAmount.toFixed(2)}
           </td>
-          <td className="border-black border-b border-r pt-2 pb-2"></td>
+          <td
+            className="border-black border-b border-r pt-1 pb-1"
+            style={{ fontSize: "9px" }}
+          ></td>
         </tr>,
       );
     }
@@ -7640,40 +7865,67 @@ Operator/ Airport Authority or any other third party.
           <>
             <table
               className="mt-0.5 text-left text-xs w-full"
-              style={{ border: "1px solid black" }}
+              style={{ border: "1px solid black", fontSize: "9px" }}
             >
               <thead>
                 <tr className="bg-gray-300">
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
-                    Charge Description
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Charge Description B
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Size/Type
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Qty
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Curr
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Ex. Rate
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Rate
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Total Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Remarks
                   </th>
                 </tr>
               </thead>
-              <tbody>{vendorRows}</tbody>
+              <tbody style={{ fontSize: "9px" }}>{vendorRows}</tbody>
             </table>
           </>
         )}
@@ -7687,83 +7939,150 @@ Operator/ Airport Authority or any other third party.
             >
               <thead>
                 <tr className="bg-gray-300">
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Charge Description
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Size/Type
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Qty
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Curr
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Ex. Rate
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Rate
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Total Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Remarks
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {recordsWithoutVendor.map((item, index) => (
-                  <tr key={`no-vendor-${index}`}>
-                    <td className="border-black border-b border-r pt-2 pb-3 ps-4">
+                  <tr key={`no-vendor-${index}`} style={{ fontSize: "9px" }}>
+                    <td
+                      className="border-black border-b border-r"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.chargeDescription}
                     </td>
-                    <td className="border-black border-b border-r pt-2 pb-3 ps-4">
+                    <td
+                      className="border-black border-b border-r pt-1"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sizeName} / {item.typeName} / {item.tankType}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.qty && item.qty !== ""
                         ? parseFloat(item.qty).toFixed(2)
                         : ""}
                     </td>
-                    <td className="border-black text-center border-b border-r pt-2 pb-3 ps-2">
+                    <td
+                      className="border-black text-center border-b border-r ps-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellCurrencyName}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellExchangeRate || 0.0}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellRate || 0.0}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellAmountHc || 0.0}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellTotalAmount || 0.0}
                     </td>
-                    <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+                    <td
+                      className="border-black border-b border-r ps-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.remarks || ""}
                     </td>
                   </tr>
                 ))}
-                <tr className="bg-gray-300 font-semibold">
+                <tr
+                  className="bg-gray-300 font-semibold"
+                  style={{ fontSize: "9px" }}
+                >
                   <td
-                    className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
+                    className="text-right border-black border-b border-r pe-2"
+                    style={{ fontSize: "9px" }}
                     colSpan="6"
                   >
                     Total ({currency})
                   </td>
-                  <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+                  <td
+                    className="text-right border-black border-b border-r pe-2"
+                    style={{ fontSize: "9px" }}
+                  >
                     {noVendorTotalAmount.toFixed(2)}
                   </td>
-                  <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+                  <td
+                    className="text-right border-black border-b border-r pe-2"
+                    style={{ fontSize: "9px" }}
+                  >
                     {noVendorTotalTotalAmount.toFixed(2)}
                   </td>
-                  <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2"></td>
+                  <td
+                    className="text-right border-black border-b border-r pe-2"
+                    style={{ fontSize: "9px" }}
+                  ></td>
                 </tr>
               </tbody>
             </table>
@@ -7772,15 +8091,25 @@ Operator/ Airport Authority or any other third party.
 
         {/* Table for Grand Total */}
         <table className="mt-2 text-left text-xs w-full">
-          <tr className="bg-gray-300 border border-black">
-            <th className="text-left pt-2 pb-2 ps-4">
+          <tr
+            className="bg-gray-300 border border-black"
+            style={{ fontSize: "9px" }}
+          >
+            <th className="text-left ps-4" style={{ fontSize: "9px" }}>
               Grand Total ({currency}){" "}
             </th>
-            <th className="text-left pt-2 pb-2">{grandTotalAmount}</th>
+            <th className="text-left" style={{ fontSize: "9px" }}>
+              {grandTotalAmount}
+            </th>
           </tr>
-          <tr className="bg-gray-300 border border-black">
-            <th className="text-left pt-2 pb-2 ps-4">Amount in Words </th>
-            <th className="text-left pt-2 pb-2 uppercase">
+          <tr
+            className="bg-gray-300 border border-black"
+            style={{ fontSize: "9px" }}
+          >
+            <th className="text-left ps-4" style={{ fontSize: "9px" }}>
+              Amount in Words
+            </th>
+            <th className="text-left uppercase" style={{ fontSize: "9px" }}>
               {" "}
               {currency} {grandTotalInWords}
             </th>
@@ -7839,20 +8168,34 @@ Operator/ Airport Authority or any other third party.
       if (isNewVendor && lastVendor !== null) {
         // Insert Total Row before switching to new vendor
         vendorRows.push(
-          <tr key={`total-${lastVendor}`} className="bg-gray-300 font-semibold">
+          <tr
+            key={`total-${lastVendor}`}
+            className="bg-gray-300 font-semibold"
+            style={{ fontSize: "9px" }}
+          >
             <td
-              className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
+              className="text-right border-black border-b border-r"
               colSpan="6"
+              style={{ fontSize: "9px" }}
             >
               Total ({currency})
             </td>
-            <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+            <td
+              className="text-right border-black border-b border-r"
+              style={{ fontSize: "9px" }}
+            >
               {totalAmount.toFixed(2)}
             </td>
-            <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+            <td
+              className="text-right border-black border-b border-r"
+              style={{ fontSize: "9px" }}
+            >
               {totalTotalAmount.toFixed(2)}
             </td>
-            <td className="border-black border-b border-r pt-2 pb-2"></td>
+            <td
+              className="border-black border-b border-r"
+              style={{ fontSize: "9px" }}
+            ></td>
           </tr>,
         );
 
@@ -7864,7 +8207,11 @@ Operator/ Airport Authority or any other third party.
       if (isNewVendor) {
         // Push vendor name row before adding new charges
         vendorRows.push(
-          <tr key={`vendor-${item.vendorName}`} className="bg-gray-200">
+          <tr
+            key={`vendor-${item.vendorName}`}
+            className="bg-gray-200"
+            style={{ fontSize: "9px" }}
+          >
             <td
               className="text-left font-semibold border-black border-b border-r pt-2 pb-2 ps-4"
               colSpan="9"
@@ -7882,34 +8229,61 @@ Operator/ Airport Authority or any other third party.
       totalTotalAmount += parseFloat(item.sellTotalAmount) || 0.0;
 
       vendorRows.push(
-        <tr key={`charge-${index}`}>
-          <td className="border-black border-b border-r pt-2 pb-3 ps-4">
+        <tr key={`charge-${index}`} style={{ fontSize: "9px" }}>
+          <td
+            className="border-black border-b border-r ps-4"
+            style={{ fontSize: "9px" }}
+          >
             {item.chargeDescription || ""}
           </td>
-          <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+          <td
+            className="border-black border-b border-r ps-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sizeName} / {item.typeName} / {item.tankType}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.qty && item.qty !== ""
               ? parseFloat(item.qty).toFixed(2)
               : 0.0}
           </td>
-          <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+          <td
+            className="border-black border-b border-r ps-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellCurrencyName || ""}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellExchangeRate || 0.0}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellRate || 0.0}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellAmountHc || 0.0}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r  pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellTotalAmount || 0.0}
           </td>
-          <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+          <td
+            className="border-black border-b border-r ps-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.remarks || ""}
           </td>
         </tr>,
@@ -7922,20 +8296,31 @@ Operator/ Airport Authority or any other third party.
         <tr
           key={`final-total-${lastVendor}`}
           className="bg-gray-300 font-semibold"
+          style={{ fontSize: "9px" }}
         >
           <td
             className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
             colSpan="6"
+            style={{ fontSize: "9px" }}
           >
             Total ({currency})
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+          <td
+            className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {totalAmount.toFixed(2)}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+          <td
+            className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {totalTotalAmount.toFixed(2)}
           </td>
-          <td className="border-black border-b border-r pt-2 pb-2"></td>
+          <td
+            className="border-black border-b border-r pt-2 pb-2"
+            style={{ fontSize: "9px" }}
+          ></td>
         </tr>,
       );
     }
@@ -7960,36 +8345,63 @@ Operator/ Airport Authority or any other third party.
             >
               <thead>
                 <tr className="bg-gray-300">
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Charge Description
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Size/Type
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Qty
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Curr
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Ex. Rate
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Rate
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Total Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Remarks
                   </th>
                 </tr>
               </thead>
-              <tbody>{vendorRows}</tbody>
+              {/* <tbody>{vendorRows}</tbody> */}
             </table>
           </>
         )}
@@ -8003,31 +8415,58 @@ Operator/ Airport Authority or any other third party.
             >
               <thead>
                 <tr className="bg-gray-300">
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Charge Description
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Size/Type
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Qty
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Curr
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Ex. Rate
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Rate
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Total Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r"
+                    style={{ fontSize: "9px" }}
+                  >
                     Remarks
                   </th>
                 </tr>
@@ -8035,51 +8474,88 @@ Operator/ Airport Authority or any other third party.
               <tbody>
                 {recordsWithoutVendor.map((item, index) => (
                   <tr key={`no-vendor-${index}`}>
-                    <td className="border-black border-b border-r pt-2 pb-3 ps-4">
+                    <td
+                      className="border-black border-b border-r ps-4"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.chargeDescription}
                     </td>
-                    <td className="border-black border-b border-r pt-2 pb-3 ps-4">
+                    <td
+                      className="border-black border-b border-r ps-4"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sizeName} / {item.typeName} / {item.tankType}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.qty && item.qty !== ""
                         ? parseFloat(item.qty).toFixed(2)
                         : ""}
                     </td>
-                    <td className="border-black text-center border-b border-r pt-2 pb-3 ps-2">
+                    <td
+                      className="border-black text-center border-b border-r ps-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellCurrencyName}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellExchangeRate || 0.0}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellRate || 0.0}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellAmountHc || 0.0}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellTotalAmount || 0.0}
                     </td>
-                    <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+                    <td
+                      className="border-black border-b border-r ps-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.remarks || ""}
                     </td>
                   </tr>
                 ))}
                 <tr className="bg-gray-300 font-semibold">
                   <td
-                    className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
+                    className="text-right border-black border-b border-r pe-2"
                     colSpan="6"
+                    style={{ fontSize: "9px" }}
                   >
                     Total ({currency})
                   </td>
-                  <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+                  <td
+                    className="text-right border-black border-b border-r pe-2"
+                    style={{ fontSize: "9px" }}
+                  >
                     {noVendorTotalAmount.toFixed(2)}
                   </td>
-                  <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+                  <td
+                    className="text-right border-black border-b border-r pe-2"
+                    style={{ fontSize: "9px" }}
+                  >
                     {noVendorTotalTotalAmount.toFixed(2)}
                   </td>
-                  <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2"></td>
+                  <td
+                    className="text-right border-black border-b border-r pe-2"
+                    style={{ fontSize: "9px" }}
+                  ></td>
                 </tr>
               </tbody>
             </table>
@@ -8089,14 +8565,18 @@ Operator/ Airport Authority or any other third party.
         {/* Table for Grand Total */}
         <table className="mt-2 text-left text-xs w-full">
           <tr className="bg-gray-300 border border-black">
-            <th className="text-left pt-2 pb-2 ps-4">
+            <th className="text-left ps-4" style={{ fontSize: "9px" }}>
               Grand Total ({currency}){" "}
             </th>
-            <th className="text-left pt-2 pb-2">{grandTotalAmount}</th>
+            <th className="text-left" style={{ fontSize: "9px" }}>
+              {grandTotalAmount}
+            </th>
           </tr>
           <tr className="bg-gray-300 border border-black">
-            <th className="text-left pt-2 pb-2 ps-4">Amount in Words </th>
-            <th className="text-left pt-2 pb-2 uppercase">
+            <th className="text-left ps-4" style={{ fontSize: "9px" }}>
+              Amount in Words{" "}
+            </th>
+            <th className="text-left uppercase" style={{ fontSize: "9px" }}>
               {" "}
               {currency} {grandTotalInWords}
             </th>
@@ -8150,23 +8630,40 @@ Operator/ Airport Authority or any other third party.
       if (isNewVendor && lastVendor !== null) {
         // Insert Total Row before switching to new vendor
         vendorRows.push(
-          <tr key={`total-${lastVendor}`} className="bg-gray-300 font-semibold">
+          <tr
+            key={`total-${lastVendor}`}
+            className="bg-gray-300 font-semibold"
+            style={{ fontSize: "9px" }}
+          >
             <td
-              className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
+              className="text-right border-black border-b border-r pt-1 pb-1 pe-1"
               colSpan="6"
+              style={{ fontSize: "9px" }}
             >
               Total ({currency})
             </td>
-            <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+            <td
+              className="text-right border-black border-b border-r  pt-1 pb-1 pe-1"
+              style={{ fontSize: "9px" }}
+            >
               {totalAmount.toFixed(2)}
             </td>
-            <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+            <td
+              className="text-right border-black border-b border-r  pt-1 pb-1 pe-1"
+              style={{ fontSize: "9px" }}
+            >
               {taxAmount.toFixed(2)}
             </td>
-            <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+            <td
+              className="text-right border-black border-b border-r  pt-1 pb-1 pe-1"
+              style={{ fontSize: "9px" }}
+            >
               {totalTotalAmount.toFixed(2)}
             </td>
-            <td className="border-black border-b border-r pt-2 pb-2"></td>
+            <td
+              className="border-black border-b border-r pt-1 pb-1"
+              style={{ fontSize: "9px" }}
+            ></td>
           </tr>,
         );
 
@@ -8181,8 +8678,9 @@ Operator/ Airport Authority or any other third party.
         vendorRows.push(
           <tr key={`vendor-${item.vendorName}`} className="bg-gray-200">
             <td
-              className="text-left font-semibold border-black border-b border-r pt-2 pb-2 ps-4"
+              className="text-left font-semibold border-black border-b border-r pt-1 pb-1 ps-4"
               colSpan="10"
+              style={{ fontSize: "9px" }}
             >
               {item.vendorName}
             </td>
@@ -8199,36 +8697,66 @@ Operator/ Airport Authority or any other third party.
 
       vendorRows.push(
         <tr key={`charge-${index}`}>
-          <td className="border-black border-b border-r pt-2 pb-3 ps-4">
+          <td
+            className="border-black border-b border-r ps-4"
+            style={{ fontSize: "9px" }}
+          >
             {item.chargeDescription || ""}
           </td>
-          <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+          <td
+            className="border-black border-b border-r ps-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sizeName} / {item.typeName} / {item.tankType}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.qty && item.qty !== ""
               ? parseFloat(item.qty).toFixed(2)
               : 0.0}
           </td>
-          <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+          <td
+            className="border-black border-b border-r ps-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellCurrencyName || ""}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellExchangeRate || 0.0}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellRate || 0.0}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellAmountHc || 0.0}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellTaxAmount || 0.0}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+          <td
+            className="text-right border-black border-b border-r pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.sellTotalAmount || 0.0}
           </td>
-          <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+          <td
+            className="border-black border-b border-r ps-2"
+            style={{ fontSize: "9px" }}
+          >
             {item.remarks || ""}
           </td>
         </tr>,
@@ -8241,23 +8769,37 @@ Operator/ Airport Authority or any other third party.
         <tr
           key={`final-total-${lastVendor}`}
           className="bg-gray-300 font-semibold"
+          style={{ fontSize: "9px" }}
         >
           <td
-            className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
+            className="text-right border-black border-b border-r  pt-1 pb-1 pe-2"
+            style={{ fontSize: "9px" }}
             colSpan="6"
           >
             Total ({currency})
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+          <td
+            className="text-right border-black border-b border-r  pt-1 pb-1 pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {totalAmount.toFixed(2)}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+          <td
+            className="text-right border-black border-b border-r  pt-1 pb-1 pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {taxAmount.toFixed(2)}
           </td>
-          <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+          <td
+            className="text-right border-black border-b border-r  pt-1 pb-1 pe-2"
+            style={{ fontSize: "9px" }}
+          >
             {totalTotalAmount.toFixed(2)}
           </td>
-          <td className="border-black border-b border-r pt-2 pb-2"></td>
+          <td
+            className="border-black border-b border-r  pt-1 pb-1"
+            style={{ fontSize: "9px" }}
+          ></td>
         </tr>,
       );
     }
@@ -8284,39 +8826,69 @@ Operator/ Airport Authority or any other third party.
             >
               <thead>
                 <tr className="bg-gray-300">
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
-                    Charge Description
+                  <th
+                    className="text-center border-black border-b border-r pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
+                    Charge Description A
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r  pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Size/Type
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r  pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Qty
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r  pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Curr
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Ex. Rate
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Rate
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r  pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r  pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Tax Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r pt-2  pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Total Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r  pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Remarks
                   </th>
                 </tr>
               </thead>
-              <tbody>{vendorRows}</tbody>
+              <tbody style={{ fontSize: "9px !important" }}>{vendorRows}</tbody>
             </table>
           </>
         )}
@@ -8330,34 +8902,64 @@ Operator/ Airport Authority or any other third party.
             >
               <thead>
                 <tr className="bg-gray-300">
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Charge Description
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Size/Type
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Qty
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Curr
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Ex. Rate
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Rate
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Tax Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Total Amount
                   </th>
-                  <th className="text-center border-black border-b border-r pt-2 pb-2">
+                  <th
+                    className="text-center border-black border-b border-r pt-1 pb-1"
+                    style={{ fontSize: "9px" }}
+                  >
                     Remarks
                   </th>
                 </tr>
@@ -8365,57 +8967,100 @@ Operator/ Airport Authority or any other third party.
               <tbody>
                 {recordsWithoutVendor.map((item, index) => (
                   <tr key={`no-vendor-${index}`}>
-                    <td className="border-black border-b border-r pt-2 pb-3 ps-4">
+                    <td
+                      className="border-black border-b border-r pt-1 pb-1 ps-4"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.chargeDescription}
                     </td>
-                    <td className="border-black border-b border-r pt-2 pb-3 ps-4">
+                    <td
+                      className="border-black border-b border-r pt-1 pb-1 ps-4"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sizeName} / {item.typeName}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.qty && item.qty !== ""
                         ? parseFloat(item.qty).toFixed(2)
                         : ""}
                     </td>
-                    <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+                    <td
+                      className="border-black border-b border-r pt-1 pb-1 ps-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellCurrency}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r  pt-1 pb-1 pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellExchangeRate || 0.0}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellRate || 0.0}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellAmountHc || 0.0}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellTaxAmount || 0.0}
                     </td>
-                    <td className="text-right border-black border-b border-r pt-2 pb-3 pe-2">
+                    <td
+                      className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.sellTotalAmount || 0.0}
                     </td>
-                    <td className="border-black border-b border-r pt-2 pb-3 ps-2">
+                    <td
+                      className="border-black border-b border-r pt-1 pb-1 ps-2"
+                      style={{ fontSize: "9px" }}
+                    >
                       {item.remarks || ""}
                     </td>
                   </tr>
                 ))}
                 <tr className="bg-gray-300 font-semibold">
                   <td
-                    className="text-right border-black border-b border-r pt-2 pb-2 pe-2"
+                    className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
                     colSpan="6"
+                    style={{ fontSize: "9px" }}
                   >
                     Total ({currency})
                   </td>
-                  <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+                  <td
+                    className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+                    style={{ fontSize: "9px" }}
+                  >
                     {noVendorTotalAmount.toFixed(2)}
                   </td>
-                  <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+                  <td
+                    className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+                    style={{ fontSize: "9px" }}
+                  >
                     {noVendortaxAmount.toFixed(2)}
                   </td>
-                  <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2">
+                  <td
+                    className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+                    style={{ fontSize: "9px" }}
+                  >
                     {noVendorTotalTotalAmount.toFixed(2)}
                   </td>
-                  <td className="text-right border-black border-b border-r pt-2 pb-2 pe-2"></td>
+                  <td
+                    className="text-right border-black border-b border-r pt-1 pb-1 pe-2"
+                    style={{ fontSize: "9px" }}
+                  ></td>
                 </tr>
               </tbody>
             </table>
@@ -8425,14 +9070,27 @@ Operator/ Airport Authority or any other third party.
         {/* Table for Grand Total */}
         <table className="mt-2 text-left text-xs w-full">
           <tr className="bg-gray-300 border border-black">
-            <th className="text-left pt-2 pb-2 ps-4">
+            <th
+              className="text-left pt-1 pb-1 ps-4"
+              style={{ fontSize: "9px" }}
+            >
               Grand Total ({currency}){" "}
             </th>
-            <th className="text-left pt-2 pb-2">{grandTotalAmount}</th>
+            <th className="text-left pt-1 pb-1" style={{ fontSize: "9px" }}>
+              {grandTotalAmount}
+            </th>
           </tr>
           <tr className="bg-gray-300 border border-black">
-            <th className="text-left pt-2 pb-2 ps-4">Amount in Words </th>
-            <th className="text-left pt-2 pb-2 uppercase">
+            <th
+              className="text-left pt-1 pb-1 ps-4"
+              style={{ fontSize: "9px" }}
+            >
+              Amount in Words
+            </th>
+            <th
+              className="text-left pt-1 pb-1 uppercase"
+              style={{ fontSize: "9px" }}
+            >
               {" "}
               {currency} {grandTotalInWords}
             </th>
@@ -8444,7 +9102,7 @@ Operator/ Airport Authority or any other third party.
 
   const QuotationExportWithTaxAndWithoutTax = ({ data }) => {
     const calculateTax = data[0]?.calculateTax; // Extracting calculateTax from the data
-
+    console.log("calculateTax =>", calculateTax);
     return (
       <div>
         {calculateTax ? (
@@ -8462,31 +9120,36 @@ Operator/ Airport Authority or any other third party.
     return (
       <>
         <div className="mt-2" style={{ fontSize: "9px" }}>
-          <p className="underline font-semibold text-sm">
+          <p
+            style={{ fontSize: "9px" }}
+            className="underline font-semibold text-sm"
+          >
             General Terms and Condition :
           </p>
-          <p className="text-sm">
+          <p style={{ fontSize: "9px" }} className="text-sm">
             1.RATES ARE SUBJECT TO TERMS AGREED AT THE TIME OF QUOTATION (CY/CY
             / DOOR-DOOR /DOOR-CY).
           </p>
-          <p className="text-sm">
+          <p style={{ fontSize: "9px" }} className="text-sm">
             -SUBJECT TO SPACE AND TANK AVAILABILITY AT POL
           </p>
-          <p className="text-sm">
+          <p style={{ fontSize: "9px" }} className="text-sm">
             -SUBJECT TO TANK AVAILABILITY AND PRODUCT APPROVAL AND COMPATIBILITY
             AT POL
           </p>
-          <p className="text-sm">
+          <p style={{ fontSize: "9px" }} className="text-sm">
             2.EQUIPMENT: 20' ISO TANK CONTAINER, UN-TANK TYPE T11 (TP1),
             STANDARD 25000 LITRES -- 26000 LITRES CAPACITY OF TANK WITH BOTTOM
             DISCHARGE /
           </p>
-          <p className="text-sm">STEAM TUBE COIL AVAILABLE.</p>
-          <p className="font-semibold text-sm mt-2">
+          <p style={{ fontSize: "9px" }} className="text-sm">
+            STEAM TUBE COIL AVAILABLE.
+          </p>
+          <p style={{ fontSize: "9px" }} className="font-semibold text-sm mt-1">
             Rates are exclusive of below local charges unless it is a Ex. Works
             or DAP shipment:-
           </p>
-          <div style={{ display: "flex", width: "100%" }} className="mt-2">
+          <div style={{ display: "flex", width: "100%" }} className="mt-1">
             <div style={{ width: "3%" }}></div>
             <div style={{ width: "97%" }}>
               <ul
@@ -8497,115 +9160,125 @@ Operator/ Airport Authority or any other third party.
                 }}
               >
                 <li
-                  style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}
+                  style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
                 >
                   Load port Terminal Handling Charges, ISPS, ENS, ACD, BL fee
                 </li>
                 <li
-                  style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}
+                  style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
                 >
                   Any Special Tank preparaon / N2 Purging / Pickling & passivaon
                   / Pump / Hoses / Gaskets / Handrails / Special couplings /
                 </li>
-                <p>
+                <p style={{ fontSize: "9px" }}>
                   IMO product name, Cargo labelling Special high security Seals
                   etc for loading & unloading on shipper / consignee account.
                 </p>
                 <li
-                  style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}
+                  style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
                 >
                   Any Local charges at POL (Port storage, Rail ramp Li on -- Li
                   off, Import DO Fee, Export BL fees, Courier fee).
                 </li>
                 <li
-                  style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}
+                  style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
                 >
                   Any customs documentaon/Costs / Customs Duty/ Inspecon / Taxes
                   / VAT / Overweight permits / drop & pull / heang prior
                 </li>
-                <p>
+                <p style={{ fontSize: "9px" }}>
                   to delivery / Chassis Hire / Trailer detenon etc if any on
                   shipper / consignee / freight payer account.
                 </p>
                 <li
-                  style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}
+                  style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
                 >
                   Any Repairs to the tank container due to damage caused whilst
                   in the Shipper / Consignee / Frt Forwarders custody
                 </li>
                 <li
-                  style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}
+                  style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
                 >
                   Any Repairs to the tank container due to damage caused whilst
                   in the Shipper / Consignee / Frt Forwarders custody
                 </li>
                 <li
-                  style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}
+                  style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
                 >
                   Replacement of any missing part of our equipment / damage tank
                   container, due to damage, loss, incurred whilst the tank In
                 </li>
-                <p>
+                <p style={{ fontSize: "9px" }}>
                   shipper's and / or consignee's control. Indicave replacement
                   value is Usd25000/- per tank.
                 </p>
                 <li
-                  style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}
+                  style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
                 >
                   Cargo compability to our equipment SS 316 is the shipper's
                   responsibility.
                 </li>
                 <li
-                  style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}
+                  style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
                 >
                   Standard local cleaning charges included in freight as per
                   provided SDS for the cargo carried, however, aer discharge at
                 </li>
-                <p>
+                <p style={{ fontSize: "9px" }}>
                   desnaon maximum permissible residue allowed is not more than
                   20 litres. If residue found is more, disposal cost will be
                 </p>
-                <p>applicable as per the Depot.</p>
+                <p style={{ fontSize: "9px" }}>applicable as per the Depot.</p>
                 <li
-                  style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}
+                  style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
                 >
                   POL Transport.
                 </li>
                 <li
-                  style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}
+                  style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
                 >
                   Surveying Costs etc.
                 </li>
                 <li
-                  style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}
+                  style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
                 >
                   If any charges incurred at pod and consignee refuses to pay
                   the addional charges, the shipper / freight payer agrees to
                   settle
                 </li>
-                <p>all the charges with the agreed payment term.</p>
+                <p style={{ fontSize: "9px" }}>
+                  all the charges with the agreed payment term.
+                </p>
                 <li
-                  style={{ fontSize: "12px", fontFamily: "Arial, sans-serif" }}
+                  style={{ fontSize: "9px", fontFamily: "Arial, sans-serif" }}
                 >
                   By placing export Delivery order / transport order based on
                   this offer, you confirm that you have read, understood and
                 </li>
-                <p>
+                <p style={{ fontSize: "9px" }}>
                   accepted, acknowledge the complete content including all terms
                   & condions on this Quote
                 </p>
               </ul>
             </div>
           </div>
-          <p className="font-semibold text-sm mt-2">
+          <p style={{ fontSize: "9px" }} className="font-semibold text-sm mt-2">
             I thank you for the opportunity of subming this quotaon and look
             forward to your response. If I can be of any further assistance,
             please do not
           </p>
-          <p className="font-semibold text-sm">hesitate to contact me.</p>
-          <p className="font-bold text-sm">Kind Regards,</p>
-          <p className="text-sm">{userName}</p>
-          <p className="text-sm">{data[0]?.companyName}</p>
+          <p style={{ fontSize: "9px" }} className="font-semibold text-sm">
+            hesitate to contact me.
+          </p>
+          <p style={{ fontSize: "9px" }} className="font-bold text-sm">
+            Kind Regards,
+          </p>
+          <p style={{ fontSize: "9px" }} className="text-sm">
+            {userName}
+          </p>
+          <p style={{ fontSize: "9px" }} className="text-sm">
+            {data[0]?.companyName}
+          </p>
         </div>
       </>
     );
@@ -10043,9 +10716,28 @@ Operator/ Airport Authority or any other third party.
     );
   };
 
+  const quotationSeaPageStyle = {
+    width: "210mm",
+    minHeight: "297mm",
+    margin: "0 auto",
+    padding: "14mm",
+    boxSizing: "border-box",
+    backgroundColor: "#fff",
+    color: "#000",
+  };
+
   const ExportQuotationSeaModule = () => (
-    <div>
-      <div className="container mx-auto p-14 bodyColour text-black h-auto bgTheme">
+    <div
+      style={{
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        className="bodyColour text-black bgTheme"
+        style={quotationSeaPageStyle}
+      >
         <CompanyImgModule />
         <h1
           style={{ textAlign: "center", fontWeight: "bold" }}
@@ -10057,12 +10749,8 @@ Operator/ Airport Authority or any other third party.
         <QuotationExportShipperModule data={data} />
         <QuotationExportShipperDetailsModule data={data} />
         <QuotationExportSizeTypeModule data={data} />
-        {/* <QuotationExportChargeVendorWiseModule data={data} />
-        <QuotationExportChargeVendorWiseModuleWithTax data={data} /> */}
         <QuotationExportWithTaxAndWithoutTax data={data} />
         {clientId === 3 && <ExportParagrafModule data={data} />}
-        {/* {clientId != 3 && <TermsAndCondition terms={termsAndConditions} />} */}
-        {clientId === 13 && <SarQuotationTermsAndCondition />}
         {clientId === 9 && (
           <TermsAndConditionDynamic termsAndConditions={termsAndConditions} />
         )}
@@ -10071,8 +10759,17 @@ Operator/ Airport Authority or any other third party.
   );
 
   const ExportQuotationSeaModuleFSA = () => (
-    <div>
-      <div className="container mx-auto p-14 bodyColour text-black h-auto bgTheme">
+    <div
+      style={{
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        className="bodyColour text-black bgTheme"
+        style={quotationSeaPageStyle}
+      >
         <CompanyImgModule />
         <h1
           style={{ textAlign: "center", fontWeight: "bold" }}
@@ -10123,16 +10820,29 @@ Operator/ Airport Authority or any other third party.
     return (
       <div className="flex p-1" style={{ fontSize: "9px" }}>
         <div style={{ width: "60%" }}>
-          <p className="font-bold">Terms And Condition :</p>
-          <p style={{ lineHeight: 1.4 }}>{renderTerms(termsAndConditions)}</p>
+          <p style={{ fontSize: "9px" }} className="font-bold">
+            Terms And Condition :
+          </p>
+          <p style={{ lineHeight: 1.4, fontSize: "9px" }}>
+            {renderTerms(termsAndConditions)}
+          </p>
         </div>
       </div>
     );
   };
 
   const ExportQuotationSeaModuleSAR = () => (
-    <div>
-      <div className="container mx-auto p-14 bodyColour text-black h-auto bgTheme">
+    <div
+      style={{
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        className="bodyColour text-black bgTheme"
+        style={quotationSeaPageStyle}
+      >
         <CompanyImgModule />
         <h1
           style={{ textAlign: "center", fontWeight: "bold" }}
@@ -10144,11 +10854,7 @@ Operator/ Airport Authority or any other third party.
         <QuotationExportShipperModule data={data} />
         <QuotationExportShipperDetailsModule data={data} />
         <QuotationExportSizeTypeModule data={data} />
-        {/* <QuotationExportChargeVendorWiseModule data={data} />
-        <QuotationExportChargeVendorWiseModuleWithTax data={data} /> */}
         <QuotationExportWithTaxAndWithoutTax data={data} />
-        {clientId === 3 && <ExportParagrafModule data={data} />}
-        {/* {clientId != 3 && <TermsAndCondition terms={termsAndConditions} />} */}
         {clientId === 13 && <SarQuotationTermsAndCondition />}
       </div>
     </div>
@@ -12005,6 +12711,12 @@ Operator/ Airport Authority or any other third party.
                     className={
                       index < reportIds.length - 1 ? "report-spacing" : ""
                     }
+                    style={{
+                      pageBreakAfter:
+                        index < reportIds.length - 1 ? "always" : "auto",
+                      backgroundColor: "lightgrey",
+                      padding: "10px",
+                    }}
                   >
                     {clientId === 13
                       ? ExportQuotationSeaModuleSAR()

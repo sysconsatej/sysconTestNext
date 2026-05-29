@@ -25,7 +25,8 @@ import {
   plusIconHover,
 } from "@/assets";
 import LightTooltip from "@/components/Tooltip/customToolTip";
-import EditSubChildComponent from "@/app/(groupControl)/formControl/addEdit/EditSubChildComponent";
+//import EditSubChildComponent from "@/app/(groupControl)/formControl/addEdit/EditSubChildComponent";
+import EditSubChildComponent from "@/app/(groupControl)/createFormControl/addEdit/EditSubChildComponent";
 import PropTypes from "prop-types";
 import InputBase from "@mui/material/InputBase";
 import Divider from "@mui/material/Divider";
@@ -296,10 +297,10 @@ export default function SubChildComponent({
           return { ...pre, ...tmpData };
         });
 
-        setSubmitNewState((pre) => {
-          if (JSON.stringify(pre) === JSON.stringify(tmpData)) return pre;
-          return { ...pre, ...tmpData };
-        });
+        // setSubmitNewState((pre) => {
+        //   if (JSON.stringify(pre) === JSON.stringify(tmpData)) return pre;
+        //   return { ...pre, ...tmpData };
+        // });
         // setNewState((pre) => {
         //   return { ...pre, ...tmpData };
         // });
@@ -436,9 +437,9 @@ export default function SubChildComponent({
       setNewState((prev) => {
         return { ...prev, ...tmpData };
       });
-      setSubmitNewState((prev) => {
-        return { ...prev, ...tmpData };
-      });
+      // setSubmitNewState((prev) => {
+      //   return { ...prev, ...tmpData };
+      // });
     }
     if (tmpData[childName][childIndex][subChild.tableName].length === 0) {
       setHideSubChildInputs((prev) => !prev);
@@ -820,17 +821,17 @@ export default function SubChildComponent({
         [childName]: updatedChild,
       };
     });
-    setSubmitNewState((prev) => {
-      let updatedChild = [...prev[childName]];
-      updatedChild[childIndex] = {
-        ...prev[childName][childIndex],
-        [tableName]: copyChildValueObj[tableName]?.[0],
-      };
-      return {
-        ...prev,
-        [childName]: updatedChild,
-      };
-    });
+    // setSubmitNewState((prev) => {
+    //   let updatedChild = [...prev[childName]];
+    //   updatedChild[childIndex] = {
+    //     ...prev[childName][childIndex],
+    //     [tableName]: copyChildValueObj[tableName]?.[0],
+    //   };
+    //   return {
+    //     ...prev,
+    //     [childName]: updatedChild,
+    //   };
+    // });
 
     setIsGridEdit(!isGridEdit);
     setCopyChildValueObj([]);

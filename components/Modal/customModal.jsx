@@ -69,12 +69,13 @@ export default function CustomeModal({
               </div>
               <div className="flex justify-end space-x-4 ">
                 <button
-                  onClick={() =>
+                  onClick={() =>{
                     onConfirm({
                       value: true,
                       isError: isError,
                       type: typeEvent,
-                    })
+                    }),
+                    setOpenModal((prev) => !prev)}
                   }
                   className={`px-4 text-[12px] py-2 ${styles.bgPrimaryColorBtn} flex items-center justify-center  rounded-[5px] shadow-custom  w-24 h-[27px]`}
                 >

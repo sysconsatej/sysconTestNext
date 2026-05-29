@@ -11,7 +11,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { userDashboardDataSubmit } from "@/services/auth/FormControl.services";
 import { useRouter } from "next/navigation";
-
+const MAX_DASHBOARD_MENUS = 8;
 const onDragEnd = (result, columns, setColumns) => {
   if (!result.destination) return;
   const { source, destination } = result;
@@ -21,6 +21,13 @@ const onDragEnd = (result, columns, setColumns) => {
     const sourceItems = [...sourceColumn.items];
     const destItems = [...destColumn.items];
     const [removed] = sourceItems.splice(source.index, 1);
+    if (
+      destination.droppableId === "toDo" &&
+      destItems.length >= MAX_DASHBOARD_MENUS
+    ) {
+      toast.error(`You can add maximum ${MAX_DASHBOARD_MENUS} Menu's only.`);
+      return;
+    }
     destItems.splice(destination.index, 0, removed);
     setColumns({
       ...columns,
@@ -58,10 +65,10 @@ function Column({ allMenus, userData, userMenus, selectedUserName }) {
   useEffect(() => {
     const loadMenu = () => {
       const otherMenus = allMenus.filter(
-        (item) => !userMenus?.includes(item.id)
+        (item) => !userMenus?.includes(item.id),
       );
       const userSelectedMenus = allMenus.filter((item) =>
-        userMenus?.includes(item.id)
+        userMenus?.includes(item.id),
       );
 
       const formattedAllMenuItems = otherMenus.map((item) => ({
@@ -84,6 +91,10 @@ function Column({ allMenus, userData, userMenus, selectedUserName }) {
 
   async function updateMenuId() {
     const itemsInToDoColumn = columns.toDo.items.map((item) => item.id);
+    if (itemsInToDoColumn.length > MAX_DASHBOARD_MENUS) {
+      toast.error(`You can add maximum ${MAX_DASHBOARD_MENUS} menus only.`);
+      return;
+    }
     const dashboardData = {
       userId: selectedUserName,
       clientId: userData.clientId,

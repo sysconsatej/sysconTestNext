@@ -35,15 +35,15 @@ export default function RptIGM() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const id = searchParams.get("recordId");
+      const id = localStorage.getItem("selectedIgmRecordId");
       if (id != null) {
         try {
           const token = localStorage.getItem("token");
           if (!token) throw new Error("No token found");
           const filterCondition = { id: id };
           const response = await fetch(
-            //`${baseUrl}/Sql/api/Reports/cargoManifestBldata`,
-            `${baseUrl}/Sql/api/Reports/igmBlData`,
+            `${baseUrl}/Sql/api/Reports/cargoManifestBldata`,
+            // `${baseUrl}/Sql/api/Reports/igmBlData`,
             {
               method: "POST",
               headers: {
@@ -51,7 +51,7 @@ export default function RptIGM() {
                 "x-access-token": JSON.parse(token),
               },
               body: JSON.stringify(filterCondition),
-            }
+            },
           );
           if (!response.ok) throw new Error("Failed to fetch job data");
           const data = await response.json();
@@ -115,12 +115,12 @@ export default function RptIGM() {
           </div>
 
           {/* Right Block – 75% */}
-          <div style={{ width: "75%", fontSize: "8px" }} className="flex">
+          {/* <div style={{ width: "75%", fontSize: "8px" }} className="flex">
             <div style={{ width: "10%" }}>
               <p className="text-black font-bold">SLOT OWNER:</p>
             </div>
             <div style={{ width: "90%" }}>{data?.slotOwnerName || ""}</div>
-          </div>
+          </div> */}
         </div>
         {/* new table 2 */}
         <div
@@ -298,8 +298,7 @@ export default function RptIGM() {
             {/* MARKS & NUMBER */}
             <div className="pl-1 pt-1">
               <p className="font-bold uppercase">MARKS & NUMBER</p>
-              <p>{data?.marksNos || ""}</p>
-              {renderMultiline(data?.marksNos || data?.marksNos || "")}
+              {renderMultiline(data?.marksNos || "")}
             </div>
           </div>
 
@@ -347,7 +346,7 @@ export default function RptIGM() {
                 {data?.grossWt || ""} {data?.grossWtUnitCode || ""}
               </div>
               <div style={{ width: "50%" }} className="p-1">
-                {data?.netWt || ""}
+                {data?.blNetWt || ""} {data?.grossWtUnitCode || ""}
               </div>
             </div>
 
@@ -412,6 +411,12 @@ export default function RptIGM() {
                   >
                     GROSS WT.
                   </th>
+                  <th
+                    className="p-1 border-b border-black text-black font-bold"
+                    style={{ fontSize: "8px" }}
+                  >
+                    SLOT OWNER
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -461,6 +466,12 @@ export default function RptIGM() {
                     >
                       {item?.containerGrossWT || ""}{" "}
                       {item?.containerGrossWTUnit || ""}
+                    </td>
+                    <td
+                      className="border-b border-black text-black"
+                      style={{ fontSize: "8px", padding: "2px" }}
+                    >
+                      {item?.slotOwnerName || ""}
                     </td>
                   </tr>
                 ))}
@@ -614,13 +625,13 @@ export default function RptIGM() {
                 // Main page keeps 14
                 const firstChunk = containersAll.slice(
                   0,
-                  MAX_CONTAINERS_PER_PAGE_MAIN
+                  MAX_CONTAINERS_PER_PAGE_MAIN,
                 );
 
                 // Attach sheets get 20 each
                 const restChunks = chunkArray(
                   containersAll.slice(MAX_CONTAINERS_PER_PAGE_MAIN),
-                  MAX_CONTAINERS_PER_PAGE_ATTACH
+                  MAX_CONTAINERS_PER_PAGE_ATTACH,
                 );
 
                 return (

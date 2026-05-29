@@ -92,6 +92,7 @@ export default function AccordionUsage() {
       isCopyForSameTable: "true",
       functionOnLoad: null,
       functionOnSubmit: "copyContainerData(activityId,activityDate,toLocationId)",
+      functionOnGridSave: "copyContainerData(activityId,activityDate,toLocationId)",
       functionOnEdit: null,
       functionOnDelete: null,
       searchApi: null,
