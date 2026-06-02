@@ -52,6 +52,8 @@ import magnifyIconHover from "@/assets/icons/magnifyIconHover.svg";
 import saveIconHover from "@/assets/icons/saveIconHover.svg";
 import viewIcon from "@/assets/icons/viewIcon.svg";
 import viewIconHover from "@/assets/icons/viewIconHover.svg";
+import excelIcon from "@/assets/icons/excelIcon.svg";
+import excelIconHover from "@/assets/icons/excelIconHover.svg";
 import calendarIcon from "@/assets/icons/calendarIcon.svg";
 import officeIcon from "@/assets/icons/officeIcon.svg";
 import userIcon from "@/assets/icons/userIcon.svg";
@@ -157,6 +159,8 @@ export {
   excelType,
   viewIcon,
   viewIconHover,
+  excelIcon,
+  excelIconHover,
   wordType,
   searchImage,
   homeLogo,

@@ -6,6 +6,7 @@ import styles from "@/components/common.module.css";
 import TextField from "@mui/material/TextField";
 import { styled } from "@mui/material/styles";
 import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 import { renderTimeViewClock } from "@mui/x-date-pickers/timeViewRenderers";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
@@ -54,6 +55,8 @@ import { MuiColorInput } from "mui-color-input";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "next/navigation";
 import { useDebounceHook } from "@/utils";
+
+dayjs.extend(customParseFormat);
 
 // ✅ widths: mobile 100% | tablet 2 columns | desktop original
 const fieldWrapClass = "w-full sm:w-[calc(50%-0.5rem)] lg:w-auto mr-2 mb-2";
@@ -843,10 +846,52 @@ function InputFieldRenderer(props) {
   const inputRef = useRef(null);
   const selectRef = useRef(null);
   const acceptButtonRef = useRef(null);
+  const dateInputTextRef = useRef({});
+  const dateInputTypingRef = useRef({});
+  const previousFieldValueRef = useRef({});
   const firstRender = useRef(true);
   const { dateFormat } = getUserDetails();
   const { companyId, financialYear, branchId, userId } = getUserDetails();
   const portalTarget = typeof window !== "undefined" ? document.body : null;
+  const datePickerFormat =
+    dateFormat === "" || dateFormat === null ? "DD-MM-YYYY" : dateFormat;
+  const dateTimePickerFormat = `${datePickerFormat} HH:mm:ss`;
+
+  const rememberDateInputText = (e, fieldName) => {
+    dateInputTextRef.current[fieldName] = (e?.target?.value ?? "").trim();
+    dateInputTypingRef.current[fieldName] = true;
+  };
+
+  const rememberDateInputKey = (fieldName) => {
+    dateInputTypingRef.current[fieldName] = true;
+  };
+
+  const rememberPreviousFieldValue = (fieldName) => {
+    if (previousFieldValueRef.current[fieldName] === undefined) {
+      previousFieldValueRef.current[fieldName] = values?.[fieldName];
+    }
+  };
+
+  const hasCompleteDateInputText = (dateStr, format) => {
+    const value = (dateStr ?? "").trim();
+    if (!value) return true;
+    return value.length >= format.length;
+  };
+
+  const canCommitPickerDate = (value, fieldName, format) => {
+    if (!value) return true;
+
+    const typedValue = dateInputTextRef.current[fieldName];
+    if (dateInputTypingRef.current[fieldName]) {
+      return (
+        typedValue &&
+        hasCompleteDateInputText(typedValue, format) &&
+        dayjs(typedValue, format, true).isValid()
+      );
+    }
+
+    return dayjs(value).isValid();
+  };
 
   useEffect(() => {
     if (values?.[field.fieldname] === "") return;
@@ -1232,6 +1277,7 @@ function InputFieldRenderer(props) {
     // const jsonMatch = functionData.match(/\[([\s\S]*)\]/);
     const jsonMatch = functionData.match(/\[([\s\S]*)\]/);
 
+    const previousValue = previousFieldValueRef.current[fieldName] ?? onFocusValue;
     setonFocusValue(null);
     // Check if we have a function name match, and we have an argsMatch (even if there are no arguments)
     if (funcNameMatch && (argsMatch !== null || (jsonMatch && jsonMatch[1]))) {
@@ -1268,6 +1314,7 @@ function InputFieldRenderer(props) {
           args,
           values,
           fieldName,
+          previousValue,
           newState,
           formControlData,
           setFormControlData,
@@ -1284,6 +1331,7 @@ function InputFieldRenderer(props) {
         //   });
         // }
 
+        previousFieldValueRef.current[fieldName] = undefined;
         onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
         return updatedValues?.values;
       }
@@ -1319,12 +1367,15 @@ function InputFieldRenderer(props) {
           args,
           values,
           fieldName,
+          previousValue:
+            previousFieldValueRef.current[fieldName] ?? onFocusValue,
           newState,
           formControlData,
           setFormControlData,
           tableName,
           setStateVariable,
         });
+        previousFieldValueRef.current[fieldName] = undefined;
         onBlurHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
         return updatedValues?.values;
       }
@@ -1368,31 +1419,41 @@ function InputFieldRenderer(props) {
   }, [dropDownValues]);
 
   const handleDateChange = (e, field) => {
-    const dateStr = e.target.value;
-    const fmt = "DD/MM/YYYY";
-    const dateObj = dayjs(dateStr, fmt, true);
-    if (dateStr !== "DD/MM/YYYY") {
-      if (!dateObj.isValid()) {
-        toast.error(`Invalid date6`);
-        return;
-      }
-      handleChange(dateObj, field);
-    }
-  };
-
-  const handleDateTimeChange = (e, field) => {
     const dateStr = (e?.target?.value ?? "").trim();
-    const fmt = "DD-MM-YYYY HH:mm:ss";
+    const fmt = datePickerFormat;
+    rememberDateInputText(e, field.fieldname);
     if (!dateStr) {
       handleChange("", field);
       return;
     }
+    if (!hasCompleteDateInputText(dateStr, fmt)) return;
+
+    const dateObj = dayjs(dateStr, fmt, true);
+    if (!dateObj.isValid()) {
+      toast.error(`Invalid date`);
+      return;
+    }
+    handleChange(dateObj, field);
+    dateInputTypingRef.current[field.fieldname] = false;
+  };
+
+  const handleDateTimeChange = (e, field) => {
+    const dateStr = (e?.target?.value ?? "").trim();
+    const fmt = dateTimePickerFormat;
+    rememberDateInputText(e, field.fieldname);
+    if (!dateStr) {
+      handleChange("", field);
+      return;
+    }
+    if (!hasCompleteDateInputText(dateStr, fmt)) return;
+
     const dateObj = dayjs(dateStr, fmt, true);
     if (!dateObj.isValid()) {
       toast.error("Invalid date");
       return;
     }
     handleChange(dateObj, field);
+    dateInputTypingRef.current[field.fieldname] = false;
   };
 
   const handleChangeDynamic = (value, field, switchToText) => {
@@ -2824,10 +2885,24 @@ function InputFieldRenderer(props) {
               }
               onOpen={() => {
                 setIsFocused(true);
+                rememberPreviousFieldValue(field.fieldname);
                 setonFocusValue(values[field.fieldname]);
+                dateInputTextRef.current[field.fieldname] = "";
+                dateInputTypingRef.current[field.fieldname] = false;
               }}
               onChange={(date) => {
+                if (
+                  !canCommitPickerDate(
+                    date,
+                    field.fieldname,
+                    datePickerFormat,
+                  )
+                ) {
+                  return;
+                }
+
                 handleChange(date, field);
+                dateInputTypingRef.current[field.fieldname] = false;
 
                 let formattedValue = date;
                 if (date && typeof date.format === "function") {
@@ -2904,6 +2979,10 @@ function InputFieldRenderer(props) {
                     background: "white",
                   },
                   inputProps: {
+                    onFocus: () => rememberPreviousFieldValue(field.fieldname),
+                    onKeyDown: () => rememberDateInputKey(field.fieldname),
+                    onChange: (e) =>
+                      rememberDateInputText(e, field.fieldname),
                     onBlur: (e) => handleDateChange(e, field),
                   },
                 },
@@ -2988,9 +3067,7 @@ function InputFieldRenderer(props) {
               }}
               required={field.isRequired}
               format={
-                dateFormat === "" || dateFormat === null
-                  ? "DD-MM-YYYY"
-                  : dateFormat
+                datePickerFormat
               }
               sx={{
                 ...customDataPickerStyleCss({
@@ -3077,7 +3154,10 @@ function InputFieldRenderer(props) {
               inputRef={inputRef}
               onOpen={() => {
                 setIsFocused(true);
+                rememberPreviousFieldValue(field.fieldname);
                 setonFocusValue(values?.[field.fieldname]);
+                dateInputTextRef.current[field.fieldname] = "";
+                dateInputTypingRef.current[field.fieldname] = false;
               }}
               onClose={() => {
                 setIsFocused(false);
@@ -3279,9 +3359,7 @@ function InputFieldRenderer(props) {
               }}
               ampm={false}
               format={
-                dateFormat === "" || dateFormat === null
-                  ? "DD-MM-YYYY HH:mm:ss"
-                  : `${dateFormat} HH:mm:ss`
+                dateTimePickerFormat
               }
               viewRenderers={{
                 hours: renderTimeViewClock,
@@ -3294,6 +3372,10 @@ function InputFieldRenderer(props) {
                     background: "white",
                   },
                   inputProps: {
+                    onFocus: () => rememberPreviousFieldValue(field.fieldname),
+                    onKeyDown: () => rememberDateInputKey(field.fieldname),
+                    onChange: (e) =>
+                      rememberDateInputText(e, field.fieldname),
                     onBlur: (e) => handleDateTimeChange(e, field),
                   },
                 },
@@ -3354,7 +3436,18 @@ function InputFieldRenderer(props) {
                   : null
               } // Use the state value, converted to a Day.js object
               onChange={(time) => {
+                if (
+                  !canCommitPickerDate(
+                    time,
+                    field.fieldname,
+                    dateTimePickerFormat,
+                  )
+                ) {
+                  return;
+                }
+
                 handleChange(time, field);
+                dateInputTypingRef.current[field.fieldname] = false;
 
                 let formattedValue = time;
                 if (time && typeof time.format === "function") {

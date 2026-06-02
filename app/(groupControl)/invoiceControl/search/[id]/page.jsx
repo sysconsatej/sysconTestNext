@@ -24,7 +24,7 @@ import {
   insertVoucherData,
   insertVoucherDataDynami,
   getRoundOffData,
-  getTaxDetails
+  getTaxDetails,
 } from "@/services/auth/FormControl.services.js";
 import { ButtonPanel } from "@/components/Buttons/customeButton.jsx";
 import CustomeInputFields from "@/components/Inputs/customeInputFields";
@@ -202,17 +202,26 @@ function onSubmitFunctionCall(
   }
 }
 
-
 const getInvoiceChargeCurrencyId = (row = {}) => {
-  if (row?.currencyId !== null && row?.currencyId !== undefined && row?.currencyId !== "") {
+  if (
+    row?.currencyId !== null &&
+    row?.currencyId !== undefined &&
+    row?.currencyId !== ""
+  ) {
     return row.currencyId;
   }
 
-  if (Array.isArray(row?.currencyIddropdown) && row.currencyIddropdown[0]?.value !== undefined) {
+  if (
+    Array.isArray(row?.currencyIddropdown) &&
+    row.currencyIddropdown[0]?.value !== undefined
+  ) {
     return row.currencyIddropdown[0].value;
   }
 
-  if (Array.isArray(row?.currencyIdDropdown) && row.currencyIdDropdown[0]?.value !== undefined) {
+  if (
+    Array.isArray(row?.currencyIdDropdown) &&
+    row.currencyIdDropdown[0]?.value !== undefined
+  ) {
     return row.currencyIdDropdown[0].value;
   }
 
@@ -282,7 +291,11 @@ const findChangedInvoiceChargeExchangeRate = (oldRows = [], newRows = []) => {
     ) {
       const currencyId = getInvoiceChargeCurrencyId(newRow);
 
-      if (currencyId !== null && currencyId !== undefined && currencyId !== "") {
+      if (
+        currencyId !== null &&
+        currencyId !== undefined &&
+        currencyId !== ""
+      ) {
         return {
           currencyId,
           exchangeRate: newExchangeRate,
@@ -312,7 +325,6 @@ const getInvoiceChargeStableKey = (row = {}, index = 0) => {
     .map((value) => String(value ?? ""))
     .join("|");
 };
-
 
 export default function AddEditFormControll() {
   const { push } = useRouter();
@@ -528,13 +540,12 @@ export default function AddEditFormControll() {
     return value;
   }
 
-
   const isBlankValue = (value) =>
     value === undefined || value === null || value === "";
 
   const withRequiredCurrency = (stateObj = {}) => {
     const resolvedCurrency = isBlankValue(stateObj?.currencyId)
-      ? homeCurrencyRef.current ?? null
+      ? (homeCurrencyRef.current ?? null)
       : stateObj.currencyId;
 
     return {
@@ -1096,6 +1107,7 @@ export default function AddEditFormControll() {
     },
     handleVoucherSubmit: async () => {
       console.log("newState", newState);
+      const voucherTypeId = String(newState?.voucherTypeId ?? "");
 
       if (isFormSaved)
         return toast.error(
@@ -1197,7 +1209,7 @@ export default function AddEditFormControll() {
           user.loginfinYear ??
           cleanData.financialYearId ??
           0;
-        cleanData.companyBranchId = loginBranchId
+        cleanData.companyBranchId = loginBranchId;
 
         // ✅ payload as Node expects
         const payload = {
@@ -1211,6 +1223,20 @@ export default function AddEditFormControll() {
           userId: Number(user.userId ?? user.id ?? cleanData?.userId ?? 0) || 0,
           json: cleanData,
         };
+        if (voucherTypeId === "8" || voucherTypeId === "9") {
+          const toNumber = (value) => {
+            const num = Number(String(value ?? 0).replace(/,/g, ""));
+            return Number.isFinite(num) ? num : 0;
+          };
+
+          const balanceAmtHc = toNumber(cleanData?.balanceAmtHc);
+          const balanceAmtFc = toNumber(cleanData?.balanceAmtFc);
+
+          if (balanceAmtHc !== 0 || balanceAmtFc !== 0) {
+            setIsFormSaved(false);
+            return toast.error("Pending amount should be 0 before saving.");
+          }
+        }
 
         const data = await insertVoucherDataDynami(payload);
 
@@ -1402,7 +1428,9 @@ export default function AddEditFormControll() {
         const _sizeId = toNumOrNull(item.sizeId);
         const _typeId = toNumOrNull(item.typeId);
         const _jobId = toNumOrNull(item.jobId);
-        const _containerTransactionId = toNumOrNull(item.containerTransactionId);
+        const _containerTransactionId = toNumOrNull(
+          item.containerTransactionId,
+        );
         const _containerRepairId = toNumOrNull(item.containerRepairId);
         const _blId = toNumOrNull(item.blId);
 
@@ -1427,11 +1455,11 @@ export default function AddEditFormControll() {
           containerIddropdown:
             _containerId !== null
               ? [
-                {
-                  value: _containerId,
-                  label: item.containerNo ?? String(_containerId),
-                },
-              ]
+                  {
+                    value: _containerId,
+                    label: item.containerNo ?? String(_containerId),
+                  },
+                ]
               : [],
 
           sizeIddropdown:
@@ -1452,29 +1480,33 @@ export default function AddEditFormControll() {
           containerTransactionIddropdown:
             _containerTransactionId !== null
               ? [
-                {
-                  value: _containerTransactionId,
-                  label:
-                    item.containerTransactionName ??
-                    String(_containerTransactionId),
-                },
-              ]
+                  {
+                    value: _containerTransactionId,
+                    label:
+                      item.containerTransactionName ??
+                      String(_containerTransactionId),
+                  },
+                ]
               : [],
 
           containerRepairIddropdown:
             _containerRepairId !== null
               ? [
-                {
-                  value: _containerRepairId,
-                  label: item.containerRepairName ?? String(_containerRepairId),
-                },
-              ]
+                  {
+                    value: _containerRepairId,
+                    label:
+                      item.containerRepairName ?? String(_containerRepairId),
+                  },
+                ]
               : [],
 
           blIddropdown:
-            _blId !== null ? [{ value: _blId, label: item.blNo ?? String(_blId) }] : [],
+            _blId !== null
+              ? [{ value: _blId, label: item.blNo ?? String(_blId) }]
+              : [],
 
-          calculatedAmount: (toNum(item.noOfDays) || 0) * (toNum(item.rate) || 0),
+          calculatedAmount:
+            (toNum(item.noOfDays) || 0) * (toNum(item.rate) || 0),
         };
       });
     };
@@ -1513,14 +1545,22 @@ export default function AddEditFormControll() {
       // ✅ avoid mixing currencies: only take detail rows that match header currencyId (when set)
       const filtered =
         headerCurrencyId != null
-          ? rows.filter((r) => Number(r.currencyId) === Number(headerCurrencyId))
+          ? rows.filter(
+              (r) => Number(r.currencyId) === Number(headerCurrencyId),
+            )
           : rows;
 
       const qty = filtered.reduce((acc, r) => acc + (toNum(r.qty) || 0), 0);
 
       // totals from amounts (best, because your API already gives amountHc/amountFc)
-      const totalAmountHc = filtered.reduce((acc, r) => acc + toNum(r.amountHc), 0);
-      const totalAmountFc = filtered.reduce((acc, r) => acc + toNum(r.amountFc), 0);
+      const totalAmountHc = filtered.reduce(
+        (acc, r) => acc + toNum(r.amountHc),
+        0,
+      );
+      const totalAmountFc = filtered.reduce(
+        (acc, r) => acc + toNum(r.amountFc),
+        0,
+      );
 
       // avg rate (weighted by qty * days)
       let weightedSum = 0;
@@ -1575,7 +1615,10 @@ export default function AddEditFormControll() {
         // currency for header:
         // prefer existing header currencyId, else api header currencyId, else first detail row
         const headerCurrencyId =
-          ch.currencyId ?? apiRow.currencyId ?? detailsRowsAll?.[0]?.currencyId ?? prev.currencyId;
+          ch.currencyId ??
+          apiRow.currencyId ??
+          detailsRowsAll?.[0]?.currencyId ??
+          prev.currencyId;
 
         const { qty, avgRate, totalAmountHc, totalAmountFc, filtered } =
           computeHeaderFromDetails(detailsRowsAll, headerCurrencyId);
@@ -1589,10 +1632,10 @@ export default function AddEditFormControll() {
           : pickValidDD(ch.currencyIddropdown).length
             ? pickValidDD(ch.currencyIddropdown)
             : mkDD(
-              headerCurrencyId,
-              filtered?.[0]?.currencyName ??
-              filtered?.[0]?.currencyIddropdown?.[0]?.label,
-            );
+                headerCurrencyId,
+                filtered?.[0]?.currencyName ??
+                  filtered?.[0]?.currencyIddropdown?.[0]?.label,
+              );
 
         const derivedChargeDD = pickValidDD(apiRow.chargeIddropdown).length
           ? pickValidDD(apiRow.chargeIddropdown)
@@ -1650,20 +1693,23 @@ export default function AddEditFormControll() {
           const detailsRowsAll = buildChargeDetailsRows(apiRow.thirdlevel);
 
           const headerCurrencyId =
-            apiRow.currencyId ?? detailsRowsAll?.[0]?.currencyId ?? prev.currencyId;
+            apiRow.currencyId ??
+            detailsRowsAll?.[0]?.currencyId ??
+            prev.currencyId;
 
           const { qty, avgRate, totalAmountHc, totalAmountFc, filtered } =
             computeHeaderFromDetails(detailsRowsAll, headerCurrencyId);
 
           const thirdlevel = buildThirdLevelForSave(filtered, apiRow.chargeId);
 
-          const derivedCurrencyDD = pickValidDD(apiRow.currencyIddropdown).length
+          const derivedCurrencyDD = pickValidDD(apiRow.currencyIddropdown)
+            .length
             ? pickValidDD(apiRow.currencyIddropdown)
             : mkDD(
-              headerCurrencyId,
-              filtered?.[0]?.currencyName ??
-              filtered?.[0]?.currencyIddropdown?.[0]?.label,
-            );
+                headerCurrencyId,
+                filtered?.[0]?.currencyName ??
+                  filtered?.[0]?.currencyIddropdown?.[0]?.label,
+              );
 
           const derivedChargeDD = pickValidDD(apiRow.chargeIddropdown).length
             ? pickValidDD(apiRow.chargeIddropdown)
@@ -1735,15 +1781,16 @@ export default function AddEditFormControll() {
     });
   }
 
-
   const onConfirm = async (conformData) => {
     if (
-      uriDecodedMenu?.menuName == "Journal Voucher" ||
-      uriDecodedMenu?.menuName == "Contra Voucher"
+      (uriDecodedMenu?.menuName == "Journal Voucher" ||
+        uriDecodedMenu?.menuName == "Contra Voucher") &&
+      conformData.type !== "onClose"
     ) {
-      setOpenModal((prev) => !prev);
+      setOpenModal(false);
       return;
     }
+
     if (conformData.type === "onClose") {
       if (conformData.isError) {
         setOpenModal((prev) => !prev);
@@ -1786,7 +1833,8 @@ export default function AddEditFormControll() {
     }
 
     if (Array.isArray(value)) return value.length > 0;
-    if (value && typeof value === "object") return Object.keys(value).length > 0;
+    if (value && typeof value === "object")
+      return Object.keys(value).length > 0;
 
     return value !== null && value !== undefined;
   };
@@ -1838,7 +1886,12 @@ export default function AddEditFormControll() {
     });
   };
 
-  const updateParentFieldMeta = ({ visibleIds = [], hiddenIds = [], enableIds = [], disableIds = [] }) => {
+  const updateParentFieldMeta = ({
+    visibleIds = [],
+    hiddenIds = [],
+    enableIds = [],
+    disableIds = [],
+  }) => {
     const visibleSet = new Set(visibleIds.map(Number));
     const hiddenSet = new Set(hiddenIds.map(Number));
     const enableSet = new Set(enableIds.map(Number));
@@ -1900,7 +1953,10 @@ export default function AddEditFormControll() {
         }
 
         const ddKey = `${name}dropdown`;
-        if (Object.prototype.hasOwnProperty.call(prev, ddKey) && prev[ddKey] !== null) {
+        if (
+          Object.prototype.hasOwnProperty.call(prev, ddKey) &&
+          prev[ddKey] !== null
+        ) {
           updates[ddKey] = null;
           changed = true;
         }
@@ -1965,7 +2021,8 @@ export default function AddEditFormControll() {
           tempnewState = {
             ...tempnewState,
             [`${element.fieldname}datetime`]:
-              element.controlDefaultValue == null || element.controlDefaultValue === ""
+              element.controlDefaultValue == null ||
+              element.controlDefaultValue === ""
                 ? null
                 : new Date(element.controlDefaultValue),
             [element.fieldname]: element.controlDefaultValue,
@@ -2008,7 +2065,7 @@ export default function AddEditFormControll() {
 
         if (
           ["checkbox", "radio", "multicheckbox"].includes(
-            String(element.controlname || "").toLowerCase()
+            String(element.controlname || "").toLowerCase(),
           )
         ) {
           tempnewState = {
@@ -2102,7 +2159,9 @@ export default function AddEditFormControll() {
       // -------------------------------------------------------
       let Obj = { tableName: tableName };
 
-      for (const iterator of apiResponseData.child || apiResponseData.children || []) {
+      for (const iterator of apiResponseData.child ||
+        apiResponseData.children ||
+        []) {
         Obj[iterator.tableName] = [];
       }
 
@@ -2148,24 +2207,29 @@ export default function AddEditFormControll() {
         tempnewState?.tdsApplicable === 1 ||
         tempnewState?.tdsApplicable === "1";
 
-      const preparedChilds = (apiResponseData.child || apiResponseData.children || []).map(
-        (child) => {
-          if (child.tableName !== "tblVoucherLedger") return child;
+      const preparedChilds = (
+        apiResponseData.child ||
+        apiResponseData.children ||
+        []
+      ).map((child) => {
+        if (child.tableName !== "tblVoucherLedger") return child;
 
-          return {
-            ...child,
-            fields: (child.fields || []).map((field) => {
-              if (field.fieldname === "tdsAmtFC" || field.fieldname === "tdsAmtHC") {
-                return {
-                  ...field,
-                  columnsToBeVisible: showChildTds,
-                };
-              }
-              return field;
-            }),
-          };
-        }
-      );
+        return {
+          ...child,
+          fields: (child.fields || []).map((field) => {
+            if (
+              field.fieldname === "tdsAmtFC" ||
+              field.fieldname === "tdsAmtHC"
+            ) {
+              return {
+                ...field,
+                columnsToBeVisible: showChildTds,
+              };
+            }
+            return field;
+          }),
+        };
+      });
 
       setChildsFields(preparedChilds);
       setButtonsData(apiResponseData.buttons || []);
@@ -2195,7 +2259,7 @@ export default function AddEditFormControll() {
     if (!changedFieldNames.length || !actionFieldNames.length) return;
 
     const matchedRecords = actionFieldNames.filter((record) =>
-      changedFieldNames.includes(record.parentFieldName)
+      changedFieldNames.includes(record.parentFieldName),
     );
 
     if (!matchedRecords.length) return;
@@ -2231,7 +2295,7 @@ export default function AddEditFormControll() {
     if (!changedFieldNames.length || !actionFieldNames.length) return;
 
     const matchedRecords = actionFieldNames.filter((record) =>
-      changedFieldNames.includes(record.parentFieldName)
+      changedFieldNames.includes(record.parentFieldName),
     );
 
     if (!matchedRecords.length) return;
@@ -2326,7 +2390,10 @@ export default function AddEditFormControll() {
         let childChanged = false;
 
         const updatedFields = (child.fields || []).map((field) => {
-          if (field.fieldname === "tdsAmtFC" || field.fieldname === "tdsAmtHC") {
+          if (
+            field.fieldname === "tdsAmtFC" ||
+            field.fieldname === "tdsAmtHC"
+          ) {
             if (field.columnsToBeVisible !== showChildTds) {
               childChanged = true;
               return {
@@ -2361,11 +2428,18 @@ export default function AddEditFormControll() {
 
         const updatedLedger = prev.tblVoucherLedger.map((row) => {
           const nextTdsAmtHC =
-            row?.tdsAmtHC === null || row?.tdsAmtHC === undefined ? 0 : row.tdsAmtHC;
+            row?.tdsAmtHC === null || row?.tdsAmtHC === undefined
+              ? 0
+              : row.tdsAmtHC;
           const nextTdsAmtFC =
-            row?.tdsAmtFC === null || row?.tdsAmtFC === undefined ? 0 : row.tdsAmtFC;
+            row?.tdsAmtFC === null || row?.tdsAmtFC === undefined
+              ? 0
+              : row.tdsAmtFC;
 
-          if (nextTdsAmtHC !== row?.tdsAmtHC || nextTdsAmtFC !== row?.tdsAmtFC) {
+          if (
+            nextTdsAmtHC !== row?.tdsAmtHC ||
+            nextTdsAmtFC !== row?.tdsAmtFC
+          ) {
             changed = true;
             return {
               ...row,
@@ -2379,9 +2453,9 @@ export default function AddEditFormControll() {
 
         return changed
           ? {
-            ...prev,
-            tblVoucherLedger: updatedLedger,
-          }
+              ...prev,
+              tblVoucherLedger: updatedLedger,
+            }
           : prev;
       });
 
@@ -2392,11 +2466,18 @@ export default function AddEditFormControll() {
 
         const updatedLedger = prev.tblVoucherLedger.map((row) => {
           const nextTdsAmtHC =
-            row?.tdsAmtHC === null || row?.tdsAmtHC === undefined ? 0 : row.tdsAmtHC;
+            row?.tdsAmtHC === null || row?.tdsAmtHC === undefined
+              ? 0
+              : row.tdsAmtHC;
           const nextTdsAmtFC =
-            row?.tdsAmtFC === null || row?.tdsAmtFC === undefined ? 0 : row.tdsAmtFC;
+            row?.tdsAmtFC === null || row?.tdsAmtFC === undefined
+              ? 0
+              : row.tdsAmtFC;
 
-          if (nextTdsAmtHC !== row?.tdsAmtHC || nextTdsAmtFC !== row?.tdsAmtFC) {
+          if (
+            nextTdsAmtHC !== row?.tdsAmtHC ||
+            nextTdsAmtFC !== row?.tdsAmtFC
+          ) {
             changed = true;
             return {
               ...row,
@@ -2410,9 +2491,9 @@ export default function AddEditFormControll() {
 
         return changed
           ? {
-            ...prev,
-            tblVoucherLedger: updatedLedger,
-          }
+              ...prev,
+              tblVoucherLedger: updatedLedger,
+            }
           : prev;
       });
     }
@@ -2426,7 +2507,7 @@ export default function AddEditFormControll() {
     safeTaxAmountFc,
     totalAmountFc,
     safeTdsAmount,
-    safeTdsAmountFc
+    safeTdsAmountFc,
   ) {
     const { clientId } = getUserDetails();
     const { voucherTypeId } = newState || {};
@@ -2455,7 +2536,9 @@ export default function AddEditFormControll() {
     const roundedFc = Math.round(Number(totalInvoiceAmountFc) || 0);
 
     const roundOffAmount = to2(roundedHc - (Number(totalInvoiceAmount) || 0));
-    const roundOffAmountFc = to2(roundedFc - (Number(totalInvoiceAmountFc) || 0));
+    const roundOffAmountFc = to2(
+      roundedFc - (Number(totalInvoiceAmountFc) || 0),
+    );
 
     if (roUpper === "Y") {
       setNewState((prev) => ({
@@ -2595,7 +2678,10 @@ export default function AddEditFormControll() {
     const charges = newState?.tblInvoiceCharge || [];
 
     const totalAmount = round2(
-      charges.reduce((acc, item) => acc + (Number(item?.totalAmountHc) || 0), 0)
+      charges.reduce(
+        (acc, item) => acc + (Number(item?.totalAmountHc) || 0),
+        0,
+      ),
     );
 
     const taxAmount = round2(
@@ -2612,11 +2698,14 @@ export default function AddEditFormControll() {
         }, 0);
 
         return acc + temp;
-      }, 0)
+      }, 0),
     );
 
     const totalAmountFc = round2(
-      charges.reduce((acc, item) => acc + (Number(item?.totalAmountFc) || 0), 0)
+      charges.reduce(
+        (acc, item) => acc + (Number(item?.totalAmountFc) || 0),
+        0,
+      ),
     );
 
     const taxAmountFc = round2(
@@ -2633,7 +2722,7 @@ export default function AddEditFormControll() {
         }, 0);
 
         return acc + temp;
-      }, 0)
+      }, 0),
     );
 
     const tdsAmount = round2(
@@ -2650,7 +2739,7 @@ export default function AddEditFormControll() {
         }, 0);
 
         return acc + temp;
-      }, 0)
+      }, 0),
     );
 
     const tdsAmountFc = round2(
@@ -2667,16 +2756,28 @@ export default function AddEditFormControll() {
         }, 0);
 
         return acc + temp;
-      }, 0)
+      }, 0),
     );
 
-    const safeTaxAmount = round2(Number.isNaN(Number(taxAmount)) ? 0 : taxAmount);
-    const safeTaxAmountFc = round2(Number.isNaN(Number(taxAmountFc)) ? 0 : taxAmountFc);
-    const safeTdsAmount = round2(Number.isNaN(Number(tdsAmount)) ? 0 : tdsAmount);
-    const safeTdsAmountFc = round2(Number.isNaN(Number(tdsAmountFc)) ? 0 : tdsAmountFc);
+    const safeTaxAmount = round2(
+      Number.isNaN(Number(taxAmount)) ? 0 : taxAmount,
+    );
+    const safeTaxAmountFc = round2(
+      Number.isNaN(Number(taxAmountFc)) ? 0 : taxAmountFc,
+    );
+    const safeTdsAmount = round2(
+      Number.isNaN(Number(tdsAmount)) ? 0 : tdsAmount,
+    );
+    const safeTdsAmountFc = round2(
+      Number.isNaN(Number(tdsAmountFc)) ? 0 : tdsAmountFc,
+    );
 
-    const totalInvoiceAmount = round2(Number(totalAmount) + Number(safeTaxAmount));
-    const totalInvoiceAmountFc = round2(Number(totalAmountFc) + Number(safeTaxAmountFc));
+    const totalInvoiceAmount = round2(
+      Number(totalAmount) + Number(safeTaxAmount),
+    );
+    const totalInvoiceAmountFc = round2(
+      Number(totalAmountFc) + Number(safeTaxAmountFc),
+    );
 
     getRoundOffSetting(
       totalInvoiceAmount,
@@ -2686,10 +2787,14 @@ export default function AddEditFormControll() {
       safeTaxAmountFc,
       totalAmountFc,
       safeTdsAmount,
-      safeTdsAmountFc
+      safeTdsAmountFc,
     );
-  }, [newState?.tblInvoiceCharge, newState?.tblInvoiceCharge?.length, invoiceRoundOff]);
-  //till here 
+  }, [
+    newState?.tblInvoiceCharge,
+    newState?.tblInvoiceCharge?.length,
+    invoiceRoundOff,
+  ]);
+  //till here
 
   async function homeCurrency() {
     try {
@@ -2795,7 +2900,7 @@ export default function AddEditFormControll() {
           rowKey,
           tblInvoiceChargeTax: res?.tblTax || [],
         };
-      })
+      }),
     );
 
     // Ignore older async tax responses. This prevents old rows/rates from
@@ -2810,10 +2915,10 @@ export default function AddEditFormControll() {
       if (!currentRows.length) return prev;
 
       const taxByKey = new Map(
-        taxResults.map((item) => [item.rowKey, item.tblInvoiceChargeTax])
+        taxResults.map((item) => [item.rowKey, item.tblInvoiceChargeTax]),
       );
       const taxByIndex = new Map(
-        taxResults.map((item) => [item.index, item.tblInvoiceChargeTax])
+        taxResults.map((item) => [item.index, item.tblInvoiceChargeTax]),
       );
 
       let hasChanges = false;
@@ -2842,9 +2947,9 @@ export default function AddEditFormControll() {
 
       return hasChanges
         ? {
-          ...prev,
-          tblInvoiceCharge: updatedRows,
-        }
+            ...prev,
+            tblInvoiceCharge: updatedRows,
+          }
         : prev;
     };
 
@@ -2862,7 +2967,7 @@ export default function AddEditFormControll() {
       totalAmountHc: charge?.totalAmountHc,
       sacId: charge?.sacId,
       SelectedParentInvId: charge?.SelectedParentInvId,
-    }))
+    })),
   );
 
   useEffect(() => {
@@ -2914,7 +3019,8 @@ export default function AddEditFormControll() {
     };
 
     const parentExchangeRateRaw = toNum(newState?.exchangeRate);
-    const parentExchangeRate = parentExchangeRateRaw > 0 ? parentExchangeRateRaw : 1;
+    const parentExchangeRate =
+      parentExchangeRateRaw > 0 ? parentExchangeRateRaw : 1;
 
     const recalculateTaxRows = (taxRows = [], totalAmountFc, totalAmountHc) => {
       if (!Array.isArray(taxRows)) return [];
@@ -2924,8 +3030,12 @@ export default function AddEditFormControll() {
 
         if (taxPercentage <= 0) return tax;
 
-        const nextTaxAmountFc = toFixed2((toNum(totalAmountFc) * taxPercentage) / 100);
-        const nextTaxAmountHc = toFixed2((toNum(totalAmountHc) * taxPercentage) / 100);
+        const nextTaxAmountFc = toFixed2(
+          (toNum(totalAmountFc) * taxPercentage) / 100,
+        );
+        const nextTaxAmountHc = toFixed2(
+          (toNum(totalAmountHc) * taxPercentage) / 100,
+        );
 
         if (
           String(tax?.taxAmountFc ?? "") === String(nextTaxAmountFc) &&
@@ -2950,8 +3060,12 @@ export default function AddEditFormControll() {
 
         if (tdsPercentage <= 0) return tds;
 
-        const nextTdsAmountFc = toFixed2((toNum(totalAmountFc) * tdsPercentage) / 100);
-        const nextTdsAmountHc = toFixed2((toNum(totalAmountHc) * tdsPercentage) / 100);
+        const nextTdsAmountFc = toFixed2(
+          (toNum(totalAmountFc) * tdsPercentage) / 100,
+        );
+        const nextTdsAmountHc = toFixed2(
+          (toNum(totalAmountHc) * tdsPercentage) / 100,
+        );
 
         if (
           String(tds?.tdsAmountFc ?? "") === String(nextTdsAmountFc) &&
@@ -2983,7 +3097,8 @@ export default function AddEditFormControll() {
         const noOfDaysRaw = toNum(item?.noOfDays);
         const effectiveNoOfDays = noOfDaysRaw <= 0 ? 1 : noOfDaysRaw;
 
-        const totalAmountFcValue = qty * rate * effectiveNoOfDays * exchangeRate;
+        const totalAmountFcValue =
+          qty * rate * effectiveNoOfDays * exchangeRate;
         const totalAmountHcValue = totalAmountFcValue * parentExchangeRate;
 
         const nextTotalAmountFc = toFixed2(totalAmountFcValue);
@@ -3072,7 +3187,6 @@ export default function AddEditFormControll() {
     setSubmitNewState(applyExchangeSyncAndAmountCalculation);
   }, [newState?.tblInvoiceCharge, newState?.exchangeRate]);
 
-
   const [amtRecReadOnly, setAmtRecReadOnly] = useState(false);
   const [amtRecFCReadOnly, setAmtRecFCReadOnly] = useState(false);
 
@@ -3128,7 +3242,9 @@ export default function AddEditFormControll() {
       setNewState((prev) => {
         if (isForeignCurrency) {
           const safeAmtRecFC = toNum(prev?.amtRecFC ?? 0);
-          const safeExchangeRate = toNum(prev?.exchangeRate || exchangeRate || 1);
+          const safeExchangeRate = toNum(
+            prev?.exchangeRate || exchangeRate || 1,
+          );
 
           const calculatedAmtRec = to2(safeAmtRecFC * safeExchangeRate);
 
@@ -3161,11 +3277,7 @@ export default function AddEditFormControll() {
 
   useEffect(() => {
     voucherCalculationBaseonCurrency();
-  }, [
-    newState?.currencyId,
-    newState?.exchangeRate,
-    newState?.amtRecFC,
-  ]);
+  }, [newState?.currencyId, newState?.exchangeRate, newState?.amtRecFC]);
   function onLoadFunctionCall(
     functionData,
     formControlData,
@@ -3199,9 +3311,9 @@ export default function AddEditFormControll() {
           formControlData,
           setFormControlData,
           setStateVariable,
-          isEditMode:false,
+          isEditMode: false,
           parentFieldDataInArray,
-          setParentFieldDataInArray
+          setParentFieldDataInArray,
         });
         if (updatedValues) {
           // toast.success("Function called successfully");
@@ -3281,692 +3393,1992 @@ export default function AddEditFormControll() {
     }
   }, [isDataLoaded, formControlData]);
 
- 
-const allocPrevRef = useRef("");
-const allocInternalUpdateRef = useRef(false);
-const allocHydrateRef = useRef(true);
-const allocParentLedgerSnapshotRef = useRef("");
-const allocVoucherTypeRef = useRef("");
+  // const allocPrevRef = useRef("");
+  // const allocInternalUpdateRef = useRef(false);
+  // const allocHydrateRef = useRef(true);
+  // const allocParentLedgerSnapshotRef = useRef("");
+  // const allocVoucherTypeRef = useRef("");
 
-// ✅ ADDED: used to detect whether user changed HC or FC amount manually
-const allocAmountEditSnapshotRef = useRef({});
+  // // ✅ ADDED: used to detect whether user changed HC or FC amount manually
+  // const allocAmountEditSnapshotRef = useRef({});
 
-const forceVoucherAllocationRecalcAfterDelete = () => {
-  allocPrevRef.current = "";
-  allocInternalUpdateRef.current = false;
-  allocHydrateRef.current = false;
-  allocParentLedgerSnapshotRef.current = "";
-  allocAmountEditSnapshotRef.current = {};
+  // const forceVoucherAllocationRecalcAfterDelete = () => {
+  //   allocPrevRef.current = "";
+  //   allocInternalUpdateRef.current = false;
+  //   allocHydrateRef.current = false;
+  //   allocParentLedgerSnapshotRef.current = "";
+  //   allocAmountEditSnapshotRef.current = {};
 
-  setVoucherAllocDeleteTick((prev) => prev + 1);
-};
+  //   setVoucherAllocDeleteTick((prev) => prev + 1);
+  // };
 
-useEffect(() => {
-  const voucherTypeId = String(newState?.voucherTypeId ?? "");
+  // useEffect(() => {
+  //   const voucherTypeId = String(newState?.voucherTypeId ?? "");
 
-  if (!["8", "9", "11", "12"].includes(voucherTypeId)) {
-    return;
-  }
+  //   if (!["8", "9", "11", "12"].includes(voucherTypeId)) {
+  //     return;
+  //   }
 
-  if (allocVoucherTypeRef.current !== voucherTypeId) {
-    allocVoucherTypeRef.current = voucherTypeId;
+  //   if (allocVoucherTypeRef.current !== voucherTypeId) {
+  //     allocVoucherTypeRef.current = voucherTypeId;
+  //     allocPrevRef.current = "";
+  //     allocInternalUpdateRef.current = false;
+  //     allocHydrateRef.current = true;
+  //     allocParentLedgerSnapshotRef.current = "";
+  //     allocAmountEditSnapshotRef.current = {};
+  //   }
+
+  //   // ✅ voucherTypeId 8 and 11 should work like voucherTypeId 9 for row allocation.
+  //   // ✅ No debit/credit swap needed for 8 or 11.
+  //   const shouldSwapDrCr = false;
+
+  //   const toNum = (v) => {
+  //     if (v === null || v === undefined || v === "") return 0;
+  //     const n = Number(String(v).replace(/,/g, ""));
+  //     return Number.isFinite(n) ? n : 0;
+  //   };
+
+  //   const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+  //   const asStr2 = (n) =>
+  //     n === null || n === undefined || n === "" ? "" : round2(n).toFixed(2);
+
+  //   const asNum2 = (n) => round2(n);
+
+  //   const clamp0 = (n) => Math.max(0, round2(n));
+
+  //   const isTrueValue = (value) =>
+  //     value === true ||
+  //     value === 1 ||
+  //     value === "1" ||
+  //     String(value).toLowerCase() === "true" ||
+  //     String(value).toLowerCase() === "y";
+
+  //   const isSameAmount = (a, b) =>
+  //     Math.abs(round2(toNum(a)) - round2(toNum(b))) < 0.01;
+
+  //   const getHomeCurrencyId = () => {
+  //     const homeCurrency = homeCurrencyRef?.current;
+
+  //     return (
+  //       homeCurrency?.[0]?.currencyId ??
+  //       homeCurrency?.[0]?.id ??
+  //       homeCurrency?.currencyId ??
+  //       homeCurrency?.id ??
+  //       homeCurrency ??
+  //       newState?.homeCurrencyId ??
+  //       newState?.homeCurrency ??
+  //       null
+  //     );
+  //   };
+
+  //   const getRowCurrencyId = (row = {}) =>
+  //     row?.currencyId ?? row?.currencyID ?? row?.currency ?? null;
+
+  //   const getRowExchangeRate = (row = {}) => {
+  //     const rate = toNum(row?.exchangeRate ?? newState?.exchangeRate ?? 1);
+  //     return rate > 0 ? rate : 1;
+  //   };
+
+  //   const isForeignCurrencyRow = (row = {}) => {
+  //     const homeCurrencyId = getHomeCurrencyId();
+  //     const rowCurrencyId = getRowCurrencyId(row);
+
+  //     if (
+  //       homeCurrencyId === null ||
+  //       homeCurrencyId === undefined ||
+  //       homeCurrencyId === "" ||
+  //       rowCurrencyId === null ||
+  //       rowCurrencyId === undefined ||
+  //       rowCurrencyId === ""
+  //     ) {
+  //       return false;
+  //     }
+
+  //     return String(homeCurrencyId) !== String(rowCurrencyId);
+  //   };
+
+  //   // ✅ FC balance to HC balance
+  //   // balanceAmount = balanceAmountFc * exchangeRate
+  //   const getConvertedBalanceHC = (row = {}, balanceFcValue, fallbackHcValue) => {
+  //     if (!isForeignCurrencyRow(row)) {
+  //       return round2(toNum(fallbackHcValue));
+  //     }
+
+  //     return round2(toNum(balanceFcValue) * getRowExchangeRate(row));
+  //   };
+
+  //   // ✅ HC amount to FC amount
+  //   // creditAmountFc = creditAmount / exchangeRate
+  //   // debitAmountFc = debitAmount / exchangeRate
+  //   const getConvertedAmountFC = (row = {}, hcValue, fallbackFcValue) => {
+  //     if (!isForeignCurrencyRow(row)) {
+  //       return round2(toNum(fallbackFcValue));
+  //     }
+
+  //     const rate = getRowExchangeRate(row);
+
+  //     if (rate <= 0) {
+  //       return round2(toNum(fallbackFcValue));
+  //     }
+
+  //     return round2(toNum(hcValue) / rate);
+  //   };
+
+  //   // ✅ FC amount to HC amount
+  //   // creditAmount = creditAmountFc * exchangeRate
+  //   // debitAmount = debitAmountFc * exchangeRate
+  //   const getConvertedAmountHC = (row = {}, fcValue, fallbackHcValue) => {
+  //     if (!isForeignCurrencyRow(row)) {
+  //       return round2(toNum(fallbackHcValue));
+  //     }
+
+  //     return round2(toNum(fcValue) * getRowExchangeRate(row));
+  //   };
+
+  //   const firstPositiveNum = (...values) => {
+  //     for (const value of values) {
+  //       const n = toNum(value);
+  //       if (n > 0) return n;
+  //     }
+  //     return 0;
+  //   };
+
+  //   // ✅ TDS should calculate on LOWEST of Balance Amount and Invoice Amount.
+  //   // ✅ If invoice amount is not available, fallback to balance amount.
+  //   const getTdsBaseAmount = (row, originalBalanceValue, isFC = false) => {
+  //     const balanceValue = clamp0(originalBalanceValue);
+
+  //     const invoiceValue = clamp0(
+  //       firstPositiveNum(
+  //         ...(isFC
+  //           ? [
+  //             row?.invoiceAmountFc,
+  //             row?.invoiceAmountFC,
+  //             row?.billAmountFc,
+  //             row?.billAmountFC,
+  //             row?.invoiceAmount,
+  //             row?.billAmount,
+  //           ]
+  //           : [row?.invoiceAmount, row?.billAmount])
+  //       )
+  //     );
+
+  //     if (invoiceValue > 0) {
+  //       return round2(Math.min(balanceValue, invoiceValue));
+  //     }
+
+  //     return balanceValue;
+  //   };
+
+  //   const isDebitMinusCreditPlusVoucher = ["8", "11"].includes(voucherTypeId);
+
+  //   const isTdsApplicable =
+  //     newState?.tdsApplicable === true ||
+  //     newState?.tdsApplicable === "true" ||
+  //     newState?.tdsApplicable === 1 ||
+  //     newState?.tdsApplicable === "1";
+
+  //   const stateToLogic = (debitValue, creditValue) => {
+  //     if (shouldSwapDrCr) {
+  //       return {
+  //         debit: round2(toNum(creditValue)),
+  //         credit: round2(toNum(debitValue)),
+  //       };
+  //     }
+
+  //     return {
+  //       debit: round2(toNum(debitValue)),
+  //       credit: round2(toNum(creditValue)),
+  //     };
+  //   };
+
+  //   const logicToStateHC = (debitValue, creditValue) => {
+  //     if (shouldSwapDrCr) {
+  //       return {
+  //         debitAmount: asStr2(creditValue),
+  //         creditAmount: asStr2(debitValue),
+  //       };
+  //     }
+
+  //     return {
+  //       debitAmount: asStr2(debitValue),
+  //       creditAmount: asStr2(creditValue),
+  //     };
+  //   };
+
+  //   const logicToStateFC = (debitValue, creditValue) => {
+  //     if (shouldSwapDrCr) {
+  //       return {
+  //         debitAmountFc: asStr2(creditValue),
+  //         creditAmountFc: asStr2(debitValue),
+  //       };
+  //     }
+
+  //     return {
+  //       debitAmountFc: asStr2(debitValue),
+  //       creditAmountFc: asStr2(creditValue),
+  //     };
+  //   };
+
+  //   const normalizeOriginalBalanceFC = ({
+  //     originalValue,
+  //     balanceValue,
+  //     creditValue,
+  //     debitValue,
+  //   }) => {
+  //     if (
+  //       originalValue !== null &&
+  //       originalValue !== undefined &&
+  //       originalValue !== ""
+  //     ) {
+  //       return round2(toNum(originalValue));
+  //     }
+
+  //     const logical = stateToLogic(debitValue, creditValue);
+  //     return round2(toNum(balanceValue) + logical.credit - logical.debit);
+  //   };
+
+  //   const normalizeOriginalBalance = ({
+  //     row,
+  //     originalValue,
+  //     balanceValue,
+  //     balanceFcValue,
+  //     creditValue,
+  //     debitValue,
+  //   }) => {
+  //     if (
+  //       originalValue !== null &&
+  //       originalValue !== undefined &&
+  //       originalValue !== ""
+  //     ) {
+  //       return round2(toNum(originalValue));
+  //     }
+
+  //     const logical = stateToLogic(debitValue, creditValue);
+  //     const fallbackHC = round2(
+  //       toNum(balanceValue) + logical.credit - logical.debit
+  //     );
+
+  //     return getConvertedBalanceHC(row, balanceFcValue, fallbackHC);
+  //   };
+
+  //   const getLedgerKey = (ledger, index) =>
+  //     ledger?.voucherLedgerId != null
+  //       ? String(ledger.voucherLedgerId)
+  //       : String(ledger?.indexValue ?? index);
+
+  //   const getDetailKey = (row, index) =>
+  //     row?.voucherOutstandingId != null
+  //       ? String(row.voucherOutstandingId)
+  //       : String(row?.indexValue ?? index);
+
+  //   const hasHCAmount = (row) =>
+  //     toNum(row?.debitAmount) > 0 || toNum(row?.creditAmount) > 0;
+
+  //   const hasFCAmount = (row) =>
+  //     toNum(row?.debitAmountFc) > 0 || toNum(row?.creditAmountFc) > 0;
+
+  //   const getManualDetailAlloc = (row) => {
+  //     const checked = isTrueValue(row?.isChecked);
+
+  //     return {
+  //       hc: !!row?.__manualAllocHC || (checked && hasHCAmount(row)),
+  //       fc: !!row?.__manualAllocFC || (checked && hasFCAmount(row)),
+  //     };
+  //   };
+
+  //   const hasParentLedgerAmount = (ledger) =>
+  //     toNum(ledger?.debitAmount) > 0 ||
+  //     toNum(ledger?.creditAmount) > 0 ||
+  //     toNum(ledger?.debitAmountFc) > 0 ||
+  //     toNum(ledger?.creditAmountFc) > 0;
+
+  //   const hasCheckedThirdLevelRows = (ledger) => {
+  //     const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+  //       ? ledger.tblVoucherLedgerDetails
+  //       : [];
+
+  //     return details.some(
+  //       (row) => isTrueValue(row?.isChecked) || isTrueValue(row?.ispreChecked)
+  //     );
+  //   };
+
+  //   const getParentOnlyLedgerSnapshot = (ledgerRows) =>
+  //     JSON.stringify(
+  //       (Array.isArray(ledgerRows) ? ledgerRows : [])
+  //         .map((ledger, ledgerIndex) => {
+  //           const hasCheckedThirdLevel = hasCheckedThirdLevelRows(ledger);
+
+  //           if (hasCheckedThirdLevel) return null;
+
+  //           return {
+  //             k: getLedgerKey(ledger, ledgerIndex),
+  //             checked: isTrueValue(ledger?.isChecked),
+  //             d: asStr2(ledger?.debitAmount),
+  //             df: asStr2(ledger?.debitAmountFc),
+  //             cr: asStr2(ledger?.creditAmount),
+  //             crf: asStr2(ledger?.creditAmountFc),
+  //             th: asStr2(ledger?.tdsAmtHC ?? ledger?.tdsAmount),
+  //             tf: asStr2(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc),
+  //           };
+  //         })
+  //         .filter(Boolean)
+  //     );
+
+  //   const getManualLedgerTds = (ledger) => ({
+  //     hc: isTdsApplicable
+  //       ? round2(toNum(ledger?.tdsAmtHC ?? ledger?.tdsAmount ?? 0))
+  //       : 0,
+  //     fc: isTdsApplicable
+  //       ? round2(toNum(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc ?? 0))
+  //       : 0,
+  //   });
+
+  //   const makeSnapshot = (
+  //     ledgerRows,
+  //     balanceAmtHc,
+  //     balanceAmtFc,
+  //     tdsAmt,
+  //     tdsAmtFC
+  //   ) =>
+  //     JSON.stringify({
+  //       balanceAmtHc: asStr2(balanceAmtHc),
+  //       balanceAmtFc: asStr2(balanceAmtFc),
+  //       tdsAmt: asStr2(tdsAmt),
+  //       tdsAmtFC: asStr2(tdsAmtFC),
+  //       ledgers: ledgerRows.map((ledger, ledgerIndex) => ({
+  //         k: getLedgerKey(ledger, ledgerIndex),
+  //         d: asStr2(ledger?.debitAmount),
+  //         df: asStr2(ledger?.debitAmountFc),
+  //         cr: asStr2(ledger?.creditAmount),
+  //         crf: asStr2(ledger?.creditAmountFc),
+  //         th: asStr2(ledger?.tdsAmtHC),
+  //         tf: asStr2(ledger?.tdsAmtFC),
+  //         ta: asStr2(ledger?.tdsAmount),
+  //         taf: asStr2(ledger?.tdsAmountFc),
+  //         child: isTrueValue(ledger?.isChildChecked),
+  //         rows: (Array.isArray(ledger?.tblVoucherLedgerDetails)
+  //           ? ledger.tblVoucherLedgerDetails
+  //           : []
+  //         ).map((row, rowIndex) => ({
+  //           k: getDetailKey(row, rowIndex),
+  //           c: isTrueValue(row?.isChecked),
+  //           neg: !!row?.__isNegRow,
+  //           mh: !!row?.__manualAllocHC,
+  //           mf: !!row?.__manualAllocFC,
+  //           fh: !!row?.__fcDerivedFromHC,
+  //           hf: !!row?.__hcDerivedFromFC,
+  //           ob: asStr2(row?.__origBalHC),
+  //           obf: asStr2(row?.__origBalFC),
+  //           d: asStr2(row?.debitAmount),
+  //           df: asStr2(row?.debitAmountFc),
+  //           cr: asStr2(row?.creditAmount),
+  //           crf: asStr2(row?.creditAmountFc),
+  //           b: asStr2(row?.balanceAmount),
+  //           bf: asStr2(row?.balanceAmountFc),
+  //           t: asStr2(row?.tdsAmount),
+  //           tf: asStr2(row?.tdsAmountFc),
+  //           inv: asStr2(row?.invoiceAmount),
+  //           invf: asStr2(row?.invoiceAmountFc),
+  //           cid: String(getRowCurrencyId(row) ?? ""),
+  //           ex: asStr2(row?.exchangeRate),
+  //         })),
+  //       })),
+  //     });
+
+  //   const getSignedDisplayDelta = (debitValue, creditValue) =>
+  //     round2(toNum(debitValue) - toNum(creditValue));
+
+  //   const getEffectiveDisplayTotals = (ledgerRows) => {
+  //     return ledgerRows.reduce(
+  //       (acc, ledger) => {
+  //         const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+  //           ? ledger.tblVoucherLedgerDetails
+  //           : [];
+
+  //         if (details.length && isTrueValue(ledger?.isChildChecked)) {
+  //           details.forEach((row) => {
+  //             acc.hc = round2(
+  //               acc.hc +
+  //               getSignedDisplayDelta(row?.debitAmount, row?.creditAmount)
+  //             );
+
+  //             acc.fc = round2(
+  //               acc.fc +
+  //               getSignedDisplayDelta(
+  //                 row?.debitAmountFc,
+  //                 row?.creditAmountFc
+  //               )
+  //             );
+  //           });
+  //         } else {
+  //           acc.hc = round2(
+  //             acc.hc +
+  //             getSignedDisplayDelta(ledger?.debitAmount, ledger?.creditAmount)
+  //           );
+
+  //           acc.fc = round2(
+  //             acc.fc +
+  //             getSignedDisplayDelta(
+  //               ledger?.debitAmountFc,
+  //               ledger?.creditAmountFc
+  //             )
+  //           );
+  //         }
+
+  //         return acc;
+  //       },
+  //       { hc: 0, fc: 0 }
+  //     );
+  //   };
+
+  //   const hasLedgers =
+  //     Array.isArray(newState?.tblVoucherLedger) &&
+  //     newState.tblVoucherLedger.length > 0;
+
+  //   const ledgers = hasLedgers
+  //     ? newState.tblVoucherLedger
+  //     : [
+  //       {
+  //         __virtual: true,
+  //         tblVoucherLedgerDetails: Array.isArray(
+  //           newState?.tblVoucherLedgerDetails
+  //         )
+  //           ? newState.tblVoucherLedgerDetails
+  //           : [],
+  //       },
+  //     ];
+
+  //   const getRowEditKey = (ledger, ledgerIndex, row, rowIndex) =>
+  //     `${getLedgerKey(ledger, ledgerIndex)}__${getDetailKey(row, rowIndex)}`;
+
+  //   const makeAmountEditSnapshot = (ledgerRows) => {
+  //     const snap = {};
+
+  //     (Array.isArray(ledgerRows) ? ledgerRows : []).forEach(
+  //       (ledger, ledgerIndex) => {
+  //         const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+  //           ? ledger.tblVoucherLedgerDetails
+  //           : [];
+
+  //         details.forEach((row, rowIndex) => {
+  //           const key = getRowEditKey(ledger, ledgerIndex, row, rowIndex);
+
+  //           snap[key] = {
+  //             debitAmount: asStr2(row?.debitAmount),
+  //             creditAmount: asStr2(row?.creditAmount),
+  //             debitAmountFc: asStr2(row?.debitAmountFc),
+  //             creditAmountFc: asStr2(row?.creditAmountFc),
+  //           };
+  //         });
+  //       }
+  //     );
+
+  //     return snap;
+  //   };
+
+  //   const getAmountEditDirection = (editKey, row = {}) => {
+  //     if (!isForeignCurrencyRow(row)) return "";
+
+  //     const prev = allocAmountEditSnapshotRef.current?.[editKey];
+
+  //     if (prev) {
+  //       const hcChanged =
+  //         !isSameAmount(prev.debitAmount, row?.debitAmount) ||
+  //         !isSameAmount(prev.creditAmount, row?.creditAmount);
+
+  //       const fcChanged =
+  //         !isSameAmount(prev.debitAmountFc, row?.debitAmountFc) ||
+  //         !isSameAmount(prev.creditAmountFc, row?.creditAmountFc);
+
+  //       if (fcChanged && !hcChanged) return "FC_TO_HC";
+  //       if (hcChanged && !fcChanged) return "HC_TO_FC";
+  //     }
+
+  //     if (isTrueValue(row?.__hcDerivedFromFC)) return "FC_TO_HC";
+  //     if (isTrueValue(row?.__fcDerivedFromHC)) return "HC_TO_FC";
+
+  //     const manual = getManualDetailAlloc(row);
+  //     const hc = stateToLogic(row?.debitAmount, row?.creditAmount);
+  //     const fc = stateToLogic(row?.debitAmountFc, row?.creditAmountFc);
+  //     const rate = getRowExchangeRate(row);
+
+  //     const fcHasValue = fc.debit > 0 || fc.credit > 0;
+  //     const hcHasValue = hc.debit > 0 || hc.credit > 0;
+
+  //     if (manual.fc && fcHasValue && rate > 0) {
+  //       const expectedDebitHC = round2(fc.debit * rate);
+  //       const expectedCreditHC = round2(fc.credit * rate);
+
+  //       if (
+  //         !isSameAmount(hc.debit, expectedDebitHC) ||
+  //         !isSameAmount(hc.credit, expectedCreditHC)
+  //       ) {
+  //         return "FC_TO_HC";
+  //       }
+  //     }
+
+  //     if (manual.hc && hcHasValue && rate > 0) {
+  //       const expectedDebitFC = round2(hc.debit / rate);
+  //       const expectedCreditFC = round2(hc.credit / rate);
+
+  //       if (
+  //         !isSameAmount(fc.debit, expectedDebitFC) ||
+  //         !isSameAmount(fc.credit, expectedCreditFC)
+  //       ) {
+  //         return "HC_TO_FC";
+  //       }
+  //     }
+
+  //     return "";
+  //   };
+
+  //   const parentOnlyLedgerSnapshot = getParentOnlyLedgerSnapshot(ledgers);
+
+  //   const hasParentOnlyLedgerChange =
+  //     parentOnlyLedgerSnapshot !== "[]" &&
+  //     allocParentLedgerSnapshotRef.current !== "" &&
+  //     allocParentLedgerSnapshotRef.current !== parentOnlyLedgerSnapshot;
+
+  //   const hasParentLedgerRowsForCalculation = ledgers.some((ledger) => {
+  //     const noThirdLevelChecked = !hasCheckedThirdLevelRows(ledger);
+
+  //     return (
+  //       noThirdLevelChecked &&
+  //       (isTrueValue(ledger?.isChecked) || hasParentLedgerAmount(ledger))
+  //     );
+  //   });
+
+  //   const currentSnapshot = makeSnapshot(
+  //     ledgers,
+  //     newState?.balanceAmtHc,
+  //     newState?.balanceAmtFc,
+  //     newState?.tdsAmt,
+  //     newState?.tdsAmtFC
+  //   );
+
+  //   if (allocInternalUpdateRef.current) {
+  //     if (currentSnapshot === allocPrevRef.current) {
+  //       allocInternalUpdateRef.current = false;
+  //       allocAmountEditSnapshotRef.current = makeAmountEditSnapshot(ledgers);
+  //       return;
+  //     }
+
+  //     allocInternalUpdateRef.current = false;
+  //   }
+
+  //   const baseBalanceHC = round2(
+  //     toNum(newState?.amtRec ?? 0) +
+  //     toNum(newState?.bcAmt ?? newState?.bankCharges ?? 0) +
+  //     toNum(newState?.exGainLoss ?? 0)
+  //   );
+
+  //   // const baseBalanceFC = round2(
+  //   //   toNum(newState?.amtRecFC ?? 0) +
+  //   //   toNum(
+  //   //     newState?.bcAmtFC ??
+  //   //     newState?.bankChargesFC ??
+  //   //     newState?.bankCharges ??
+  //   //     0
+  //   //   )
+  //   // );
+  //   const baseBalanceFC = round2(
+  //     toNum(newState?.amtRecFC ?? 0) +
+  //     toNum(
+  //       newState?.bcAmtFC ??
+  //       newState?.bcAmtFc ??
+  //       newState?.bankChargesFC ??
+  //       newState?.bankChargesFc ??
+  //       0
+  //     )
+  //   );
+
+  //   let remainingHC = baseBalanceHC;
+  //   let remainingFC = baseBalanceFC;
+
+  //   const nextLedgers = ledgers.map((ledger, ledgerIndex) => {
+  //     const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+  //       ? ledger.tblVoucherLedgerDetails
+  //       : [];
+
+  //     if (!details.length) {
+  //       const manualHC = stateToLogic(ledger?.debitAmount, ledger?.creditAmount);
+  //       const manualFC = stateToLogic(
+  //         ledger?.debitAmountFc,
+  //         ledger?.creditAmountFc
+  //       );
+
+  //       remainingHC = round2(remainingHC - manualHC.credit + manualHC.debit);
+  //       remainingFC = round2(remainingFC - manualFC.credit + manualFC.debit);
+
+  //       const manualLedgerTds = getManualLedgerTds(ledger);
+
+  //       return {
+  //         ...ledger,
+  //         isChildChecked: false,
+  //         tdsAmtHC: manualLedgerTds.hc,
+  //         tdsAmtFC: manualLedgerTds.fc,
+  //         tdsAmount: manualLedgerTds.hc,
+  //         tdsAmountFc: manualLedgerTds.fc,
+  //       };
+  //     }
+
+  //     const hasExistingCheckedHC = details.some((row) => {
+  //       if (!isTrueValue(row?.isChecked)) return false;
+
+  //       const manual = getManualDetailAlloc(row);
+
+  //       return isTrueValue(row?.ispreChecked) || manual.hc;
+  //     });
+
+  //     const hasExistingCheckedFC = details.some((row) => {
+  //       if (!isTrueValue(row?.isChecked)) return false;
+
+  //       const manual = getManualDetailAlloc(row);
+
+  //       return isTrueValue(row?.ispreChecked) || manual.fc;
+  //     });
+
+  //     const hasNewCheckedHC = details.some((row) => {
+  //       if (!isTrueValue(row?.isChecked) || isTrueValue(row?.ispreChecked)) {
+  //         return false;
+  //       }
+
+  //       const manual = getManualDetailAlloc(row);
+  //       return !manual.hc;
+  //     });
+
+  //     const hasNewCheckedFC = details.some((row) => {
+  //       if (!isTrueValue(row?.isChecked) || isTrueValue(row?.ispreChecked)) {
+  //         return false;
+  //       }
+
+  //       const manual = getManualDetailAlloc(row);
+  //       return !manual.fc;
+  //     });
+
+  //     const currentBalanceHC = clamp0(
+  //       toNum(newState?.balanceAmtHc ?? newState?.balanceAmt ?? 0)
+  //     );
+
+  //     const currentBalanceFC = clamp0(
+  //       toNum(newState?.balanceAmtFc ?? newState?.balanceAmtFC ?? 0)
+  //     );
+
+  //     const useCurrentRemainingHC = hasExistingCheckedHC && hasNewCheckedHC;
+  //     const useCurrentRemainingFC = hasExistingCheckedFC && hasNewCheckedFC;
+
+  //     if (useCurrentRemainingHC) {
+  //       remainingHC = currentBalanceHC;
+  //     }
+
+  //     if (useCurrentRemainingFC) {
+  //       remainingFC = currentBalanceFC;
+  //     }
+
+  //     let isChildChecked = false;
+
+  //     const nextDetails = details.map((row, rowIndex) => {
+  //       const isPreChecked = isTrueValue(row?.ispreChecked);
+  //       const isChecked = isTrueValue(row?.isChecked);
+  //       const shouldFreezePreCheckedRow = isPreChecked && isChecked;
+
+  //       const editKey = getRowEditKey(ledger, ledgerIndex, row, rowIndex);
+  //       const amountEditDirection = getAmountEditDirection(editKey, row);
+
+  //       if (shouldFreezePreCheckedRow) {
+  //         isChildChecked = true;
+
+  //         const origBalFC = normalizeOriginalBalanceFC({
+  //           originalValue: row?.__origBalFC,
+  //           balanceValue: row?.balanceAmountFc,
+  //           creditValue: row?.creditAmountFc,
+  //           debitValue: row?.debitAmountFc,
+  //         });
+
+  //         const origBalHC = normalizeOriginalBalance({
+  //           row,
+  //           originalValue: row?.__origBalHC,
+  //           balanceValue: row?.balanceAmount,
+  //           balanceFcValue: origBalFC,
+  //           creditValue: row?.creditAmount,
+  //           debitValue: row?.debitAmount,
+  //         });
+
+  //         return {
+  //           ...row,
+  //           __isNegRow: origBalHC < 0 || origBalFC < 0,
+  //           __origBalHC: origBalHC,
+  //           __origBalFC: origBalFC,
+  //           __fcDerivedFromHC: !!row?.__fcDerivedFromHC,
+  //           __hcDerivedFromFC: !!row?.__hcDerivedFromFC,
+  //           tdsAmount: asNum2(row?.tdsAmount),
+  //           tdsAmountFc: asNum2(row?.tdsAmountFc),
+  //         };
+  //       }
+
+  //       if (isChecked) isChildChecked = true;
+
+  //       const origBalFC = normalizeOriginalBalanceFC({
+  //         originalValue: row?.__origBalFC,
+  //         balanceValue: row?.balanceAmountFc,
+  //         creditValue: row?.creditAmountFc,
+  //         debitValue: row?.debitAmountFc,
+  //       });
+
+  //       const origBalHC = normalizeOriginalBalance({
+  //         row,
+  //         originalValue: row?.__origBalHC,
+  //         balanceValue: row?.balanceAmount,
+  //         balanceFcValue: origBalFC,
+  //         creditValue: row?.creditAmount,
+  //         debitValue: row?.debitAmount,
+  //       });
+
+  //       const isNegativeRow = origBalHC < 0 || origBalFC < 0;
+
+  //       const manualAlloc = getManualDetailAlloc(row);
+  //       const manualAllocHC = isChecked && manualAlloc.hc;
+  //       const manualAllocFC = isChecked && manualAlloc.fc;
+
+  //       let logicalDebitHC = 0;
+  //       let logicalCreditHC = 0;
+  //       let logicalDebitFC = 0;
+  //       let logicalCreditFC = 0;
+
+  //       let balanceHC = origBalHC;
+  //       let balanceFC = origBalFC;
+
+  //       let rowTdsAmountHC = 0;
+  //       let rowTdsAmountFC = 0;
+
+  //       let shouldDeriveFCFromHC = false;
+  //       let shouldDeriveHCFromFC = false;
+
+  //       if (isChecked) {
+  //         shouldDeriveFCFromHC =
+  //           amountEditDirection === "HC_TO_FC" &&
+  //           manualAllocHC &&
+  //           isForeignCurrencyRow(row);
+
+  //         shouldDeriveHCFromFC =
+  //           amountEditDirection === "FC_TO_HC" &&
+  //           manualAllocFC &&
+  //           isForeignCurrencyRow(row);
+
+  //         if (isTdsApplicable && manualAllocHC && useCurrentRemainingHC) {
+  //           rowTdsAmountHC = round2(toNum(row?.tdsAmount));
+  //         } else {
+  //           const canCalculateTdsHC =
+  //             isTdsApplicable &&
+  //             origBalHC > 0 &&
+  //             (manualAllocHC ? !useCurrentRemainingHC : remainingHC > 0);
+
+  //           if (canCalculateTdsHC) {
+  //             const tdsBaseHC = getTdsBaseAmount(row, origBalHC, false);
+
+  //             rowTdsAmountHC = round2(tdsBaseHC * 0.02);
+  //             remainingHC = round2(remainingHC + rowTdsAmountHC);
+  //           }
+  //         }
+
+  //         if (manualAllocHC) {
+  //           const manualHC = stateToLogic(row?.debitAmount, row?.creditAmount);
+
+  //           logicalDebitHC = clamp0(manualHC.debit);
+  //           logicalCreditHC = clamp0(manualHC.credit);
+  //           balanceHC = round2(origBalHC - logicalCreditHC + logicalDebitHC);
+
+  //           if (!useCurrentRemainingHC) {
+  //             remainingHC = round2(
+  //               remainingHC - logicalCreditHC + logicalDebitHC
+  //             );
+  //           }
+  //         } else if (origBalHC < 0) {
+  //           if (isDebitMinusCreditPlusVoucher) {
+  //             const allocatableHC = clamp0(
+  //               Math.min(Math.abs(origBalHC), remainingHC)
+  //             );
+
+  //             logicalDebitHC = round2(allocatableHC);
+  //             balanceHC = round2(origBalHC + allocatableHC);
+  //             remainingHC = round2(remainingHC - allocatableHC);
+  //           } else {
+  //             logicalDebitHC = round2(Math.abs(origBalHC));
+  //             balanceHC = 0;
+  //             remainingHC = round2(remainingHC + logicalDebitHC);
+  //           }
+  //         } else if (origBalHC > 0) {
+  //           logicalCreditHC = clamp0(Math.min(remainingHC, origBalHC));
+  //           balanceHC = round2(origBalHC - logicalCreditHC);
+  //           remainingHC = round2(remainingHC - logicalCreditHC);
+  //         } else {
+  //           balanceHC = 0;
+  //         }
+
+  //         const effectiveManualAllocFC =
+  //           manualAllocFC || shouldDeriveFCFromHC || shouldDeriveHCFromFC;
+
+  //         if (isTdsApplicable && effectiveManualAllocFC && useCurrentRemainingFC) {
+  //           rowTdsAmountFC = round2(toNum(row?.tdsAmountFc));
+  //         } else {
+  //           const canCalculateTdsFC =
+  //             isTdsApplicable &&
+  //             origBalFC > 0 &&
+  //             (effectiveManualAllocFC ? !useCurrentRemainingFC : remainingFC > 0);
+
+  //           if (canCalculateTdsFC) {
+  //             const tdsBaseFC = getTdsBaseAmount(row, origBalFC, true);
+
+  //             rowTdsAmountFC = round2(tdsBaseFC * 0.02);
+  //             remainingFC = round2(remainingFC + rowTdsAmountFC);
+  //           }
+  //         }
+
+  //         if (shouldDeriveFCFromHC) {
+  //           logicalDebitFC = clamp0(
+  //             getConvertedAmountFC(row, logicalDebitHC, logicalDebitFC)
+  //           );
+
+  //           logicalCreditFC = clamp0(
+  //             getConvertedAmountFC(row, logicalCreditHC, logicalCreditFC)
+  //           );
+
+  //           balanceFC = round2(origBalFC - logicalCreditFC + logicalDebitFC);
+
+  //           if (!useCurrentRemainingFC) {
+  //             remainingFC = round2(
+  //               remainingFC - logicalCreditFC + logicalDebitFC
+  //             );
+  //           }
+  //         } else if (manualAllocFC || shouldDeriveHCFromFC) {
+  //           const manualFC = stateToLogic(
+  //             row?.debitAmountFc,
+  //             row?.creditAmountFc
+  //           );
+
+  //           logicalDebitFC = clamp0(manualFC.debit);
+  //           logicalCreditFC = clamp0(manualFC.credit);
+  //           balanceFC = round2(origBalFC - logicalCreditFC + logicalDebitFC);
+
+  //           if (!useCurrentRemainingFC) {
+  //             remainingFC = round2(
+  //               remainingFC - logicalCreditFC + logicalDebitFC
+  //             );
+  //           }
+  //         } else if (origBalFC < 0) {
+  //           if (isDebitMinusCreditPlusVoucher) {
+  //             const allocatableFC = clamp0(
+  //               Math.min(Math.abs(origBalFC), remainingFC)
+  //             );
+
+  //             logicalDebitFC = round2(allocatableFC);
+  //             balanceFC = round2(origBalFC + allocatableFC);
+  //             remainingFC = round2(remainingFC - allocatableFC);
+  //           } else {
+  //             logicalDebitFC = round2(Math.abs(origBalFC));
+  //             balanceFC = 0;
+  //             remainingFC = round2(remainingFC + logicalDebitFC);
+  //           }
+  //         } else if (origBalFC > 0) {
+  //           logicalCreditFC = clamp0(Math.min(remainingFC, origBalFC));
+  //           balanceFC = round2(origBalFC - logicalCreditFC);
+  //           remainingFC = round2(remainingFC - logicalCreditFC);
+  //         } else {
+  //           balanceFC = 0;
+  //         }
+
+  //         // ✅ IMPORTANT:
+  //         // If user changed FC amount manually,
+  //         // then calculate HC amount from FC * exchangeRate.
+  //         // Example: creditAmountFc 20 * exchangeRate 95 = creditAmount 1900.
+  //         if (shouldDeriveHCFromFC) {
+  //           const oldLogicalDebitHC = logicalDebitHC;
+  //           const oldLogicalCreditHC = logicalCreditHC;
+
+  //           logicalDebitHC = clamp0(
+  //             getConvertedAmountHC(row, logicalDebitFC, logicalDebitHC)
+  //           );
+
+  //           logicalCreditHC = clamp0(
+  //             getConvertedAmountHC(row, logicalCreditFC, logicalCreditHC)
+  //           );
+
+  //           balanceHC = round2(origBalHC - logicalCreditHC + logicalDebitHC);
+
+  //           if (!useCurrentRemainingHC) {
+  //             remainingHC = round2(
+  //               remainingHC +
+  //               oldLogicalCreditHC -
+  //               oldLogicalDebitHC -
+  //               logicalCreditHC +
+  //               logicalDebitHC
+  //             );
+  //           }
+  //         }
+  //       }
+
+  //       const hcState = logicToStateHC(logicalDebitHC, logicalCreditHC);
+  //       const fcState = logicToStateFC(logicalDebitFC, logicalCreditFC);
+
+  //       const finalBalanceFC = asNum2(isChecked ? balanceFC : origBalFC);
+
+  //       const finalBalanceHC = asNum2(
+  //         getConvertedBalanceHC(
+  //           row,
+  //           finalBalanceFC,
+  //           isChecked ? balanceHC : origBalHC
+  //         )
+  //       );
+
+  //       return {
+  //         ...row,
+  //         __isNegRow: isNegativeRow,
+  //         __origBalHC: origBalHC,
+  //         __origBalFC: origBalFC,
+
+  //         // ✅ If HC is derived from FC, don't treat HC as manually entered.
+  //         // ✅ If FC is derived from HC, don't treat FC as manually entered.
+  //         __manualAllocHC: shouldDeriveHCFromFC ? false : manualAllocHC,
+  //         __manualAllocFC: shouldDeriveFCFromHC ? false : manualAllocFC,
+
+  //         // ✅ Direction flags
+  //         __fcDerivedFromHC: shouldDeriveFCFromHC,
+  //         __hcDerivedFromFC: shouldDeriveHCFromFC,
+
+  //         debitAmount: hcState.debitAmount,
+  //         creditAmount: hcState.creditAmount,
+  //         debitAmountFc: fcState.debitAmountFc,
+  //         creditAmountFc: fcState.creditAmountFc,
+
+  //         balanceAmount: finalBalanceHC,
+  //         balanceAmountFc: finalBalanceFC,
+
+  //         tdsAmount: asNum2(rowTdsAmountHC),
+  //         tdsAmountFc: asNum2(rowTdsAmountFC),
+  //       };
+  //     });
+
+  //     const ledgerTdsTotalHC = round2(
+  //       nextDetails.reduce((acc, row) => acc + toNum(row?.tdsAmount), 0)
+  //     );
+
+  //     const ledgerTdsTotalFC = round2(
+  //       nextDetails.reduce((acc, row) => acc + toNum(row?.tdsAmountFc), 0)
+  //     );
+
+  //     const parentLogicHC = nextDetails.reduce(
+  //       (acc, row) => {
+  //         const x = stateToLogic(row?.debitAmount, row?.creditAmount);
+  //         acc.debit = round2(acc.debit + x.debit);
+  //         acc.credit = round2(acc.credit + x.credit);
+  //         return acc;
+  //       },
+  //       { debit: 0, credit: 0 }
+  //     );
+
+  //     const parentLogicFC = nextDetails.reduce(
+  //       (acc, row) => {
+  //         const x = stateToLogic(row?.debitAmountFc, row?.creditAmountFc);
+  //         acc.debit = round2(acc.debit + x.debit);
+  //         acc.credit = round2(acc.credit + x.credit);
+  //         return acc;
+  //       },
+  //       { debit: 0, credit: 0 }
+  //     );
+
+  //     const parentStateHC = logicToStateHC(
+  //       round2(parentLogicHC.debit),
+  //       round2(parentLogicHC.credit)
+  //     );
+
+  //     const parentStateFC = logicToStateFC(
+  //       round2(parentLogicFC.debit),
+  //       round2(parentLogicFC.credit)
+  //     );
+
+  //     const zeroStateHC = logicToStateHC(0, 0);
+  //     const zeroStateFC = logicToStateFC(0, 0);
+
+  //     const isClearingLastChildSelection =
+  //       details.length > 0 &&
+  //       isTrueValue(ledger?.isChildChecked) &&
+  //       !isChildChecked;
+
+  //     const shouldUseParentLedgerAmount =
+  //       !isChildChecked &&
+  //       !isClearingLastChildSelection &&
+  //       hasParentLedgerAmount(ledger);
+
+  //     const parentLedgerManualHC = stateToLogic(
+  //       ledger?.debitAmount,
+  //       ledger?.creditAmount
+  //     );
+
+  //     const parentLedgerManualFC = stateToLogic(
+  //       ledger?.debitAmountFc,
+  //       ledger?.creditAmountFc
+  //     );
+
+  //     const parentLedgerStateHC = logicToStateHC(
+  //       round2(parentLedgerManualHC.debit),
+  //       round2(parentLedgerManualHC.credit)
+  //     );
+
+  //     const parentLedgerStateFC = logicToStateFC(
+  //       round2(parentLedgerManualFC.debit),
+  //       round2(parentLedgerManualFC.credit)
+  //     );
+
+  //     const nextDebitHC = isChildChecked
+  //       ? parentStateHC.debitAmount
+  //       : shouldUseParentLedgerAmount
+  //         ? parentLedgerStateHC.debitAmount
+  //         : zeroStateHC.debitAmount;
+
+  //     const nextCreditHC = isChildChecked
+  //       ? parentStateHC.creditAmount
+  //       : shouldUseParentLedgerAmount
+  //         ? parentLedgerStateHC.creditAmount
+  //         : zeroStateHC.creditAmount;
+
+  //     const nextDebitFC = isChildChecked
+  //       ? parentStateFC.debitAmountFc
+  //       : shouldUseParentLedgerAmount
+  //         ? parentLedgerStateFC.debitAmountFc
+  //         : zeroStateFC.debitAmountFc;
+
+  //     const nextCreditFC = isChildChecked
+  //       ? parentStateFC.creditAmountFc
+  //       : shouldUseParentLedgerAmount
+  //         ? parentLedgerStateFC.creditAmountFc
+  //         : zeroStateFC.creditAmountFc;
+
+  //     const manualLedgerTds = getManualLedgerTds(ledger);
+
+  //     const nextLedgerTdsHC = isChildChecked
+  //       ? ledgerTdsTotalHC
+  //       : manualLedgerTds.hc;
+
+  //     const nextLedgerTdsFC = isChildChecked
+  //       ? ledgerTdsTotalFC
+  //       : manualLedgerTds.fc;
+
+  //     if (shouldUseParentLedgerAmount) {
+  //       const nextLogicHC = stateToLogic(nextDebitHC, nextCreditHC);
+  //       const nextLogicFC = stateToLogic(nextDebitFC, nextCreditFC);
+
+  //       remainingHC = round2(remainingHC - nextLogicHC.credit + nextLogicHC.debit);
+  //       remainingFC = round2(remainingFC - nextLogicFC.credit + nextLogicFC.debit);
+  //     }
+
+  //     return {
+  //       ...ledger,
+  //       isChecked: isClearingLastChildSelection ? false : ledger?.isChecked,
+  //       isChildChecked,
+
+  //       tblVoucherLedgerDetails: nextDetails,
+
+  //       debitAmount: nextDebitHC,
+  //       creditAmount: nextCreditHC,
+  //       debitAmountFc: nextDebitFC,
+  //       creditAmountFc: nextCreditFC,
+
+  //       tdsAmtHC: nextLedgerTdsHC,
+  //       tdsAmtFC: nextLedgerTdsFC,
+  //       tdsAmount: nextLedgerTdsHC,
+  //       tdsAmountFc: nextLedgerTdsFC,
+  //     };
+  //   });
+
+  //   const nextTdsAmtHC = round2(
+  //     nextLedgers.reduce(
+  //       (acc, ledger) => acc + toNum(ledger?.tdsAmtHC ?? ledger?.tdsAmount),
+  //       0
+  //     )
+  //   );
+
+  //   const nextTdsAmtFC = round2(
+  //     nextLedgers.reduce(
+  //       (acc, ledger) => acc + toNum(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc),
+  //       0
+  //     )
+  //   );
+
+  //   const displayTotals = getEffectiveDisplayTotals(nextLedgers);
+
+  //   const nextBalanceAmtHc = isDebitMinusCreditPlusVoucher
+  //     ? asStr2(clamp0(baseBalanceHC - displayTotals.hc))
+  //     : shouldSwapDrCr
+  //       ? asStr2(clamp0(baseBalanceHC + displayTotals.hc))
+  //       : asStr2(clamp0(remainingHC));
+
+  //   const nextBalanceAmtFc = isDebitMinusCreditPlusVoucher
+  //     ? asStr2(clamp0(baseBalanceFC - displayTotals.fc))
+  //     : shouldSwapDrCr
+  //       ? asStr2(clamp0(baseBalanceFC + displayTotals.fc))
+  //       : asStr2(clamp0(remainingFC));
+
+  //   const nextSnapshot = makeSnapshot(
+  //     nextLedgers,
+  //     nextBalanceAmtHc,
+  //     nextBalanceAmtFc,
+  //     nextTdsAmtHC,
+  //     nextTdsAmtFC
+  //   );
+
+  //   const nextParentOnlyLedgerSnapshot = getParentOnlyLedgerSnapshot(nextLedgers);
+
+  //   if (
+  //     nextSnapshot === currentSnapshot ||
+  //     allocPrevRef.current === nextSnapshot
+  //   ) {
+  //     allocPrevRef.current = nextSnapshot;
+  //     allocParentLedgerSnapshotRef.current = nextParentOnlyLedgerSnapshot;
+  //     allocAmountEditSnapshotRef.current = makeAmountEditSnapshot(nextLedgers);
+  //     return;
+  //   }
+
+  //   allocPrevRef.current = nextSnapshot;
+  //   allocParentLedgerSnapshotRef.current = nextParentOnlyLedgerSnapshot;
+  //   allocAmountEditSnapshotRef.current = makeAmountEditSnapshot(nextLedgers);
+  //   allocInternalUpdateRef.current = true;
+
+  //   setNewState((prevState) => {
+  //     if (hasLedgers) {
+  //       return {
+  //         ...prevState,
+  //         tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
+  //         balanceAmtHc: nextBalanceAmtHc,
+  //         balanceAmtFc: nextBalanceAmtFc,
+  //         balanceAmt: nextBalanceAmtHc,
+  //         balanceAmtFC: nextBalanceAmtFc,
+  //         tdsAmt: nextTdsAmtHC,
+  //         tdsAmtFC: nextTdsAmtFC,
+  //         tdsAmount: nextTdsAmtHC,
+  //         tdsAmountFc: nextTdsAmtFC,
+  //       };
+  //     }
+
+  //     return {
+  //       ...prevState,
+  //       tblVoucherLedgerDetails: nextLedgers[0]?.tblVoucherLedgerDetails || [],
+  //       balanceAmtHc: nextBalanceAmtHc,
+  //       balanceAmtFc: nextBalanceAmtFc,
+  //       balanceAmt: nextBalanceAmtHc,
+  //       balanceAmtFC: nextBalanceAmtFc,
+  //       tdsAmt: nextTdsAmtHC,
+  //       tdsAmtFC: nextTdsAmtFC,
+  //       tdsAmount: nextTdsAmtHC,
+  //       tdsAmountFc: nextTdsAmtFC,
+  //     };
+  //   });
+
+  //   setSubmitNewState((prevState) => {
+  //     if (hasLedgers) {
+  //       return {
+  //         ...prevState,
+  //         tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
+  //         balanceAmtHc: nextBalanceAmtHc,
+  //         balanceAmtFc: nextBalanceAmtFc,
+  //         balanceAmt: nextBalanceAmtHc,
+  //         balanceAmtFC: nextBalanceAmtFc,
+  //         tdsAmt: nextTdsAmtHC,
+  //         tdsAmtFC: nextTdsAmtFC,
+  //         tdsAmount: nextTdsAmtHC,
+  //         tdsAmountFc: nextTdsAmtFC,
+  //       };
+  //     }
+
+  //     return {
+  //       ...prevState,
+  //       tblVoucherLedgerDetails: nextLedgers[0]?.tblVoucherLedgerDetails || [],
+  //       balanceAmtHc: nextBalanceAmtHc,
+  //       balanceAmtFc: nextBalanceAmtFc,
+  //       balanceAmt: nextBalanceAmtHc,
+  //       balanceAmtFC: nextBalanceAmtFc,
+  //       tdsAmt: nextTdsAmtHC,
+  //       tdsAmtFC: nextTdsAmtFC,
+  //       tdsAmount: nextTdsAmtHC,
+  //       tdsAmountFc: nextTdsAmtFC,
+  //     };
+  //   });
+  // }, [
+  //   newState?.voucherTypeId,
+  //   newState?.amtRec,
+  //   newState?.amtRecFC,
+  //   newState?.bankCharges,
+  //   newState?.bankChargesFC,
+  //   newState?.bankChargesFc,
+  //   newState?.bcAmtFC,
+  //   newState?.bcAmtFc,
+  //   newState?.bcAmt,
+  //   newState?.exGainLoss,
+  //   newState?.tdsApplicable,
+  //   newState?.tdsAmt,
+  //   newState?.tdsAmtFC,
+  //   newState?.tdsAmount,
+  //   newState?.tdsAmountFc,
+  //   newState?.currencyId,
+  //   newState?.exchangeRate,
+  //   JSON.stringify(newState?.tblVoucherLedger),
+  //   JSON.stringify(newState?.tblVoucherLedgerDetails),
+  //   voucherAllocDeleteTick,
+  // ]);
+  const allocPrevRef = useRef("");
+  const allocInternalUpdateRef = useRef(false);
+  const allocHydrateRef = useRef(true);
+  const allocParentLedgerSnapshotRef = useRef("");
+  const allocVoucherTypeRef = useRef("");
+
+  // ✅ used to detect whether user changed HC or FC amount manually
+  const allocAmountEditSnapshotRef = useRef({});
+
+  const forceVoucherAllocationRecalcAfterDelete = () => {
     allocPrevRef.current = "";
     allocInternalUpdateRef.current = false;
-    allocHydrateRef.current = true;
+    allocHydrateRef.current = false;
     allocParentLedgerSnapshotRef.current = "";
     allocAmountEditSnapshotRef.current = {};
-  }
 
-  // ✅ voucherTypeId 8 and 11 should work like voucherTypeId 9 for row allocation.
-  // ✅ No debit/credit swap needed for 8 or 11.
-  const shouldSwapDrCr = false;
-
-  const toNum = (v) => {
-    if (v === null || v === undefined || v === "") return 0;
-    const n = Number(String(v).replace(/,/g, ""));
-    return Number.isFinite(n) ? n : 0;
+    setVoucherAllocDeleteTick((prev) => prev + 1);
   };
 
-  const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+  useEffect(() => {
+    const voucherTypeId = String(newState?.voucherTypeId ?? "");
 
-  const asStr2 = (n) =>
-    n === null || n === undefined || n === "" ? "" : round2(n).toFixed(2);
-
-  const asNum2 = (n) => round2(n);
-
-  const clamp0 = (n) => Math.max(0, round2(n));
-
-  const isTrueValue = (value) =>
-    value === true ||
-    value === 1 ||
-    value === "1" ||
-    String(value).toLowerCase() === "true" ||
-    String(value).toLowerCase() === "y";
-
-  const isSameAmount = (a, b) =>
-    Math.abs(round2(toNum(a)) - round2(toNum(b))) < 0.01;
-
-  const getHomeCurrencyId = () => {
-    const homeCurrency = homeCurrencyRef?.current;
-
-    return (
-      homeCurrency?.[0]?.currencyId ??
-      homeCurrency?.[0]?.id ??
-      homeCurrency?.currencyId ??
-      homeCurrency?.id ??
-      homeCurrency ??
-      newState?.homeCurrencyId ??
-      newState?.homeCurrency ??
-      null
-    );
-  };
-
-  const getRowCurrencyId = (row = {}) =>
-    row?.currencyId ?? row?.currencyID ?? row?.currency ?? null;
-
-  const getRowExchangeRate = (row = {}) => {
-    const rate = toNum(row?.exchangeRate ?? newState?.exchangeRate ?? 1);
-    return rate > 0 ? rate : 1;
-  };
-
-  const isForeignCurrencyRow = (row = {}) => {
-    const homeCurrencyId = getHomeCurrencyId();
-    const rowCurrencyId = getRowCurrencyId(row);
-
-    if (
-      homeCurrencyId === null ||
-      homeCurrencyId === undefined ||
-      homeCurrencyId === "" ||
-      rowCurrencyId === null ||
-      rowCurrencyId === undefined ||
-      rowCurrencyId === ""
-    ) {
-      return false;
+    if (!["8", "9", "11", "12"].includes(voucherTypeId)) {
+      return;
     }
 
-    return String(homeCurrencyId) !== String(rowCurrencyId);
-  };
-
-  // ✅ FC balance to HC balance
-  // balanceAmount = balanceAmountFc * exchangeRate
-  const getConvertedBalanceHC = (row = {}, balanceFcValue, fallbackHcValue) => {
-    if (!isForeignCurrencyRow(row)) {
-      return round2(toNum(fallbackHcValue));
+    if (allocVoucherTypeRef.current !== voucherTypeId) {
+      allocVoucherTypeRef.current = voucherTypeId;
+      allocPrevRef.current = "";
+      allocInternalUpdateRef.current = false;
+      allocHydrateRef.current = true;
+      allocParentLedgerSnapshotRef.current = "";
+      allocAmountEditSnapshotRef.current = {};
     }
 
-    return round2(toNum(balanceFcValue) * getRowExchangeRate(row));
-  };
+    const shouldSwapDrCr = false;
 
-  // ✅ HC amount to FC amount
-  // creditAmountFc = creditAmount / exchangeRate
-  // debitAmountFc = debitAmount / exchangeRate
-  const getConvertedAmountFC = (row = {}, hcValue, fallbackFcValue) => {
-    if (!isForeignCurrencyRow(row)) {
-      return round2(toNum(fallbackFcValue));
-    }
+    const toNum = (v) => {
+      if (v === null || v === undefined || v === "") return 0;
+      const n = Number(String(v).replace(/,/g, ""));
+      return Number.isFinite(n) ? n : 0;
+    };
 
-    const rate = getRowExchangeRate(row);
+    const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
-    if (rate <= 0) {
-      return round2(toNum(fallbackFcValue));
-    }
+    const asStr2 = (n) =>
+      n === null || n === undefined || n === "" ? "" : round2(n).toFixed(2);
 
-    return round2(toNum(hcValue) / rate);
-  };
+    const asNum2 = (n) => round2(n);
 
-  // ✅ FC amount to HC amount
-  // creditAmount = creditAmountFc * exchangeRate
-  // debitAmount = debitAmountFc * exchangeRate
-  const getConvertedAmountHC = (row = {}, fcValue, fallbackHcValue) => {
-    if (!isForeignCurrencyRow(row)) {
-      return round2(toNum(fallbackHcValue));
-    }
+    const clamp0 = (n) => Math.max(0, round2(n));
 
-    return round2(toNum(fcValue) * getRowExchangeRate(row));
-  };
+    const isTrueValue = (value) =>
+      value === true ||
+      value === 1 ||
+      value === "1" ||
+      String(value).toLowerCase() === "true" ||
+      String(value).toLowerCase() === "y";
 
-  const firstPositiveNum = (...values) => {
-    for (const value of values) {
-      const n = toNum(value);
-      if (n > 0) return n;
-    }
-    return 0;
-  };
+    const isSameAmount = (a, b) =>
+      Math.abs(round2(toNum(a)) - round2(toNum(b))) < 0.01;
 
-  // ✅ TDS should calculate on LOWEST of Balance Amount and Invoice Amount.
-  // ✅ If invoice amount is not available, fallback to balance amount.
-  const getTdsBaseAmount = (row, originalBalanceValue, isFC = false) => {
-    const balanceValue = clamp0(originalBalanceValue);
+    const getHomeCurrencyId = () => {
+      const homeCurrency = homeCurrencyRef?.current;
 
-    const invoiceValue = clamp0(
-      firstPositiveNum(
-        ...(isFC
-          ? [
-              row?.invoiceAmountFc,
-              row?.invoiceAmountFC,
-              row?.billAmountFc,
-              row?.billAmountFC,
-              row?.invoiceAmount,
-              row?.billAmount,
-            ]
-          : [row?.invoiceAmount, row?.billAmount])
-      )
-    );
+      return (
+        homeCurrency?.[0]?.currencyId ??
+        homeCurrency?.[0]?.id ??
+        homeCurrency?.currencyId ??
+        homeCurrency?.id ??
+        homeCurrency ??
+        newState?.homeCurrencyId ??
+        newState?.homeCurrency ??
+        null
+      );
+    };
 
-    if (invoiceValue > 0) {
-      return round2(Math.min(balanceValue, invoiceValue));
-    }
+    const getRowCurrencyId = (row = {}) =>
+      row?.currencyId ?? row?.currencyID ?? row?.currency ?? null;
 
-    return balanceValue;
-  };
+    const getRowExchangeRate = (row = {}) => {
+      const rate = toNum(row?.exchangeRate ?? newState?.exchangeRate ?? 1);
+      return rate > 0 ? rate : 1;
+    };
 
-  const isDebitMinusCreditPlusVoucher = ["8", "11"].includes(voucherTypeId);
+    const isForeignCurrencyRow = (row = {}) => {
+      const homeCurrencyId = getHomeCurrencyId();
+      const rowCurrencyId = getRowCurrencyId(row);
 
-  const isTdsApplicable =
-    newState?.tdsApplicable === true ||
-    newState?.tdsApplicable === "true" ||
-    newState?.tdsApplicable === 1 ||
-    newState?.tdsApplicable === "1";
+      if (
+        homeCurrencyId === null ||
+        homeCurrencyId === undefined ||
+        homeCurrencyId === "" ||
+        rowCurrencyId === null ||
+        rowCurrencyId === undefined ||
+        rowCurrencyId === ""
+      ) {
+        return false;
+      }
 
-  const stateToLogic = (debitValue, creditValue) => {
-    if (shouldSwapDrCr) {
+      return String(homeCurrencyId) !== String(rowCurrencyId);
+    };
+
+    const getConvertedBalanceHC = (
+      row = {},
+      balanceFcValue,
+      fallbackHcValue,
+    ) => {
+      if (!isForeignCurrencyRow(row)) {
+        return round2(toNum(fallbackHcValue));
+      }
+
+      return round2(toNum(balanceFcValue) * getRowExchangeRate(row));
+    };
+
+    const getConvertedAmountFC = (row = {}, hcValue, fallbackFcValue) => {
+      if (!isForeignCurrencyRow(row)) {
+        return round2(toNum(fallbackFcValue));
+      }
+
+      const rate = getRowExchangeRate(row);
+
+      if (rate <= 0) {
+        return round2(toNum(fallbackFcValue));
+      }
+
+      return round2(toNum(hcValue) / rate);
+    };
+
+    const getConvertedAmountHC = (row = {}, fcValue, fallbackHcValue) => {
+      if (!isForeignCurrencyRow(row)) {
+        return round2(toNum(fallbackHcValue));
+      }
+
+      return round2(toNum(fcValue) * getRowExchangeRate(row));
+    };
+
+    const firstPositiveNum = (...values) => {
+      for (const value of values) {
+        const n = toNum(value);
+        if (n > 0) return n;
+      }
+      return 0;
+    };
+
+    const getTdsBaseAmount = (row, originalBalanceValue, isFC = false) => {
+      const balanceValue = clamp0(originalBalanceValue);
+
+      const invoiceValue = clamp0(
+        firstPositiveNum(
+          ...(isFC
+            ? [
+                row?.invoiceAmountFc,
+                row?.invoiceAmountFC,
+                row?.billAmountFc,
+                row?.billAmountFC,
+                row?.invoiceAmount,
+                row?.billAmount,
+              ]
+            : [row?.invoiceAmount, row?.billAmount]),
+        ),
+      );
+
+      if (invoiceValue > 0) {
+        return round2(Math.min(balanceValue, invoiceValue));
+      }
+
+      return balanceValue;
+    };
+
+    const isDebitMinusCreditPlusVoucher = ["8", "11"].includes(voucherTypeId);
+
+    const isTdsApplicable =
+      newState?.tdsApplicable === true ||
+      newState?.tdsApplicable === "true" ||
+      newState?.tdsApplicable === 1 ||
+      newState?.tdsApplicable === "1";
+
+    const stateToLogic = (debitValue, creditValue) => {
+      if (shouldSwapDrCr) {
+        return {
+          debit: round2(toNum(creditValue)),
+          credit: round2(toNum(debitValue)),
+        };
+      }
+
       return {
-        debit: round2(toNum(creditValue)),
-        credit: round2(toNum(debitValue)),
+        debit: round2(toNum(debitValue)),
+        credit: round2(toNum(creditValue)),
       };
-    }
-
-    return {
-      debit: round2(toNum(debitValue)),
-      credit: round2(toNum(creditValue)),
     };
-  };
 
-  const logicToStateHC = (debitValue, creditValue) => {
-    if (shouldSwapDrCr) {
+    const logicToStateHC = (debitValue, creditValue) => {
+      if (shouldSwapDrCr) {
+        return {
+          debitAmount: asStr2(creditValue),
+          creditAmount: asStr2(debitValue),
+        };
+      }
+
       return {
-        debitAmount: asStr2(creditValue),
-        creditAmount: asStr2(debitValue),
+        debitAmount: asStr2(debitValue),
+        creditAmount: asStr2(creditValue),
       };
-    }
-
-    return {
-      debitAmount: asStr2(debitValue),
-      creditAmount: asStr2(creditValue),
     };
-  };
 
-  const logicToStateFC = (debitValue, creditValue) => {
-    if (shouldSwapDrCr) {
+    const logicToStateFC = (debitValue, creditValue) => {
+      if (shouldSwapDrCr) {
+        return {
+          debitAmountFc: asStr2(creditValue),
+          creditAmountFc: asStr2(debitValue),
+        };
+      }
+
       return {
-        debitAmountFc: asStr2(creditValue),
-        creditAmountFc: asStr2(debitValue),
+        debitAmountFc: asStr2(debitValue),
+        creditAmountFc: asStr2(creditValue),
       };
-    }
-
-    return {
-      debitAmountFc: asStr2(debitValue),
-      creditAmountFc: asStr2(creditValue),
     };
-  };
 
-  const normalizeOriginalBalanceFC = ({
-    originalValue,
-    balanceValue,
-    creditValue,
-    debitValue,
-  }) => {
-    if (
-      originalValue !== null &&
-      originalValue !== undefined &&
-      originalValue !== ""
-    ) {
-      return round2(toNum(originalValue));
-    }
+    const normalizeOriginalBalanceFC = ({
+      originalValue,
+      balanceValue,
+      creditValue,
+      debitValue,
+    }) => {
+      if (
+        originalValue !== null &&
+        originalValue !== undefined &&
+        originalValue !== ""
+      ) {
+        return round2(toNum(originalValue));
+      }
 
-    const logical = stateToLogic(debitValue, creditValue);
-    return round2(toNum(balanceValue) + logical.credit - logical.debit);
-  };
-
-  const normalizeOriginalBalance = ({
-    row,
-    originalValue,
-    balanceValue,
-    balanceFcValue,
-    creditValue,
-    debitValue,
-  }) => {
-    if (
-      originalValue !== null &&
-      originalValue !== undefined &&
-      originalValue !== ""
-    ) {
-      return round2(toNum(originalValue));
-    }
-
-    const logical = stateToLogic(debitValue, creditValue);
-    const fallbackHC = round2(
-      toNum(balanceValue) + logical.credit - logical.debit
-    );
-
-    return getConvertedBalanceHC(row, balanceFcValue, fallbackHC);
-  };
-
-  const getLedgerKey = (ledger, index) =>
-    ledger?.voucherLedgerId != null
-      ? String(ledger.voucherLedgerId)
-      : String(ledger?.indexValue ?? index);
-
-  const getDetailKey = (row, index) =>
-    row?.voucherOutstandingId != null
-      ? String(row.voucherOutstandingId)
-      : String(row?.indexValue ?? index);
-
-  const hasHCAmount = (row) =>
-    toNum(row?.debitAmount) > 0 || toNum(row?.creditAmount) > 0;
-
-  const hasFCAmount = (row) =>
-    toNum(row?.debitAmountFc) > 0 || toNum(row?.creditAmountFc) > 0;
-
-  const getManualDetailAlloc = (row) => {
-    const checked = isTrueValue(row?.isChecked);
-
-    return {
-      hc: !!row?.__manualAllocHC || (checked && hasHCAmount(row)),
-      fc: !!row?.__manualAllocFC || (checked && hasFCAmount(row)),
+      const logical = stateToLogic(debitValue, creditValue);
+      return round2(toNum(balanceValue) + logical.credit - logical.debit);
     };
-  };
 
-  const hasParentLedgerAmount = (ledger) =>
-    toNum(ledger?.debitAmount) > 0 ||
-    toNum(ledger?.creditAmount) > 0 ||
-    toNum(ledger?.debitAmountFc) > 0 ||
-    toNum(ledger?.creditAmountFc) > 0;
+    const normalizeOriginalBalance = ({
+      row,
+      originalValue,
+      balanceValue,
+      balanceFcValue,
+      creditValue,
+      debitValue,
+    }) => {
+      if (
+        originalValue !== null &&
+        originalValue !== undefined &&
+        originalValue !== ""
+      ) {
+        return round2(toNum(originalValue));
+      }
 
-  const hasCheckedThirdLevelRows = (ledger) => {
-    const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
-      ? ledger.tblVoucherLedgerDetails
-      : [];
+      const logical = stateToLogic(debitValue, creditValue);
 
-    return details.some(
-      (row) => isTrueValue(row?.isChecked) || isTrueValue(row?.ispreChecked)
-    );
-  };
+      const fallbackHC = round2(
+        toNum(balanceValue) + logical.credit - logical.debit,
+      );
 
-  const getParentOnlyLedgerSnapshot = (ledgerRows) =>
-    JSON.stringify(
-      (Array.isArray(ledgerRows) ? ledgerRows : [])
-        .map((ledger, ledgerIndex) => {
-          const hasCheckedThirdLevel = hasCheckedThirdLevelRows(ledger);
+      return getConvertedBalanceHC(row, balanceFcValue, fallbackHC);
+    };
 
-          if (hasCheckedThirdLevel) return null;
+    const getLedgerKey = (ledger, index) =>
+      ledger?.voucherLedgerId != null
+        ? String(ledger.voucherLedgerId)
+        : String(ledger?.indexValue ?? index);
 
-          return {
-            k: getLedgerKey(ledger, ledgerIndex),
-            checked: isTrueValue(ledger?.isChecked),
-            d: asStr2(ledger?.debitAmount),
-            df: asStr2(ledger?.debitAmountFc),
-            cr: asStr2(ledger?.creditAmount),
-            crf: asStr2(ledger?.creditAmountFc),
-            th: asStr2(ledger?.tdsAmtHC ?? ledger?.tdsAmount),
-            tf: asStr2(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc),
-          };
-        })
-        .filter(Boolean)
-    );
+    const getDetailKey = (row, index) =>
+      row?.voucherOutstandingId != null
+        ? String(row.voucherOutstandingId)
+        : String(row?.indexValue ?? index);
 
-  const getManualLedgerTds = (ledger) => ({
-    hc: isTdsApplicable
-      ? round2(toNum(ledger?.tdsAmtHC ?? ledger?.tdsAmount ?? 0))
-      : 0,
-    fc: isTdsApplicable
-      ? round2(toNum(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc ?? 0))
-      : 0,
-  });
+    const hasHCAmount = (row) =>
+      toNum(row?.debitAmount) > 0 || toNum(row?.creditAmount) > 0;
 
-  const makeSnapshot = (
-    ledgerRows,
-    balanceAmtHc,
-    balanceAmtFc,
-    tdsAmt,
-    tdsAmtFC
-  ) =>
-    JSON.stringify({
-      balanceAmtHc: asStr2(balanceAmtHc),
-      balanceAmtFc: asStr2(balanceAmtFc),
-      tdsAmt: asStr2(tdsAmt),
-      tdsAmtFC: asStr2(tdsAmtFC),
-      ledgers: ledgerRows.map((ledger, ledgerIndex) => ({
-        k: getLedgerKey(ledger, ledgerIndex),
-        d: asStr2(ledger?.debitAmount),
-        df: asStr2(ledger?.debitAmountFc),
-        cr: asStr2(ledger?.creditAmount),
-        crf: asStr2(ledger?.creditAmountFc),
-        th: asStr2(ledger?.tdsAmtHC),
-        tf: asStr2(ledger?.tdsAmtFC),
-        ta: asStr2(ledger?.tdsAmount),
-        taf: asStr2(ledger?.tdsAmountFc),
-        child: isTrueValue(ledger?.isChildChecked),
-        rows: (Array.isArray(ledger?.tblVoucherLedgerDetails)
-          ? ledger.tblVoucherLedgerDetails
-          : []
-        ).map((row, rowIndex) => ({
-          k: getDetailKey(row, rowIndex),
-          c: isTrueValue(row?.isChecked),
-          neg: !!row?.__isNegRow,
-          mh: !!row?.__manualAllocHC,
-          mf: !!row?.__manualAllocFC,
-          fh: !!row?.__fcDerivedFromHC,
-          hf: !!row?.__hcDerivedFromFC,
-          ob: asStr2(row?.__origBalHC),
-          obf: asStr2(row?.__origBalFC),
-          d: asStr2(row?.debitAmount),
-          df: asStr2(row?.debitAmountFc),
-          cr: asStr2(row?.creditAmount),
-          crf: asStr2(row?.creditAmountFc),
-          b: asStr2(row?.balanceAmount),
-          bf: asStr2(row?.balanceAmountFc),
-          t: asStr2(row?.tdsAmount),
-          tf: asStr2(row?.tdsAmountFc),
-          inv: asStr2(row?.invoiceAmount),
-          invf: asStr2(row?.invoiceAmountFc),
-          cid: String(getRowCurrencyId(row) ?? ""),
-          ex: asStr2(row?.exchangeRate),
-        })),
-      })),
+    const hasFCAmount = (row) =>
+      toNum(row?.debitAmountFc) > 0 || toNum(row?.creditAmountFc) > 0;
+
+    const getManualDetailAlloc = (row) => {
+      const checked = isTrueValue(row?.isChecked);
+
+      return {
+        hc: !!row?.__manualAllocHC || (checked && hasHCAmount(row)),
+        fc: !!row?.__manualAllocFC || (checked && hasFCAmount(row)),
+      };
+    };
+
+    const hasParentLedgerAmount = (ledger) =>
+      toNum(ledger?.debitAmount) > 0 ||
+      toNum(ledger?.creditAmount) > 0 ||
+      toNum(ledger?.debitAmountFc) > 0 ||
+      toNum(ledger?.creditAmountFc) > 0;
+
+    const hasCheckedThirdLevelRows = (ledger) => {
+      const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+        ? ledger.tblVoucherLedgerDetails
+        : [];
+
+      return details.some(
+        (row) => isTrueValue(row?.isChecked) || isTrueValue(row?.ispreChecked),
+      );
+    };
+
+    const getParentOnlyLedgerSnapshot = (ledgerRows) =>
+      JSON.stringify(
+        (Array.isArray(ledgerRows) ? ledgerRows : [])
+          .map((ledger, ledgerIndex) => {
+            const hasCheckedThirdLevel = hasCheckedThirdLevelRows(ledger);
+
+            if (hasCheckedThirdLevel) return null;
+
+            return {
+              k: getLedgerKey(ledger, ledgerIndex),
+              checked: isTrueValue(ledger?.isChecked),
+              d: asStr2(ledger?.debitAmount),
+              df: asStr2(ledger?.debitAmountFc),
+              cr: asStr2(ledger?.creditAmount),
+              crf: asStr2(ledger?.creditAmountFc),
+              th: asStr2(ledger?.tdsAmtHC ?? ledger?.tdsAmount),
+              tf: asStr2(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc),
+            };
+          })
+          .filter(Boolean),
+      );
+
+    const getManualLedgerTds = (ledger) => ({
+      hc: isTdsApplicable
+        ? round2(toNum(ledger?.tdsAmtHC ?? ledger?.tdsAmount ?? 0))
+        : 0,
+      fc: isTdsApplicable
+        ? round2(toNum(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc ?? 0))
+        : 0,
     });
 
-  const getSignedDisplayDelta = (debitValue, creditValue) =>
-    round2(toNum(debitValue) - toNum(creditValue));
+    const makeSnapshot = (
+      ledgerRows,
+      balanceAmtHc,
+      balanceAmtFc,
+      tdsAmt,
+      tdsAmtFC,
+    ) =>
+      JSON.stringify({
+        // ✅ Added base fields so balance recalculates when these values change
+        base: {
+          amtRec: asStr2(newState?.amtRec),
+          amtRecFC: asStr2(newState?.amtRecFC),
 
-  const getEffectiveDisplayTotals = (ledgerRows) => {
-    return ledgerRows.reduce(
-      (acc, ledger) => {
-        const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
-          ? ledger.tblVoucherLedgerDetails
-          : [];
+          bankCharges: asStr2(newState?.bcAmt ?? newState?.bankCharges),
 
-        if (details.length && isTrueValue(ledger?.isChildChecked)) {
-          details.forEach((row) => {
+          bankChargesFc: asStr2(
+            newState?.bcAmtFC ??
+              newState?.bcAmtFc ??
+              newState?.bankChargesFC ??
+              newState?.bankChargesFc,
+          ),
+
+          exGainLoss: asStr2(newState?.exGainLoss),
+          currencyId: String(newState?.currencyId ?? ""),
+          exchangeRate: asStr2(newState?.exchangeRate),
+        },
+
+        balanceAmtHc: asStr2(balanceAmtHc),
+        balanceAmtFc: asStr2(balanceAmtFc),
+        tdsAmt: asStr2(tdsAmt),
+        tdsAmtFC: asStr2(tdsAmtFC),
+
+        ledgers: ledgerRows.map((ledger, ledgerIndex) => ({
+          k: getLedgerKey(ledger, ledgerIndex),
+          d: asStr2(ledger?.debitAmount),
+          df: asStr2(ledger?.debitAmountFc),
+          cr: asStr2(ledger?.creditAmount),
+          crf: asStr2(ledger?.creditAmountFc),
+          th: asStr2(ledger?.tdsAmtHC),
+          tf: asStr2(ledger?.tdsAmtFC),
+          ta: asStr2(ledger?.tdsAmount),
+          taf: asStr2(ledger?.tdsAmountFc),
+          child: isTrueValue(ledger?.isChildChecked),
+
+          rows: (Array.isArray(ledger?.tblVoucherLedgerDetails)
+            ? ledger.tblVoucherLedgerDetails
+            : []
+          ).map((row, rowIndex) => ({
+            k: getDetailKey(row, rowIndex),
+            c: isTrueValue(row?.isChecked),
+            p: isTrueValue(row?.ispreChecked),
+            neg: !!row?.__isNegRow,
+            mh: !!row?.__manualAllocHC,
+            mf: !!row?.__manualAllocFC,
+            fh: !!row?.__fcDerivedFromHC,
+            hf: !!row?.__hcDerivedFromFC,
+            ob: asStr2(row?.__origBalHC),
+            obf: asStr2(row?.__origBalFC),
+            d: asStr2(row?.debitAmount),
+            df: asStr2(row?.debitAmountFc),
+            cr: asStr2(row?.creditAmount),
+            crf: asStr2(row?.creditAmountFc),
+            b: asStr2(row?.balanceAmount),
+            bf: asStr2(row?.balanceAmountFc),
+            t: asStr2(row?.tdsAmount),
+            tf: asStr2(row?.tdsAmountFc),
+            inv: asStr2(row?.invoiceAmount),
+            invf: asStr2(row?.invoiceAmountFc),
+            cid: String(getRowCurrencyId(row) ?? ""),
+            ex: asStr2(row?.exchangeRate),
+          })),
+        })),
+      });
+
+    const getSignedDisplayDelta = (debitValue, creditValue) =>
+      round2(toNum(debitValue) - toNum(creditValue));
+
+    const getEffectiveDisplayTotals = (ledgerRows) => {
+      return ledgerRows.reduce(
+        (acc, ledger) => {
+          const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+            ? ledger.tblVoucherLedgerDetails
+            : [];
+
+          if (details.length && isTrueValue(ledger?.isChildChecked)) {
+            details.forEach((row) => {
+              acc.hc = round2(
+                acc.hc +
+                  getSignedDisplayDelta(row?.debitAmount, row?.creditAmount),
+              );
+
+              acc.fc = round2(
+                acc.fc +
+                  getSignedDisplayDelta(
+                    row?.debitAmountFc,
+                    row?.creditAmountFc,
+                  ),
+              );
+            });
+          } else {
             acc.hc = round2(
               acc.hc +
-                getSignedDisplayDelta(row?.debitAmount, row?.creditAmount)
+                getSignedDisplayDelta(
+                  ledger?.debitAmount,
+                  ledger?.creditAmount,
+                ),
             );
 
             acc.fc = round2(
               acc.fc +
                 getSignedDisplayDelta(
-                  row?.debitAmountFc,
-                  row?.creditAmountFc
-                )
+                  ledger?.debitAmountFc,
+                  ledger?.creditAmountFc,
+                ),
             );
-          });
-        } else {
-          acc.hc = round2(
-            acc.hc +
-              getSignedDisplayDelta(ledger?.debitAmount, ledger?.creditAmount)
-          );
+          }
 
-          acc.fc = round2(
-            acc.fc +
-              getSignedDisplayDelta(
-                ledger?.debitAmountFc,
-                ledger?.creditAmountFc
-              )
-          );
-        }
-
-        return acc;
-      },
-      { hc: 0, fc: 0 }
-    );
-  };
-
-  const hasLedgers =
-    Array.isArray(newState?.tblVoucherLedger) &&
-    newState.tblVoucherLedger.length > 0;
-
-  const ledgers = hasLedgers
-    ? newState.tblVoucherLedger
-    : [
-        {
-          __virtual: true,
-          tblVoucherLedgerDetails: Array.isArray(
-            newState?.tblVoucherLedgerDetails
-          )
-            ? newState.tblVoucherLedgerDetails
-            : [],
+          return acc;
         },
-      ];
+        { hc: 0, fc: 0 },
+      );
+    };
 
-  const getRowEditKey = (ledger, ledgerIndex, row, rowIndex) =>
-    `${getLedgerKey(ledger, ledgerIndex)}__${getDetailKey(row, rowIndex)}`;
+    const hasLedgers =
+      Array.isArray(newState?.tblVoucherLedger) &&
+      newState.tblVoucherLedger.length > 0;
 
-  const makeAmountEditSnapshot = (ledgerRows) => {
-    const snap = {};
+    const ledgers = hasLedgers
+      ? newState.tblVoucherLedger
+      : [
+          {
+            __virtual: true,
+            tblVoucherLedgerDetails: Array.isArray(
+              newState?.tblVoucherLedgerDetails,
+            )
+              ? newState.tblVoucherLedgerDetails
+              : [],
+          },
+        ];
 
-    (Array.isArray(ledgerRows) ? ledgerRows : []).forEach(
-      (ledger, ledgerIndex) => {
-        const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
-          ? ledger.tblVoucherLedgerDetails
-          : [];
+    const getRowEditKey = (ledger, ledgerIndex, row, rowIndex) =>
+      `${getLedgerKey(ledger, ledgerIndex)}__${getDetailKey(row, rowIndex)}`;
 
-        details.forEach((row, rowIndex) => {
-          const key = getRowEditKey(ledger, ledgerIndex, row, rowIndex);
+    const makeAmountEditSnapshot = (ledgerRows) => {
+      const snap = {};
 
-          snap[key] = {
-            debitAmount: asStr2(row?.debitAmount),
-            creditAmount: asStr2(row?.creditAmount),
-            debitAmountFc: asStr2(row?.debitAmountFc),
-            creditAmountFc: asStr2(row?.creditAmountFc),
-          };
-        });
-      }
-    );
+      (Array.isArray(ledgerRows) ? ledgerRows : []).forEach(
+        (ledger, ledgerIndex) => {
+          const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+            ? ledger.tblVoucherLedgerDetails
+            : [];
 
-    return snap;
-  };
+          details.forEach((row, rowIndex) => {
+            const key = getRowEditKey(ledger, ledgerIndex, row, rowIndex);
 
-  const getAmountEditDirection = (editKey, row = {}) => {
-    if (!isForeignCurrencyRow(row)) return "";
-
-    const prev = allocAmountEditSnapshotRef.current?.[editKey];
-
-    if (prev) {
-      const hcChanged =
-        !isSameAmount(prev.debitAmount, row?.debitAmount) ||
-        !isSameAmount(prev.creditAmount, row?.creditAmount);
-
-      const fcChanged =
-        !isSameAmount(prev.debitAmountFc, row?.debitAmountFc) ||
-        !isSameAmount(prev.creditAmountFc, row?.creditAmountFc);
-
-      if (fcChanged && !hcChanged) return "FC_TO_HC";
-      if (hcChanged && !fcChanged) return "HC_TO_FC";
-    }
-
-    if (isTrueValue(row?.__hcDerivedFromFC)) return "FC_TO_HC";
-    if (isTrueValue(row?.__fcDerivedFromHC)) return "HC_TO_FC";
-
-    const manual = getManualDetailAlloc(row);
-    const hc = stateToLogic(row?.debitAmount, row?.creditAmount);
-    const fc = stateToLogic(row?.debitAmountFc, row?.creditAmountFc);
-    const rate = getRowExchangeRate(row);
-
-    const fcHasValue = fc.debit > 0 || fc.credit > 0;
-    const hcHasValue = hc.debit > 0 || hc.credit > 0;
-
-    if (manual.fc && fcHasValue && rate > 0) {
-      const expectedDebitHC = round2(fc.debit * rate);
-      const expectedCreditHC = round2(fc.credit * rate);
-
-      if (
-        !isSameAmount(hc.debit, expectedDebitHC) ||
-        !isSameAmount(hc.credit, expectedCreditHC)
-      ) {
-        return "FC_TO_HC";
-      }
-    }
-
-    if (manual.hc && hcHasValue && rate > 0) {
-      const expectedDebitFC = round2(hc.debit / rate);
-      const expectedCreditFC = round2(hc.credit / rate);
-
-      if (
-        !isSameAmount(fc.debit, expectedDebitFC) ||
-        !isSameAmount(fc.credit, expectedCreditFC)
-      ) {
-        return "HC_TO_FC";
-      }
-    }
-
-    return "";
-  };
-
-  const parentOnlyLedgerSnapshot = getParentOnlyLedgerSnapshot(ledgers);
-
-  const hasParentOnlyLedgerChange =
-    parentOnlyLedgerSnapshot !== "[]" &&
-    allocParentLedgerSnapshotRef.current !== "" &&
-    allocParentLedgerSnapshotRef.current !== parentOnlyLedgerSnapshot;
-
-  const hasParentLedgerRowsForCalculation = ledgers.some((ledger) => {
-    const noThirdLevelChecked = !hasCheckedThirdLevelRows(ledger);
-
-    return (
-      noThirdLevelChecked &&
-      (isTrueValue(ledger?.isChecked) || hasParentLedgerAmount(ledger))
-    );
-  });
-
-  const currentSnapshot = makeSnapshot(
-    ledgers,
-    newState?.balanceAmtHc,
-    newState?.balanceAmtFc,
-    newState?.tdsAmt,
-    newState?.tdsAmtFC
-  );
-
-  if (allocInternalUpdateRef.current) {
-    if (currentSnapshot === allocPrevRef.current) {
-      allocInternalUpdateRef.current = false;
-      allocAmountEditSnapshotRef.current = makeAmountEditSnapshot(ledgers);
-      return;
-    }
-
-    allocInternalUpdateRef.current = false;
-  }
-
-  const baseBalanceHC = round2(
-    toNum(newState?.amtRec ?? 0) +
-      toNum(newState?.bcAmt ?? newState?.bankCharges ?? 0)
-  );
-
-  const baseBalanceFC = round2(
-    toNum(newState?.amtRecFC ?? 0) +
-      toNum(
-        newState?.bcAmtFC ??
-          newState?.bankChargesFC ??
-          newState?.bankCharges ??
-          0
-      )
-  );
-
-  let remainingHC = baseBalanceHC;
-  let remainingFC = baseBalanceFC;
-
-  const nextLedgers = ledgers.map((ledger, ledgerIndex) => {
-    const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
-      ? ledger.tblVoucherLedgerDetails
-      : [];
-
-    if (!details.length) {
-      const manualHC = stateToLogic(ledger?.debitAmount, ledger?.creditAmount);
-      const manualFC = stateToLogic(
-        ledger?.debitAmountFc,
-        ledger?.creditAmountFc
+            snap[key] = {
+              debitAmount: asStr2(row?.debitAmount),
+              creditAmount: asStr2(row?.creditAmount),
+              debitAmountFc: asStr2(row?.debitAmountFc),
+              creditAmountFc: asStr2(row?.creditAmountFc),
+            };
+          });
+        },
       );
 
-      remainingHC = round2(remainingHC - manualHC.credit + manualHC.debit);
-      remainingFC = round2(remainingFC - manualFC.credit + manualFC.debit);
+      return snap;
+    };
 
-      const manualLedgerTds = getManualLedgerTds(ledger);
+    const getAmountEditDirection = (editKey, row = {}) => {
+      if (!isForeignCurrencyRow(row)) return "";
 
-      return {
-        ...ledger,
-        isChildChecked: false,
-        tdsAmtHC: manualLedgerTds.hc,
-        tdsAmtFC: manualLedgerTds.fc,
-        tdsAmount: manualLedgerTds.hc,
-        tdsAmountFc: manualLedgerTds.fc,
-      };
-    }
+      const prev = allocAmountEditSnapshotRef.current?.[editKey];
 
-    const hasExistingCheckedHC = details.some((row) => {
-      if (!isTrueValue(row?.isChecked)) return false;
+      if (prev) {
+        const hcChanged =
+          !isSameAmount(prev.debitAmount, row?.debitAmount) ||
+          !isSameAmount(prev.creditAmount, row?.creditAmount);
 
-      const manual = getManualDetailAlloc(row);
+        const fcChanged =
+          !isSameAmount(prev.debitAmountFc, row?.debitAmountFc) ||
+          !isSameAmount(prev.creditAmountFc, row?.creditAmountFc);
 
-      return isTrueValue(row?.ispreChecked) || manual.hc;
-    });
-
-    const hasExistingCheckedFC = details.some((row) => {
-      if (!isTrueValue(row?.isChecked)) return false;
-
-      const manual = getManualDetailAlloc(row);
-
-      return isTrueValue(row?.ispreChecked) || manual.fc;
-    });
-
-    const hasNewCheckedHC = details.some((row) => {
-      if (!isTrueValue(row?.isChecked) || isTrueValue(row?.ispreChecked)) {
-        return false;
+        if (fcChanged && !hcChanged) return "FC_TO_HC";
+        if (hcChanged && !fcChanged) return "HC_TO_FC";
       }
 
-      const manual = getManualDetailAlloc(row);
-      return !manual.hc;
-    });
+      if (isTrueValue(row?.__hcDerivedFromFC)) return "FC_TO_HC";
+      if (isTrueValue(row?.__fcDerivedFromHC)) return "HC_TO_FC";
 
-    const hasNewCheckedFC = details.some((row) => {
-      if (!isTrueValue(row?.isChecked) || isTrueValue(row?.ispreChecked)) {
-        return false;
+      const manual = getManualDetailAlloc(row);
+      const hc = stateToLogic(row?.debitAmount, row?.creditAmount);
+      const fc = stateToLogic(row?.debitAmountFc, row?.creditAmountFc);
+      const rate = getRowExchangeRate(row);
+
+      const fcHasValue = fc.debit > 0 || fc.credit > 0;
+      const hcHasValue = hc.debit > 0 || hc.credit > 0;
+
+      if (manual.fc && fcHasValue && rate > 0) {
+        const expectedDebitHC = round2(fc.debit * rate);
+        const expectedCreditHC = round2(fc.credit * rate);
+
+        if (
+          !isSameAmount(hc.debit, expectedDebitHC) ||
+          !isSameAmount(hc.credit, expectedCreditHC)
+        ) {
+          return "FC_TO_HC";
+        }
       }
 
-      const manual = getManualDetailAlloc(row);
-      return !manual.fc;
+      if (manual.hc && hcHasValue && rate > 0) {
+        const expectedDebitFC = round2(hc.debit / rate);
+        const expectedCreditFC = round2(hc.credit / rate);
+
+        if (
+          !isSameAmount(fc.debit, expectedDebitFC) ||
+          !isSameAmount(fc.credit, expectedCreditFC)
+        ) {
+          return "HC_TO_FC";
+        }
+      }
+
+      return "";
+    };
+
+    const parentOnlyLedgerSnapshot = getParentOnlyLedgerSnapshot(ledgers);
+
+    const hasParentOnlyLedgerChange =
+      parentOnlyLedgerSnapshot !== "[]" &&
+      allocParentLedgerSnapshotRef.current !== "" &&
+      allocParentLedgerSnapshotRef.current !== parentOnlyLedgerSnapshot;
+
+    const hasParentLedgerRowsForCalculation = ledgers.some((ledger) => {
+      const noThirdLevelChecked = !hasCheckedThirdLevelRows(ledger);
+
+      return (
+        noThirdLevelChecked &&
+        (isTrueValue(ledger?.isChecked) || hasParentLedgerAmount(ledger))
+      );
     });
 
-    const currentBalanceHC = clamp0(
-      toNum(newState?.balanceAmtHc ?? newState?.balanceAmt ?? 0)
+    const currentSnapshot = makeSnapshot(
+      ledgers,
+      newState?.balanceAmtHc,
+      newState?.balanceAmtFc,
+      newState?.tdsAmt,
+      newState?.tdsAmtFC,
     );
 
-    const currentBalanceFC = clamp0(
-      toNum(newState?.balanceAmtFc ?? newState?.balanceAmtFC ?? 0)
+    if (allocInternalUpdateRef.current) {
+      if (currentSnapshot === allocPrevRef.current) {
+        allocInternalUpdateRef.current = false;
+        allocAmountEditSnapshotRef.current = makeAmountEditSnapshot(ledgers);
+        return;
+      }
+
+      allocInternalUpdateRef.current = false;
+    }
+
+    // ✅ HC base amount includes bank charges and gain/loss
+    const baseBalanceHC = round2(
+      toNum(newState?.amtRec ?? 0) +
+        toNum(newState?.bcAmt ?? newState?.bankCharges ?? 0) +
+        toNum(newState?.exGainLoss ?? 0),
     );
 
-    const useCurrentRemainingHC = hasExistingCheckedHC && hasNewCheckedHC;
-    const useCurrentRemainingFC = hasExistingCheckedFC && hasNewCheckedFC;
+    // ✅ FC base amount uses only FC bank charge fields, not HC bankCharges
+    const baseBalanceFC = round2(
+      toNum(newState?.amtRecFC ?? 0) +
+        toNum(
+          newState?.bcAmtFC ??
+            newState?.bcAmtFc ??
+            newState?.bankChargesFC ??
+            newState?.bankChargesFc ??
+            0,
+        ),
+    );
 
-    if (useCurrentRemainingHC) {
-      remainingHC = currentBalanceHC;
-    }
+    let remainingHC = baseBalanceHC;
+    let remainingFC = baseBalanceFC;
 
-    if (useCurrentRemainingFC) {
-      remainingFC = currentBalanceFC;
-    }
+    const nextLedgers = ledgers.map((ledger, ledgerIndex) => {
+      const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+        ? ledger.tblVoucherLedgerDetails
+        : [];
 
-    let isChildChecked = false;
+      if (!details.length) {
+        const manualHC = stateToLogic(
+          ledger?.debitAmount,
+          ledger?.creditAmount,
+        );
+        const manualFC = stateToLogic(
+          ledger?.debitAmountFc,
+          ledger?.creditAmountFc,
+        );
 
-    const nextDetails = details.map((row, rowIndex) => {
-      const isPreChecked = isTrueValue(row?.ispreChecked);
-      const isChecked = isTrueValue(row?.isChecked);
-      const shouldFreezePreCheckedRow = isPreChecked && isChecked;
+        remainingHC = round2(remainingHC - manualHC.credit + manualHC.debit);
+        remainingFC = round2(remainingFC - manualFC.credit + manualFC.debit);
 
-      const editKey = getRowEditKey(ledger, ledgerIndex, row, rowIndex);
-      const amountEditDirection = getAmountEditDirection(editKey, row);
+        const manualLedgerTds = getManualLedgerTds(ledger);
 
-      if (shouldFreezePreCheckedRow) {
-        isChildChecked = true;
+        return {
+          ...ledger,
+          isChildChecked: false,
+          tdsAmtHC: manualLedgerTds.hc,
+          tdsAmtFC: manualLedgerTds.fc,
+          tdsAmount: manualLedgerTds.hc,
+          tdsAmountFc: manualLedgerTds.fc,
+        };
+      }
+
+      const hasExistingCheckedHC = details.some((row) => {
+        if (!isTrueValue(row?.isChecked)) return false;
+
+        const manual = getManualDetailAlloc(row);
+
+        return isTrueValue(row?.ispreChecked) || manual.hc;
+      });
+
+      const hasExistingCheckedFC = details.some((row) => {
+        if (!isTrueValue(row?.isChecked)) return false;
+
+        const manual = getManualDetailAlloc(row);
+
+        return isTrueValue(row?.ispreChecked) || manual.fc;
+      });
+
+      const hasNewCheckedHC = details.some((row) => {
+        if (!isTrueValue(row?.isChecked) || isTrueValue(row?.ispreChecked)) {
+          return false;
+        }
+
+        const manual = getManualDetailAlloc(row);
+        return !manual.hc;
+      });
+
+      const hasNewCheckedFC = details.some((row) => {
+        if (!isTrueValue(row?.isChecked) || isTrueValue(row?.ispreChecked)) {
+          return false;
+        }
+
+        const manual = getManualDetailAlloc(row);
+        return !manual.fc;
+      });
+
+      const currentBalanceHC = clamp0(
+        toNum(newState?.balanceAmtHc ?? newState?.balanceAmt ?? 0),
+      );
+
+      const currentBalanceFC = clamp0(
+        toNum(newState?.balanceAmtFc ?? newState?.balanceAmtFC ?? 0),
+      );
+
+      const useCurrentRemainingHC = hasExistingCheckedHC && hasNewCheckedHC;
+      const useCurrentRemainingFC = hasExistingCheckedFC && hasNewCheckedFC;
+
+      if (useCurrentRemainingHC) {
+        remainingHC = currentBalanceHC;
+      }
+
+      if (useCurrentRemainingFC) {
+        remainingFC = currentBalanceFC;
+      }
+
+      let isChildChecked = false;
+
+      const nextDetails = details.map((row, rowIndex) => {
+        const isPreChecked = isTrueValue(row?.ispreChecked);
+        const isChecked = isTrueValue(row?.isChecked);
+        const shouldFreezePreCheckedRow = isPreChecked && isChecked;
+
+        const editKey = getRowEditKey(ledger, ledgerIndex, row, rowIndex);
+        const amountEditDirection = getAmountEditDirection(editKey, row);
+
+        if (shouldFreezePreCheckedRow) {
+          isChildChecked = true;
+
+          const origBalFC = normalizeOriginalBalanceFC({
+            originalValue: row?.__origBalFC,
+            balanceValue: row?.balanceAmountFc,
+            creditValue: row?.creditAmountFc,
+            debitValue: row?.debitAmountFc,
+          });
+
+          const origBalHC = normalizeOriginalBalance({
+            row,
+            originalValue: row?.__origBalHC,
+            balanceValue: row?.balanceAmount,
+            balanceFcValue: origBalFC,
+            creditValue: row?.creditAmount,
+            debitValue: row?.debitAmount,
+          });
+
+          // ✅ Important fix:
+          // Already checked/prechecked rows should still reduce remaining balance
+          // when bankCharges, bankChargesFc, or exGainLoss changes.
+          // This does not change the row amount.
+          const frozenHC = stateToLogic(row?.debitAmount, row?.creditAmount);
+          const frozenFC = stateToLogic(
+            row?.debitAmountFc,
+            row?.creditAmountFc,
+          );
+
+          remainingHC = round2(remainingHC - frozenHC.credit + frozenHC.debit);
+          remainingFC = round2(remainingFC - frozenFC.credit + frozenFC.debit);
+
+          return {
+            ...row,
+            __isNegRow: origBalHC < 0 || origBalFC < 0,
+            __origBalHC: origBalHC,
+            __origBalFC: origBalFC,
+            __fcDerivedFromHC: !!row?.__fcDerivedFromHC,
+            __hcDerivedFromFC: !!row?.__hcDerivedFromFC,
+            tdsAmount: asNum2(row?.tdsAmount),
+            tdsAmountFc: asNum2(row?.tdsAmountFc),
+          };
+        }
+
+        if (isChecked) isChildChecked = true;
 
         const origBalFC = normalizeOriginalBalanceFC({
           originalValue: row?.__origBalFC,
@@ -3984,450 +5396,438 @@ useEffect(() => {
           debitValue: row?.debitAmount,
         });
 
+        const isNegativeRow = origBalHC < 0 || origBalFC < 0;
+
+        const manualAlloc = getManualDetailAlloc(row);
+        const manualAllocHC = isChecked && manualAlloc.hc;
+        const manualAllocFC = isChecked && manualAlloc.fc;
+
+        let logicalDebitHC = 0;
+        let logicalCreditHC = 0;
+        let logicalDebitFC = 0;
+        let logicalCreditFC = 0;
+
+        let balanceHC = origBalHC;
+        let balanceFC = origBalFC;
+
+        let rowTdsAmountHC = 0;
+        let rowTdsAmountFC = 0;
+
+        let shouldDeriveFCFromHC = false;
+        let shouldDeriveHCFromFC = false;
+
+        if (isChecked) {
+          shouldDeriveFCFromHC =
+            amountEditDirection === "HC_TO_FC" &&
+            manualAllocHC &&
+            isForeignCurrencyRow(row);
+
+          shouldDeriveHCFromFC =
+            amountEditDirection === "FC_TO_HC" &&
+            manualAllocFC &&
+            isForeignCurrencyRow(row);
+
+          if (isTdsApplicable && manualAllocHC && useCurrentRemainingHC) {
+            rowTdsAmountHC = round2(toNum(row?.tdsAmount));
+          } else {
+            const canCalculateTdsHC =
+              isTdsApplicable &&
+              origBalHC > 0 &&
+              (manualAllocHC ? !useCurrentRemainingHC : remainingHC > 0);
+
+            if (canCalculateTdsHC) {
+              const tdsBaseHC = getTdsBaseAmount(row, origBalHC, false);
+
+              rowTdsAmountHC = round2(tdsBaseHC * 0.02);
+              remainingHC = round2(remainingHC + rowTdsAmountHC);
+            }
+          }
+
+          if (manualAllocHC) {
+            const manualHC = stateToLogic(row?.debitAmount, row?.creditAmount);
+
+            logicalDebitHC = clamp0(manualHC.debit);
+            logicalCreditHC = clamp0(manualHC.credit);
+            balanceHC = round2(origBalHC - logicalCreditHC + logicalDebitHC);
+
+            if (!useCurrentRemainingHC) {
+              remainingHC = round2(
+                remainingHC - logicalCreditHC + logicalDebitHC,
+              );
+            }
+          } else if (origBalHC < 0) {
+            if (isDebitMinusCreditPlusVoucher) {
+              const allocatableHC = clamp0(
+                Math.min(Math.abs(origBalHC), remainingHC),
+              );
+
+              logicalDebitHC = round2(allocatableHC);
+              balanceHC = round2(origBalHC + allocatableHC);
+              remainingHC = round2(remainingHC - allocatableHC);
+            } else {
+              logicalDebitHC = round2(Math.abs(origBalHC));
+              balanceHC = 0;
+              remainingHC = round2(remainingHC + logicalDebitHC);
+            }
+          } else if (origBalHC > 0) {
+            logicalCreditHC = clamp0(Math.min(remainingHC, origBalHC));
+            balanceHC = round2(origBalHC - logicalCreditHC);
+            remainingHC = round2(remainingHC - logicalCreditHC);
+          } else {
+            balanceHC = 0;
+          }
+
+          const effectiveManualAllocFC =
+            manualAllocFC || shouldDeriveFCFromHC || shouldDeriveHCFromFC;
+
+          if (
+            isTdsApplicable &&
+            effectiveManualAllocFC &&
+            useCurrentRemainingFC
+          ) {
+            rowTdsAmountFC = round2(toNum(row?.tdsAmountFc));
+          } else {
+            const canCalculateTdsFC =
+              isTdsApplicable &&
+              origBalFC > 0 &&
+              (effectiveManualAllocFC
+                ? !useCurrentRemainingFC
+                : remainingFC > 0);
+
+            if (canCalculateTdsFC) {
+              const tdsBaseFC = getTdsBaseAmount(row, origBalFC, true);
+
+              rowTdsAmountFC = round2(tdsBaseFC * 0.02);
+              remainingFC = round2(remainingFC + rowTdsAmountFC);
+            }
+          }
+
+          if (shouldDeriveFCFromHC) {
+            logicalDebitFC = clamp0(
+              getConvertedAmountFC(row, logicalDebitHC, logicalDebitFC),
+            );
+
+            logicalCreditFC = clamp0(
+              getConvertedAmountFC(row, logicalCreditHC, logicalCreditFC),
+            );
+
+            balanceFC = round2(origBalFC - logicalCreditFC + logicalDebitFC);
+
+            if (!useCurrentRemainingFC) {
+              remainingFC = round2(
+                remainingFC - logicalCreditFC + logicalDebitFC,
+              );
+            }
+          } else if (manualAllocFC || shouldDeriveHCFromFC) {
+            const manualFC = stateToLogic(
+              row?.debitAmountFc,
+              row?.creditAmountFc,
+            );
+
+            logicalDebitFC = clamp0(manualFC.debit);
+            logicalCreditFC = clamp0(manualFC.credit);
+            balanceFC = round2(origBalFC - logicalCreditFC + logicalDebitFC);
+
+            if (!useCurrentRemainingFC) {
+              remainingFC = round2(
+                remainingFC - logicalCreditFC + logicalDebitFC,
+              );
+            }
+          } else if (origBalFC < 0) {
+            if (isDebitMinusCreditPlusVoucher) {
+              const allocatableFC = clamp0(
+                Math.min(Math.abs(origBalFC), remainingFC),
+              );
+
+              logicalDebitFC = round2(allocatableFC);
+              balanceFC = round2(origBalFC + allocatableFC);
+              remainingFC = round2(remainingFC - allocatableFC);
+            } else {
+              logicalDebitFC = round2(Math.abs(origBalFC));
+              balanceFC = 0;
+              remainingFC = round2(remainingFC + logicalDebitFC);
+            }
+          } else if (origBalFC > 0) {
+            logicalCreditFC = clamp0(Math.min(remainingFC, origBalFC));
+            balanceFC = round2(origBalFC - logicalCreditFC);
+            remainingFC = round2(remainingFC - logicalCreditFC);
+          } else {
+            balanceFC = 0;
+          }
+
+          if (shouldDeriveHCFromFC) {
+            const oldLogicalDebitHC = logicalDebitHC;
+            const oldLogicalCreditHC = logicalCreditHC;
+
+            logicalDebitHC = clamp0(
+              getConvertedAmountHC(row, logicalDebitFC, logicalDebitHC),
+            );
+
+            logicalCreditHC = clamp0(
+              getConvertedAmountHC(row, logicalCreditFC, logicalCreditHC),
+            );
+
+            balanceHC = round2(origBalHC - logicalCreditHC + logicalDebitHC);
+
+            if (!useCurrentRemainingHC) {
+              remainingHC = round2(
+                remainingHC +
+                  oldLogicalCreditHC -
+                  oldLogicalDebitHC -
+                  logicalCreditHC +
+                  logicalDebitHC,
+              );
+            }
+          }
+        }
+
+        const hcState = logicToStateHC(logicalDebitHC, logicalCreditHC);
+        const fcState = logicToStateFC(logicalDebitFC, logicalCreditFC);
+
+        const finalBalanceFC = asNum2(isChecked ? balanceFC : origBalFC);
+
+        const finalBalanceHC = asNum2(
+          getConvertedBalanceHC(
+            row,
+            finalBalanceFC,
+            isChecked ? balanceHC : origBalHC,
+          ),
+        );
+
         return {
           ...row,
-          __isNegRow: origBalHC < 0 || origBalFC < 0,
+          __isNegRow: isNegativeRow,
           __origBalHC: origBalHC,
           __origBalFC: origBalFC,
-          __fcDerivedFromHC: !!row?.__fcDerivedFromHC,
-          __hcDerivedFromFC: !!row?.__hcDerivedFromFC,
-          tdsAmount: asNum2(row?.tdsAmount),
-          tdsAmountFc: asNum2(row?.tdsAmountFc),
+
+          __manualAllocHC: shouldDeriveHCFromFC ? false : manualAllocHC,
+          __manualAllocFC: shouldDeriveFCFromHC ? false : manualAllocFC,
+
+          __fcDerivedFromHC: shouldDeriveFCFromHC,
+          __hcDerivedFromFC: shouldDeriveHCFromFC,
+
+          debitAmount: hcState.debitAmount,
+          creditAmount: hcState.creditAmount,
+          debitAmountFc: fcState.debitAmountFc,
+          creditAmountFc: fcState.creditAmountFc,
+
+          balanceAmount: finalBalanceHC,
+          balanceAmountFc: finalBalanceFC,
+
+          tdsAmount: asNum2(rowTdsAmountHC),
+          tdsAmountFc: asNum2(rowTdsAmountFC),
         };
-      }
-
-      if (isChecked) isChildChecked = true;
-
-      const origBalFC = normalizeOriginalBalanceFC({
-        originalValue: row?.__origBalFC,
-        balanceValue: row?.balanceAmountFc,
-        creditValue: row?.creditAmountFc,
-        debitValue: row?.debitAmountFc,
       });
 
-      const origBalHC = normalizeOriginalBalance({
-        row,
-        originalValue: row?.__origBalHC,
-        balanceValue: row?.balanceAmount,
-        balanceFcValue: origBalFC,
-        creditValue: row?.creditAmount,
-        debitValue: row?.debitAmount,
-      });
-
-      const isNegativeRow = origBalHC < 0 || origBalFC < 0;
-
-      const manualAlloc = getManualDetailAlloc(row);
-      const manualAllocHC = isChecked && manualAlloc.hc;
-      const manualAllocFC = isChecked && manualAlloc.fc;
-
-      let logicalDebitHC = 0;
-      let logicalCreditHC = 0;
-      let logicalDebitFC = 0;
-      let logicalCreditFC = 0;
-
-      let balanceHC = origBalHC;
-      let balanceFC = origBalFC;
-
-      let rowTdsAmountHC = 0;
-      let rowTdsAmountFC = 0;
-
-      let shouldDeriveFCFromHC = false;
-      let shouldDeriveHCFromFC = false;
-
-      if (isChecked) {
-        shouldDeriveFCFromHC =
-          amountEditDirection === "HC_TO_FC" &&
-          manualAllocHC &&
-          isForeignCurrencyRow(row);
-
-        shouldDeriveHCFromFC =
-          amountEditDirection === "FC_TO_HC" &&
-          manualAllocFC &&
-          isForeignCurrencyRow(row);
-
-        if (isTdsApplicable && manualAllocHC && useCurrentRemainingHC) {
-          rowTdsAmountHC = round2(toNum(row?.tdsAmount));
-        } else {
-          const canCalculateTdsHC =
-            isTdsApplicable &&
-            origBalHC > 0 &&
-            (manualAllocHC ? !useCurrentRemainingHC : remainingHC > 0);
-
-          if (canCalculateTdsHC) {
-            const tdsBaseHC = getTdsBaseAmount(row, origBalHC, false);
-
-            rowTdsAmountHC = round2(tdsBaseHC * 0.02);
-            remainingHC = round2(remainingHC + rowTdsAmountHC);
-          }
-        }
-
-        if (manualAllocHC) {
-          const manualHC = stateToLogic(row?.debitAmount, row?.creditAmount);
-
-          logicalDebitHC = clamp0(manualHC.debit);
-          logicalCreditHC = clamp0(manualHC.credit);
-          balanceHC = round2(origBalHC - logicalCreditHC + logicalDebitHC);
-
-          if (!useCurrentRemainingHC) {
-            remainingHC = round2(
-              remainingHC - logicalCreditHC + logicalDebitHC
-            );
-          }
-        } else if (origBalHC < 0) {
-          if (isDebitMinusCreditPlusVoucher) {
-            const allocatableHC = clamp0(
-              Math.min(Math.abs(origBalHC), remainingHC)
-            );
-
-            logicalDebitHC = round2(allocatableHC);
-            balanceHC = round2(origBalHC + allocatableHC);
-            remainingHC = round2(remainingHC - allocatableHC);
-          } else {
-            logicalDebitHC = round2(Math.abs(origBalHC));
-            balanceHC = 0;
-            remainingHC = round2(remainingHC + logicalDebitHC);
-          }
-        } else if (origBalHC > 0) {
-          logicalCreditHC = clamp0(Math.min(remainingHC, origBalHC));
-          balanceHC = round2(origBalHC - logicalCreditHC);
-          remainingHC = round2(remainingHC - logicalCreditHC);
-        } else {
-          balanceHC = 0;
-        }
-
-        const effectiveManualAllocFC =
-          manualAllocFC || shouldDeriveFCFromHC || shouldDeriveHCFromFC;
-
-        if (isTdsApplicable && effectiveManualAllocFC && useCurrentRemainingFC) {
-          rowTdsAmountFC = round2(toNum(row?.tdsAmountFc));
-        } else {
-          const canCalculateTdsFC =
-            isTdsApplicable &&
-            origBalFC > 0 &&
-            (effectiveManualAllocFC ? !useCurrentRemainingFC : remainingFC > 0);
-
-          if (canCalculateTdsFC) {
-            const tdsBaseFC = getTdsBaseAmount(row, origBalFC, true);
-
-            rowTdsAmountFC = round2(tdsBaseFC * 0.02);
-            remainingFC = round2(remainingFC + rowTdsAmountFC);
-          }
-        }
-
-        if (shouldDeriveFCFromHC) {
-          logicalDebitFC = clamp0(
-            getConvertedAmountFC(row, logicalDebitHC, logicalDebitFC)
-          );
-
-          logicalCreditFC = clamp0(
-            getConvertedAmountFC(row, logicalCreditHC, logicalCreditFC)
-          );
-
-          balanceFC = round2(origBalFC - logicalCreditFC + logicalDebitFC);
-
-          if (!useCurrentRemainingFC) {
-            remainingFC = round2(
-              remainingFC - logicalCreditFC + logicalDebitFC
-            );
-          }
-        } else if (manualAllocFC || shouldDeriveHCFromFC) {
-          const manualFC = stateToLogic(
-            row?.debitAmountFc,
-            row?.creditAmountFc
-          );
-
-          logicalDebitFC = clamp0(manualFC.debit);
-          logicalCreditFC = clamp0(manualFC.credit);
-          balanceFC = round2(origBalFC - logicalCreditFC + logicalDebitFC);
-
-          if (!useCurrentRemainingFC) {
-            remainingFC = round2(
-              remainingFC - logicalCreditFC + logicalDebitFC
-            );
-          }
-        } else if (origBalFC < 0) {
-          if (isDebitMinusCreditPlusVoucher) {
-            const allocatableFC = clamp0(
-              Math.min(Math.abs(origBalFC), remainingFC)
-            );
-
-            logicalDebitFC = round2(allocatableFC);
-            balanceFC = round2(origBalFC + allocatableFC);
-            remainingFC = round2(remainingFC - allocatableFC);
-          } else {
-            logicalDebitFC = round2(Math.abs(origBalFC));
-            balanceFC = 0;
-            remainingFC = round2(remainingFC + logicalDebitFC);
-          }
-        } else if (origBalFC > 0) {
-          logicalCreditFC = clamp0(Math.min(remainingFC, origBalFC));
-          balanceFC = round2(origBalFC - logicalCreditFC);
-          remainingFC = round2(remainingFC - logicalCreditFC);
-        } else {
-          balanceFC = 0;
-        }
-
-        // ✅ IMPORTANT:
-        // If user changed FC amount manually,
-        // then calculate HC amount from FC * exchangeRate.
-        // Example: creditAmountFc 20 * exchangeRate 95 = creditAmount 1900.
-        if (shouldDeriveHCFromFC) {
-          const oldLogicalDebitHC = logicalDebitHC;
-          const oldLogicalCreditHC = logicalCreditHC;
-
-          logicalDebitHC = clamp0(
-            getConvertedAmountHC(row, logicalDebitFC, logicalDebitHC)
-          );
-
-          logicalCreditHC = clamp0(
-            getConvertedAmountHC(row, logicalCreditFC, logicalCreditHC)
-          );
-
-          balanceHC = round2(origBalHC - logicalCreditHC + logicalDebitHC);
-
-          if (!useCurrentRemainingHC) {
-            remainingHC = round2(
-              remainingHC +
-                oldLogicalCreditHC -
-                oldLogicalDebitHC -
-                logicalCreditHC +
-                logicalDebitHC
-            );
-          }
-        }
-      }
-
-      const hcState = logicToStateHC(logicalDebitHC, logicalCreditHC);
-      const fcState = logicToStateFC(logicalDebitFC, logicalCreditFC);
-
-      const finalBalanceFC = asNum2(isChecked ? balanceFC : origBalFC);
-
-      const finalBalanceHC = asNum2(
-        getConvertedBalanceHC(
-          row,
-          finalBalanceFC,
-          isChecked ? balanceHC : origBalHC
-        )
+      const ledgerTdsTotalHC = round2(
+        nextDetails.reduce((acc, row) => acc + toNum(row?.tdsAmount), 0),
       );
 
+      const ledgerTdsTotalFC = round2(
+        nextDetails.reduce((acc, row) => acc + toNum(row?.tdsAmountFc), 0),
+      );
+
+      const parentLogicHC = nextDetails.reduce(
+        (acc, row) => {
+          const x = stateToLogic(row?.debitAmount, row?.creditAmount);
+          acc.debit = round2(acc.debit + x.debit);
+          acc.credit = round2(acc.credit + x.credit);
+          return acc;
+        },
+        { debit: 0, credit: 0 },
+      );
+
+      const parentLogicFC = nextDetails.reduce(
+        (acc, row) => {
+          const x = stateToLogic(row?.debitAmountFc, row?.creditAmountFc);
+          acc.debit = round2(acc.debit + x.debit);
+          acc.credit = round2(acc.credit + x.credit);
+          return acc;
+        },
+        { debit: 0, credit: 0 },
+      );
+
+      const parentStateHC = logicToStateHC(
+        round2(parentLogicHC.debit),
+        round2(parentLogicHC.credit),
+      );
+
+      const parentStateFC = logicToStateFC(
+        round2(parentLogicFC.debit),
+        round2(parentLogicFC.credit),
+      );
+
+      const zeroStateHC = logicToStateHC(0, 0);
+      const zeroStateFC = logicToStateFC(0, 0);
+
+      const isClearingLastChildSelection =
+        details.length > 0 &&
+        isTrueValue(ledger?.isChildChecked) &&
+        !isChildChecked;
+
+      const shouldUseParentLedgerAmount =
+        !isChildChecked &&
+        !isClearingLastChildSelection &&
+        hasParentLedgerAmount(ledger);
+
+      const parentLedgerManualHC = stateToLogic(
+        ledger?.debitAmount,
+        ledger?.creditAmount,
+      );
+
+      const parentLedgerManualFC = stateToLogic(
+        ledger?.debitAmountFc,
+        ledger?.creditAmountFc,
+      );
+
+      const parentLedgerStateHC = logicToStateHC(
+        round2(parentLedgerManualHC.debit),
+        round2(parentLedgerManualHC.credit),
+      );
+
+      const parentLedgerStateFC = logicToStateFC(
+        round2(parentLedgerManualFC.debit),
+        round2(parentLedgerManualFC.credit),
+      );
+
+      const nextDebitHC = isChildChecked
+        ? parentStateHC.debitAmount
+        : shouldUseParentLedgerAmount
+          ? parentLedgerStateHC.debitAmount
+          : zeroStateHC.debitAmount;
+
+      const nextCreditHC = isChildChecked
+        ? parentStateHC.creditAmount
+        : shouldUseParentLedgerAmount
+          ? parentLedgerStateHC.creditAmount
+          : zeroStateHC.creditAmount;
+
+      const nextDebitFC = isChildChecked
+        ? parentStateFC.debitAmountFc
+        : shouldUseParentLedgerAmount
+          ? parentLedgerStateFC.debitAmountFc
+          : zeroStateFC.debitAmountFc;
+
+      const nextCreditFC = isChildChecked
+        ? parentStateFC.creditAmountFc
+        : shouldUseParentLedgerAmount
+          ? parentLedgerStateFC.creditAmountFc
+          : zeroStateFC.creditAmountFc;
+
+      const manualLedgerTds = getManualLedgerTds(ledger);
+
+      const nextLedgerTdsHC = isChildChecked
+        ? ledgerTdsTotalHC
+        : manualLedgerTds.hc;
+
+      const nextLedgerTdsFC = isChildChecked
+        ? ledgerTdsTotalFC
+        : manualLedgerTds.fc;
+
+      if (shouldUseParentLedgerAmount) {
+        const nextLogicHC = stateToLogic(nextDebitHC, nextCreditHC);
+        const nextLogicFC = stateToLogic(nextDebitFC, nextCreditFC);
+
+        remainingHC = round2(
+          remainingHC - nextLogicHC.credit + nextLogicHC.debit,
+        );
+        remainingFC = round2(
+          remainingFC - nextLogicFC.credit + nextLogicFC.debit,
+        );
+      }
+
       return {
-        ...row,
-        __isNegRow: isNegativeRow,
-        __origBalHC: origBalHC,
-        __origBalFC: origBalFC,
+        ...ledger,
+        isChecked: isClearingLastChildSelection ? false : ledger?.isChecked,
+        isChildChecked,
 
-        // ✅ If HC is derived from FC, don't treat HC as manually entered.
-        // ✅ If FC is derived from HC, don't treat FC as manually entered.
-        __manualAllocHC: shouldDeriveHCFromFC ? false : manualAllocHC,
-        __manualAllocFC: shouldDeriveFCFromHC ? false : manualAllocFC,
+        tblVoucherLedgerDetails: nextDetails,
 
-        // ✅ Direction flags
-        __fcDerivedFromHC: shouldDeriveFCFromHC,
-        __hcDerivedFromFC: shouldDeriveHCFromFC,
+        debitAmount: nextDebitHC,
+        creditAmount: nextCreditHC,
+        debitAmountFc: nextDebitFC,
+        creditAmountFc: nextCreditFC,
 
-        debitAmount: hcState.debitAmount,
-        creditAmount: hcState.creditAmount,
-        debitAmountFc: fcState.debitAmountFc,
-        creditAmountFc: fcState.creditAmountFc,
-
-        balanceAmount: finalBalanceHC,
-        balanceAmountFc: finalBalanceFC,
-
-        tdsAmount: asNum2(rowTdsAmountHC),
-        tdsAmountFc: asNum2(rowTdsAmountFC),
+        tdsAmtHC: nextLedgerTdsHC,
+        tdsAmtFC: nextLedgerTdsFC,
+        tdsAmount: nextLedgerTdsHC,
+        tdsAmountFc: nextLedgerTdsFC,
       };
     });
 
-    const ledgerTdsTotalHC = round2(
-      nextDetails.reduce((acc, row) => acc + toNum(row?.tdsAmount), 0)
+    const nextTdsAmtHC = round2(
+      nextLedgers.reduce(
+        (acc, ledger) => acc + toNum(ledger?.tdsAmtHC ?? ledger?.tdsAmount),
+        0,
+      ),
     );
 
-    const ledgerTdsTotalFC = round2(
-      nextDetails.reduce((acc, row) => acc + toNum(row?.tdsAmountFc), 0)
+    const nextTdsAmtFC = round2(
+      nextLedgers.reduce(
+        (acc, ledger) => acc + toNum(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc),
+        0,
+      ),
     );
 
-    const parentLogicHC = nextDetails.reduce(
-      (acc, row) => {
-        const x = stateToLogic(row?.debitAmount, row?.creditAmount);
-        acc.debit = round2(acc.debit + x.debit);
-        acc.credit = round2(acc.credit + x.credit);
-        return acc;
-      },
-      { debit: 0, credit: 0 }
+    const displayTotals = getEffectiveDisplayTotals(nextLedgers);
+
+    const nextBalanceAmtHc = isDebitMinusCreditPlusVoucher
+      ? asStr2(clamp0(baseBalanceHC - displayTotals.hc))
+      : shouldSwapDrCr
+        ? asStr2(clamp0(baseBalanceHC + displayTotals.hc))
+        : asStr2(clamp0(remainingHC));
+
+    const nextBalanceAmtFc = isDebitMinusCreditPlusVoucher
+      ? asStr2(clamp0(baseBalanceFC - displayTotals.fc))
+      : shouldSwapDrCr
+        ? asStr2(clamp0(baseBalanceFC + displayTotals.fc))
+        : asStr2(clamp0(remainingFC));
+
+    const nextSnapshot = makeSnapshot(
+      nextLedgers,
+      nextBalanceAmtHc,
+      nextBalanceAmtFc,
+      nextTdsAmtHC,
+      nextTdsAmtFC,
     );
 
-    const parentLogicFC = nextDetails.reduce(
-      (acc, row) => {
-        const x = stateToLogic(row?.debitAmountFc, row?.creditAmountFc);
-        acc.debit = round2(acc.debit + x.debit);
-        acc.credit = round2(acc.credit + x.credit);
-        return acc;
-      },
-      { debit: 0, credit: 0 }
-    );
+    const nextParentOnlyLedgerSnapshot =
+      getParentOnlyLedgerSnapshot(nextLedgers);
 
-    const parentStateHC = logicToStateHC(
-      round2(parentLogicHC.debit),
-      round2(parentLogicHC.credit)
-    );
-
-    const parentStateFC = logicToStateFC(
-      round2(parentLogicFC.debit),
-      round2(parentLogicFC.credit)
-    );
-
-    const zeroStateHC = logicToStateHC(0, 0);
-    const zeroStateFC = logicToStateFC(0, 0);
-
-    const isClearingLastChildSelection =
-      details.length > 0 &&
-      isTrueValue(ledger?.isChildChecked) &&
-      !isChildChecked;
-
-    const shouldUseParentLedgerAmount =
-      !isChildChecked &&
-      !isClearingLastChildSelection &&
-      hasParentLedgerAmount(ledger);
-
-    const parentLedgerManualHC = stateToLogic(
-      ledger?.debitAmount,
-      ledger?.creditAmount
-    );
-
-    const parentLedgerManualFC = stateToLogic(
-      ledger?.debitAmountFc,
-      ledger?.creditAmountFc
-    );
-
-    const parentLedgerStateHC = logicToStateHC(
-      round2(parentLedgerManualHC.debit),
-      round2(parentLedgerManualHC.credit)
-    );
-
-    const parentLedgerStateFC = logicToStateFC(
-      round2(parentLedgerManualFC.debit),
-      round2(parentLedgerManualFC.credit)
-    );
-
-    const nextDebitHC = isChildChecked
-      ? parentStateHC.debitAmount
-      : shouldUseParentLedgerAmount
-        ? parentLedgerStateHC.debitAmount
-        : zeroStateHC.debitAmount;
-
-    const nextCreditHC = isChildChecked
-      ? parentStateHC.creditAmount
-      : shouldUseParentLedgerAmount
-        ? parentLedgerStateHC.creditAmount
-        : zeroStateHC.creditAmount;
-
-    const nextDebitFC = isChildChecked
-      ? parentStateFC.debitAmountFc
-      : shouldUseParentLedgerAmount
-        ? parentLedgerStateFC.debitAmountFc
-        : zeroStateFC.debitAmountFc;
-
-    const nextCreditFC = isChildChecked
-      ? parentStateFC.creditAmountFc
-      : shouldUseParentLedgerAmount
-        ? parentLedgerStateFC.creditAmountFc
-        : zeroStateFC.creditAmountFc;
-
-    const manualLedgerTds = getManualLedgerTds(ledger);
-
-    const nextLedgerTdsHC = isChildChecked
-      ? ledgerTdsTotalHC
-      : manualLedgerTds.hc;
-
-    const nextLedgerTdsFC = isChildChecked
-      ? ledgerTdsTotalFC
-      : manualLedgerTds.fc;
-
-    if (shouldUseParentLedgerAmount) {
-      const nextLogicHC = stateToLogic(nextDebitHC, nextCreditHC);
-      const nextLogicFC = stateToLogic(nextDebitFC, nextCreditFC);
-
-      remainingHC = round2(remainingHC - nextLogicHC.credit + nextLogicHC.debit);
-      remainingFC = round2(remainingFC - nextLogicFC.credit + nextLogicFC.debit);
+    if (
+      nextSnapshot === currentSnapshot ||
+      allocPrevRef.current === nextSnapshot
+    ) {
+      allocPrevRef.current = nextSnapshot;
+      allocParentLedgerSnapshotRef.current = nextParentOnlyLedgerSnapshot;
+      allocAmountEditSnapshotRef.current = makeAmountEditSnapshot(nextLedgers);
+      return;
     }
 
-    return {
-      ...ledger,
-      isChecked: isClearingLastChildSelection ? false : ledger?.isChecked,
-      isChildChecked,
-
-      tblVoucherLedgerDetails: nextDetails,
-
-      debitAmount: nextDebitHC,
-      creditAmount: nextCreditHC,
-      debitAmountFc: nextDebitFC,
-      creditAmountFc: nextCreditFC,
-
-      tdsAmtHC: nextLedgerTdsHC,
-      tdsAmtFC: nextLedgerTdsFC,
-      tdsAmount: nextLedgerTdsHC,
-      tdsAmountFc: nextLedgerTdsFC,
-    };
-  });
-
-  const nextTdsAmtHC = round2(
-    nextLedgers.reduce(
-      (acc, ledger) => acc + toNum(ledger?.tdsAmtHC ?? ledger?.tdsAmount),
-      0
-    )
-  );
-
-  const nextTdsAmtFC = round2(
-    nextLedgers.reduce(
-      (acc, ledger) => acc + toNum(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc),
-      0
-    )
-  );
-
-  const displayTotals = getEffectiveDisplayTotals(nextLedgers);
-
-  const nextBalanceAmtHc = isDebitMinusCreditPlusVoucher
-    ? asStr2(clamp0(baseBalanceHC - displayTotals.hc))
-    : shouldSwapDrCr
-      ? asStr2(clamp0(baseBalanceHC + displayTotals.hc))
-      : asStr2(clamp0(remainingHC));
-
-  const nextBalanceAmtFc = isDebitMinusCreditPlusVoucher
-    ? asStr2(clamp0(baseBalanceFC - displayTotals.fc))
-    : shouldSwapDrCr
-      ? asStr2(clamp0(baseBalanceFC + displayTotals.fc))
-      : asStr2(clamp0(remainingFC));
-
-  const nextSnapshot = makeSnapshot(
-    nextLedgers,
-    nextBalanceAmtHc,
-    nextBalanceAmtFc,
-    nextTdsAmtHC,
-    nextTdsAmtFC
-  );
-
-  const nextParentOnlyLedgerSnapshot = getParentOnlyLedgerSnapshot(nextLedgers);
-
-  if (
-    nextSnapshot === currentSnapshot ||
-    allocPrevRef.current === nextSnapshot
-  ) {
     allocPrevRef.current = nextSnapshot;
     allocParentLedgerSnapshotRef.current = nextParentOnlyLedgerSnapshot;
     allocAmountEditSnapshotRef.current = makeAmountEditSnapshot(nextLedgers);
-    return;
-  }
+    allocInternalUpdateRef.current = true;
 
-  allocPrevRef.current = nextSnapshot;
-  allocParentLedgerSnapshotRef.current = nextParentOnlyLedgerSnapshot;
-  allocAmountEditSnapshotRef.current = makeAmountEditSnapshot(nextLedgers);
-  allocInternalUpdateRef.current = true;
+    setNewState((prevState) => {
+      if (hasLedgers) {
+        return {
+          ...prevState,
+          tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
+          balanceAmtHc: nextBalanceAmtHc,
+          balanceAmtFc: nextBalanceAmtFc,
+          balanceAmt: nextBalanceAmtHc,
+          balanceAmtFC: nextBalanceAmtFc,
+          tdsAmt: nextTdsAmtHC,
+          tdsAmtFC: nextTdsAmtFC,
+          tdsAmount: nextTdsAmtHC,
+          tdsAmountFc: nextTdsAmtFC,
+        };
+      }
 
-  setNewState((prevState) => {
-    if (hasLedgers) {
       return {
         ...prevState,
-        tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
+        tblVoucherLedgerDetails: nextLedgers[0]?.tblVoucherLedgerDetails || [],
         balanceAmtHc: nextBalanceAmtHc,
         balanceAmtFc: nextBalanceAmtFc,
         balanceAmt: nextBalanceAmtHc,
@@ -4437,27 +5837,27 @@ useEffect(() => {
         tdsAmount: nextTdsAmtHC,
         tdsAmountFc: nextTdsAmtFC,
       };
-    }
+    });
 
-    return {
-      ...prevState,
-      tblVoucherLedgerDetails: nextLedgers[0]?.tblVoucherLedgerDetails || [],
-      balanceAmtHc: nextBalanceAmtHc,
-      balanceAmtFc: nextBalanceAmtFc,
-      balanceAmt: nextBalanceAmtHc,
-      balanceAmtFC: nextBalanceAmtFc,
-      tdsAmt: nextTdsAmtHC,
-      tdsAmtFC: nextTdsAmtFC,
-      tdsAmount: nextTdsAmtHC,
-      tdsAmountFc: nextTdsAmtFC,
-    };
-  });
+    setSubmitNewState((prevState) => {
+      if (hasLedgers) {
+        return {
+          ...prevState,
+          tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
+          balanceAmtHc: nextBalanceAmtHc,
+          balanceAmtFc: nextBalanceAmtFc,
+          balanceAmt: nextBalanceAmtHc,
+          balanceAmtFC: nextBalanceAmtFc,
+          tdsAmt: nextTdsAmtHC,
+          tdsAmtFC: nextTdsAmtFC,
+          tdsAmount: nextTdsAmtHC,
+          tdsAmountFc: nextTdsAmtFC,
+        };
+      }
 
-  setSubmitNewState((prevState) => {
-    if (hasLedgers) {
       return {
         ...prevState,
-        tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
+        tblVoucherLedgerDetails: nextLedgers[0]?.tblVoucherLedgerDetails || [],
         balanceAmtHc: nextBalanceAmtHc,
         balanceAmtFc: nextBalanceAmtFc,
         balanceAmt: nextBalanceAmtHc,
@@ -4467,40 +5867,29 @@ useEffect(() => {
         tdsAmount: nextTdsAmtHC,
         tdsAmountFc: nextTdsAmtFC,
       };
-    }
-
-    return {
-      ...prevState,
-      tblVoucherLedgerDetails: nextLedgers[0]?.tblVoucherLedgerDetails || [],
-      balanceAmtHc: nextBalanceAmtHc,
-      balanceAmtFc: nextBalanceAmtFc,
-      balanceAmt: nextBalanceAmtHc,
-      balanceAmtFC: nextBalanceAmtFc,
-      tdsAmt: nextTdsAmtHC,
-      tdsAmtFC: nextTdsAmtFC,
-      tdsAmount: nextTdsAmtHC,
-      tdsAmountFc: nextTdsAmtFC,
-    };
-  });
-}, [
-  newState?.voucherTypeId,
-  newState?.amtRec,
-  newState?.amtRecFC,
-  newState?.bankCharges,
-  newState?.bankChargesFC,
-  newState?.bcAmt,
-  newState?.bcAmtFC,
-  newState?.tdsApplicable,
-  newState?.tdsAmt,
-  newState?.tdsAmtFC,
-  newState?.tdsAmount,
-  newState?.tdsAmountFc,
-  newState?.currencyId,
-  newState?.exchangeRate,
-  JSON.stringify(newState?.tblVoucherLedger),
-  JSON.stringify(newState?.tblVoucherLedgerDetails),
-  voucherAllocDeleteTick,
-]);
+    });
+  }, [
+    newState?.voucherTypeId,
+    newState?.amtRec,
+    newState?.amtRecFC,
+    newState?.bankCharges,
+    newState?.bankChargesFC,
+    newState?.bankChargesFc,
+    newState?.bcAmtFC,
+    newState?.bcAmtFc,
+    newState?.bcAmt,
+    newState?.exGainLoss,
+    newState?.tdsApplicable,
+    newState?.tdsAmt,
+    newState?.tdsAmtFC,
+    newState?.tdsAmount,
+    newState?.tdsAmountFc,
+    newState?.currencyId,
+    newState?.exchangeRate,
+    JSON.stringify(newState?.tblVoucherLedger),
+    JSON.stringify(newState?.tblVoucherLedgerDetails),
+    voucherAllocDeleteTick,
+  ]);
   return (
     <div className={`h-screen relative`}>
       <form onSubmit={handleButtonClick.handleSubmit}>
@@ -4577,7 +5966,9 @@ useEffect(() => {
                 formControlData={formControlData}
                 setFormControlData={setFormControlData}
                 getLabelValue={getLabelValue}
-                onVoucherAllocationDelete={forceVoucherAllocationRecalcAfterDelete}
+                onVoucherAllocationDelete={
+                  forceVoucherAllocationRecalcAfterDelete
+                }
               />
             </div>
           ))}
@@ -4944,7 +6335,6 @@ function ChildAccordianComponent({
   const [tableBodyWidth, setTableBodyWidth] = useState("0px");
   const isChildAddHidden = isConfigFlagEnabled(section?.isAddHide);
   const isChildDeleteHidden = isConfigFlagEnabled(section?.isDeleteHide);
-
 
   const handleFieldChildrenValuesChange = (updatedValues) => {
     let Object = { ...childObject, ...updatedValues };
@@ -5322,13 +6712,13 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-              // const parsedValue = parseFloat(row[item.fieldname] || 0);
-              const parsedValue =
-                typeof row[item.fieldname] === "number"
-                  ? row[item.fieldname]
-                  : parseFloat(row[item.fieldname] || 0);
-              return isNaN(parsedValue) ? sum : sum + parsedValue;
-            }, 0) // Calculate sum for 's' type
+                // const parsedValue = parseFloat(row[item.fieldname] || 0);
+                const parsedValue =
+                  typeof row[item.fieldname] === "number"
+                    ? row[item.fieldname]
+                    : parseFloat(row[item.fieldname] || 0);
+                return isNaN(parsedValue) ? sum : sum + parsedValue;
+              }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -5450,8 +6840,6 @@ function ChildAccordianComponent({
     setActiveColumn(columnId); // Set the active column to the one that was right-clicked
     // setOriginalData(newState);
   };
-
-
 
   CustomizedInputBase.propTypes = {
     columnData: PropTypes.array,
@@ -5829,8 +7217,6 @@ function ChildAccordianComponent({
     }
   }, [inputFieldsVisible]);
 
-
-
   useEffect(() => {
     const resizeObserver = new ResizeObserver((entries) => {
       if (entries && entries[0]) {
@@ -5853,8 +7239,8 @@ function ChildAccordianComponent({
       const right = Math.round(
         Math.floor(
           tableRef.current?.getBoundingClientRect()?.width +
-          tableRef.current?.scrollLeft
-        )
+            tableRef.current?.scrollLeft,
+        ),
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
         setTableBodyWidth(`${right - 100}`);
@@ -5939,9 +7325,10 @@ function ChildAccordianComponent({
         <AccordionDetails
           className={`${styles.pageBackground} flex   relative  `}
           sx={{
-            height: newState[section.tableName]?.length <= 0 && !inputFieldsVisible
-              ? "3.5rem"
-              : "auto",
+            height:
+              newState[section.tableName]?.length <= 0 && !inputFieldsVisible
+                ? "3.5rem"
+                : "auto",
             padding: inputFieldsVisible ? "0" : "0",
             width: "100%",
           }}
@@ -6099,7 +7486,7 @@ function ChildAccordianComponent({
                                               onClick={() => {
                                                 childButtonHandler(
                                                   section,
-                                                  indexValue
+                                                  indexValue,
                                                 );
                                               }}
                                             />
@@ -6115,7 +7502,7 @@ function ChildAccordianComponent({
                                       ...childTableHeaderStyle,
                                       paddingLeft:
                                         section?.showSrNo === true ||
-                                          section?.showSrNo === "true"
+                                        section?.showSrNo === "true"
                                           ? "29px !important"
                                           : "0px !important",
                                     }}
@@ -6130,8 +7517,10 @@ function ChildAccordianComponent({
                                   >
                                     {index === 0 &&
                                       !isChildAddHidden &&
-                                      !(section?.showSrNo == true ||
-                                        section?.showSrNo == "true") && (
+                                      !(
+                                        section?.showSrNo == true ||
+                                        section?.showSrNo == "true"
+                                      ) && (
                                         <HoverIcon
                                           defaultIcon={addLogo}
                                           hoverIcon={plusIconHover}
@@ -6140,7 +7529,7 @@ function ChildAccordianComponent({
                                           onClick={() => {
                                             childButtonHandler(
                                               section,
-                                              indexValue
+                                              indexValue,
                                             );
                                           }}
                                         />
@@ -6253,7 +7642,7 @@ function ChildAccordianComponent({
                                               {(field.type === "number" ||
                                                 field.type === "decimal" ||
                                                 field.type === "string") &&
-                                                field.gridTotal
+                                              field.gridTotal
                                                 ? columnTotals[field.fieldname]
                                                 : ""}
                                             </div>
@@ -6276,8 +7665,7 @@ function ChildAccordianComponent({
                                                 <div
                                                   className={`${childTableRowStyles} `}
                                                   style={{
-                                                    backgroundColor:
-                                                      "#E0E0E0",
+                                                    backgroundColor: "#E0E0E0",
                                                   }}
                                                 />
                                               </div>
@@ -6295,7 +7683,8 @@ function ChildAccordianComponent({
                 </>
               )}
           </div>
-        </AccordionDetails>:
+        </AccordionDetails>
+        :
       </Accordion>
     </>
   );

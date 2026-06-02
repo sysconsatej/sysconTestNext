@@ -10441,13 +10441,17 @@ function rptInvoice() {
       .flat() // use .flat(Infinity) if deeper nesting
       .reduce((sum, r) => sum + (Number(r?.amountHc) || 0), 0);
 
+    const totalDays = (chargeAtt ?? [])
+      .flat() // use .flat(Infinity) if deeper nesting
+      .reduce((sum, r) => sum + (Number(r?.noOfDays) || 0), 0);
+
     console.log("totalAmountHc", totalAmountHc);
 
     // Calculate totals
-    const totalDays = currentChargeAtt.reduce(
-      (sum, item) => sum + (Number(item.noOfDays) || 0),
-      0,
-    );
+    // const totalDays = currentChargeAtt.reduce(
+    //   (sum, item) => sum + (Number(item.noOfDays) || 0),
+    //   0,
+    // );
 
     const totalAmount = currentChargeAtt.reduce(
       (sum, item) => sum + (Number(item.amountHc) || 0),
@@ -10716,8 +10720,8 @@ function rptInvoice() {
                   className="pb-1 border-r border-black text-center ps-1"
                   style={{ width: "8%" }}
                 >
-                  {/* {totalDays} */}
-                  {gridTotalDisplay}
+                  {totalDays}
+                  {/* {gridTotalDisplay} */}
                 </p>
                 <p
                   className="pb-1 border-r border-black text-center ps-1"
@@ -10739,8 +10743,8 @@ function rptInvoice() {
                   className="pb-1 border-black text-center ps-1"
                   style={{ width: "15%" }}
                 >
-                  {/* {totalAmountHc.toFixed(2)} */}
-                  {gridTotalDisplay}
+                  {totalAmountHc.toFixed(2)}
+                  {/* {gridTotalDisplay} */}
                 </p>
               </div>
             )}

@@ -2853,7 +2853,7 @@ export default function AddEditFormControll({ reportData }) {
           {
             state: "frozen",
             xSplit: 0,
-            ySplit: 10,
+            ySplit: 11,
           },
         ];
 
@@ -2867,15 +2867,15 @@ export default function AddEditFormControll({ reportData }) {
         // TEMPLATE STYLING
         // -------------------------
 
-        setFill(`A1:${lastColumnLetter}9`, YELLOW_FILL);
-        setFill(`A10:${lastColumnLetter}10`, GRID_FILL);
+        setFill(`A1:${lastColumnLetter}10`, YELLOW_FILL);
+        setFill(`A11:${lastColumnLetter}11`, GRID_FILL);
 
-        setFont(`A1:${lastColumnLetter}10`, {
+        setFont(`A1:${lastColumnLetter}11`, {
           name: "Calibri",
           size: 10,
         });
 
-        setAlignment(`A1:${lastColumnLetter}10`, {
+        setAlignment(`A1:${lastColumnLetter}11`, {
           vertical: "middle",
           wrapText: true,
         });
@@ -2889,7 +2889,8 @@ export default function AddEditFormControll({ reportData }) {
         worksheet.getRow(7).height = 18;
         worksheet.getRow(8).height = 18;
         worksheet.getRow(9).height = 18;
-        worksheet.getRow(10).height = 22;
+        worksheet.getRow(10).height = 18;
+        worksheet.getRow(11).height = 22;
 
         // -------------------------
         // TOP HEADER BLOCK
@@ -2941,28 +2942,28 @@ export default function AddEditFormControll({ reportData }) {
 
         setBorder("A3:D4");
 
-        worksheet.getCell("M3").value = "Doc Master";
-        worksheet.getCell("N3").value = "Input Template";
-        worksheet.getCell("O3").value = "Header";
+        worksheet.getCell("N3").value = "Doc Master";
+        worksheet.getCell("O3").value = "Input Template";
+        worksheet.getCell("P3").value = "Header";
 
-        worksheet.getCell("M4").value = safeString(
+        worksheet.getCell("N4").value = safeString(
           sheetData[0]?.["Doc Master"],
         );
-        worksheet.getCell("N4").value = safeString(
+        worksheet.getCell("O4").value = safeString(
           sheetData[0]?.["Input Template"],
         );
-        worksheet.getCell("O4").value = safeString(sheetData[0]?.Header);
+        worksheet.getCell("P4").value = safeString(sheetData[0]?.Header);
 
-        ["M3", "N3", "O3", "M4", "N4", "O4"].forEach((cellRef) => {
+        ["N3", "O3", "P3", "N4", "O4", "P4"].forEach((cellRef) => {
           styleCell(worksheet.getCell(cellRef), {
-            bold: ["M3", "N3", "O3"].includes(cellRef),
+            bold: ["N3", "O3", "P3"].includes(cellRef),
             fill: YELLOW_FILL,
             border: true,
             size: 10,
           });
         });
 
-        setBorder("M3:O4");
+        setBorder("N3:P4");
 
         // -------------------------
         // SUMMARY BLOCK
@@ -3065,11 +3066,11 @@ export default function AddEditFormControll({ reportData }) {
         setBorder("N6:O6");
 
         // -------------------------
-        // DETAIL HEADER ROW - ROW 10
+        // DETAIL HEADER ROW - ROW 11
         // -------------------------
 
-        const detailHeaderRowNumber = 10;
-        const detailStartRowNumber = 11;
+        const detailHeaderRowNumber = 11;
+        const detailStartRowNumber = 12;
 
         const detailHeaderRow = worksheet.getRow(detailHeaderRowNumber);
 
@@ -3145,10 +3146,10 @@ export default function AddEditFormControll({ reportData }) {
 
         // Re-apply important borders after writing values.
         setBorder("A3:D4");
-        setBorder("M3:O4");
+        setBorder("N3:P4");
         setBorder("N6:O6");
         setBorder("M7:O9");
-        setBorder(`A10:${lastColumnLetter}10`);
+        setBorder(`A11:${lastColumnLetter}11`);
 
         worksheet.pageSetup = {
           paperSize: 9,
@@ -6456,7 +6457,7 @@ export default function AddEditFormControll({ reportData }) {
           setFileUploadStage("completed");
           setFileUploadMessage("PDF data extracted successfully");
           return toast.success(
-            `${spResponse?.message || "PDF Uploaded successfully"}`,
+            `${spResponse?.rowsAffected[0]?.message || "PDF Uploaded successfully"}`,
           );
         } else {
           setAllErrors(spResponse.rowsAffected[0].errors);
@@ -6464,7 +6465,7 @@ export default function AddEditFormControll({ reportData }) {
           setEditableErrorsData(spResponse.rowsAffected[0].errors);
           setFileUploadingLoader(false);
           setFileUploadProgress(100);
-          toast.error(`${spResponse?.message || "PDF Uploaded Failed"}`);
+          toast.error(`${spResponse?.rowsAffected[0]?.message || "PDF Uploaded Failed"}`);
           return extractedData;
         }
 

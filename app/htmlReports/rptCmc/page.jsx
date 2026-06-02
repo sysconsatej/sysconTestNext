@@ -214,20 +214,60 @@ export default function RptIGM() {
     let imageHeader = null;
 
     if (storedUserData) {
-      const decryptedData = decrypt(storedUserData);
-      const userData = JSON.parse(decryptedData);
-      imageHeader = userData[0]?.headerLogoPath;
+      try {
+        const decryptedData = decrypt(storedUserData);
+        const userData = JSON.parse(decryptedData);
+        imageHeader = userData[0]?.headerLogoPath || userData[0]?.headerLogo || null;
+      } catch (e) {
+        // ignore
+      }
     }
+
+    if (!imageHeader) return <CMCHeaderSpace />;
 
     return (
       <img
-        src={imageHeader ? baseUrlNext + imageHeader : ""}
+        src={baseUrlNext + imageHeader}
         style={{ width: "100%" }}
         alt="LOGO"
       />
     );
   };
 
+  const FooterModule = () => {
+    const storedUserData = localStorage.getItem("userData");
+    let imageFooter = null;
+
+    if (storedUserData) {
+      try {
+        const decryptedData = decrypt(storedUserData);
+        const userData = JSON.parse(decryptedData);
+        imageFooter =
+          userData[0]?.footerLogoPath ||
+          userData[0]?.footerLogo ||
+          null;
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    if (!imageFooter) return null;
+
+    return (
+      <div style={{ width: "100%", display: "flex" }}>
+        <img
+          src={baseUrlNext + imageFooter}
+          alt="Footer"
+          style={{
+            display: "block",
+            width: "100%",
+            height: "auto",
+            objectFit: "contain",
+          }}
+        />
+      </div>
+    );
+  };
   const containerList = Array.isArray(data?.[0]?.container)
     ? data[0].container
     : [];
@@ -273,7 +313,7 @@ export default function RptIGM() {
             theadHeight -
             pageNoHeight -
             safetyBuffer) /
-            rowHeight,
+          rowHeight,
         ),
       );
 
@@ -286,7 +326,7 @@ export default function RptIGM() {
             footerHeight -
             pageNoHeight -
             safetyBuffer) /
-            rowHeight,
+          rowHeight,
         ),
       );
 
@@ -367,13 +407,14 @@ export default function RptIGM() {
         ? reportIds
         : ["CMC"];
 
+  const showCompanyImage = true;
+
   const CMC = ({ page }) => {
     const isLastPage = page.pageNo === page.totalPages;
 
     return (
       <div id={`CMC-${page.pageNo}`} className="mx-auto text-black">
-        {/* <CompanyImgModule /> */}
-        {/* <CMCHeaderSpace /> */}
+        <CompanyImgModule />
         <CMCSecondaryHeader
           data={data}
           totalContainers={totalContainers}
@@ -408,7 +449,6 @@ export default function RptIGM() {
   }) => {
     return (
       <>
-        <div style={{ width: "100%", height: "130px" }}></div>
         <div
           className="flex justify-between"
           style={{
@@ -746,9 +786,23 @@ export default function RptIGM() {
                   height: "100%",
                   boxSizing: "border-box",
                   fontFamily: "Arial, sans-serif",
+                  position: "relative",
+                  paddingBottom: "18mm", // reserve space for footer
                 }}
               >
                 {page.type === "CMC" && <CMC page={page} />}
+
+                {/* Absolute footer pinned to bottom like invoice report */}
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                  }}
+                >
+                  <FooterModule />
+                </div>
               </div>
             </div>
           ))}

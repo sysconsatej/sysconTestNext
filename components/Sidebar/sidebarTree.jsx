@@ -341,17 +341,19 @@ export default function SideBarMenu() {
     }
   };
 
-  const handleClose = () => setOpenAlertModal((prev) => !prev);
+  const handleClose = () => setOpenAlertModal(false);
 
   const handleOk = () => {
-    setOpenAlertModal((prev) => !prev);
+    setOpenAlertModal(false);
     setRedirected(true);
+    dispatch(updateFlag({ flag: "isRedirection", value: true }));
+    if (!menuIdToRedirect?.item) return;
+
     toggleAccordionMenus(
       menuIdToRedirect?.index,
       menuIdToRedirect?.parentAccordian,
       menuIdToRedirect?.item,
       menuIdToRedirect?.byIcon,
-      true,
     );
   };
 
@@ -365,8 +367,8 @@ export default function SideBarMenu() {
     dispatch(updateFlag({ flag: "selectedMenuId", value: item?.id || null }));
 
     if (!redirected) {
-      setOpenAlertModal((pre) => !pre);
-      if (!redirected) return;
+      setOpenAlertModal(true);
+      return;
     }
 
     setRedirected(true);

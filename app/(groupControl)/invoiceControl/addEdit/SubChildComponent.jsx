@@ -823,6 +823,42 @@ export default function SubChildComponent({
 
   // }, [subChild])
 
+  const getSubChildRows = () =>
+    newState?.[childName]?.[childIndex]?.[subChild.tableName] || [];
+
+  const getSubChildRowIndex = (rowData, fallbackIndex) => {
+    const rows = getSubChildRows();
+
+    const matchedIndex = rows.findIndex((rowItem) => {
+      if (!rowItem || !rowData) return false;
+
+      if (rowItem?._id != null && rowData?._id != null) {
+        return rowItem._id === rowData._id;
+      }
+
+      if (
+        rowItem?.voucherOutstandingId != null &&
+        rowData?.voucherOutstandingId != null
+      ) {
+        return rowItem.voucherOutstandingId === rowData.voucherOutstandingId;
+      }
+
+      if (rowItem?.indexValue != null && rowData?.indexValue != null) {
+        return rowItem.indexValue === rowData.indexValue;
+      }
+
+      return rowItem === rowData;
+    });
+
+    return matchedIndex === -1 ? fallbackIndex : matchedIndex;
+  };
+
+  const getSubChildRowKey = (rowData, fallbackIndex) =>
+    rowData?._id ??
+    rowData?.voucherOutstandingId ??
+    rowData?.indexValue ??
+    getSubChildRowIndex(rowData, fallbackIndex);
+
   return (
     <>
       {/* Input field integration */}
@@ -1015,46 +1051,53 @@ export default function SubChildComponent({
                 </TableHead>
 
                 <TableBody className="relative">
-                  {renderedData?.map((item, index) => (
-                    <React.Fragment key={index}>
-                      <EditSubChildComponent
-                        subChildObject={item}
-                        subChildIndex={index}
-                        setNewState={setNewState}
-                        newState={newState}
-                        subChild={subChild}
-                        index={index}
-                        childName={childName}
-                        childIndex={childIndex}
-                        expandAll={expandAll}
-                        inEditMode={inEditMode}
-                        setRenderedData={setRenderedData}
-                        setHideSubChildInputs={setHideSubChildInputs}
-                        deleteSubChildRecord={deleteSubChildRecord}
-                        originalData={originalData}
-                        isView={isView}
-                        isGridEdit={isGridEdit}
-                        setIsGridEdit={setIsGridEdit}
-                        copyChildValueObj={copyChildValueObj}
-                        setCopyChildValueObj={setCopyChildValueObj}
-                        setOpenModal={setOpenModal}
-                        setParaText={setParaText}
-                        setIsError={setIsError}
-                        setTypeofModal={setTypeofModal}
-                        clearFlag={clearFlag}
-                        setClearFlag={setClearFlag}
-                        containerWidth={containerWidth}
-                        submitNewState={submitNewState}
-                        setSubmitNewState={setSubmitNewState}
-                        removeSubChildRecordFromInsert={
-                          removeSubChildRecordFromInsert
-                        }
-                        formControlData={formControlData}
-                        setFormControlData={setFormControlData}
-                        setSubChildObject={setSubChildObject}
-                      />
-                    </React.Fragment>
-                  ))}
+                  {renderedData?.map((item, index) => {
+                    const actualSubChildIndex = getSubChildRowIndex(
+                      item,
+                      index,
+                    );
+
+                    return (
+                      <React.Fragment key={getSubChildRowKey(item, index)}>
+                        <EditSubChildComponent
+                          subChildObject={item}
+                          subChildIndex={actualSubChildIndex}
+                          setNewState={setNewState}
+                          newState={newState}
+                          subChild={subChild}
+                          index={actualSubChildIndex}
+                          childName={childName}
+                          childIndex={childIndex}
+                          expandAll={expandAll}
+                          inEditMode={inEditMode}
+                          setRenderedData={setRenderedData}
+                          setHideSubChildInputs={setHideSubChildInputs}
+                          deleteSubChildRecord={deleteSubChildRecord}
+                          originalData={originalData}
+                          isView={isView}
+                          isGridEdit={isGridEdit}
+                          setIsGridEdit={setIsGridEdit}
+                          copyChildValueObj={copyChildValueObj}
+                          setCopyChildValueObj={setCopyChildValueObj}
+                          setOpenModal={setOpenModal}
+                          setParaText={setParaText}
+                          setIsError={setIsError}
+                          setTypeofModal={setTypeofModal}
+                          clearFlag={clearFlag}
+                          setClearFlag={setClearFlag}
+                          containerWidth={containerWidth}
+                          submitNewState={submitNewState}
+                          setSubmitNewState={setSubmitNewState}
+                          removeSubChildRecordFromInsert={
+                            removeSubChildRecordFromInsert
+                          }
+                          formControlData={formControlData}
+                          setFormControlData={setFormControlData}
+                          setSubChildObject={setSubChildObject}
+                        />
+                      </React.Fragment>
+                    );
+                  })}
                   <>
                     {Object.keys(columnTotals).length > 0 &&
                       columnTotals.tableName === subChild.tableName && (

@@ -953,7 +953,7 @@ const setNoOfContainer = (obj) => {
         }
       } else if (fieldName === "typeId") {
         if (values.qty === childCommonItem.length) {
-          let typeIddropdown = values.typeIddropdown[0].label;
+          let typeIddropdown = values.typeIddropdown[0]?.label;
           if (typeIddropdown === "" || type !== typeIddropdown) {
             values[fieldName] = "";
             setStateVariable((prev) => ({
@@ -1955,7 +1955,6 @@ const setTaxDetails = async (obj) => {
     onChangeHandler,
   } = obj;
 
-
   const { companyId, clientId, branchId, userId, financialYear } =
     getUserDetails();
 
@@ -2605,8 +2604,7 @@ const getJobCharges = async (obj) => {
         partyId: finalBillingPartyId,
         formControlId: newState?.menuID || 0,
         totalAmount: safeTotalAmountHc,
-        exchangeRateGrid:
-          Number(newState?.exchangeRate),
+        exchangeRateGrid: Number(newState?.exchangeRate),
         clientId: clientId,
       };
 
@@ -5567,8 +5565,8 @@ const setGLSacDetails = async (obj) => {
     voucherTypeId: newState?.voucherTypeId,
     companyId: companyId,
     glId: values?.chargeGlId,
-    businessSegmentId:newState.businessSegmentId,
-    principalId:newState.principalId,
+    businessSegmentId: newState.businessSegmentId,
+    principalId: newState.principalId,
   };
 
   const response = await getGLChargeDetails(requestBody);
@@ -9020,119 +9018,6 @@ const setBankByDefault = async (obj) => {
   }
 };
 
-// const calculateVoucherAmt = async (obj) => {
-//   const { args, newState, setStateVariable } = obj;
-//   /currencyId,exchangeRate,amtRec,amtRecFC,tdsAmtFC,tdsAmt
-//   try {
-//     const argNames = args.split(",").map((arg) => arg.trim());
-//     const currency = newState?.[argNames[0]];
-//     const exchangeRate = parseFloat(newState?.[argNames[1]]) || 0; // e.g. "exchangeRate"
-//     const amtRec = parseFloat(newState?.[argNames[2]]) || 0;
-//     const amtRecFcValue = parseFloat(newState?.[argNames[3]]) || 0;
-//     const tdsPercent = [argNames[6]] || 0;
-//     const request = {
-//       columns: "*",
-//       tableName: "tblCompanyParameter",
-//       whereCondition: `currencyId = ${currency} and status = 1`,
-//       clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
-//     };
-
-//     const response = await fetchReportData(request);
-//     const currencyId = response?.data[0]?.currencyId;
-//     if (currencyId == currency) {
-//       amtRecFC
-//       const amtRecFc = amtRec;
-//       const tdsAmtFc = amtRecFc * tdsPercent;
-//       const tdsAmt = amtRec * tdsPercent;
-
-//       Store in newState
-//       setStateVariable((prev) => ({
-//         ...prev,
-//         [argNames[3]]: amtRecFc,
-//       }));
-//       [argNames[4]]: tdsAmtFc,
-//       [argNames[5]]: tdsAmt,
-
-//       const tdsApplicableData = newState?.tdsApplicable || null;
-//       if (tdsApplicableData == true || tdsApplicableData == "true") {
-//         const amtRecFCValue = parseFloat(newState?.amtRecFC) || 0;
-//         const amtRecValue = parseFloat(newState?.amtRec) || 0;
-//         const tdsPercent = parseFloat([argNames[6]]) || 0;
-//         //tdsAmtFC   // tdsAmt
-//         const calculatedTdsAmtFc = amtRecFCValue * tdsPercent;
-//         const CalculatedCTdsAmt = amtRecValue * tdsPercent;
-//         setStateVariable((prev) => ({
-//           ...prev,
-//           tdsAmtFC: calculatedTdsAmtFc,
-//           tdsAmt: CalculatedCTdsAmt,
-//         }));
-//       } else {
-//         setStateVariable((prev) => ({
-//           ...prev,
-//           tdsAmtFC: null,
-//           tdsAmt: null,
-//         }));
-//       }
-
-//       return {
-//         type: "success",
-//         result: true,
-//         message: "Amount & TDS calculated successfully",
-//         amtRecFc,
-//         tdsAmtFc,
-//         tdsAmt,
-//       };
-//     } else if (currencyId != currency) {
-//       const amtRec = amtRecFcValue * exchangeRate;
-//       const tdsAmtFc = amtRecFcValue * tdsPercent;
-//       const tdsAmt = amtRec * tdsPercent;
-
-//       Store in newState
-//       setStateVariable((prev) => ({
-//         ...prev,
-//         [argNames[2]]: amtRec,
-//       }));
-//       [argNames[4]]: tdsAmtFc,
-//       [argNames[5]]: tdsAmt,
-
-//       const tdsApplicableData = newState?.tdsApplicable || null;
-//       if (tdsApplicableData == true || tdsApplicableData == "true") {
-//         const amtRecFCValue = parseFloat(newState?.amtRecFC) || 0;
-//         const amtRecValue = parseFloat(newState?.amtRec) || 0;
-//         const tdsPercent = parseFloat([argNames[6]]) || 0;
-//         //tdsAmtFC   // tdsAmt
-//         const calculatedTdsAmtFc = amtRecFCValue * tdsPercent;
-//         const CalculatedCTdsAmt = amtRecValue * tdsPercent;
-//         setStateVariable((prev) => ({
-//           ...prev,
-//           tdsAmtFC: calculatedTdsAmtFc,
-//           tdsAmt: CalculatedCTdsAmt,
-//         }));
-//       } else {
-//         setStateVariable((prev) => ({
-//           ...prev,
-//           tdsAmtFC: null,
-//           tdsAmt: null,
-//         }));
-//       }
-
-//       return {
-//         type: "success",
-//         result: true,
-//         message: "Amount & TDS calculated successfully",
-//         tdsAmtFc,
-//         tdsAmt,
-//       };
-//     }
-//   } catch (error) {
-//     console.error("Error in calculateVoucherAmt:", error);
-//     return {
-//       type: "error",
-//       result: false,
-//       message: "Error calculating voucher amount. Please try again.",
-//     };
-//   }
-// };
 
 const calculateVoucherAmt = async (obj) => {
   const { args, newState, setStateVariable } = obj;
@@ -10792,8 +10677,7 @@ const getBlCharges = async (obj) => {
     const safeTotalAmountFc = Number(charge.totalAmountFc) || 0;
     const safeChargeGlId = charge.chargeGlId || charge.glId || 0;
     const safeSacId = charge.sacId || 0;
-    const safeExchangeRate =
-      Number(newState?.exchangeRate || 1) || 1;
+    const safeExchangeRate = Number(newState?.exchangeRate || 1) || 1;
 
     // 2️⃣ Fetch GST / Tax
     const taxRequestData = {
@@ -11259,17 +11143,6 @@ const setSameCurrencyFc = async (obj) => {
     const exGainLoss = toNum(newState?.exGainLoss);
 
     const balanceAmtFc = fcData + bankCharges + exGainLoss;
-    // If you want 2 decimals, use:
-    // const balanceAmtFc = Math.round((fcData + bankCharges + exGainLoss) * 100) / 100;
-
-    console.log("rohit setSameCurrencyFc", {
-      fcData,
-      bankCharges,
-      exGainLoss,
-      balanceAmtFc,
-    });
-
-    // Store in newState
     setStateVariable((prev) => ({
       ...prev,
       balanceAmtFc,
@@ -11290,34 +11163,127 @@ const setSameCurrencyFc = async (obj) => {
   }
 };
 
+// const setSameCurrencyHc = async (obj) => {
+//   const { args, newState, setStateVariable } = obj;
+
+//   try {
+//     // 🔹 Utility: safely convert to number
+
+
+//     const toNum = (v) => {
+//       if (v === null || v === undefined || v === "") return 0;
+//       const n = Number(String(v).replace(/,/g, ""));
+//       return Number.isNaN(n) ? 0 : n;
+//     };
+
+//     const hcData = toNum(newState?.amtRec);
+//     const bankCharges = toNum(newState?.bankCharges);
+//     const exGainLoss = toNum(newState?.exGainLoss);
+
+//     const balanceAmtHc = hcData + bankCharges + exGainLoss;
+
+//     // Store in newState
+//     setStateVariable((prev) => ({
+//       ...prev,
+//       balanceAmtHc,
+//     }));
+
+//     return {
+//       type: "success",
+//       result: true,
+//       message: "Amount & TDS calculated successfully",
+//     };
+//   } catch (error) {
+//     console.error("Error in setSameCurrencyHc:", error);
+//     return {
+//       type: "error",
+//       result: false,
+//       message: "Error while calculating HC amount",
+//     };
+//   }
+// };
+
 const setSameCurrencyHc = async (obj) => {
   const { args, newState, setStateVariable } = obj;
 
   try {
-    // 🔹 Utility: safely convert to number
     const toNum = (v) => {
       if (v === null || v === undefined || v === "") return 0;
       const n = Number(String(v).replace(/,/g, ""));
       return Number.isNaN(n) ? 0 : n;
     };
 
-    const hcData = toNum(newState?.amtRec);
-    const bankCharges = toNum(newState?.bankCharges);
+    const round2 = (v) => Number(toNum(v).toFixed(2));
+
+    const getCurrencyValue = (val) => {
+      if (Array.isArray(val)) return String(val?.[0]?.value ?? "").trim();
+      if (typeof val === "object" && val !== null) {
+        return String(val?.value ?? val?.id ?? "").trim();
+      }
+      return String(val ?? "").trim();
+    };
+
+    const { companyId } = getUserDetails();
+
+    const request = {
+      columns: "currencyId",
+      tableName: "tblCompanyParameter",
+      whereCondition: `companyId=${companyId}`,
+      clientIdCondition: `status=1 FOR JSON PATH ,INCLUDE_NULL_VALUES`,
+    };
+
+    const companyCurrencyRes = await fetchReportData(request);
+
+    const companyCurrencyId = getCurrencyValue(
+      companyCurrencyRes?.data?.[0]?.currencyId
+    );
+
+    const voucherCurrencyId = getCurrencyValue(
+      newState?.currencyId || newState?.currencyIddropdown
+    );
+
+    const isSameCurrency = voucherCurrencyId === companyCurrencyId;
+
+    const amtRec = toNum(newState?.amtRec);
+    const amtRecFC = toNum(newState?.amtRecFC);
+    const exchangeRate = toNum(newState?.exchangeRate);
+
+    let bankCharges = toNum(newState?.bankCharges);
+    let bankChargesFc = toNum(newState?.bankChargesFc);
+
     const exGainLoss = toNum(newState?.exGainLoss);
 
-    const balanceAmtHc = hcData + bankCharges + exGainLoss;
+    if (isSameCurrency) {
+      // Same currency: HC and FC bank charges should be same
+      bankChargesFc = round2(bankCharges);
+    } else {
+      // Different currency: HC bank charge comes from FC * exchange rate
+      bankCharges = round2(exchangeRate * bankChargesFc);
+    }
 
+    const balanceAmtHc = round2(amtRec + bankCharges + exGainLoss);
 
-    // Store in newState
+    // This will work for different currency also:
+    // balanceAmtFc = amtRecFC + bankChargesFc
+    const balanceAmtFc = round2(amtRecFC + bankChargesFc);
+
     setStateVariable((prev) => ({
       ...prev,
+
+      bankCharges: bankCharges.toFixed(2),
+      bankChargesFc: bankChargesFc.toFixed(2),
+
       balanceAmtHc,
+      balanceAmtFc,
+
+      balanceAmt: balanceAmtHc.toFixed(2),
+      balanceAmtFC: balanceAmtFc.toFixed(2),
     }));
 
     return {
       type: "success",
       result: true,
-      message: "Amount & TDS calculated successfully",
+      message: "Amount calculated successfully",
     };
   } catch (error) {
     console.error("Error in setSameCurrencyHc:", error);
@@ -11328,7 +11294,6 @@ const setSameCurrencyHc = async (obj) => {
     };
   }
 };
-
 const fetchPartyBalanceThirdLevel = async (obj) => {
   let {
     args,
@@ -12548,8 +12513,10 @@ const toDateObj = (v) => {
 const clampToStartOfDay = (d) =>
   new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
 
+const previousFinancialYearDateByField = {};
+
 const compareDatewithFin = async (obj) => {
-  const { args, newState, values, setStateVariable } = obj;
+  const { args, previousValue, values, setStateVariable } = obj;
 
   try {
     const argNames = String(args || "")
@@ -12562,6 +12529,21 @@ const compareDatewithFin = async (obj) => {
 
     const fieldDateRaw = values?.[dateFieldKey];
     if (!fieldDateRaw) return;
+
+    const isCompleteDateInput = (value) => {
+      if (value instanceof Date) return !Number.isNaN(value.getTime());
+
+      const dateValue = String(value).trim();
+      if (!dateValue) return false;
+
+      return (
+        /^\d{4}-\d{2}-\d{2}(?:[T\s].*)?$/.test(dateValue) ||
+        /^\d{2}[/-]\d{2}[/-]\d{4}$/.test(dateValue) ||
+        /^\d{2}-[A-Za-z]{3}-\d{4}$/.test(dateValue)
+      );
+    };
+
+    if (!isCompleteDateInput(fieldDateRaw)) return;
 
     const { financialYear, clientId } = getUserDetails();
 
@@ -12599,19 +12581,27 @@ const compareDatewithFin = async (obj) => {
       fieldD.getTime() >= startD.getTime() &&
       fieldD.getTime() <= endD.getTime();
 
-    if (isValid) return;
+    if (isValid) {
+      previousFinancialYearDateByField[dateFieldKey] = fieldDateRaw;
+      return;
+    }
 
-    toast.error("Please take the correct Financial Year");
+    toast.error("The Date should be within the Financial Year range.");
 
-    setStateVariable((prev) => ({
-      ...prev,
-      [dateFieldKey]: null, // or "" if your date input expects empty string
-    }));
+    const previousDate =
+      previousValue ?? previousFinancialYearDateByField[dateFieldKey];
+
+    if (previousDate !== undefined) {
+      setStateVariable((prev) => ({
+        ...prev,
+        [dateFieldKey]: previousDate,
+      }));
+    }
 
     return {
       type: "error",
       result: false,
-      message: "Please take the correct Financial Year",
+      message: "The Date should be within the Financial Year range.",
     };
   } catch (error) {
     console.error("Error in compareDatewithFin:", error);
@@ -13361,7 +13351,7 @@ const parentCurrency = async (obj) => {
     const requestObj = {
       columns: "importExchangeRate",
       tableName: "tblExchangeRate",
-      whereCondition: `fromCurrencyId=${currencyId} and toCurrencyId=${childCurrencyId} and effectiveDate='${invoiceDate}'`,
+      whereCondition: `fromCurrencyId=${currencyId} and toCurrencyId=${childCurrencyId} and effectiveDate='${invoiceDate}' and clientId=${clientId}`,
       clientIdCondition: "status = 1 FOR JSON PATH, INCLUDE_NULL_VALUES",
     };
 
@@ -13516,7 +13506,14 @@ const parentCurrency = async (obj) => {
 //   }
 // };
 const calculateBaseOnCurrency = async (obj) => {
-  const { args, values, fieldName, newState, setStateVariable, formControlData } = obj;
+  const {
+    args,
+    values,
+    fieldName,
+    newState,
+    setStateVariable,
+    formControlData,
+  } = obj;
   const { companyId } = getUserDetails();
 
   try {
@@ -13587,7 +13584,7 @@ const calculateBaseOnCurrency = async (obj) => {
         totalAmountHc: totalAmountHc,
         totalAmountFc: totalAmount,
       },
-      formControlData
+      formControlData,
     };
   } catch (error) {
     console.error("Error in calculateBaseOnCurrency:", error);
@@ -13814,14 +13811,22 @@ const setLabourAndMaterial = (obj) => {
   const materialCost = values[splitArgs[1]];
   const tableName = splitArgs[2];
   const quantity = Number(values[fieldName]);
-  const editInitialQnt = newState?.[tableName]?.filter((item) => item?.indexValue === values?.indexValue)?.[0]?.[fieldName];
+  const editInitialQnt = newState?.[tableName]?.filter(
+    (item) => item?.indexValue === values?.indexValue,
+  )?.[0]?.[fieldName];
   const prevQuantity = Number(values?.prevQuantity || editInitialQnt || 1);
 
   const setLabourHourse = (labourHours / prevQuantity) * quantity;
   const setMaterialCost = (materialCost / prevQuantity) * quantity;
 
-  setStateVariable((prev) => ({ ...prev, labourHours: setLabourHourse, materialCost: setMaterialCost, prevQuantity: quantity, totalAmoumt: newState?.labourRate  * setLabourHourse + setMaterialCost}))
-}
+  setStateVariable((prev) => ({
+    ...prev,
+    labourHours: setLabourHourse,
+    materialCost: setMaterialCost,
+    prevQuantity: quantity,
+    totalAmoumt: newState?.labourRate * setLabourHourse + setMaterialCost,
+  }));
+};
 const setParentFieldsDisableOnEdit = (obj) => {
   const {
     args,
@@ -13832,16 +13837,24 @@ const setParentFieldsDisableOnEdit = (obj) => {
   } = obj;
 
   const parsedJson = JSON.parse(args);
-   if(isEditMode === true){
-     const newParentFieldDataInArra = parentFieldDataInArray.map((item) => {  
-              if(Object.keys(parsedJson)?.includes(item.fieldname) &&  parsedJson[item.fieldname] === newState[item.fieldname]){
-          return {...item, isEditable : false, isEditableMode: "B", columnsToDisabled: true};
-         }
-         return item;
-     })
-      setParentFieldDataInArray(newParentFieldDataInArra)
-   }
-}
+  if (isEditMode === true) {
+    const newParentFieldDataInArra = parentFieldDataInArray.map((item) => {
+      if (
+        Object.keys(parsedJson)?.includes(item.fieldname) &&
+        parsedJson[item.fieldname] === newState[item.fieldname]
+      ) {
+        return {
+          ...item,
+          isEditable: false,
+          isEditableMode: "B",
+          columnsToDisabled: true,
+        };
+      }
+      return item;
+    });
+    setParentFieldDataInArray(newParentFieldDataInArra);
+  }
+};
 
 export {
   setSameCurrencyFc,
@@ -14002,5 +14015,5 @@ export {
   setMblNoToDD,
   setNoOfOriginals,
   setLabourAndMaterial,
-  setParentFieldsDisableOnEdit
+  setParentFieldsDisableOnEdit,
 };

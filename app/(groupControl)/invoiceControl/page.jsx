@@ -65,6 +65,8 @@ import {
   magnifyIconHover,
   viewIconHover,
   searchImage,
+  excelIcon,
+  excelIconHover,
 } from "@/assets/index.jsx";
 import LightTooltip from "@/components/Tooltip/customToolTip";
 import CustomeBreadCrumb from "@/components/BreadCrumbs/breadCrumb.jsx";
@@ -98,6 +100,8 @@ import { components } from "react-select";
 import { decrypt } from "@/helper/security";
 import CloseIcon from "@mui/icons-material/Close";
 import _ from "lodash";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { getUserDetails } from "@/helper/userDetails";
 import { fetchReportData } from "@/services/auth/FormControl.services";
 import { encryptUrlFun, operatorFunc } from "@/utils";
@@ -158,7 +162,8 @@ export default function StickyHeadTable() {
   const selectedMenuId = useSelector((state) => state?.counter?.selectedMenuId);
   const { clientId } = getUserDetails();
   const searchParams = useSearchParams();
-  const search = JSON.parse(searchParams.get("menuName")).id;
+  const currentMenu = JSON.parse(searchParams.get("menuName"));
+  const search = currentMenu.id;
   const [menuSearch, setMenuSearch] = useState("");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(17);
@@ -942,6 +947,156 @@ export default function StickyHeadTable() {
     return value.join(",");
   }
 
+  const getExcelCellValue = (row, field) => {
+    if (!field?.id) return "";
+
+    if (field.isDummy === true) {
+      const cellValue = row?.[field.id];
+      const isObjectValue = cellValue !== null && typeof cellValue === "object";
+
+      if (!isObjectValue) return "";
+
+      const dummyValue = getCommaSeparatedValuesCountFromNestedKeys(
+        cellValue,
+        field.refkey,
+      );
+
+      return field.dummyField == "comma" ? dummyValue.values : dummyValue.count;
+    }
+
+    const cellValue = row?.[field.id];
+
+    if (cellValue !== null && typeof cellValue === "object") {
+      const nestedValue = getNestedValue(cellValue, field.refkey);
+      return nestedValue !== undefined && nestedValue !== null
+        ? isDateFormat(nestedValue)
+        : "";
+    }
+
+    return isDateFormat(cellValue);
+  };
+
+  const sanitizeExcelFileName = (name) =>
+    String(name || "invoice-control")
+      .replace(/[\\/:*?"<>|]/g, "_")
+      .trim();
+
+  const fetchCompleteExcelData = async () => {
+    const exportLimit = Math.max(
+      Number(pageCount) || 0,
+      Number(rowsPerPage) || 0,
+      gridData?.length || 0,
+      1,
+    );
+
+    const requestData = {
+      tableName,
+      pageNo: 1,
+      limit: exportLimit,
+      label: sortData.label,
+      order: sortData.order,
+      menuID: search,
+      search: advanceSearch,
+      searchQuery: searchInput,
+      keyName: columnSearchKeyName,
+      keyValue: columnSearchKeyValue,
+      sortingCondition: formControlData?.sortingCondition,
+    };
+
+    const response = await masterTableList(requestData);
+
+    if (response?.success === false) {
+      throw new Error(response?.message || "Excel export failed");
+    }
+
+    return response?.data?.length ? response.data : gridData;
+  };
+
+  const handleExportToExcel = async () => {
+    if (!gridData?.length) {
+      toast.warn("No data available to export", { autoClose: 1000 });
+      return;
+    }
+
+    const visibleColumns = (tableheading || []).filter(
+      (field) => field?.id && field?.label,
+    );
+
+    if (!visibleColumns.length) {
+      toast.warn("No columns available to export", { autoClose: 1000 });
+      return;
+    }
+
+    try {
+      const exportData = await fetchCompleteExcelData();
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Data");
+
+      worksheet.views = [{ state: "frozen", ySplit: 1 }];
+      worksheet.addRow(visibleColumns.map((field) => field.label));
+
+      exportData.forEach((row) => {
+        worksheet.addRow(
+          visibleColumns.map((field) => getExcelCellValue(row, field)),
+        );
+      });
+
+      const cellBorder = {
+        top: { style: "thin", color: { argb: "FFB7C9E8" } },
+        left: { style: "thin", color: { argb: "FFB7C9E8" } },
+        bottom: { style: "thin", color: { argb: "FFB7C9E8" } },
+        right: { style: "thin", color: { argb: "FFB7C9E8" } },
+      };
+
+      worksheet.eachRow((row) => {
+        row.height = 18;
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.border = cellBorder;
+          cell.alignment = {
+            vertical: "middle",
+            horizontal: "left",
+            wrapText: false,
+          };
+        });
+      });
+
+      const headerRow = worksheet.getRow(1);
+      headerRow.height = 22;
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF0766AD" },
+        };
+        cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+        cell.border = cellBorder;
+      });
+
+      worksheet.columns.forEach((column, index) => {
+        let maxLength = String(visibleColumns[index]?.label || "").length;
+
+        column.eachCell({ includeEmpty: true }, (cell) => {
+          const value = cell.value ? String(cell.value) : "";
+          maxLength = Math.max(maxLength, value.length);
+        });
+
+        column.width = Math.min(Math.max(maxLength + 4, 18), 45);
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      saveAs(
+        new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+        }),
+        `${sanitizeExcelFileName(currentMenu?.menuName || tableName)}.xlsx`,
+      );
+    } catch (error) {
+      console.error("Excel export failed:", error);
+      toast.error(error?.message || "Excel export failed", { autoClose: 1000 });
+    }
+  };
+
   const handleCustomRowsPerPageChange = (event) => {
     const value = parseInt(event.target.value, 10);
     if (!isNaN(value) && value >= 0) {
@@ -1602,6 +1757,20 @@ export default function StickyHeadTable() {
                 <Image
                   src={hoveredIcon === "shareForm" ? ShareIconHover : shareIcon}
                   alt="Share Icon"
+                  priority={false}
+                  className="cursor-pointer gridIcons2"
+                />
+              </Button>
+            </LightTooltip>
+            <LightTooltip title="Excel">
+              <Button
+                onClick={handleExportToExcel}
+                onMouseEnter={() => setHoveredIcon("excel")}
+                onMouseLeave={() => setHoveredIcon(null)}
+              >
+                <Image
+                  src={hoveredIcon === "excel" ? excelIconHover : excelIcon}
+                  alt="Excel Icon"
                   priority={false}
                   className="cursor-pointer gridIcons2"
                 />

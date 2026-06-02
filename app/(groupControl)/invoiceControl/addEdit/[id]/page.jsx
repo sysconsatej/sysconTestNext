@@ -355,7 +355,9 @@ export default function AddEditFormControll() {
   const prevInvoiceChargeRowsRef = useRef(null);
   const isSyncingInvoiceChargeExchangeRateRef = useRef(false);
   const prevParentExchangeRateRef = useRef(null);
-
+  const [amtRecReadOnly, setAmtRecReadOnly] = useState(false);
+  const [amtRecFCReadOnly, setAmtRecFCReadOnly] = useState(false);
+  const homeCurrencyIdRef = useRef(null);
   async function checkReportPresent(menuId) {
     const { clientId } = getUserDetails();
     if (menuId) {
@@ -819,6 +821,120 @@ export default function AddEditFormControll() {
     setNewState(applyClear);
     setSubmitNewState(applyClear);
   };
+  async function voucherCalculationBaseonCurrency() {
+    try {
+      const { companyId } = getUserDetails();
+      const { currencyId, exchangeRate } = newState || {};
+
+      const hasVoucherAmountFields =
+        Object.prototype.hasOwnProperty.call(newState || {}, "amtRec") ||
+        Object.prototype.hasOwnProperty.call(newState || {}, "amtRecFC");
+
+      if (!hasVoucherAmountFields) {
+        return;
+      }
+
+      if (!currencyId) {
+        setAmtRecReadOnly(false);
+        setAmtRecFCReadOnly(false);
+        return;
+      }
+
+      let homeCurrencyId = homeCurrencyIdRef.current;
+
+      if (!homeCurrencyId) {
+        const request = {
+          columns: "currencyId",
+          tableName: "tblCompanyParameter",
+          whereCondition: `companyId=${companyId}`,
+          clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+        };
+
+        const response = await fetchReportData(request);
+        const data = response?.data || [];
+        homeCurrencyId = data?.[0]?.currencyId || null;
+        homeCurrencyIdRef.current = homeCurrencyId;
+      }
+
+      if (!homeCurrencyId) {
+        setAmtRecReadOnly(false);
+        setAmtRecFCReadOnly(false);
+        return;
+      }
+
+      const toNum = (value) => {
+        if (value === null || value === undefined || value === "") return 0;
+
+        const num = Number(String(value).replace(/,/g, ""));
+        return Number.isFinite(num) ? num : 0;
+      };
+
+      const to2 = (n) => {
+        const x = Number(n) || 0;
+        const v = Math.round((x + Number.EPSILON) * 100) / 100;
+        return Object.is(v, -0) ? "0.00" : v.toFixed(2);
+      };
+
+      const homeCurrency = String(homeCurrencyId || "");
+      const selectedCurrency = String(currencyId || "");
+
+      const isForeignCurrency = homeCurrency !== selectedCurrency;
+
+      // Foreign currency:
+      // amtRecFC editable, amtRec readonly
+      // Home currency:
+      // amtRec editable, amtRecFC readonly
+      setAmtRecReadOnly(isForeignCurrency);
+      setAmtRecFCReadOnly(!isForeignCurrency);
+
+      const applyCurrencyCalculation = (prev = {}) => {
+        if (!prev || typeof prev !== "object") return prev;
+
+        if (isForeignCurrency) {
+          const safeAmtRecFC = toNum(prev?.amtRecFC ?? 0);
+          const safeExchangeRate =
+            toNum(prev?.exchangeRate || exchangeRate || 1) || 1;
+
+          const calculatedAmtRec = to2(safeAmtRecFC * safeExchangeRate);
+
+          if (String(prev?.amtRec ?? "") === calculatedAmtRec) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            amtRec: calculatedAmtRec,
+          };
+        }
+
+        const safeAmtRec = toNum(prev?.amtRec ?? 0);
+        const calculatedAmtRecFC = to2(safeAmtRec);
+
+        if (String(prev?.amtRecFC ?? "") === calculatedAmtRecFC) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          amtRecFC: calculatedAmtRecFC,
+        };
+      };
+
+      setNewState((prev) => applyCurrencyCalculation(prev));
+      setSubmitNewState((prev) => applyCurrencyCalculation(prev));
+    } catch (error) {
+      console.error("Error in voucherCalculationBaseonCurrency:", error);
+    }
+  }
+
+  useEffect(() => {
+    voucherCalculationBaseonCurrency();
+  }, [
+    newState?.currencyId,
+    newState?.exchangeRate,
+    newState?.amtRec,
+    newState?.amtRecFC,
+  ]);
   async function fetchData() {
     const { clientId } = getUserDetails();
 
@@ -2419,10 +2535,36 @@ export default function AddEditFormControll() {
     }
   }
   const onConfirm = async (conformData) => {
-    if (uriDecodedMenu?.menuName == "Journal Voucher") {
-      setOpenModal((prev) => !prev);
+    if (
+      uriDecodedMenu?.menuName == "Journal Voucher" &&
+      conformData.type !== "onClose"
+    ) {
+      setOpenModal(false);
       return;
     }
+
+    if (
+      uriDecodedMenu?.menuName == "Journal Voucher" &&
+      conformData.type === "onClose"
+    ) {
+      if (conformData.isError) {
+        const menuId = selectedMenuId || search?.menuName || uriDecodedMenu?.id;
+        setOpenModal(false);
+        setNewState({ routeName: "mastervalue" });
+        setSubmitNewState({ routeName: "mastervalue" });
+        push(
+          `/invoiceControl?menuName=${encryptUrlFun({
+            id: menuId,
+            menuName: uriDecodedMenu.menuName,
+            parentMenuId: uriDecodedMenu.parentMenuId || menuId,
+          })}`,
+        );
+      } else {
+        setOpenModal(false);
+      }
+      return;
+    }
+
     if (conformData.type === "onClose") {
       if (conformData.isError) {
         setOpenModal((prev) => !prev);
@@ -2446,6 +2588,7 @@ export default function AddEditFormControll() {
       }
     }
   };
+
   const allocPrevRef = useRef("");
   const allocInternalUpdateRef = useRef(false);
   const allocHydrateRef = useRef(true);
@@ -2553,15 +2696,7 @@ export default function AddEditFormControll() {
 
       return hasLiveIsChecked ? isYes(row?.isChecked) : isYes(row?.ispreChecked);
     };
-
     const isTdsApplicable = isYes(newState?.tdsApplicable);
-
-    // Voucher 8/11:
-    // - negative balanceAmount should allocate in debitAmount
-    // - positive balanceAmount should allocate in creditAmount
-    //
-    // Voucher 9/12:
-    // existing behavior is preserved.
     const isDebitMinusCreditPlusVoucher = ["8", "11"].includes(voucherTypeId);
 
     const stateToLogic = (debitValue, creditValue) => {
@@ -2739,7 +2874,6 @@ export default function AddEditFormControll() {
 
     const getTdsBaseAmount = (row, balanceValue, isFC = false) => {
       const safeBalance = clamp0(balanceValue);
-
       const invoiceValue = clamp0(
         firstPositiveNum(
           ...(isFC
@@ -2822,6 +2956,77 @@ export default function AddEditFormControll() {
       toNum(ledger?.debitAmountFc) > 0 ||
       toNum(ledger?.creditAmountFc) > 0;
 
+    // ✅ SHORT EXCESS PAYMENT helper logic
+    // This allows pending child balance like 3.72 to be adjusted only when
+    // a checked SHORT EXCESS PAYMENT ledger exists with matching amount.
+    const getDropdownLabelText = (dropdownValue) => {
+      if (Array.isArray(dropdownValue)) {
+        return dropdownValue
+          .map((x) => x?.label ?? "")
+          .filter(Boolean)
+          .join(" ");
+      }
+
+      if (dropdownValue && typeof dropdownValue === "object") {
+        return dropdownValue?.label ?? "";
+      }
+
+      return dropdownValue ?? "";
+    };
+
+    const getLedgerLabelText = (ledger = {}) =>
+      [
+        ledger?.glName,
+        ledger?.ledgerName,
+        ledger?.accountName,
+        getDropdownLabelText(ledger?.glIddropdown),
+        getDropdownLabelText(ledger?.glIdDropdown),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+    const hasNoChildDetails = (ledger = {}) => {
+      const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+        ? ledger.tblVoucherLedgerDetails
+        : [];
+
+      return details.length === 0;
+    };
+
+    const isShortExcessLedger = (ledger = {}) => {
+      const label = getLedgerLabelText(ledger);
+
+      return (
+        hasNoChildDetails(ledger) &&
+        (label.includes("short excess") ||
+          label.includes("short/excess") ||
+          label.includes("short & excess"))
+      );
+    };
+
+    const getCheckedExtraLedgerAmount = (ledgerRows = [], isFC = false) => {
+      return round2(
+        (Array.isArray(ledgerRows) ? ledgerRows : []).reduce((acc, ledger) => {
+          const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
+            ? ledger.tblVoucherLedgerDetails
+            : [];
+
+          // Only checked parent ledger rows without child details
+          if (!isYes(ledger?.isChecked) || details.length > 0) {
+            return acc;
+          }
+
+          const debitValue = isFC ? ledger?.debitAmountFc : ledger?.debitAmount;
+          const creditValue = isFC
+            ? ledger?.creditAmountFc
+            : ledger?.creditAmount;
+
+          return acc + Math.abs(round2(toNum(debitValue) - toNum(creditValue)));
+        }, 0)
+      );
+    };
+
     const hasCheckedThirdLevelRows = (ledger) => {
       const details = Array.isArray(ledger?.tblVoucherLedgerDetails)
         ? ledger.tblVoucherLedgerDetails
@@ -2866,16 +3071,14 @@ export default function AddEditFormControll() {
             details.length &&
             (isYes(ledger?.isChildChecked) ||
               details.some(
-                (row) =>
-                  isLiveChecked(row) ||
-                  hasHCAmount(row) ||
-                  hasFCAmount(row)
+                (row) => isLiveChecked(row) || hasHCAmount(row) || hasFCAmount(row)
               ));
 
           if (useDetails) {
             details.forEach((row) => {
               acc.hc = round2(
-                acc.hc + getSignedDisplayDelta(row?.debitAmount, row?.creditAmount)
+                acc.hc +
+                getSignedDisplayDelta(row?.debitAmount, row?.creditAmount)
               );
 
               acc.fc = round2(
@@ -2912,10 +3115,31 @@ export default function AddEditFormControll() {
       tdsAmtFC
     ) =>
       JSON.stringify({
+        // ✅ Added only for recalculation detection.
+        // ✅ This does not change any calculation logic.
+        base: {
+          amtRec: asStr2(newState?.amtRec),
+          amtRecFC: asStr2(newState?.amtRecFC),
+
+          bankCharges: asStr2(newState?.bcAmt ?? newState?.bankCharges),
+
+          bankChargesFc: asStr2(
+            newState?.bcAmtFC ??
+            newState?.bcAmtFc ??
+            newState?.bankChargesFC ??
+            newState?.bankChargesFc
+          ),
+
+          exGainLoss: asStr2(newState?.exGainLoss),
+          currencyId: String(newState?.currencyId ?? ""),
+          exchangeRate: asStr2(newState?.exchangeRate),
+        },
+
         balanceAmtHc: asStr2(balanceAmtHc),
         balanceAmtFc: asStr2(balanceAmtFc),
         tdsAmt: asStr2(tdsAmt),
         tdsAmtFC: asStr2(tdsAmtFC),
+
         ledgers: ledgerRows.map((ledger, ledgerIndex) => ({
           k: getLedgerKey(ledger, ledgerIndex),
           d: asStr2(ledger?.debitAmount),
@@ -2924,20 +3148,26 @@ export default function AddEditFormControll() {
           crf: asStr2(ledger?.creditAmountFc),
           th: asStr2(ledger?.tdsAmtHC ?? ledger?.tdsAmount),
           tf: asStr2(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc),
-          details: (ledger?.tblVoucherLedgerDetails || []).map((row, rowIndex) => ({
-            k: getDetailKey(row, rowIndex),
-            checked: isLiveChecked(row),
-            liveChecked: isYes(row?.isChecked),
-            pre: isYes(row?.ispreChecked),
-            d: asStr2(row?.debitAmount),
-            df: asStr2(row?.debitAmountFc),
-            cr: asStr2(row?.creditAmount),
-            crf: asStr2(row?.creditAmountFc),
-            bh: asStr2(row?.balanceAmount ?? row?.balanceAmtHC),
-            bf: asStr2(row?.balanceAmountFc ?? row?.balanceAmtFC),
-            th: asStr2(row?.tdsAmtHC ?? row?.tdsAmount),
-            tf: asStr2(row?.tdsAmtFC ?? row?.tdsAmountFc),
-          })),
+
+          details: (ledger?.tblVoucherLedgerDetails || []).map(
+            (row, rowIndex) => ({
+              k: getDetailKey(row, rowIndex),
+              checked: isLiveChecked(row),
+              liveChecked: isYes(row?.isChecked),
+              pre: isYes(row?.ispreChecked),
+
+              d: asStr2(row?.debitAmount),
+              df: asStr2(row?.debitAmountFc),
+              cr: asStr2(row?.creditAmount),
+              crf: asStr2(row?.creditAmountFc),
+
+              bh: asStr2(row?.balanceAmount ?? row?.balanceAmtHC),
+              bf: asStr2(row?.balanceAmountFc ?? row?.balanceAmtFC),
+
+              th: asStr2(row?.tdsAmtHC ?? row?.tdsAmount),
+              tf: asStr2(row?.tdsAmtFC ?? row?.tdsAmountFc),
+            })
+          ),
         })),
       });
 
@@ -2966,15 +3196,17 @@ export default function AddEditFormControll() {
 
     const baseBalanceHC = round2(
       toNum(newState?.amtRec ?? 0) +
-      toNum(newState?.bcAmt ?? newState?.bankCharges ?? 0)
+      toNum(newState?.bcAmt ?? newState?.bankCharges ?? 0) +
+      toNum(newState?.exGainLoss ?? 0)
     );
 
     const baseBalanceFC = round2(
       toNum(newState?.amtRecFC ?? 0) +
       toNum(
         newState?.bcAmtFC ??
+        newState?.bcAmtFc ??
         newState?.bankChargesFC ??
-        newState?.bankCharges ??
+        newState?.bankChargesFc ??
         0
       )
     );
@@ -3137,9 +3369,6 @@ export default function AddEditFormControll() {
           const allocFC = Math.min(Math.abs(origBalFC), availableFC);
 
           if (isDebitMinusCreditPlusVoucher) {
-            // FIX:
-            // voucherTypeId 8/11 + negative balanceAmountFc
-            // should go to debitAmountFc, not creditAmountFc.
             if (isNegativeRowFC) {
               nextDebitFC = allocFC;
             } else {
@@ -3219,10 +3448,6 @@ export default function AddEditFormControll() {
       const wasChildChecked =
         isYes(ledger?.isChildChecked) ||
         details.some((row) => isYes(row?.ispreChecked));
-
-      // ✅ When user unchecks the last child row in edit page,
-      // do not reuse old parent debit/credit values because those values
-      // are only the previous child total.
       const isClearingLastChildSelection =
         details.length > 0 && wasChildChecked && !nextIsChildChecked;
 
@@ -3292,12 +3517,10 @@ export default function AddEditFormControll() {
         tblVoucherLedgerDetails: nextDetails,
         isChecked: isClearingLastChildSelection ? false : ledger?.isChecked,
         isChildChecked: nextIsChildChecked,
-
         debitAmount: asStr2(nextDebitHC),
         creditAmount: asStr2(nextCreditHC),
         debitAmountFc: asStr2(nextDebitFC),
         creditAmountFc: asStr2(nextCreditFC),
-
         tdsAmtHC: nextLedgerTdsHC,
         tdsAmtFC: nextLedgerTdsFC,
         tdsAmount: nextLedgerTdsHC,
@@ -3305,152 +3528,7 @@ export default function AddEditFormControll() {
       };
     });
 
-    // const nextTdsAmtHC = round2(
-    //   nextLedgers.reduce(
-    //     (acc, ledger) => acc + toNum(ledger?.tdsAmtHC ?? ledger?.tdsAmount),
-    //     0
-    //   )
-    // );
-
-    // const nextTdsAmtFC = round2(
-    //   nextLedgers.reduce(
-    //     (acc, ledger) => acc + toNum(ledger?.tdsAmtFC ?? ledger?.tdsAmountFc),
-    //     0
-    //   )
-    // );
-
-    // const displayTotals = getEffectiveDisplayTotals(nextLedgers);
-
-    // const nextBalanceHcNumber = isDebitMinusCreditPlusVoucher
-    //   ? clamp0(baseBalanceHC - displayTotals.hc)
-    //   : clamp0(
-    //     baseBalanceHC +
-    //     displayTotals.hc +
-    //     (isTdsApplicable ? nextTdsAmtHC : 0)
-    //   );
-
-    // const nextBalanceFcNumber = isDebitMinusCreditPlusVoucher
-    //   ? clamp0(baseBalanceFC - displayTotals.fc)
-    //   : clamp0(
-    //     baseBalanceFC +
-    //     displayTotals.fc +
-    //     (isTdsApplicable ? nextTdsAmtFC : 0)
-    //   );
-
-    // const nextBalanceAmtHc = asStr2(nextBalanceHcNumber);
-    // const nextBalanceAmtFc = asStr2(nextBalanceFcNumber);
-
-    // const currentSnapshot = makeSnapshot(
-    //   ledgers,
-    //   newState?.balanceAmtHc ?? newState?.balanceAmt,
-    //   newState?.balanceAmtFc ?? newState?.balanceAmtFC,
-    //   newState?.tdsAmt ?? newState?.tdsAmount,
-    //   newState?.tdsAmtFC ?? newState?.tdsAmountFc
-    // );
-
-    // const nextSnapshot = makeSnapshot(
-    //   nextLedgers,
-    //   nextBalanceAmtHc,
-    //   nextBalanceAmtFc,
-    //   nextTdsAmtHC,
-    //   nextTdsAmtFC
-    // );
-
-    // const nextParentOnlyLedgerSnapshot = getParentOnlyLedgerSnapshot(nextLedgers);
-
-    // if (allocInternalUpdateRef.current) {
-    //   if (currentSnapshot === allocPrevRef.current) {
-    //     allocInternalUpdateRef.current = false;
-    //     return;
-    //   }
-
-    //   allocInternalUpdateRef.current = false;
-    // }
-
-    // if (
-    //   nextSnapshot === currentSnapshot ||
-    //   allocPrevRef.current === nextSnapshot
-    // ) {
-    //   allocPrevRef.current = nextSnapshot;
-    //   allocParentLedgerSnapshotRef.current = nextParentOnlyLedgerSnapshot;
-    //   return;
-    // }
-
-    // allocPrevRef.current = nextSnapshot;
-    // allocParentLedgerSnapshotRef.current = nextParentOnlyLedgerSnapshot;
-    // allocInternalUpdateRef.current = true;
-    // allocHydrateRef.current = false;
-
-    // const nextBalanceValues = {
-    //   balanceAmtHc: nextBalanceAmtHc,
-    //   balanceAmtFc: nextBalanceAmtFc,
-
-    //   // old aliases also updated
-    //   balanceAmt: nextBalanceAmtHc,
-    //   balanceAmtFC: nextBalanceAmtFc,
-
-    //   tdsAmt: nextTdsAmtHC,
-    //   tdsAmtFC: nextTdsAmtFC,
-    //   tdsAmount: nextTdsAmtHC,
-    //   tdsAmountFc: nextTdsAmtFC,
-    // };
-
-    // setNewState((prevState) => {
-    //   if (hasLedgers) {
-    //     return {
-    //       ...prevState,
-    //       tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
-    //       ...nextBalanceValues,
-    //     };
-    //   }
-
-    //   return {
-    //     ...prevState,
-    //     tblVoucherLedgerDetails:
-    //       nextLedgers[0]?.tblVoucherLedgerDetails || [],
-    //     ...nextBalanceValues,
-    //   };
-    // });
-
-    // setSubmitNewState((prevState) => {
-    //   if (hasLedgers) {
-    //     return {
-    //       ...prevState,
-    //       tblVoucherLedger: nextLedgers.filter((l) => !l?.__virtual),
-    //       ...nextBalanceValues,
-    //     };
-    //   }
-
-    //   return {
-    //     ...prevState,
-    //     tblVoucherLedgerDetails:
-    //       nextLedgers[0]?.tblVoucherLedgerDetails || [],
-    //     ...nextBalanceValues,
-    //   };
-    // });
     const adjustSmallPendingChildBalanceFromRootBalance = (ledgerRows = []) => {
-      /*
-        ✅ Purpose:
-        If a checked child row still has a small pending balance like 0.04
-        and root voucher balance has amount like 25.00,
-        consume that 0.04 from root balance.
-    
-        Example:
-          child balanceAmount = 0.04
-          root balanceAmtHc = 25.00
-    
-        Result:
-          child balanceAmount = 0.00
-          root balanceAmtHc = 24.96
-    
-        ✅ This will not affect previous logic because:
-        - it runs after your existing allocation logic
-        - it only works for checked rows
-        - it only adjusts small pending balances <= AUTO_CHILD_BALANCE_ADJUST_LIMIT
-        - it does not touch unchecked rows
-        - it does not touch large balances
-      */
-
       if (isDebitMinusCreditPlusVoucher) {
         return ledgerRows;
       }
@@ -3485,6 +3563,26 @@ export default function AddEditFormControll() {
         baseBalanceFC +
         preDisplayTotals.fc +
         (isTdsApplicable ? preTdsAmtFC : 0)
+      );
+
+      const extraLedgerAdjustLimitHC = getCheckedExtraLedgerAmount(
+        ledgerRows,
+        false
+      );
+
+      const extraLedgerAdjustLimitFC = getCheckedExtraLedgerAmount(
+        ledgerRows,
+        true
+      );
+
+      const childBalanceAdjustLimitHC = Math.max(
+        AUTO_CHILD_BALANCE_ADJUST_LIMIT,
+        extraLedgerAdjustLimitHC
+      );
+
+      const childBalanceAdjustLimitFC = Math.max(
+        AUTO_CHILD_BALANCE_ADJUST_LIMIT,
+        extraLedgerAdjustLimitFC
       );
 
       if (availableHC <= 0 && availableFC <= 0) {
@@ -3530,7 +3628,7 @@ export default function AddEditFormControll() {
           if (
             allowHCAdjust &&
             balanceHC > 0 &&
-            balanceHC <= AUTO_CHILD_BALANCE_ADJUST_LIMIT &&
+            balanceHC <= childBalanceAdjustLimitHC &&
             availableHC > 0
           ) {
             adjustedHC = round2(Math.min(balanceHC, availableHC));
@@ -3553,7 +3651,7 @@ export default function AddEditFormControll() {
           if (
             allowFCAdjust &&
             balanceFC > 0 &&
-            balanceFC <= AUTO_CHILD_BALANCE_ADJUST_LIMIT &&
+            balanceFC <= childBalanceAdjustLimitFC &&
             availableFC > 0
           ) {
             adjustedFC = round2(Math.min(balanceFC, availableFC));
@@ -3685,8 +3783,7 @@ export default function AddEditFormControll() {
       return hasAnyAdjustment ? adjustedLedgers : ledgerRows;
     };
 
-    const finalLedgers =
-      adjustSmallPendingChildBalanceFromRootBalance(nextLedgers);
+    const finalLedgers = adjustSmallPendingChildBalanceFromRootBalance(nextLedgers);
 
     const nextTdsAmtHC = round2(
       finalLedgers.reduce(
@@ -3701,7 +3798,6 @@ export default function AddEditFormControll() {
         0
       )
     );
-
     const displayTotals = getEffectiveDisplayTotals(finalLedgers);
 
     const nextBalanceHcNumber = isDebitMinusCreditPlusVoucher
@@ -3751,10 +3847,7 @@ export default function AddEditFormControll() {
       allocInternalUpdateRef.current = false;
     }
 
-    if (
-      nextSnapshot === currentSnapshot ||
-      allocPrevRef.current === nextSnapshot
-    ) {
+    if (nextSnapshot === currentSnapshot || allocPrevRef.current === nextSnapshot) {
       allocPrevRef.current = nextSnapshot;
       allocParentLedgerSnapshotRef.current = nextParentOnlyLedgerSnapshot;
       return;
@@ -3768,11 +3861,9 @@ export default function AddEditFormControll() {
     const nextBalanceValues = {
       balanceAmtHc: nextBalanceAmtHc,
       balanceAmtFc: nextBalanceAmtFc,
-
       // old aliases also updated
       balanceAmt: nextBalanceAmtHc,
       balanceAmtFC: nextBalanceAmtFc,
-
       tdsAmt: nextTdsAmtHC,
       tdsAmtFC: nextTdsAmtFC,
       tdsAmount: nextTdsAmtHC,
@@ -3820,8 +3911,13 @@ export default function AddEditFormControll() {
     newState?.amtRecFC,
     newState?.bankCharges,
     newState?.bankChargesFC,
+    newState?.bankChargesFc,
     newState?.bcAmt,
     newState?.bcAmtFC,
+    newState?.bcAmtFc,
+    newState?.exGainLoss,
+    newState?.currencyId,
+    newState?.exchangeRate,
     newState?.tdsApplicable,
     newState?.tdsAmt,
     newState?.tdsAmtFC,
@@ -4375,6 +4471,8 @@ export default function AddEditFormControll() {
                   newState={newState}
                   setNewState={setNewState}
                   parentsFields={topParentsFields}
+                  amtRecReadOnly={amtRecReadOnly}
+                  amtRecFCReadOnly={amtRecFCReadOnly}
                   expandAll={expandAll}
                   isCopy={search.isCopy}
                   isView={isView}
@@ -4448,6 +4546,8 @@ export default function AddEditFormControll() {
                   formControlData={formControlData}
                   setFormControlData={setFormControlData}
                   getLabelValue={getLabelValue}
+                  amtRecReadOnly={amtRecReadOnly}
+                  amtRecFCReadOnly={amtRecFCReadOnly}
                 />
               )}
             </React.Fragment>
@@ -4522,13 +4622,171 @@ ParentAccordianComponent.propTypes = {
   formControlData: PropTypes.any,
   setFormControlData: PropTypes.any,
   getLabelValue: PropTypes.any,
+  amtRecReadOnly: PropTypes.any,
+  amtRecFCReadOnly: PropTypes.any,
 };
 
+// function ParentAccordianComponent({
+//   section,
+//   indexValue,
+//   newState,
+//   parentsFields,
+//   expandAll,
+//   isCopy,
+//   handleFieldValuesChange2,
+//   setNewState,
+//   isView,
+//   setOpenModal,
+//   setParaText,
+//   setIsError,
+//   setTypeofModal,
+//   clearFlag,
+//   setClearFlag,
+//   setSubmitNewState,
+//   parentTableName,
+//   formControlData,
+//   setFormControlData,
+//   getLabelValue,
+// }) {
+//   const [isParentAccordionOpen, setIsParentAccordionOpen] = useState(false);
+//   // Assuming you have a ref to your accordion component
+//   const handleAccordionClick = () => {
+//     setIsParentAccordionOpen((prev) => !prev);
+//   };
+//   useEffect(() => {
+//     setIsParentAccordionOpen(expandAll);
+//   }, [expandAll]);
+
+//   const handleFieldValuesChange = (updatedValues) => {
+//     setNewState((prev) => ({ ...prev, ...updatedValues }));
+//     setSubmitNewState((prev) => ({ ...prev, ...updatedValues }));
+//   };
+
+//   function handleChangeFunction(result) {
+//     if (result.isCheck === false) {
+//       if (result.alertShow) {
+//         setParaText(result.message);
+//         setIsError(true);
+//         setOpenModal((prev) => !prev);
+//         setTypeofModal("onCheck");
+//         setClearFlag({
+//           isClear: true,
+//           fieldName: result.fieldName,
+//         });
+//       }
+//       return;
+//     }
+//     // let data = { ...result.values };
+//     let data = { ...result.newState };
+//     setNewState((pre) => {
+//       return {
+//         ...pre,
+//         ...data,
+//       };
+//     });
+//     setSubmitNewState((pre) => {
+//       return {
+//         ...pre,
+//         ...data,
+//       };
+//     });
+//   }
+//   function handleBlurFunction(result) {
+//     if (result.isCheck === false) {
+//       if (result.alertShow) {
+//         setParaText(result.message);
+//         setIsError(true);
+//         setOpenModal((prev) => !prev);
+//         setTypeofModal("onCheck");
+//       }
+//       return;
+//     }
+//     // let data = { ...result.values };
+//     let data = { ...result.newState };
+//     setNewState((pre) => {
+//       return {
+//         ...pre,
+//         ...data,
+//       };
+//     });
+//     setSubmitNewState((pre) => {
+//       return {
+//         ...pre,
+//         ...data,
+//       };
+//     });
+//   }
+
+//   return (
+//     <React.Fragment key={indexValue}>
+//       <Accordion
+//         expanded={isParentAccordionOpen}
+//         sx={{
+//           ...parentAccordionSection,
+//           "& .MuiPaper-root-MuiAccordion-root::before ": {
+//             position: "static !important",
+//             height: "0px !important",
+//           },
+//         }}
+//         key={indexValue}
+//       >
+//         <AccordionSummary
+//           className="relative left-[11px]"
+//           expandIcon={
+//             <LightTooltip title={isParentAccordionOpen ? "Collapse" : "Expand"}>
+//               <ExpandMoreIcon
+//                 sx={{ color: "black" }}
+//                 onClick={handleAccordionClick}
+//               />
+//             </LightTooltip>
+//           }
+//           aria-controls={`panel${indexValue + 1}-content`}
+//           id={`panel${indexValue + 1}-header`}
+//         >
+//           <Typography key={indexValue} className="relative right-[11px]">
+//             {section}
+//           </Typography>
+//         </AccordionSummary>
+
+//         <AccordionDetails
+//           className={`overflow-hidden  ${styles.thinScrollBar}`}
+//           sx={{
+//             ...accordianDetailsStyleForm,
+//           }}
+//         >
+//           <CustomeInputFields
+//             inputFieldData={parentsFields[section]}
+//             values={newState}
+//             newState={newState}
+//             onValuesChange={handleFieldValuesChange}
+//             handleFieldValuesChange2={handleFieldValuesChange2}
+//             inEditMode={{ isEditMode: false, isCopy: true }}
+//             onChangeHandler={(result) => {
+//               handleChangeFunction(result);
+//             }}
+//             onBlurHandler={(result) => {
+//               handleBlurFunction(result);
+//             }}
+//             isView={isView}
+//             clearFlag={clearFlag}
+//             tableName={parentTableName}
+//             formControlData={formControlData}
+//             setFormControlData={setFormControlData}
+//             setStateVariable={setNewState}
+//             getLabelValue={getLabelValue}
+//           />
+//         </AccordionDetails>
+//       </Accordion>
+//     </React.Fragment>
+//   );
+// }
 function ParentAccordianComponent({
   section,
   indexValue,
   newState,
   parentsFields,
+  amtRecReadOnly,
+  amtRecFCReadOnly,
   expandAll,
   isCopy,
   handleFieldValuesChange2,
@@ -4547,10 +4805,11 @@ function ParentAccordianComponent({
   getLabelValue,
 }) {
   const [isParentAccordionOpen, setIsParentAccordionOpen] = useState(false);
-  // Assuming you have a ref to your accordion component
+
   const handleAccordionClick = () => {
     setIsParentAccordionOpen((prev) => !prev);
   };
+
   useEffect(() => {
     setIsParentAccordionOpen(expandAll);
   }, [expandAll]);
@@ -4574,14 +4833,16 @@ function ParentAccordianComponent({
       }
       return;
     }
-    // let data = { ...result.values };
+
     let data = { ...result.newState };
+
     setNewState((pre) => {
       return {
         ...pre,
         ...data,
       };
     });
+
     setSubmitNewState((pre) => {
       return {
         ...pre,
@@ -4589,6 +4850,7 @@ function ParentAccordianComponent({
       };
     });
   }
+
   function handleBlurFunction(result) {
     if (result.isCheck === false) {
       if (result.alertShow) {
@@ -4599,14 +4861,16 @@ function ParentAccordianComponent({
       }
       return;
     }
-    // let data = { ...result.values };
+
     let data = { ...result.newState };
+
     setNewState((pre) => {
       return {
         ...pre,
         ...data,
       };
     });
+
     setSubmitNewState((pre) => {
       return {
         ...pre,
@@ -4614,6 +4878,34 @@ function ParentAccordianComponent({
       };
     });
   }
+
+  const parentInputFields = React.useMemo(() => {
+    const fields = parentsFields?.[section] || [];
+
+    return fields.map((field) => {
+      const fieldName = String(field?.fieldname || "").toLowerCase();
+
+      if (fieldName === "amtrec" && amtRecReadOnly) {
+        return {
+          ...field,
+          isEditable: false,
+          readOnly: true,
+          disabled: true,
+        };
+      }
+
+      if (fieldName === "amtrecfc" && amtRecFCReadOnly) {
+        return {
+          ...field,
+          isEditable: false,
+          readOnly: true,
+          disabled: true,
+        };
+      }
+
+      return field;
+    });
+  }, [parentsFields, section, amtRecReadOnly, amtRecFCReadOnly]);
 
   return (
     <React.Fragment key={indexValue}>
@@ -4653,7 +4945,7 @@ function ParentAccordianComponent({
           }}
         >
           <CustomeInputFields
-            inputFieldData={parentsFields[section]}
+            inputFieldData={parentInputFields}
             values={newState}
             newState={newState}
             onValuesChange={handleFieldValuesChange}

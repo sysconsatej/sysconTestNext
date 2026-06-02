@@ -39,6 +39,7 @@ import {
 import styles from "@/components/common.module.css";
 import { decrypt, encrypt } from "@/helper/security";
 import { debounce } from "@/helper/debounceFile";
+import { updateFlag } from "@/app/counterSlice";
 
 import {
   dynamicDropDownFieldsData,
@@ -619,14 +620,19 @@ export default function NavbarPage() {
   }, [pageNo]);
 
   function setRedirectedFn() {
-    setOpenAlertModal((pre) => !pre);
-    if (redirected == true) router.push("/UserProfile");
+    if (!redirected) {
+      setOpenAlertModal(true);
+      return;
+    }
+
+    router.push("/UserProfile");
   }
 
-  const handleClose = () => setOpenAlertModal((prev) => !prev);
+  const handleClose = () => setOpenAlertModal(false);
   const handleOk = () => {
-    setOpenAlertModal((prev) => !prev);
+    setOpenAlertModal(false);
     setRedirected(true);
+    dispatch(updateFlag({ flag: "isRedirection", value: true }));
     router.push("/UserProfile");
   };
 

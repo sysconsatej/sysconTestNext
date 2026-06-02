@@ -16,7 +16,20 @@ export default function CustomeModal({
   typeEvent,
   labelValue
 }) {
-  const handleClose = () => setOpenModal((prev) => !prev);
+  const handleClose = () => setOpenModal(false);
+  const handleConfirm = async () => {
+    try {
+      if (typeof onConfirm === "function") {
+        await onConfirm({
+          value: true,
+          isError: isError,
+          type: typeEvent,
+        });
+      }
+    } finally {
+      setOpenModal(false);
+    }
+  };
 
   //  code to remove the fieldName and add LabelName
   const arrStr = paraText?.split(' ');
@@ -69,14 +82,7 @@ export default function CustomeModal({
               </div>
               <div className="flex justify-end space-x-4 ">
                 <button
-                  onClick={() =>{
-                    onConfirm({
-                      value: true,
-                      isError: isError,
-                      type: typeEvent,
-                    }),
-                    setOpenModal((prev) => !prev)}
-                  }
+                  onClick={handleConfirm}
                   className={`px-4 text-[12px] py-2 ${styles.bgPrimaryColorBtn} flex items-center justify-center  rounded-[5px] shadow-custom  w-24 h-[27px]`}
                 >
                   Ok
