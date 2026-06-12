@@ -472,10 +472,28 @@ export default function CustomeInputFields({
     const [scrollPosition, setScrollPosition] = useState(0);
 
     const CustomMenuList = (props) => {
-      const { pageNo, setPageNo, setScrollPosition, scrollPosition } = props; // Assuming these are passed as props now
+      const {
+        innerRef,
+        pageNo,
+        setPageNo,
+        setScrollPosition,
+        scrollPosition,
+      } = props; // Assuming these are passed as props now
       const menuListRef = useRef(null);
       // Adding a flag to control when to adjust scroll
       const localScrollPosition = useRef(scrollPosition); // To track scroll position locally
+      const setMenuListRef = React.useCallback(
+        (node) => {
+          menuListRef.current = node;
+
+          if (typeof innerRef === "function") {
+            innerRef(node);
+          } else if (innerRef) {
+            innerRef.current = node;
+          }
+        },
+        [innerRef],
+      );
 
       useEffect(() => {
         const menuList = menuListRef.current;
@@ -518,7 +536,7 @@ export default function CustomeInputFields({
       }, [pageNo]); // Added adjustScrollNeeded as a dependency
 
       return (
-        <components.MenuList {...props} innerRef={menuListRef}>
+        <components.MenuList {...props} innerRef={setMenuListRef}>
           {props.children}
         </components.MenuList>
       );
@@ -526,6 +544,7 @@ export default function CustomeInputFields({
 
     CustomMenuList.propTypes = {
       props: PropTypes.any,
+      innerRef: PropTypes.any,
       selectProps: PropTypes.any,
       children: PropTypes.any,
       pageNo: PropTypes.any,

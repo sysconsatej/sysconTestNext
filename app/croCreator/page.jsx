@@ -6573,8 +6573,14 @@ function Inspector({
                 "refTemp",
                 "refTempUnitCode",
                 "ventilation",
-                "typeCode",
                 "humidity",
+                "commodity",
+                "dg",
+                "containerQty",
+                "sizeType",
+                "qty",
+                "cargoWt",
+                "grossWtCode",
               ],
             };
 

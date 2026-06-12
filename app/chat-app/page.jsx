@@ -1,12 +1,17 @@
 "use client";
-import ChatApp from "@/components/ChatComponents/ChatApp";
 import React from "react";
+import { destroySocket, getSocket } from "@/helper/socket";
+import ChatApp from "./ChatApp";
+import io from "socket.io-client";
 
 export default function Page() {
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Chat Interface</h1>
-      <ChatApp />
-    </div>
+    <ChatApp
+      socketUrl={process.env.NEXT_PUBLIC_CHAT_SERVER_URL}
+      apiBase={process.env.NEXT_PUBLIC_CHAT_SERVER_URL + '/chat-app/'}
+      ioFactory={io}
+      destroySocket={destroySocket}
+      socketFactory={getSocket}
+    />
   );
 }

@@ -663,50 +663,50 @@ function ChildAccordianComponent({
           //          console.log("functonsArray", functonsArray);
 
           // let Data = { ...childObject }
-          for (const fun of functonsArray) {
-            if (typeof onSubmitValidation[fun] == "function") {
-            }
+          // for (const fun of functonsArray) {
+          //   if (typeof onSubmitValidation[fun] == "function") {
+          //   }
 
-            let updatedData = onSubmitFunctionCall(
-              fun,
-              newState,
-              formControlData,
-              Data,
-              setChildObject,
-            );
-            if (updatedData?.alertShow == true) {
-              // if (updatedData.type == "success") {
-              //   toast.success(updatedData.message);
+          //   let updatedData = onSubmitFunctionCall(
+          //     fun,
+          //     newState,
+          //     formControlData,
+          //     Data,
+          //     setChildObject,
+          //   );
+          //   if (updatedData?.alertShow == true) {
+          //     // if (updatedData.type == "success") {
+          //     //   toast.success(updatedData.message);
 
-              // }
-              // else {
-              // toast.error(updatedData.message);
-              setParaText(updatedData.message);
-              setIsError(true);
-              setOpenModal((prev) => !prev);
-              setTypeofModal("onCheck");
-              // setClearFlag({
-              //   isClear: true,
-              //   fieldName: result.fieldName,
-              // });
-              // }
-            }
-            if (updatedData) {
-              Data = updatedData.values;
-              setNewState((prevState) => {
-                return {
-                  ...prevState,
-                  ...updatedData?.newState,
-                };
-              });
-              setSubmitNewState((prevState) => {
-                return {
-                  ...prevState,
-                  ...updatedData?.newState,
-                };
-              });
-            }
-          }
+          //     // }
+          //     // else {
+          //     // toast.error(updatedData.message);
+          //     setParaText(updatedData.message);
+          //     setIsError(true);
+          //     setOpenModal((prev) => !prev);
+          //     setTypeofModal("onCheck");
+          //     // setClearFlag({
+          //     //   isClear: true,
+          //     //   fieldName: result.fieldName,
+          //     // });
+          //     // }
+          //   }
+          //   if (updatedData) {
+          //     Data = updatedData.values;
+          //     setNewState((prevState) => {
+          //       return {
+          //         ...prevState,
+          //         ...updatedData?.newState,
+          //       };
+          //     });
+          //     setSubmitNewState((prevState) => {
+          //       return {
+          //         ...prevState,
+          //         ...updatedData?.newState,
+          //       };
+          //     });
+          //   }
+          // }
           //          console.log("childButtonHandler", Data);
 
           // setChildObject((prevObject) => {
@@ -790,17 +790,17 @@ function ChildAccordianComponent({
       }
       return newStateCopy;
     });
-    setDummyData((prevState) => {
-      const newStateCopy = { ...prevState };
-      const updatedData = newStateCopy[section.tableName].filter(
-        (_, idx) => idx !== index,
-      );
-      newStateCopy[section.tableName] = updatedData;
-      if (updatedData.length === 0) {
-        setInputFieldsVisible((prev) => !prev);
-      }
-      return newStateCopy;
-    });
+    // setDummyData((prevState) => {
+    //   const newStateCopy = { ...prevState };
+    //   const updatedData = newStateCopy[section.tableName].filter(
+    //     (_, idx) => idx !== index,
+    //   );
+    //   newStateCopy[section.tableName] = updatedData;
+    //   if (updatedData.length === 0) {
+    //     setInputFieldsVisible((prev) => !prev);
+    //   }
+    //   return newStateCopy;
+    // });
   };
 
   //right click function

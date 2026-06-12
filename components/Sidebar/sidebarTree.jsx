@@ -73,10 +73,6 @@ export default function SideBarMenu() {
   const [openAlertModal, setOpenAlertModal] = useState(false);
   const [redirected, setRedirected] = useState(true);
 
-  const [combinedRoleAndMenuIdsArray, setCombinedRoleAndMenuIdsArray] =
-    useState([]);
-  const [defaultCompanyBranch, setDefaultCompanyBranch] = useState([]);
-
   // ✅ Mobile/Tablet Drawer UI (GRID)
   const [device, setDevice] = useState("desktop"); // desktop | tablet | mobile
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -198,107 +194,12 @@ export default function SideBarMenu() {
     return DocumentTextIcon;
   };
 
-  // --- fetch user roles/menu ids (unchanged) ---
-  useEffect(() => {
-    async function fetchUserData() {
-      const getUser = localStorage.getItem("userData");
-      let userData, userEmail, defaultCompanyBranchId;
-
-      if (getUser) {
-        const decryptedData = decrypt(getUser);
-        try {
-          userData = JSON.parse(decryptedData);
-        } catch (e) {
-          console.error("Error parsing decrypted data:", e);
-          return;
-        }
-      } else {
-        console.error("No user data found in local storage");
-        return;
-      }
-
-      if (Array.isArray(userData) && userData.length > 0 && userData[0].email) {
-        userEmail = userData[0].email;
-        defaultCompanyBranchId = userData[0].defaultBranchId;
-        setDefaultCompanyBranch(defaultCompanyBranchId);
-      } else {
-        console.error("Invalid user data structure or email is missing");
-        return;
-      }
-
-      const userRequestBody = {
-        tableName: "tblUser",
-        whereCondition: { email: userEmail, status: 1 },
-        projection: {},
-      };
-
-      try {
-        const fetchedUserData = await fetchDataApi(userRequestBody);
-        const branchAccess = fetchedUserData.data[0].branchAccess[0];
-
-        const companyBranchId = branchAccess.companyBranchId;
-        const roleAccess = branchAccess.roleAccess;
-        const menuAccess = branchAccess.menuAccess;
-
-        const roleIdsArray = roleAccess.map((access) => access.roleId);
-        const userMenuIdsArray = menuAccess
-          .filter((access) => access.isAccess)
-          .map((access) => access.menuId);
-
-        const roleDataPromises = roleIdsArray.map(async (roleId) => {
-          const roleRequestBody = {
-            tableName: "tblRole",
-            whereCondition: { _id: roleId, status: 1 },
-            projection: {},
-          };
-          try {
-            const fetchedRoleData = await fetchDataApi(roleRequestBody);
-            return fetchedRoleData.data[0];
-          } catch (error) {
-            console.error("Failed to fetch role data", roleId, error);
-            return null;
-          }
-        });
-
-        const allRoleData = await Promise.all(roleDataPromises);
-
-        const roleMenuAccessArray = allRoleData
-          .filter((roleData) => roleData !== null)
-          .flatMap((roleData) => roleData.menuAccess)
-          .filter((access) => access.isAccess);
-
-        const roleMenuIdsArray = roleMenuAccessArray.map(
-          (access) => access.menuId,
-        );
-
-        const combinedMenuIdsArray = [
-          ...new Set([...userMenuIdsArray, ...roleMenuIdsArray]),
-        ];
-
-        const arr = [...roleIdsArray, ...combinedMenuIdsArray];
-        setCombinedRoleAndMenuIdsArray(arr);
-
-        if (defaultCompanyBranchId === companyBranchId) {
-          // ok
-        }
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-      }
-    }
-
-    fetchUserData();
-  }, []);
 
   // --- fetch sidebar menu (unchanged) ---
   useEffect(() => {
-    const requestBodyMenu = {
-      whereCondition: { _id: combinedRoleAndMenuIdsArray },
-      projection: {},
-    };
-
     async function fetchData() {
       try {
-        const apiResponse = await sideBarMenu(requestBodyMenu);
+        const apiResponse = await sideBarMenu();
         setMenuItem(apiResponse || []);
       } catch (error) {
         console.error("Failed to fetch menu items:", error);
@@ -306,7 +207,7 @@ export default function SideBarMenu() {
     }
 
     fetchData();
-  }, [combinedRoleAndMenuIdsArray]);
+  }, []);
 
   // ------------------------ navigation helpers (unchanged) ------------------------
   function extractMenuName(items, id, parentPath = []) {

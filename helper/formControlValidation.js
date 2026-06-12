@@ -263,8 +263,9 @@ const SetDecimalsGeneric = (obj) => {
         return {
           isCheck: false,
           type: "success",
-          message: `You can enter Max ${fieldSize - decimalCheck - 1
-            } Characters`,
+          message: `You can enter Max ${
+            fieldSize - decimalCheck - 1
+          } Characters`,
           alertShow: true,
           fieldName: fieldName,
           values: values,
@@ -913,11 +914,11 @@ const setNoOfContainer = (obj) => {
 
       let size = currentItem.length
         ? currentItem[0].sizeIdDropdown ||
-        currentItem[0].sizeIddropdown[0]?.label
+          currentItem[0].sizeIddropdown[0]?.label
         : "";
       let type = currentItem.length
         ? currentItem[0].typeIdDropdown ||
-        currentItem[0].typeIddropdown[0]?.label
+          currentItem[0].typeIddropdown[0]?.label
         : "";
 
       if (fieldName === "sizeId" && childCommonItem.length !== 0) {
@@ -932,9 +933,11 @@ const setNoOfContainer = (obj) => {
             return {
               isCheck: false,
               type: "error",
-              message: `For type ${typeIdDropdown || type
-                } and No Of Containers ${values.qty}, the size should be ${sizeIdDropdown || size
-                }.`,
+              message: `For type ${
+                typeIdDropdown || type
+              } and No Of Containers ${values.qty}, the size should be ${
+                sizeIdDropdown || size
+              }.`,
               alertShow: true,
               values: values,
               newState: newState,
@@ -963,9 +966,11 @@ const setNoOfContainer = (obj) => {
             return {
               isCheck: false,
               type: "error",
-              message: `For size ${sizeIdDropdown || size
-                } and No Of Container ${values.qty} the type should be ${typeIdDropdown || type
-                } `,
+              message: `For size ${
+                sizeIdDropdown || size
+              } and No Of Container ${values.qty} the type should be ${
+                typeIdDropdown || type
+              } `,
               alertShow: true,
               values: values,
               newState: newState,
@@ -2614,8 +2619,8 @@ const getJobCharges = async (obj) => {
 
           const tdsData = normalizeArray(
             fetchTDSDetails?.data ||
-            fetchTDSDetails?.tblTds ||
-            fetchTDSDetails?.tblInvoiceChargeTds,
+              fetchTDSDetails?.tblTds ||
+              fetchTDSDetails?.tblInvoiceChargeTds,
           );
 
           updatedCharges[index].tblInvoiceChargeTds = tdsData;
@@ -3185,10 +3190,10 @@ const removeFilterCondition = (obj) => {
         ...prev.formControlData,
         fields: prev.formControlData?.fields
           ? prev.formControlData.fields.map((field) =>
-            field.fieldname === fieldName
-              ? { ...field, dropdownFilter: null }
-              : field,
-          )
+              field.fieldname === fieldName
+                ? { ...field, dropdownFilter: null }
+                : field,
+            )
           : [],
       },
     }));
@@ -4075,8 +4080,9 @@ const checkGridsDuplication = (obj) => {
     const fieldsList =
       labels.slice(0, -1).join(", ") +
       (labels.length > 1 ? `, and ${labels.slice(-1)}` : labels[0]);
-    const message = `Duplicate entry found for ${fieldsList}. Please enter different ${labels[labels.length - 1]
-      }.`;
+    const message = `Duplicate entry found for ${fieldsList}. Please enter different ${
+      labels[labels.length - 1]
+    }.`;
 
     return {
       type: "error",
@@ -6280,10 +6286,11 @@ const setSameSizeValues = (obj) => {
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
-      const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
-        ? `id in (${sizeIds.join(",")})`
-        : `id = ${sizeIds}`
-        } `;
+      const editedString = `${dropFilterValueWithoutBraces} and ${
+        Array.isArray(sizeIds)
+          ? `id in (${sizeIds.join(",")})`
+          : `id = ${sizeIds}`
+      } `;
 
       console.log("editedString", editedString);
 
@@ -6330,10 +6337,11 @@ const setSameSizeValues = (obj) => {
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
-      const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
-        ? `id in (${sizeIds.join(",")})`
-        : `id = ${sizeIds}`
-        } `;
+      const editedString = `${dropFilterValueWithoutBraces} and ${
+        Array.isArray(sizeIds)
+          ? `id in (${sizeIds.join(",")})`
+          : `id = ${sizeIds}`
+      } `;
 
       if (editedString.trim()) {
         setterField.dropdownFilter = editedString;
@@ -6354,8 +6362,8 @@ const setSameSizeValues = (obj) => {
       let getterSize = newState[argsArray[0]];
       let currentSize =
         values &&
-          Array.isArray(values.sizeIddropdown) &&
-          values.sizeIddropdown.length > 0
+        Array.isArray(values.sizeIddropdown) &&
+        values.sizeIddropdown.length > 0
           ? values.sizeIddropdown[0].label
           : "";
 
@@ -6445,8 +6453,8 @@ const setSameSizeValues = (obj) => {
       let getterSize = newState[argsArray[0]];
       let currentSize =
         values &&
-          Array.isArray(values.sizeIddropdown) &&
-          values.sizeIddropdown.length > 0
+        Array.isArray(values.sizeIddropdown) &&
+        values.sizeIddropdown.length > 0
           ? values.sizeIddropdown[0].label
           : "";
 
@@ -7176,47 +7184,109 @@ const getBranchInvoice = async (obj) => {
     setFormControlData,
     setStateVariable,
   } = obj;
+
   const argNames = args.split(",").map((arg) => arg.trim());
   let [originCol] = argNames;
-  const billingParty = values[originCol];
-  const token = localStorage.getItem("token");
-  const { companyId, branchId } = getUserDetails();
-  const request = {
+
+  const billingParty = values?.[originCol];
+
+  const { companyId, branchId, clientId } = getUserDetails();
+
+  if (!billingParty) {
+    return {
+      type: "error",
+      result: false,
+      newState: {
+        ...newState,
+      },
+      values: {
+        ...values,
+        billingPartyBranchId: null,
+      },
+      message: "Billing party not selected!",
+    };
+  }
+
+  const request1 = {
     columns: "b.id,b.name,b.address",
     tableName:
-      "tblCompanyBranch b inner join tblGeneralLedger gl on b.id=gl.accCompanyBranchId inner join tblGlGSt gst on gl.id=gst.generalLedgerId and b.id=gst.companyBranchId ",
-    whereCondition: `gst.generalLedgerId =${billingParty}`,
-    clientIdCondition: `b.status=1 FOR JSON PATH`,
+      "tblCompanyBranch b INNER JOIN tblGeneralLedger gl ON b.id = gl.accCompanyBranchId INNER JOIN tblGlGSt gst ON gl.id = gst.generalLedgerId AND b.id = gst.companyBranchId",
+    whereCondition: `gst.generalLedgerId = ${billingParty}`,
+    clientIdCondition: `b.status = 1 FOR JSON PATH`,
   };
-  return fetchReportData(request).then((response) => {
-    const data = response.data;
-    const name = data[0]?.id;
-    //const address = data[1].address;
-    if (billingParty !== "") {
-      if (name !== undefined && name !== null) {
-        const updatedValues = {
-          ...values,
-          billingPartyBranchId: name,
-          //billingPartyaddress: address,
-        };
-        setStateVariable((prev) => ({
-          ...prev,
-          billingPartyBranchId: name,
-          //billingPartyaddress: address,
-        }));
 
-        return {
-          type: "success",
-          result: true,
-          newState: {
-            ...newState,
-          },
-          values: updatedValues,
-          message: "Data found !",
-        };
-      }
+  const request2 = {
+    columns: "b.id,b.name,b.address",
+    tableName:
+      "tblCompanyBranch b INNER JOIN tblGeneralLedger gl ON b.companyId = gl.accCompanyId",
+    whereCondition: `gl.id = ${billingParty} AND b.clientId = ${clientId} AND gl.clientId = ${clientId}`,
+    clientIdCondition: `b.status = 1 FOR JSON PATH`,
+  };
+
+  try {
+    let response = await fetchReportData(request1);
+    let data = response?.data || [];
+
+    // fallback: if request1 gives empty array, then call request2
+    if (!Array.isArray(data) || data.length === 0) {
+      response = await fetchReportData(request2);
+      data = response?.data || [];
     }
-  });
+
+    const branchId = data?.[0]?.id || null;
+    const address = data?.[0]?.address || "";
+
+    if (branchId) {
+      const updatedValues = {
+        ...values,
+        billingPartyBranchId: branchId,
+        // billingPartyaddress: address,
+      };
+
+      setStateVariable((prev) => ({
+        ...prev,
+        billingPartyBranchId: branchId,
+        // billingPartyaddress: address,
+      }));
+
+      return {
+        type: "success",
+        result: true,
+        newState: {
+          ...newState,
+          billingPartyBranchId: branchId,
+          // billingPartyaddress: address,
+        },
+        values: updatedValues,
+        message: "Data found!",
+      };
+    }
+
+    return {
+      type: "error",
+      result: false,
+      newState: {
+        ...newState,
+      },
+      values: {
+        ...values,
+        billingPartyBranchId: null,
+      },
+      message: "Branch data not found!",
+    };
+  } catch (error) {
+    console.error("getBranchInvoice error:", error);
+
+    return {
+      type: "error",
+      result: false,
+      newState: {
+        ...newState,
+      },
+      values,
+      message: "Something went wrong while fetching branch data!",
+    };
+  }
 };
 
 const getBranchAddressInvoice = async (obj) => {
@@ -7469,9 +7539,9 @@ const getVoucherInvoiceDetails = async (obj) => {
     const invoiceNumbers =
       Array.isArray(fetchInvoice?.Chargers) && fetchInvoice.Chargers.length > 0
         ? fetchInvoice.Chargers.map((invoice) => ({
-          value: invoice?.value ?? invoice?.invoiceNo, // Use invoiceNo if value is missing
-          label: invoice?.label ?? invoice?.invoiceNo, // Ensure label is never undefined
-        }))
+            value: invoice?.value ?? invoice?.invoiceNo, // Use invoiceNo if value is missing
+            label: invoice?.label ?? invoice?.invoiceNo, // Ensure label is never undefined
+          }))
         : [];
 
     console.log("invoiceNumbers", invoiceNumbers);
@@ -8181,174 +8251,174 @@ const setTaxCalculation = async (obj) => {
   }
 };
 
-const setFirstExchangeRate = async (obj) => {
-  const { args, fieldName, values, newState, setStateVariable } = obj;
-  const argNames = args.split(",").map((arg) => arg.trim());
-  let [originCol, exchangeRate] = argNames;
-  const currencyId = values[originCol];
-  const token = localStorage.getItem("token");
-  const storedUserData = localStorage.getItem("userData");
-  let userData;
-  let companyResponseData;
+// const setFirstExchangeRate = async (obj) => {
+//   const { args, fieldName, values, newState, setStateVariable } = obj;
+//   const argNames = args.split(",").map((arg) => arg.trim());
+//   let [originCol, exchangeRate] = argNames;
+//   const currencyId = values[originCol];
+//   const token = localStorage.getItem("token");
+//   const storedUserData = localStorage.getItem("userData");
+//   let userData;
+//   let companyResponseData;
 
-  if (storedUserData) {
-    const decryptedData = decrypt(storedUserData);
-    try {
-      userData = JSON.parse(decryptedData);
-    } catch (e) {
-      console.error("Error parsing decrypted data:", e);
-      return;
-    }
-  } else {
-    console.error("No user data found in local storage");
-    return;
-  }
+//   if (storedUserData) {
+//     const decryptedData = decrypt(storedUserData);
+//     try {
+//       userData = JSON.parse(decryptedData);
+//     } catch (e) {
+//       console.error("Error parsing decrypted data:", e);
+//       return;
+//     }
+//   } else {
+//     console.error("No user data found in local storage");
+//     return;
+//   }
 
-  if (!currencyId) {
-    console.log("CurrencyId is empty, setting exchange rate to empty");
-    values[exchangeRate] = ""; // Set exchangeRate to empty if currencyId is empty
-    return {
-      obj: { ...obj },
-      values: { ...values },
-      isCheck: true,
-      type: "success",
-      message: "Exchange rate set to empty due to empty currencyId",
-      alertShow: true,
-      newState: newState,
-      fieldName: fieldName,
-    };
-  }
+//   if (!currencyId) {
+//     console.log("CurrencyId is empty, setting exchange rate to empty");
+//     values[exchangeRate] = ""; // Set exchangeRate to empty if currencyId is empty
+//     return {
+//       obj: { ...obj },
+//       values: { ...values },
+//       isCheck: true,
+//       type: "success",
+//       message: "Exchange rate set to empty due to empty currencyId",
+//       alertShow: true,
+//       newState: newState,
+//       fieldName: fieldName,
+//     };
+//   }
 
-  const companyRequestBody = {
-    columns: "*",
-    tableName: "tblCompanyParameter",
-    whereCondition: `currencyId = ${currencyId} and status = 1`,
-    clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
-  };
+//   const companyRequestBody = {
+//     columns: "*",
+//     tableName: "tblCompanyParameter",
+//     whereCondition: `currencyId = ${currencyId} and status = 1`,
+//     clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
+//   };
 
-  try {
-    console.log("Fetching company parameters...");
-    const companyResponse = await fetchReportData(companyRequestBody);
-    companyResponseData = companyResponse;
-    console.log("Company Response Data:", companyResponse);
-  } catch (error) {
-    console.error("Error fetching company parameters:", error);
-    return {
-      obj: { ...obj },
-      values: { ...values },
-      isCheck: false,
-      type: "error",
-      message: "Error fetching company parameters",
-      alertShow: true,
-    };
-  }
+//   try {
+//     console.log("Fetching company parameters...");
+//     const companyResponse = await fetchReportData(companyRequestBody);
+//     companyResponseData = companyResponse;
+//     console.log("Company Response Data:", companyResponse);
+//   } catch (error) {
+//     console.error("Error fetching company parameters:", error);
+//     return {
+//       obj: { ...obj },
+//       values: { ...values },
+//       isCheck: false,
+//       type: "error",
+//       message: "Error fetching company parameters",
+//       alertShow: true,
+//     };
+//   }
 
-  try {
-    const requestBody = {
-      columns: "*",
-      tableName: "tblExchangeRate",
-      whereCondition: `fromCurrencyId = ${currencyId} and status = 1`,
-      clientIdCondition: `clientId IN (${clientId}) FOR JSON PATH`,
-    };
-    const response = await fetchReportData(requestBody);
+//   try {
+//     const requestBody = {
+//       columns: "*",
+//       tableName: "tblExchangeRate",
+//       whereCondition: `fromCurrencyId = ${currencyId} and status = 1`,
+//       clientIdCondition: `clientId IN (${clientId}) FOR JSON PATH`,
+//     };
+//     const response = await fetchReportData(requestBody);
 
-    const fromCurrencyId =
-      response.data.length > 0 ? response.data[0].fromCurrencyId : null;
-    const exportExchangeRate =
-      response.data.length > 0 ? response.data[0].exportExchangeRate : null;
-    const companyCurrencyId =
-      companyResponseData.data.length > 0
-        ? companyResponseData.data[0].currencyId
-        : null;
+//     const fromCurrencyId =
+//       response.data.length > 0 ? response.data[0].fromCurrencyId : null;
+//     const exportExchangeRate =
+//       response.data.length > 0 ? response.data[0].exportExchangeRate : null;
+//     const companyCurrencyId =
+//       companyResponseData.data.length > 0
+//         ? companyResponseData.data[0].currencyId
+//         : null;
 
-    if (
-      fromCurrencyId !== "" &&
-      fromCurrencyId !== null &&
-      fromCurrencyId !== undefined
-    ) {
-      if (fromCurrencyId === companyCurrencyId) {
-        values[exchangeRate] = 1; // Set sell rate to 1 if currency IDs match
-        setStateVariable((prev) => ({
-          ...prev,
-          [argNames[1]]: 1 || "",
-        }));
+//     if (
+//       fromCurrencyId !== "" &&
+//       fromCurrencyId !== null &&
+//       fromCurrencyId !== undefined
+//     ) {
+//       if (fromCurrencyId === companyCurrencyId) {
+//         values[exchangeRate] = 1; // Set sell rate to 1 if currency IDs match
+//         setStateVariable((prev) => ({
+//           ...prev,
+//           [argNames[1]]: 1 || "",
+//         }));
 
-        const updatedValues = {
-          ...values,
-          [argNames[1]]: 1 || "",
-        };
+//         const updatedValues = {
+//           ...values,
+//           [argNames[1]]: 1 || "",
+//         };
 
-        console.log("updated values - ", updatedValues);
-        return {
-          obj: { ...obj },
-          values: updatedValues,
-          isCheck: true,
-          type: "success",
-          message: "Exchange rate updated successfully",
-          alertShow: true,
-          newState: newState,
-          fieldName: fieldName,
-        };
-      } else {
-        values[exchangeRate] = exportExchangeRate; // Set sell rate to 1 if currency IDs match
-        setStateVariable((prev) => ({
-          ...prev,
-          [argNames[1]]: exportExchangeRate || "",
-        }));
+//         console.log("updated values - ", updatedValues);
+//         return {
+//           obj: { ...obj },
+//           values: updatedValues,
+//           isCheck: true,
+//           type: "success",
+//           message: "Exchange rate updated successfully",
+//           alertShow: true,
+//           newState: newState,
+//           fieldName: fieldName,
+//         };
+//       } else {
+//         values[exchangeRate] = exportExchangeRate; // Set sell rate to 1 if currency IDs match
+//         setStateVariable((prev) => ({
+//           ...prev,
+//           [argNames[1]]: exportExchangeRate || "",
+//         }));
 
-        const updatedValues = {
-          ...values,
-          [argNames[1]]: exportExchangeRate || "",
-        };
+//         const updatedValues = {
+//           ...values,
+//           [argNames[1]]: exportExchangeRate || "",
+//         };
 
-        console.log("updated values - ", updatedValues);
-        return {
-          obj: { ...obj },
-          values: updatedValues,
-          isCheck: true,
-          type: "success",
-          message: "Exchange rate updated successfully",
-          alertShow: true,
-          newState: newState,
-          fieldName: fieldName,
-        };
-      }
-    } else {
-      values[exchangeRate] = 1;
-      setStateVariable((prev) => ({
-        ...prev,
-        [argNames[1]]: 1 || "",
-      }));
+//         console.log("updated values - ", updatedValues);
+//         return {
+//           obj: { ...obj },
+//           values: updatedValues,
+//           isCheck: true,
+//           type: "success",
+//           message: "Exchange rate updated successfully",
+//           alertShow: true,
+//           newState: newState,
+//           fieldName: fieldName,
+//         };
+//       }
+//     } else {
+//       values[exchangeRate] = 1;
+//       setStateVariable((prev) => ({
+//         ...prev,
+//         [argNames[1]]: 1 || "",
+//       }));
 
-      const updatedValues = {
-        ...values,
-        [argNames[1]]: 1 || "",
-      };
+//       const updatedValues = {
+//         ...values,
+//         [argNames[1]]: 1 || "",
+//       };
 
-      console.log("updated values - ", updatedValues);
-      return {
-        obj: { ...obj },
-        values: updatedValues,
-        isCheck: true,
-        type: "success",
-        message: "Exchange rate updated successfully",
-        alertShow: true,
-        newState: newState,
-        fieldName: fieldName,
-      };
-    }
-  } catch (error) {
-    console.error("Error fetching exchange rates:", error);
-    return {
-      obj: { ...obj },
-      values: { ...values },
-      isCheck: false,
-      type: "error",
-      message: "Error fetching exchange rates",
-      alertShow: true,
-    };
-  }
-};
+//       console.log("updated values - ", updatedValues);
+//       return {
+//         obj: { ...obj },
+//         values: updatedValues,
+//         isCheck: true,
+//         type: "success",
+//         message: "Exchange rate updated successfully",
+//         alertShow: true,
+//         newState: newState,
+//         fieldName: fieldName,
+//       };
+//     }
+//   } catch (error) {
+//     console.error("Error fetching exchange rates:", error);
+//     return {
+//       obj: { ...obj },
+//       values: { ...values },
+//       isCheck: false,
+//       type: "error",
+//       message: "Error fetching exchange rates",
+//       alertShow: true,
+//     };
+//   }
+// };
 
 const validateDateDo = async (obj) => {
   let { args, newState, setStateVariable } = obj;
@@ -9018,7 +9088,6 @@ const setBankByDefault = async (obj) => {
   }
 };
 
-
 const calculateVoucherAmt = async (obj) => {
   const { args, newState, setStateVariable } = obj;
 
@@ -9484,11 +9553,11 @@ const getThirdLevelDetails = async (obj) => {
         containerIddropdown:
           _containerId !== null
             ? [
-              {
-                value: _containerId,
-                label: item.containerNo ?? String(_containerId),
-              },
-            ]
+                {
+                  value: _containerId,
+                  label: item.containerNo ?? String(_containerId),
+                },
+              ]
             : [],
         sizeIddropdown:
           _sizeId !== null
@@ -9505,22 +9574,22 @@ const getThirdLevelDetails = async (obj) => {
         containerTransactionIddropdown:
           _containerTransactionId !== null
             ? [
-              {
-                value: _containerTransactionId,
-                label:
-                  item.containerTransactionName ??
-                  String(_containerTransactionId),
-              },
-            ]
+                {
+                  value: _containerTransactionId,
+                  label:
+                    item.containerTransactionName ??
+                    String(_containerTransactionId),
+                },
+              ]
             : [],
         containerRepairIddropdown:
           _containerRepairId !== null
             ? [
-              {
-                value: _containerRepairId,
-                label: item.containerRepairName ?? String(_containerRepairId),
-              },
-            ]
+                {
+                  value: _containerRepairId,
+                  label: item.containerRepairName ?? String(_containerRepairId),
+                },
+              ]
             : [],
         blIddropdown:
           _blId !== null
@@ -9957,11 +10026,11 @@ const getBlChargesForPaty = async (obj) => {
         billingPartyId: finalBillingPartyId,
         billingPartyIddropdown: finalBillingPartyId
           ? [
-            {
-              value: finalBillingPartyId,
-              label: selectedLedger?.LedgerName || "",
-            },
-          ]
+              {
+                value: finalBillingPartyId,
+                label: selectedLedger?.LedgerName || "",
+              },
+            ]
           : [],
       };
 
@@ -10395,8 +10464,9 @@ const setTransit = async (obj) => {
 
     // --- Prepare Updated goodsDesc ---
     let updatedGoodsDesc = goodsDesc || "";
-    const transitRemark = `Cargo in transit to ${countryDestination || "(country of destination)"
-      } on consignee’s risk, cost & responsibilities`;
+    const transitRemark = `Cargo in transit to ${
+      countryDestination || "(country of destination)"
+    } on consignee’s risk, cost & responsibilities`;
 
     // Remove any previous existing instance of this line (avoid duplicates)
     updatedGoodsDesc = updatedGoodsDesc
@@ -11169,7 +11239,6 @@ const setSameCurrencyFc = async (obj) => {
 //   try {
 //     // 🔹 Utility: safely convert to number
 
-
 //     const toNum = (v) => {
 //       if (v === null || v === undefined || v === "") return 0;
 //       const n = Number(String(v).replace(/,/g, ""));
@@ -11235,11 +11304,11 @@ const setSameCurrencyHc = async (obj) => {
     const companyCurrencyRes = await fetchReportData(request);
 
     const companyCurrencyId = getCurrencyValue(
-      companyCurrencyRes?.data?.[0]?.currencyId
+      companyCurrencyRes?.data?.[0]?.currencyId,
     );
 
     const voucherCurrencyId = getCurrencyValue(
-      newState?.currencyId || newState?.currencyIddropdown
+      newState?.currencyId || newState?.currencyIddropdown,
     );
 
     const isSameCurrency = voucherCurrencyId === companyCurrencyId;
@@ -11891,9 +11960,9 @@ const getBlChargesForTariff = async (obj) => {
     const argNames = Array.isArray(args)
       ? args.map((a) => String(a).trim())
       : String(args ?? "")
-        .split(",")
-        .map((a) => a.trim())
-        .filter(Boolean);
+          .split(",")
+          .map((a) => a.trim())
+          .filter(Boolean);
 
     const rateKey = argNames[0];
     const currencyIdKey = argNames[1];
@@ -12326,8 +12395,8 @@ const checkRate = (obj) => {
       );
       const vCurrencyId = pickVal(
         values?.currencyId ??
-        values?.currencyIdText ??
-        values?.currencyIddropdown,
+          values?.currencyIdText ??
+          values?.currencyIddropdown,
       );
       const vRateBasisId = pickVal(
         values?.rateBasisId ?? values?.rateBasisIddropdown,
@@ -13206,13 +13275,13 @@ const getInvoiceDetailsKJS = async (obj) => {
       splitArgs.push(iterator.split("."));
     }
   }
-  const { billingPartyBranchId } = newState;
+  const { billingPartyBranchId, billingPartyId } = newState;
   // const { chargeId, chargeGlId, SelectedParentInvId } = values;
   const { companyId, clientId, branchId } = getUserDetails();
   const request = {
     columns: "stateId,taxRegistrationNo",
     tableName: `tblGlGst`,
-    whereCondition: `companyBranchId = ${billingPartyBranchId}`,
+    whereCondition: `companyBranchId = ${billingPartyBranchId} and clientId=${clientId} and generalLedgerId = ${billingPartyId}`,
     clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
   };
 
@@ -13235,12 +13304,12 @@ const getInvoiceDetailsKJS = async (obj) => {
     const requestGst = {
       columns: "id",
       tableName: `tblGlGst`,
-      whereCondition: `taxRegistrationNo = '${gstinNo}' and clientId=${clientId}`,
+      whereCondition: `taxRegistrationNo = '${gstinNo}' and clientId=${clientId} and companyBranchId = ${billingPartyBranchId} and generalLedgerId = ${billingPartyId}`,
       clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
     };
 
     const gstData = await fetchReportData(requestGst);
-    const taxRegistrationNos = gstData.data[0]?.id || "";
+    const taxRegistrationNos = gstData?.data[0]?.id || "";
 
     setStateVariable((prev) => ({
       ...prev,
@@ -13856,6 +13925,173 @@ const setParentFieldsDisableOnEdit = (obj) => {
   }
 };
 
+const checkDuplicateVendorInvoiceNo = async (obj) => {
+  const { values = {}, newState = {}, setStateVariable, formControlData } = obj;
+  try {
+    const response = await fetchReportData({
+      columns: `vendorInvoiceNo`,
+      tableName: "tblInvoice",
+      whereCondition: `clientId=${clientId} and vendorInvoiceNo='${values.vendorInvoiceNo}'`,
+      clientIdCondition: "status=1 FOR JSON PATH, INCLUDE_NULL_VALUES",
+    });
+    if (!response?.data?.length)
+      return {
+        type: "success",
+        result: true,
+        values,
+        newState,
+        formControlData,
+      };
+    setStateVariable?.((prev) => ({ ...prev, vendorInvoiceNo: "" }));
+    toast.error("Vendor Invoice Number already exist");
+    return {
+      type: "error",
+      result: false,
+      values: values,
+      newState: newState,
+      formControlData,
+      message: "Vendor Invoice No already exist",
+    };
+  } catch (error) {
+    return {
+      type: "error",
+      result: false,
+      values,
+      newState,
+      formControlData,
+      message: "Error.",
+    };
+  }
+};
+
+const setVoucherCalOnHCFC = async (obj) => {
+  const {
+    args,
+    values,
+    fieldName,
+    newState,
+    setStateVariable,
+    formControlData,
+  } = obj;
+
+  const { companyId } = getUserDetails();
+
+  try {
+    const argNames = String(args || "")
+      .split(",")
+      .map((arg) => arg.trim())
+      .filter(Boolean);
+
+    const currencyField = argNames[0] || "currencyId";
+    const exchangeRateField = argNames[1] || "exchangeRate";
+    const amtRecField = argNames[2] || "amtRec";
+    const amtRecFCField = argNames[3] || "amtRecFC";
+    const toNum = (value) => {
+      if (value === null || value === undefined || value === "") return 0;
+
+      const num = Number(String(value).replace(/,/g, ""));
+      return Number.isFinite(num) ? num : 0;
+    };
+
+    const to2 = (n) => {
+      const x = Number(n) || 0;
+      const v = Math.round((x + Number.EPSILON) * 100) / 100;
+      return Object.is(v, -0) ? "0.00" : v.toFixed(2);
+    };
+
+    const currencyId = newState?.[currencyField];
+
+    if (!currencyId) {
+      return {
+        type: "success",
+        result: true,
+        message: "Currency not selected.",
+        values,
+        newState,
+        formControlData,
+      };
+    }
+
+    const request = {
+      columns: "currencyId",
+      tableName: "tblCompanyParameter",
+      whereCondition: `companyId=${companyId}`,
+      clientIdCondition: `status=1 FOR JSON PATH, INCLUDE_NULL_VALUES`,
+    };
+
+    const response = await fetchReportData(request);
+    const homeCurrencyId = response?.data?.[0]?.currencyId || null;
+
+    if (!homeCurrencyId) {
+      return {
+        type: "success",
+        result: true,
+        message: "Home currency not found.",
+        values,
+        newState,
+        formControlData,
+      };
+    }
+
+    const homeCurrency = String(homeCurrencyId || "");
+    const selectedCurrency = String(currencyId || "");
+    const isForeignCurrency = homeCurrency !== selectedCurrency;
+
+    let finalAmtRec = toNum(newState?.[amtRecField]);
+    let finalAmtRecFC = toNum(newState?.[amtRecFCField]);
+
+    if (isForeignCurrency) {
+      const safeExchangeRate = toNum(newState?.[exchangeRateField]) || 1;
+      finalAmtRec = finalAmtRecFC * safeExchangeRate;
+    } else {
+      finalAmtRecFC = finalAmtRec;
+    }
+
+    const calculatedAmtRec = to2(finalAmtRec);
+    const calculatedAmtRecFC = to2(finalAmtRecFC);
+
+    const updatedValues = {
+      ...values,
+      [amtRecField]: calculatedAmtRec,
+      [amtRecFCField]: calculatedAmtRecFC,
+    };
+
+    const updatedNewState = {
+      ...newState,
+      [amtRecField]: calculatedAmtRec,
+      [amtRecFCField]: calculatedAmtRecFC,
+    };
+
+    if (setStateVariable) {
+      setStateVariable((prev) => ({
+        ...prev,
+        [amtRecField]: calculatedAmtRec,
+        [amtRecFCField]: calculatedAmtRecFC,
+      }));
+    }
+
+    return {
+      type: "success",
+      result: true,
+      message: "Currency-based amount calculated successfully.",
+      values: updatedValues,
+      newState: updatedNewState,
+      formControlData,
+    };
+  } catch (error) {
+    console.error("Error in setVoucherCalOnHCFC:", error);
+
+    return {
+      type: "error",
+      result: false,
+      values,
+      newState,
+      formControlData,
+      message: "Error while calculating amount based on currency.",
+    };
+  }
+};
+
 export {
   setSameCurrencyFc,
   setSameCurrencyHc,
@@ -13914,7 +14150,7 @@ export {
   chargeableWtCal,
   wtCompareGrossWtVolWt,
   setCalculateVolume,
-  setFirstExchangeRate,
+  //setFirstExchangeRate,
   currency1,
   setExchangeRateNew,
   setTaxCalculation,
@@ -14016,4 +14252,6 @@ export {
   setNoOfOriginals,
   setLabourAndMaterial,
   setParentFieldsDisableOnEdit,
+  checkDuplicateVendorInvoiceNo,
+  setVoucherCalOnHCFC,
 };

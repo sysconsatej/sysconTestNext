@@ -99,7 +99,7 @@ const Attachments = ({
   };
 
   //test
-  console.log("attachmentsData", attachmentsData);
+  //console.log("attachmentsData", attachmentsData);
 
   const [stateAttachments, setStateAttachments] = useState([]);
 

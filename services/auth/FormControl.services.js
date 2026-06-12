@@ -168,11 +168,11 @@ export async function masterTableInfo(data) {
     return false;
   }
 }
-export async function formControlMenuList(id) {
+export async function formControlMenuList(id, defaultFinYearId) {
   try {
     const token = localStorage.getItem("token");
     const response = await fetch(
-      `${baseUrlSQl}/api/FormControl/list?menuID=${id}`,
+      `${baseUrlSQl}/api/FormControl/list?menuID=${id}&defaultFinYearId=${defaultFinYearId}`,
       {
         method: "GET",
         headers: {

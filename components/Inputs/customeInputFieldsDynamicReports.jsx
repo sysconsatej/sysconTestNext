@@ -5,6 +5,7 @@ import styles from "@/components/common.module.css";
 import TextField from "@mui/material/TextField";
 import { styled } from "@mui/material/styles";
 import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 import { renderTimeViewClock } from "@mui/x-date-pickers/timeViewRenderers";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
@@ -54,12 +55,25 @@ import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "next/navigation";
 import { get } from "lodash";
 
+dayjs.extend(customParseFormat);
+
 // ✅ widths: mobile 100% | tablet 2 columns | desktop original
 const fieldWrapClass = "w-full sm:w-[calc(50%-0.5rem)] lg:w-auto mr-2 mb-2";
 
 const inputWidthClass = "w-full lg:w-[12rem]"; // ✅ mobile full, desktop = 12rem
 
 const fileWidthClass = "w-full lg:w-[25rem]"; // ✅ keep your big file button on desktop
+
+const parseFlexibleDate = (dateStr) => {
+  const dateParts = dateStr.match(/^(\d{2})\D+(\d{2})\D+(\d{4})$/);
+
+  if (!dateParts) {
+    return null;
+  }
+
+  const [, day, month, year] = dateParts;
+  return dayjs(`${day}/${month}/${year}`, "DD/MM/YYYY", true);
+};
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -88,16 +102,22 @@ const customStyles = (showLabel) => {
       backgroundColor: "var(--page-bg-color)",
       zIndex: 9999, // Set zIndex to a very high value
     }),
-    option: (provided) => ({
-      ...provided,
-      backgroundColor: "var(--accordian-summary-bg)",
-      color: "var(--table-text-color)", // Normal text color
-      ":hover": {
-        ...provided[":hover"],
-        backgroundColor: "var(--accordion-summary-bg)", // Background color on hover
-      },
+    option: (base, state) => ({
+      ...base,
+      cursor: "pointer",
+      backgroundColor: state.isFocused
+        ? "rgba(25,118,210,0.24)"
+        : state.isSelected
+          ? "rgba(25,118,210,0.18)"
+          : "var(--page-bg-color)",
+      color: "var(--table-text-color)",
+      fontWeight: state.isSelected ? 700 : 400,
+      boxShadow: state.isFocused
+        ? "inset 3px 0 0 var(--bg-color)"
+        : "none",
     }),
-    menuList: () => ({
+    menuList: (base) => ({
+      ...base,
       ...menuListStyles,
     }),
 
@@ -455,10 +475,9 @@ function CustomeInputFieldsDynamicReports({
 
   const handleDateChange = (e, field) => {
     const dateStr = e.target.value;
-    const fmt = "DD/MM/YYYY";
-    const dateObj = dayjs(dateStr, fmt, true);
+    const dateObj = parseFlexibleDate(dateStr);
     if (dateStr !== "DD/MM/YYYY") {
-      if (!dateObj.isValid()) {
+      if (!dateObj?.isValid()) {
         toast.error(`Invalid date`);
         return;
       }
@@ -1084,12 +1103,35 @@ function InputFieldRenderer(props) {
     return String(value);
   };
   let callInputChangeFunc = true;
+  const stopDropdownArrowKeyPropagation = (event) => {
+    if (["ArrowUp", "ArrowDown"].includes(event.key)) {
+      event.stopPropagation();
+    }
+  };
 
   const CustomMenuList = (props) => {
-    const { pageNo, setPageNo, setScrollPosition, scrollPosition } = props; // Assuming these are passed as props now
+    const {
+      innerRef,
+      pageNo,
+      setPageNo,
+      setScrollPosition,
+      scrollPosition,
+    } = props; // Assuming these are passed as props now
     const menuListRef = useRef(null);
     // Adding a flag to control when to adjust scroll
     const localScrollPosition = useRef(scrollPosition); // To track scroll position locally
+    const setMenuListRef = React.useCallback(
+      (node) => {
+        menuListRef.current = node;
+
+        if (typeof innerRef === "function") {
+          innerRef(node);
+        } else if (innerRef) {
+          innerRef.current = node;
+        }
+      },
+      [innerRef],
+    );
 
     useEffect(() => {
       const menuList = menuListRef.current;
@@ -1127,7 +1169,7 @@ function InputFieldRenderer(props) {
     }, [pageNo]); // Added adjustScrollNeeded as a dependency
 
     return (
-      <components.MenuList {...props} innerRef={menuListRef}>
+      <components.MenuList {...props} innerRef={setMenuListRef}>
         {props.children}
       </components.MenuList>
     );
@@ -1135,6 +1177,7 @@ function InputFieldRenderer(props) {
 
   CustomMenuList.propTypes = {
     props: PropTypes.any,
+    innerRef: PropTypes.any,
     selectProps: PropTypes.any,
     children: PropTypes.any,
     pageNo: PropTypes.any,
@@ -1293,10 +1336,9 @@ function InputFieldRenderer(props) {
 
   const handleDateChange = (e, field) => {
     const dateStr = e.target.value;
-    const fmt = "DD/MM/YYYY";
-    const dateObj = dayjs(dateStr, fmt, true);
+    const dateObj = parseFlexibleDate(dateStr);
     if (dateStr !== "DD/MM/YYYY") {
-      if (!dateObj.isValid()) {
+      if (!dateObj?.isValid()) {
         toast.error(`Invalid date`);
         return;
       }
@@ -1661,6 +1703,7 @@ function InputFieldRenderer(props) {
               <Select
                 ref={selectRef}
                 id={uniqueId}
+                classNamePrefix="react-select"
                 placeholder=""
                 //menuPortalTarget={document.body}
                 menuPortalTarget={portalTarget}
@@ -1706,6 +1749,7 @@ function InputFieldRenderer(props) {
                     : "Loading..."
                 }
                 menuIsOpen={menuOpen}
+                onKeyDown={stopDropdownArrowKeyPropagation}
                 onFocus={() => {
                   setonFocusValue(values?.[field.fieldname]);
                   fetchData(field, 1, inputValueForDataFetch, "", "onPoen");
@@ -1851,6 +1895,7 @@ function InputFieldRenderer(props) {
             </p>
             <Select
               isMulti={true}
+              classNamePrefix="react-select"
               //menuPortalTarget={document.body}
               menuPortalTarget={portalTarget}
               backspaceRemovesValue={true}
@@ -1923,6 +1968,7 @@ function InputFieldRenderer(props) {
                   : "Searching..."
               }
               menuIsOpen={menuOpen}
+              onKeyDown={stopDropdownArrowKeyPropagation}
               onMenuOpen={() => {
                 setMenuOpen(true);
                 setInputValueForDataFetch("");

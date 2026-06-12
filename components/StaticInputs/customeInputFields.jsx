@@ -55,7 +55,7 @@ import { DialogActions, MenuItem } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers";
 import { MuiColorInput } from "mui-color-input";
 import { useDispatch, useSelector } from "react-redux";
-//import { useSearchParams } from "react-router-dom";
+// import { useSearchParams } from "react-router-dom";
 import { useSearchParams } from "next/navigation";
 
 const VisuallyHiddenInput = styled("input")({
@@ -806,10 +806,28 @@ export default function CustomeInputFields({
     let callInputChangeFunc = true;
 
     const CustomMenuList = (props) => {
-      const { pageNo, setPageNo, setScrollPosition, scrollPosition } = props; // Assuming these are passed as props now
+      const {
+        innerRef,
+        pageNo,
+        setPageNo,
+        setScrollPosition,
+        scrollPosition,
+      } = props; // Assuming these are passed as props now
       const menuListRef = useRef(null);
       // Adding a flag to control when to adjust scroll
       const localScrollPosition = useRef(scrollPosition); // To track scroll position locally
+      const setMenuListRef = React.useCallback(
+        (node) => {
+          menuListRef.current = node;
+
+          if (typeof innerRef === "function") {
+            innerRef(node);
+          } else if (innerRef) {
+            innerRef.current = node;
+          }
+        },
+        [innerRef],
+      );
 
       useEffect(() => {
         const menuList = menuListRef.current;
@@ -847,7 +865,7 @@ export default function CustomeInputFields({
       }, [pageNo]); // Added adjustScrollNeeded as a dependency
 
       return (
-        <components.MenuList {...props} innerRef={menuListRef}>
+        <components.MenuList {...props} innerRef={setMenuListRef}>
           {props.children}
         </components.MenuList>
       );
@@ -855,6 +873,7 @@ export default function CustomeInputFields({
 
     CustomMenuList.propTypes = {
       props: PropTypes.any,
+      innerRef: PropTypes.any,
       selectProps: PropTypes.any,
       children: PropTypes.any,
       pageNo: PropTypes.any,
@@ -1015,9 +1034,9 @@ export default function CustomeInputFields({
     }, [dropDownValues]);
 
     //
-    // eslint-disable-next-line no-unused-vars
+  // eslint-disable-next-line no-unused-vars
 
-    function CustomActionBar(props) {
+  function CustomActionBar(props) {
       const { onAccept, onCancel, actions, className } = props;
       if (actions == null || actions.length === 0) {
         return null;

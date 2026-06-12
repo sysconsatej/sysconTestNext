@@ -97,14 +97,15 @@ const customStyles = (showLabel) => {
       ...base,
       cursor: "pointer",
       backgroundColor: state.isFocused
-        ? "rgba(25,118,210,0.12)"
+        ? "rgba(25,118,210,0.24)"
         : state.isSelected
           ? "rgba(25,118,210,0.18)"
           : "transparent",
-
       color: "#000",
-
       fontWeight: state.isSelected ? 700 : 400,
+      boxShadow: state.isFocused
+        ? "inset 3px 0 0 var(--bg-color)"
+        : "none",
     }),
 
     menu: (base) => ({
@@ -1204,12 +1205,34 @@ function InputFieldRenderer(props) {
   let inputLabel = field.yourlabel;
 
   let callInputChangeFunc = true;
+  const stopDropdownArrowKeyPropagation = (event) => {
+    if (["ArrowUp", "ArrowDown"].includes(event.key)) {
+      event.stopPropagation();
+    }
+  };
 
   const CustomMenuList = (props) => {
-    const { pageNo, setPageNo, setScrollPosition, scrollPosition } = props; // Assuming these are passed as props now
+    const {
+      innerRef,
+      pageNo,
+      setPageNo,
+      setScrollPosition,
+      scrollPosition,
+    } = props; // Assuming these are passed as props now
     const menuListRef = useRef(null);
     // Adding a flag to control when to adjust scroll
     const localScrollPosition = useRef(scrollPosition); // To track scroll position locally
+    const setMenuListRef = React.useCallback(
+      (node) => {
+        menuListRef.current = node;
+        if (typeof innerRef === "function") {
+          innerRef(node);
+        } else if (innerRef) {
+          innerRef.current = node;
+        }
+      },
+      [innerRef],
+    );
 
     useEffect(() => {
       const menuList = menuListRef.current;
@@ -1247,7 +1270,7 @@ function InputFieldRenderer(props) {
     }, [pageNo]); // Added adjustScrollNeeded as a dependency
 
     return (
-      <components.MenuList {...props} innerRef={menuListRef}>
+      <components.MenuList {...props} innerRef={setMenuListRef}>
         {props.children}
       </components.MenuList>
     );
@@ -1255,6 +1278,7 @@ function InputFieldRenderer(props) {
 
   CustomMenuList.propTypes = {
     props: PropTypes.any,
+    innerRef: PropTypes.any,
     selectProps: PropTypes.any,
     children: PropTypes.any,
     pageNo: PropTypes.any,
@@ -1780,6 +1804,7 @@ function InputFieldRenderer(props) {
               <Select
                 ref={selectRef}
                 id={uniqueId}
+                classNamePrefix="react-select"
                 placeholder=""
                 //menuPortalTarget={document.body}
                 menuPortalTarget={portalTarget}
@@ -1825,6 +1850,7 @@ function InputFieldRenderer(props) {
                     : "Loading..."
                 }
                 menuIsOpen={menuOpen}
+                onKeyDown={stopDropdownArrowKeyPropagation}
                 onFocus={() => {
                   setonFocusValue(values?.[field.fieldname]);
                   fetchData(
@@ -1994,6 +2020,7 @@ function InputFieldRenderer(props) {
             </p>
             <Select
               isMulti={true}
+              classNamePrefix="react-select"
               //menuPortalTarget={document.body}
               menuPortalTarget={portalTarget}
               backspaceRemovesValue={true}
@@ -2066,6 +2093,7 @@ function InputFieldRenderer(props) {
                   : "Searching..."
               }
               menuIsOpen={menuOpen}
+              onKeyDown={stopDropdownArrowKeyPropagation}
               onMenuOpen={() => {
                 setMenuOpen(true);
                 setInputValueForDataFetch("");

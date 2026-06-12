@@ -2936,17 +2936,6 @@ export default function AddEditFormControll({ reportData }) {
         JSON.stringify("Cargo Manifest Report"),
       );
       localStorage.setItem("selectedIgmRecordId", selectedReportIds || "");
-
-      const url = `/htmlReports/rptCargoManifest?reportId=1432`;
-      if (url) {
-        window.open(url, "_blank");
-      } else {
-        console.error(
-          "Unable to open the report: URL or ID is not defined.",
-          report,
-        );
-      }
-
       const filterConditionWithoutDropdowns =
         removeDropdownFields(filterCondition);
       const updatedCondition = {
@@ -2957,6 +2946,19 @@ export default function AddEditFormControll({ reportData }) {
         userId,
         clientId,
       };
+      localStorage.setItem(
+        "selectedReportCreatorId",
+        JSON.stringify(updatedCondition) || "",
+      );
+      const url = `/htmlReports/rptCargoManifest?reportId=1432`;
+      if (url) {
+        window.open(url, "_blank");
+      } else {
+        console.error(
+          "Unable to open the report: URL or ID is not defined.",
+          report,
+        );
+      }
       const json = {
         ...updatedCondition,
         data: selectedRows,
@@ -4915,6 +4917,31 @@ export default function AddEditFormControll({ reportData }) {
   };
 
   const handleKeyDown = (event) => {
+    const targetElement = event.target;
+    const activeElement = document.activeElement;
+    const isReactSelectElement = (element) =>
+      element &&
+      (element.id?.startsWith("react-select-") ||
+        element.closest?.('[id^="react-select-"]') ||
+        element.closest?.(".react-select__control") ||
+        element.closest?.(".react-select__menu") ||
+        element.getAttribute?.("role") === "combobox" ||
+        element.getAttribute?.("aria-autocomplete") === "list");
+
+    const isEditingControl =
+      (targetElement &&
+        (isReactSelectElement(targetElement) ||
+          targetElement.closest?.(".MuiInputBase-root") ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(targetElement.tagName))) ||
+      (activeElement &&
+        (isReactSelectElement(activeElement) ||
+          activeElement.closest?.(".MuiInputBase-root") ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName)));
+
+    if (isEditingControl) {
+      return;
+    }
+
     const maxColumns = grid.length; // Calculate the number of columns
     const maxRows = paginatedData?.length; // Calculate the number of rows
 

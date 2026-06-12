@@ -637,9 +637,27 @@ export default function NavbarPage() {
   };
 
   const CustomMenuList = (props) => {
-    const { pageNo, setPageNo, setScrollPosition, scrollPosition } = props;
+    const {
+      innerRef,
+      pageNo,
+      setPageNo,
+      setScrollPosition,
+      scrollPosition,
+    } = props;
     const menuListRef = useRef(null);
     const localScrollPosition = useRef(scrollPosition);
+    const setMenuListRef = React.useCallback(
+      (node) => {
+        menuListRef.current = node;
+
+        if (typeof innerRef === "function") {
+          innerRef(node);
+        } else if (innerRef) {
+          innerRef.current = node;
+        }
+      },
+      [innerRef],
+    );
 
     useEffect(() => {
       const menuList = menuListRef.current;
@@ -675,7 +693,7 @@ export default function NavbarPage() {
     }, [pageNo]);
 
     return (
-      <components.MenuList {...props} innerRef={menuListRef}>
+      <components.MenuList {...props} innerRef={setMenuListRef}>
         {props.children}
       </components.MenuList>
     );
@@ -683,6 +701,7 @@ export default function NavbarPage() {
 
   CustomMenuList.propTypes = {
     props: PropTypes.any,
+    innerRef: PropTypes.any,
     selectProps: PropTypes.any,
     children: PropTypes.any,
     pageNo: PropTypes.any,

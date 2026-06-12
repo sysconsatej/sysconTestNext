@@ -1259,16 +1259,18 @@ export default function AddEditFormControll({ reportData }) {
           reportData = await fetchReportData(requestBodyForMenuReportDetails);
           const getSpName = reportData.data[0].spName;
 
-          let responseData = await dynamicReportFilter(
-            updatedConditionWithFieldNames,
-            clientId,
-            getSpName,
-          );
+          let responseData = null;
 
           if (menuType === "L") {
             setLedgerCounter((prev) => prev + 1);
-            fetchLedgerReportData(getSpName);
+            await fetchLedgerReportData(getSpName);
             return;
+          } else {
+            responseData = await dynamicReportFilter(
+              updatedConditionWithFieldNames,
+              clientId,
+              getSpName,
+            );
           }
           if (responseData && responseData?.success) {
             if (enablePivot) {
@@ -1528,16 +1530,18 @@ export default function AddEditFormControll({ reportData }) {
           reportData = await fetchReportData(requestBodyForMenuReportDetails);
           const getSpName = reportData.data[0].spName;
 
-          let responseData = await dynamicReportFilter(
-            updatedConditionWithFieldNames,
-            clientId,
-            getSpName,
-          );
+          let responseData = null;
 
           if (menuType === "L") {
             setLedgerCounter((prev) => prev + 1);
-            fetchLedgerReportData(getSpName);
+            await fetchLedgerReportData(getSpName);
             return;
+          } else {
+            responseData = await dynamicReportFilter(
+              updatedConditionWithFieldNames,
+              clientId,
+              getSpName,
+            );
           }
           if (responseData && responseData?.success) {
             if (enablePivot) {
@@ -5568,6 +5572,12 @@ export default function AddEditFormControll({ reportData }) {
 
           const HEADER_IMAGE_WIDTH_PX = 700;
           const HEADER_IMAGE_HEIGHT_PX = 120;
+          const HEADER_IMAGE_PADDING_PX = 12;
+          const EXCEL_HEADING_BG = "0766AD";
+          const EXCEL_HEADING_TEXT = "FFFFFF";
+          const SECTION_HEADING_ROW_HEIGHT = 24;
+          const TABLE_HEADER_ROW_HEIGHT = 22;
+          const HEADING_LABEL_ROW_HEIGHT = 20;
 
           const BORDER_THIN = {
             top: { style: "thin" },
@@ -5582,8 +5592,27 @@ export default function AddEditFormControll({ reportData }) {
               .slice(0, 31)
               .trim() || "Sheet";
 
-          const styleCellPlain = (cell, { bold = false } = {}) => {
-            cell.font = { bold };
+          const styleCellPlain = (
+            cell,
+            {
+              bold = false,
+              bgColor = null,
+              fontColor = null,
+              border = BORDER_THIN,
+            } = {},
+          ) => {
+            cell.font = {
+              bold,
+              ...(fontColor ? { color: { argb: fontColor } } : {}),
+            };
+
+            if (bgColor) {
+              cell.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: bgColor },
+              };
+            }
 
             cell.alignment = {
               horizontal: "center",
@@ -5591,14 +5620,50 @@ export default function AddEditFormControll({ reportData }) {
               wrapText: true,
             };
 
-            cell.border = BORDER_THIN;
+            cell.border = border;
           };
 
-          const styleRowPlain = (row, { bold = false } = {}) => {
+          const styleRowPlain = (
+            row,
+            {
+              bold = false,
+              bgColor = null,
+              fontColor = null,
+              border = BORDER_THIN,
+            } = {},
+          ) => {
             row.eachCell({ includeEmpty: true }, (cell) =>
-              styleCellPlain(cell, { bold }),
+              styleCellPlain(cell, { bold, bgColor, fontColor, border }),
             );
           };
+
+          const styleRowByColCount = (
+            row,
+            colCount,
+            {
+              bold = false,
+              bgColor = null,
+              fontColor = null,
+              border = BORDER_THIN,
+            } = {},
+          ) => {
+            for (let c = 1; c <= colCount; c++) {
+              styleCellPlain(row.getCell(c), {
+                bold,
+                bgColor,
+                fontColor,
+                border,
+              });
+            }
+          };
+
+          const styleHeadingRow = (row, colCount) =>
+            styleRowByColCount(row, colCount, {
+              bold: true,
+              bgColor: EXCEL_HEADING_BG,
+              fontColor: EXCEL_HEADING_TEXT,
+              border: undefined,
+            });
 
           const autoWidth = (ws) => {
             ws.columns.forEach((col) => {
@@ -5648,12 +5713,31 @@ export default function AddEditFormControll({ reportData }) {
           };
 
           const addHeaderImageRow = async (ws, imgSrc, colCount) => {
+            const columnWidthPx = ws.columns
+              .slice(0, colCount)
+              .reduce((total, col) => total + ((col.width || 12) * 7 + 5), 0);
+            const imageWidthPx = Math.max(
+              80,
+              Math.min(
+                HEADER_IMAGE_WIDTH_PX,
+                columnWidthPx - HEADER_IMAGE_PADDING_PX * 2,
+              ),
+            );
+            const imageHeightPx = Math.min(
+              HEADER_IMAGE_HEIGHT_PX,
+              Math.round(
+                imageWidthPx *
+                  (HEADER_IMAGE_HEIGHT_PX / HEADER_IMAGE_WIDTH_PX),
+              ),
+            );
             const rImg = ws.addRow(new Array(colCount).fill(""));
 
             rImg.height = Math.max(
               40,
-              Math.round(HEADER_IMAGE_HEIGHT_PX * 0.75),
+              Math.ceil((imageHeightPx + HEADER_IMAGE_PADDING_PX * 2) * 0.75),
             );
+
+            ws.mergeCells(rImg.number, 1, rImg.number, colCount);
 
             const ext = guessExt(imgSrc);
             let imgId;
@@ -5667,17 +5751,20 @@ export default function AddEditFormControll({ reportData }) {
             }
 
             ws.addImage(imgId, {
-              tl: { col: 0, row: rImg.number - 1 },
+              tl: {
+                col: 0,
+                row: rImg.number - 1,
+                nativeColOff: HEADER_IMAGE_PADDING_PX * 9525,
+                nativeRowOff: HEADER_IMAGE_PADDING_PX * 9525,
+              },
               ext: {
-                width: HEADER_IMAGE_WIDTH_PX,
-                height: HEADER_IMAGE_HEIGHT_PX,
+                width: imageWidthPx,
+                height: imageHeightPx,
               },
               editAs: "oneCell",
             });
 
-            for (let c = 1; c <= colCount; c++) {
-              rImg.getCell(c).border = BORDER_THIN;
-            }
+            styleRowByColCount(rImg, colCount, { border: undefined });
           };
 
           const buildGstrSectionSheet = async (sheetKey, sectionObj) => {
@@ -5732,14 +5819,14 @@ export default function AddEditFormControll({ reportData }) {
 
             if (hasHeading) {
               const headRow = ws.addRow(new Array(colCount).fill(""));
-              headRow.height = 20;
+              headRow.height = SECTION_HEADING_ROW_HEIGHT;
 
               ws.mergeCells(headRow.number, 1, headRow.number, colCount);
 
               const c1 = ws.getCell(headRow.number, 1);
               c1.value = headingStr;
 
-              styleRowPlain(headRow, { bold: true });
+              styleHeadingRow(headRow, colCount);
             }
 
             const headingBlocks = getHeadingRowBlocks(sectionObj);
@@ -5750,11 +5837,8 @@ export default function AddEditFormControll({ reportData }) {
               const labelRow = ws.addRow(new Array(colCount).fill(""));
               const valueRow = ws.addRow(new Array(colCount).fill(""));
 
-              labelRow.height = 18;
+              labelRow.height = HEADING_LABEL_ROW_HEIGHT;
               valueRow.height = 18;
-
-              styleRowPlain(labelRow, { bold: true });
-              styleRowPlain(valueRow, { bold: false });
 
               for (let i = 0; i < usedCols; i++) {
                 const obj = arr[i];
@@ -5769,11 +5853,14 @@ export default function AddEditFormControll({ reportData }) {
                   valueRow.getCell(i + 1).value = v ?? "";
                 }
               }
+
+              styleHeadingRow(labelRow, colCount);
+              styleRowByColCount(valueRow, colCount, { bold: false });
             };
 
             const addHeadingBlock_V = (arr) => {
               const row = ws.addRow(new Array(colCount).fill(""));
-              row.height = 18;
+              row.height = HEADING_LABEL_ROW_HEIGHT;
 
               let colPtr = 1;
 
@@ -5788,7 +5875,12 @@ export default function AddEditFormControll({ reportData }) {
                 if (colPtr <= colCount) {
                   const cLabel = row.getCell(colPtr);
                   cLabel.value = label;
-                  styleCellPlain(cLabel, { bold: true });
+                  styleCellPlain(cLabel, {
+                    bold: true,
+                    bgColor: EXCEL_HEADING_BG,
+                    fontColor: EXCEL_HEADING_TEXT,
+                    border: undefined,
+                  });
                   colPtr++;
                 }
 
@@ -5815,7 +5907,8 @@ export default function AddEditFormControll({ reportData }) {
                 ["No Data"].concat(new Array(colCount - 1).fill("")),
               );
 
-              styleRowPlain(noDataHeader, { bold: true });
+              noDataHeader.height = TABLE_HEADER_ROW_HEIGHT;
+              styleHeadingRow(noDataHeader, colCount);
               autoWidth(ws);
 
               return;
@@ -5825,7 +5918,8 @@ export default function AddEditFormControll({ reportData }) {
               headers.concat(new Array(colCount - headers.length).fill("")),
             );
 
-            styleRowPlain(headerRow, { bold: true });
+            headerRow.height = TABLE_HEADER_ROW_HEIGHT;
+            styleHeadingRow(headerRow, colCount);
 
             dataRows.forEach((obj) => {
               const rowVals = headers.map((h) => {
@@ -6202,7 +6296,7 @@ export default function AddEditFormControll({ reportData }) {
           );
 
           if (menuType === "L") {
-            fetchLedgerReportData(getSpName);
+            await fetchLedgerReportData(getSpName);
             return;
           }
           if (responseData && responseData?.success) {
@@ -6465,7 +6559,9 @@ export default function AddEditFormControll({ reportData }) {
           setEditableErrorsData(spResponse.rowsAffected[0].errors);
           setFileUploadingLoader(false);
           setFileUploadProgress(100);
-          toast.error(`${spResponse?.rowsAffected[0]?.message || "PDF Uploaded Failed"}`);
+          toast.error(
+            `${spResponse?.rowsAffected[0]?.message || "PDF Uploaded Failed"}`,
+          );
           return extractedData;
         }
 
@@ -8190,6 +8286,31 @@ export default function AddEditFormControll({ reportData }) {
   };
 
   const handleKeyDown = (event) => {
+    const targetElement = event.target;
+    const activeElement = document.activeElement;
+    const isReactSelectElement = (element) =>
+      element &&
+      (element.id?.startsWith("react-select-") ||
+        element.closest?.('[id^="react-select-"]') ||
+        element.closest?.(".react-select__control") ||
+        element.closest?.(".react-select__menu") ||
+        element.getAttribute?.("role") === "combobox" ||
+        element.getAttribute?.("aria-autocomplete") === "list");
+
+    const isEditingControl =
+      (targetElement &&
+        (isReactSelectElement(targetElement) ||
+          targetElement.closest?.(".MuiInputBase-root") ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(targetElement.tagName))) ||
+      (activeElement &&
+        (isReactSelectElement(activeElement) ||
+          activeElement.closest?.(".MuiInputBase-root") ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(activeElement.tagName)));
+
+    if (isEditingControl) {
+      return;
+    }
+
     const maxColumns = grid.length; // Calculate the number of columns
     const maxRows = paginatedData?.length; // Calculate the number of rows
 

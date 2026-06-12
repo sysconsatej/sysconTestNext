@@ -63,6 +63,11 @@ import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import RowComponent from "@/app/(groupControl)/formControl/addEdit/RowComponent";
 import { getContainerActivity } from "@/services/auth/FormControl.services";
 import { fontFamilyStyles } from "@/app/globalCss";
+
+const INITIAL_RENDER_COUNT = 10;
+const RENDER_BATCH_COUNT = 10;
+const SCROLL_LOAD_THRESHOLD = 24;
+
 export default function AccordionUsage() {
   const [nextActOptions, setNextActOptions] = React.useState([]);
   const [agentOptions, setAgentOptions] = React.useState([]);
@@ -1195,86 +1200,6 @@ export default function AccordionUsage() {
     });
   };
 
-
-  // const handleEditLastActivityClick = async () => {
-  //   try {
-  //     if (newState?.containerNo && newState.containerNo.trim() !== "") {
-  //       const containerNumbers = newState.containerNo.split(",").map(c => c.trim());
-  //       const requestData = {
-  //         columns: "id",
-  //         tableName: "tblContainer",
-  //         whereCondition: `containerNo ='${containerNumbers}'`,
-  //         clientIdCondition: `status=1 FOR JSON PATH , INCLUDE_NULL_VALUES `,
-  //       };
-
-  //       const containerData = await fetchReportData(requestData);
-  //       const containerIdData = containerData.data[0].id;
-
-  //       const request = {
-  //         clientId: clientId,
-  //         containerId: containerIdData,
-  //       };
-
-  //       const containerEdit = await editLastActivity(request);
-  //       console.log("containerEdit", containerEdit);
-
-  //       if (containerEdit?.success && Array.isArray(containerEdit?.Chargers) && containerEdit.Chargers.length >= 1) {
-  //         const firstRecord = containerEdit.Chargers[0];  // latest
-  //         const secondRecord = containerEdit.Chargers.length >= 2 ? containerEdit.Chargers[1] : null;
-
-  //         const updatedMovements = newState.tblContainerMovement.map((movement) => ({
-  //           ...movement,
-
-  //           // ✅ Last activity from 2nd if exists, else 1st
-  //           lastActivity: secondRecord?.activityName ?? firstRecord.activityName ?? "",
-  //           lastActivitydropdown: [
-  //             {
-  //               value: (secondRecord?.activityId ?? firstRecord.activityId),
-  //               label: (secondRecord?.activityName ?? firstRecord.activityName),
-  //             },
-  //           ],
-  //           lastActivityDate: secondRecord?.activityDate ?? firstRecord.activityDate ?? "",
-
-  //           // ✅ FromLocation → 2nd record if exists, else 1st
-  //           fromLocation: secondRecord?.fromLocationName ?? firstRecord.fromLocationName ?? "",
-  //           fromLocationdropdown: [
-  //             {
-  //               value: (secondRecord?.fromLocationId ?? firstRecord.fromLocationId),
-  //               label: (secondRecord?.fromLocationName ?? firstRecord.fromLocationName),
-  //             },
-  //           ],
-
-  //           // ✅ ToLocation → 1st record if 2 exist, else empty
-  //           toLocation: secondRecord ? (firstRecord.toLocationName ?? "") : "",
-  //           toLocationdropdown: secondRecord
-  //             ? [{ value: firstRecord.toLocationId, label: firstRecord.toLocationName }]
-  //             : [],
-
-  //           // ✅ ActivityId always from 1st
-  //           activityId: firstRecord.activityId ?? "",
-  //           activityIddropdown: [
-  //             { value: firstRecord.activityId, label: firstRecord.activityName },
-  //           ],
-  //           activityDate: firstRecord.activityDate ?? "",
-  //         }));
-
-  //         setNewState({
-  //           ...newState,
-  //           tblContainerMovement: updatedMovements,
-  //         });
-  //       } else {
-  //         toast.warn("No activity records found for this container.");
-  //       }
-  //     } else {
-  //       toast.error("Please enter at least one container number.");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching container activity:", error);
-  //     toast.error("Something went wrong while fetching container data.");
-  //   }
-  // };
-
-
   const handleEditLastActivityClick = async () => {
     try {
       if (newState?.containerNo && newState.containerNo.trim() !== "") {
@@ -1876,7 +1801,8 @@ function ChildAccordianComponent({
     const container = tableRef.current;
     if (container) {
       const { scrollTop, scrollHeight, clientHeight } = container;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight;
+      const isAtBottom =
+        scrollTop + clientHeight >= scrollHeight - SCROLL_LOAD_THRESHOLD;
       if (isAtBottom) {
         //        // console.log("You have reached the bottom of the scroll.");
         renderMoreData();
@@ -1917,8 +1843,9 @@ function ChildAccordianComponent({
 
   useEffect(() => {
     // Initialize with initial data
-    setRenderedData(newState[section.tableName]?.slice(0, 10)); // Initially render 10 items
-    calculateTotalForRow(newState[section.tableName]);
+    const tableData = newState[section.tableName] || [];
+    setRenderedData(tableData.slice(0, INITIAL_RENDER_COUNT)); // Initially render 10 items
+    calculateTotalForRow(tableData);
     if (
       newState[section.tableName] &&
       newState[section.tableName]?.length > 0
@@ -1927,15 +1854,53 @@ function ChildAccordianComponent({
     }
   }, [newState]);
 
-  const renderMoreData = () => {
-    // Calculate the index range to render
-    const lastIndex = renderedData.length + 10;
-    const newData = newState[section.tableName]?.slice(
-      renderedData.length,
-      lastIndex
-    );
-    setRenderedData((prevData) => [...prevData, ...newData]);
-  };
+  const renderMoreData = React.useCallback(() => {
+    const tableData = newState[section.tableName] || [];
+
+    setRenderedData((prevData = []) => {
+      if (prevData.length >= tableData.length) {
+        return prevData;
+      }
+
+      const nextData = tableData.slice(
+        prevData.length,
+        prevData.length + RENDER_BATCH_COUNT
+      );
+
+      return nextData.length > 0 ? [...prevData, ...nextData] : prevData;
+    });
+  }, [newState, section.tableName]);
+
+  useEffect(() => {
+    const container = tableRef.current;
+    const tableDataLength = newState[section.tableName]?.length || 0;
+
+    if (
+      !container ||
+      !isChildAccordionOpen ||
+      renderedData.length === 0 ||
+      renderedData.length >= tableDataLength
+    ) {
+      return;
+    }
+
+    const frameId = requestAnimationFrame(() => {
+      const isContainerScrollable =
+        container.scrollHeight > container.clientHeight + SCROLL_LOAD_THRESHOLD;
+
+      if (!isContainerScrollable) {
+        renderMoreData();
+      }
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [
+    isChildAccordionOpen,
+    newState,
+    renderedData.length,
+    renderMoreData,
+    section.tableName,
+  ]);
 
   const deleteChildRecord = (index) => {
     try {
@@ -2069,41 +2034,6 @@ function ChildAccordianComponent({
       });
       return toast.error(error.message);
     }
-
-    // setNewState((prevState) => {
-    //   const newStateCopy = { ...prevState };
-    //   const updatedData = newStateCopy[section.tableName].filter(
-    //     (_, idx) => idx !== index
-    //   );
-    //   newStateCopy[section.tableName] = updatedData;
-
-    //   if (updatedData.length === 0) {
-    //     setInputFieldsVisible((prev) => !prev);
-    //   }
-    //   return newStateCopy;
-    // });
-    // setSubmitNewState((prevState) => {
-    //   const newStateCopy = { ...prevState };
-    //   const updatedData = newStateCopy[section.tableName].filter(
-    //     (_, idx) => idx !== index
-    //   );
-    //   newStateCopy[section.tableName] = updatedData;
-    //   if (updatedData.length === 0) {
-    //     setInputFieldsVisible((prev) => !prev);
-    //   }
-    //   return newStateCopy;
-    // });
-    // setOriginalData((prevState) => {
-    //   const newStateCopy = { ...prevState };
-    //   const updatedData = newStateCopy[section?.tableName]?.filter(
-    //     (_, idx) => idx !== index
-    //   );
-    //   newStateCopy[section.tableName] = updatedData;
-    //   if (updatedData?.length === 0) {
-    //     setInputFieldsVisible((prev) => !prev);
-    //   }
-    //   return newStateCopy;
-    // });
   };
 
   // eslint-disable-next-line no-unused-vars

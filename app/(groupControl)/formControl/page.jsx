@@ -287,9 +287,6 @@ export default function StickyHeadTable() {
   const [isFocused5, setIsFocused5] = useState(false);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [scrollPosition, setScrollPosition] = useState(0);
-  const [reportTemplateData, setReportTemplate] = useState([]);
-  const [SelectedRow, setSelectedRow] = useState("");
-  const [isNewModalVisible, setNewModalVisible] = useState(false);
   const [sortData, setSortData] = useState({
     label: "",
     order: "",
@@ -961,43 +958,6 @@ export default function StickyHeadTable() {
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const storedUserData = localStorage.getItem("userData");
-      if (storedUserData) {
-        const decryptedData = decrypt(storedUserData);
-        const userData = JSON.parse(decryptedData);
-        const clientCode = userData[0].clientCode;
-
-        const requestBody = {
-          tableName: "tblReportTemplate",
-          whereCondition: {
-            status: 1,
-            clientCode: clientCode,
-          },
-          projection: {
-            reportTemplateName: 1,
-          },
-        };
-        console.log("requestBody", requestBody);
-
-        try {
-          const data = await fetchDataAPI(requestBody);
-          if (data.data.length >= 0) {
-            console.log("Fetched data reportTemplate:", data.data);
-            setReportTemplate(data.data);
-            console.log("reportTemplate", data.data);
-          } else {
-            throw new Error("Failed to fetch data");
-          }
-        } catch (error) {
-          console.error("Error fetching data:", error);
-        }
-      }
-    };
-
-    fetchData();
-  }, []);
 
   async function fetchDropDownData(field, inputValueForDataFetch) {
     const requestData = {
@@ -2062,6 +2022,7 @@ export default function StickyHeadTable() {
 
   const CustomMenuList = (props) => {
     const {
+      innerRef,
       dropPageNo,
       setDropPageNo,
       setScrollPosition,
@@ -2071,6 +2032,18 @@ export default function StickyHeadTable() {
     const menuListRef = useRef(null);
     // Adding a flag to control when to adjust scroll
     const localScrollPosition = useRef(scrollPosition); // To track scroll position locally
+    const setMenuListRef = React.useCallback(
+      (node) => {
+        menuListRef.current = node;
+
+        if (typeof innerRef === "function") {
+          innerRef(node);
+        } else if (innerRef) {
+          innerRef.current = node;
+        }
+      },
+      [innerRef],
+    );
     useEffect(() => {
       const menuList = menuListRef.current;
       if (menuList) {
@@ -2104,7 +2077,7 @@ export default function StickyHeadTable() {
     }, [dropPageNo]); // Added adjustScrollNeeded as a dependency
 
     return (
-      <components.MenuList {...props} innerRef={menuListRef}>
+      <components.MenuList {...props} innerRef={setMenuListRef}>
         {props.children}
       </components.MenuList>
     );
@@ -2112,6 +2085,7 @@ export default function StickyHeadTable() {
 
   CustomMenuList.propTypes = {
     props: PropTypes.any,
+    innerRef: PropTypes.any,
     selectProps: PropTypes.any,
     children: PropTypes.any,
     dropPageNo: PropTypes.any,

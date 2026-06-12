@@ -134,10 +134,8 @@ export async function randomImage() {
   }
 }
 
-export async function sideBarMenu(userName) {
+export async function sideBarMenu() {
   try {
-    console.log("userName", userName);
-
     const token = localStorage.getItem("token");
     const companyId = sessionStorage.getItem("companyId");
     const companyBranchId = sessionStorage.getItem("branchId");
@@ -153,7 +151,6 @@ export async function sideBarMenu(userName) {
         "x-access-token": JSON.parse(token),
       },
       body: JSON.stringify({
-        ...userName,
         companyId,
         companyBranchId,
         loginfinYear,

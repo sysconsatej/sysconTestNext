@@ -36,11 +36,24 @@ export default function RptIGM() {
   useEffect(() => {
     const fetchData = async () => {
       const id = localStorage.getItem("selectedIgmRecordId");
+      const selectedReportCreatorId = localStorage.getItem(
+        "selectedReportCreatorId",
+      );
       if (id != null) {
         try {
           const token = localStorage.getItem("token");
           if (!token) throw new Error("No token found");
-          const filterCondition = { id: id };
+          const parsedSelectedReportCreatorId =
+            typeof selectedReportCreatorId === "string"
+              ? JSON.parse(selectedReportCreatorId)
+              : selectedReportCreatorId;
+
+          const filterCondition = {
+            ...parsedSelectedReportCreatorId,
+            id: id,
+          };
+
+          console.log("filterCondition", filterCondition);
           const response = await fetch(
             `${baseUrl}/Sql/api/Reports/cargoManifestBldata`,
             // `${baseUrl}/Sql/api/Reports/igmBlData`,
@@ -243,6 +256,8 @@ export default function RptIGM() {
                   style={{ fontSize: "8px" }}
                 >
                   {data?.shipperName || ""}
+                  <br />
+                  {data?.shipperAddress || ""}
                 </p>
               </div>
 
@@ -284,7 +299,9 @@ export default function RptIGM() {
                 className="pl-1 border-black border-r pt-1"
               >
                 <p className="font-bold uppercase">NO. AND KIND OF PACKAGES</p>
-                <p>{data?.noOfPackages || ""} </p>
+                <p>
+                  {data?.noOfPackages || ""} {data?.typeOfPackage || ""}
+                </p>
               </div>
 
               {/* B/L NO. & DATE */}
@@ -299,6 +316,10 @@ export default function RptIGM() {
             <div className="pl-1 pt-1">
               <p className="font-bold uppercase">MARKS & NUMBER</p>
               {renderMultiline(data?.marksNos || "")}
+            </div>
+            <div className="pl-1 pt-1">
+              <p className="font-bold uppercase">BL Clause</p>
+              {renderMultiline(data?.blClause || "")}
             </div>
           </div>
 
@@ -354,6 +375,8 @@ export default function RptIGM() {
             <div className="p-1 border-b border-black">
               <p className="font-bold uppercase">Cargo Type</p>
               <p>{data?.cargoType || ""}</p>
+              <p className="font-bold uppercase">Freight Terms</p>
+              <p>{data?.freightPrepaidCollect || ""}</p>
             </div>
           </div>
         </div>
@@ -452,7 +475,7 @@ export default function RptIGM() {
                       className="border-b border-black text-black"
                       style={{ fontSize: "8px", padding: "2px" }}
                     >
-                      {item?.netWt || ""}
+                      {item?.netWt || ""} {item?.containerGrossWTUnit || ""}
                     </td>
                     <td
                       className="border-b border-black text-black"

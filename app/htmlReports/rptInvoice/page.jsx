@@ -1259,7 +1259,7 @@ function rptInvoice() {
               );
             setPurchaseInvoicePrint(purchaseInvoicePrintCharges || []);
 
-            const firstPageItemsPerPageForCreditNotePrint1Charges = 15;
+            const firstPageItemsPerPageForCreditNotePrint1Charges = 12;
             const creditNotePrint1Charges =
               splitIntoChunksWithExtraArrayForTaxInvoice(
                 data.data[0]?.tblInvoiceCharge ?? [],
@@ -1942,7 +1942,7 @@ function rptInvoice() {
       <div className="border border-black">
         <div className="flex flex-grow w-full justify-center items-center p-1">
           <h1 className="text-black font-bold text-sm  underline">
-            {data[0]?.invoiceHeading || "CREDIT NOTE"}
+            {data[0]?.voucher || "CREDIT NOTE"}
           </h1>
         </div>
         <div className="flex justify-between w-full p-2 border-t border-black">
@@ -5136,6 +5136,8 @@ function rptInvoice() {
     const showHsnGrid =
       isLastPage || (currentPageLength > 4 && currentPageLength < 10);
     const showChargeSummary = index === totalPages - 1;
+    const showCreditNoteFirstPageEndBorder =
+      reportIds?.[0] === "CreditNote Print" && index === 0 && totalPages > 1;
 
     return (
       <>
@@ -5200,7 +5202,13 @@ function rptInvoice() {
               return (
                 <div
                   key={idx}
-                  className={`flex w-full ${idx === array.length - 1 ? "border-b" : ""}`}
+                  className={`flex w-full ${
+                    idx === array.length - 1
+                      ? showCreditNoteFirstPageEndBorder
+                        ? "border-b border-black"
+                        : "border-b"
+                      : ""
+                  }`}
                   style={{ fontSize: "9px", width: "100%" }}
                 >
                   <p
@@ -7908,14 +7916,37 @@ function rptInvoice() {
     );
   };
   const TaxInvoiceRemarks = ({ data }) => {
+    const remarks = data?.[0]?.remarks || "";
+    const containerNos = data?.[0]?.containerNos || "";
+
     return (
-      <div className="border-r border-l border-b border-black p-1">
-        <p style={{ fontSize: "9px" }}>
-          <span className="font-bold">Remarks : </span> {data[0]?.remarks || ""}
+      <div className="border-r border-l border-b border-black ps-1">
+        <p style={{ fontSize: "8px" }}>
+          <span className="font-bold">Remarks : </span>
+          {remarks}
         </p>
-        <p style={{ fontSize: "9px", marginTop: "2px" }}>
-          <span className="font-bold">Container No(s) : </span>
-          {data[0]?.containerNos || ""}
+
+        <p
+          style={{
+            fontSize: "8px",
+            marginTop: "1px",
+            display: "flex",
+            alignItems: "flex-start",
+          }}
+        >
+          <span className="font-bold" style={{ flexShrink: 0 }}>
+            Container No(s) :&nbsp;
+          </span>
+
+          <span
+            style={{
+              flex: 1,
+              overflowWrap: "anywhere",
+              wordBreak: "break-word",
+            }}
+          >
+            {containerNos}
+          </span>
         </p>
       </div>
     );
@@ -17817,7 +17848,7 @@ function rptInvoice() {
       <TaxInvoiceRemarks data={data} />
       <TaxInvoiceChargeDetailsForTaxInvoiceReportFF
         data={data}
-        charge={generalSalesInvoicePrint}
+        charge={invoiceChargeDataForTaxInvoice}
         index={index}
         hsnSac={hsnSac}
       />

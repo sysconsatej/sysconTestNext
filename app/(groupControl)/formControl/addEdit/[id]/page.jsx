@@ -20,6 +20,7 @@ import {
   gettingTaxDetailsQuotation,
   validateSubmit,
   getCopyData,
+  fetchDynamicReportSpData,
 } from "@/services/auth/FormControl.services.js";
 import { ButtonPanel } from "@/components/Buttons/customeButton.jsx";
 import CustomeInputFields from "@/components/Inputs/customeInputFields";
@@ -299,101 +300,102 @@ export default function AddEditFormControll() {
     fetchClientName();
   }, [clientId]);
 
-  useEffect(() => {
-    const fetchChargeDetails = async () => {
-      if (
-        newState.calculateTax !== undefined &&
-        newState.calculateTax !== null
-      ) {
-        if (newState.tblRateRequestCharge.length > 0) {
-          if (newState.calculateTax === true) {
-            const businessSegmentId = newState.businessSegmentId;
+  //  MONGO DB API CALLED NO USE
+  // useEffect(() => {
+  //   const fetchChargeDetails = async () => {
+  //     if (
+  //       newState.calculateTax !== undefined &&
+  //       newState.calculateTax !== null
+  //     ) {
+  //       if (newState.tblRateRequestCharge.length > 0) {
+  //         if (newState.calculateTax === true) {
+  //           const businessSegmentId = newState.businessSegmentId;
 
-            // Iterate through all charges and add functionality for each
-            for (const charge of newState.tblRateRequestCharge) {
-              const chargeId = charge.chargeId;
-              const buyRate = charge.buyRate;
-              let taxAmount = 0;
-              const request = {
-                tableName: "tblCharge",
-                whereCondition: {
-                  _id: chargeId,
-                  status: 1,
-                },
-                projection: {
-                  "tblChargeDetails.glId": 1,
-                },
-              };
-              try {
-                const response = await fetchDataAPI(request);
-                const glId = response.data[0].tblChargeDetails[0].glId;
-                if (glId) {
-                  const requestData = {
-                    glId: glId,
-                    department: businessSegmentId,
-                  };
-                  const fetchTaxDetails =
-                    await gettingTaxDetailsQuotation(requestData);
-                  const taxRate = fetchTaxDetails.taxDetails?.taxRate;
-                  if (taxRate && buyRate) {
-                    taxAmount = (taxRate * buyRate) / 100;
-                    //console.log("taxAmount", taxAmount);
-                    charge.buyTaxAmount = taxAmount.toString();
-                  } else {
-                    //console.log("taxAmount", taxAmount);
-                    charge.buyTaxAmount = taxAmount.toString();
-                  }
-                } else {
-                  //console.log("Gl Id is missing!");
-                  charge.buyTaxAmount = 0;
-                }
-              } catch (error) {
-                console.error(
-                  `Error fetching charge details for chargeId ${chargeId}`,
-                  error,
-                );
-              }
-            }
+  //           // Iterate through all charges and add functionality for each
+  //           for (const charge of newState.tblRateRequestCharge) {
+  //             const chargeId = charge.chargeId;
+  //             const buyRate = charge.buyRate;
+  //             let taxAmount = 0;
+  //             const request = {
+  //               tableName: "tblCharge",
+  //               whereCondition: {
+  //                 _id: chargeId,
+  //                 status: 1,
+  //               },
+  //               projection: {
+  //                 "tblChargeDetails.glId": 1,
+  //               },
+  //             };
+  //             try {
+  //               const response = await fetchDataAPI(request);
+  //               const glId = response.data[0].tblChargeDetails[0].glId;
+  //               if (glId) {
+  //                 const requestData = {
+  //                   glId: glId,
+  //                   department: businessSegmentId,
+  //                 };
+  //                 const fetchTaxDetails =
+  //                   await gettingTaxDetailsQuotation(requestData);
+  //                 const taxRate = fetchTaxDetails.taxDetails?.taxRate;
+  //                 if (taxRate && buyRate) {
+  //                   taxAmount = (taxRate * buyRate) / 100;
+  //                   //console.log("taxAmount", taxAmount);
+  //                   charge.buyTaxAmount = taxAmount.toString();
+  //                 } else {
+  //                   //console.log("taxAmount", taxAmount);
+  //                   charge.buyTaxAmount = taxAmount.toString();
+  //                 }
+  //               } else {
+  //                 //console.log("Gl Id is missing!");
+  //                 charge.buyTaxAmount = 0;
+  //               }
+  //             } catch (error) {
+  //               console.error(
+  //                 `Error fetching charge details for chargeId ${chargeId}`,
+  //                 error,
+  //               );
+  //             }
+  //           }
 
-            //console.log("Rate Request Rohit- ", newState.tblRateRequestCharge);
+  //           //console.log("Rate Request Rohit- ", newState.tblRateRequestCharge);
 
-            // Update the state using indexValue as unique identifier
-            setNewState((prevState) => ({
-              ...prevState,
-              tblRateRequestCharge: prevState.tblRateRequestCharge.map(
-                (charge) => {
-                  // Use indexValue to identify the specific charge to update
-                  const updatedCharge = newState.tblRateRequestCharge.find(
-                    (c) => c.indexValue === charge.indexValue,
-                  );
-                  if (updatedCharge) {
-                    return {
-                      ...charge, // Spread the existing charge details
-                      buyTaxAmount: parseFloat(updatedCharge.buyTaxAmount) || 0, // Insert buyTaxAmount
-                    };
-                  }
-                  return charge; // Return other charges unchanged
-                },
-              ),
-            }));
-          } else if (newState.calculateTax === false) {
-            //console.log("Rate Request - ", newState.tblRateRequestCharge);
+  //           // Update the state using indexValue as unique identifier
+  //           setNewState((prevState) => ({
+  //             ...prevState,
+  //             tblRateRequestCharge: prevState.tblRateRequestCharge.map(
+  //               (charge) => {
+  //                 // Use indexValue to identify the specific charge to update
+  //                 const updatedCharge = newState.tblRateRequestCharge.find(
+  //                   (c) => c.indexValue === charge.indexValue,
+  //                 );
+  //                 if (updatedCharge) {
+  //                   return {
+  //                     ...charge, // Spread the existing charge details
+  //                     buyTaxAmount: parseFloat(updatedCharge.buyTaxAmount) || 0, // Insert buyTaxAmount
+  //                   };
+  //                 }
+  //                 return charge; // Return other charges unchanged
+  //               },
+  //             ),
+  //           }));
+  //         } else if (newState.calculateTax === false) {
+  //           //console.log("Rate Request - ", newState.tblRateRequestCharge);
 
-            // Update state in case of false as well
-            setNewState((prevState) => ({
-              ...prevState,
-              tblRateRequestCharge: prevState.tblRateRequestCharge,
-            }));
-          } else {
-            console.error("Unknown Error occurred!");
-          }
-        }
-      }
-    };
+  //           // Update state in case of false as well
+  //           setNewState((prevState) => ({
+  //             ...prevState,
+  //             tblRateRequestCharge: prevState.tblRateRequestCharge,
+  //           }));
+  //         } else {
+  //           console.error("Unknown Error occurred!");
+  //         }
+  //       }
+  //     }
+  //   };
 
-    // Call the async function inside useEffect
-    fetchChargeDetails();
-  }, [newState.calculateTax]);
+  //   // Call the async function inside useEffect
+  //   fetchChargeDetails();
+  // }, [newState.calculateTax]);
 
   useEffect(() => {
     function checkIsDataSaved(firstState, newState) {
@@ -719,10 +721,13 @@ export default function AddEditFormControll() {
   // };
 
   async function fetchData() {
-    const { clientId } = getUserDetails();
+    const { clientId, financialYear } = getUserDetails();
     try {
       // Call API for table grid data
-      const tableViewApiResponse = await formControlMenuList(search.menuName);
+      const tableViewApiResponse = await formControlMenuList(
+        search.menuName,
+        financialYear,
+      );
 
       if (tableViewApiResponse.success) {
         const apiData = tableViewApiResponse.data[0];
@@ -1011,7 +1016,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: true }
                 : field,
           );
@@ -1051,7 +1056,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, isEditable: true }
                 : field,
           );
@@ -1156,7 +1161,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               hiddenColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, columnsToBeVisible: false }
                 : field,
           );
@@ -1196,7 +1201,7 @@ export default function AddEditFormControll() {
           const updatedContainerPlanner = updatedState[sectionsArray[0]].map(
             (field) =>
               disabledColumnIds.includes(field.id) &&
-                field.isControlShow !== false
+              field.isControlShow !== false
                 ? { ...field, isEditable: false }
                 : field,
           );
@@ -1219,13 +1224,13 @@ export default function AddEditFormControll() {
   }, [newState, actionFieldNames]);
 
   useEffect(() => {
-
     const isHazardous = newState?.cargoTypeIddropdown
       ? newState?.cargoTypeIddropdown?.[0]?.label === "HAZARDOUS"
       : newState?.cargoTypeId === 164;
 
-    const routeLabel = newState?.routeIddropdown?.[0]?.label || newState?.routeId;
-    console.log('newState', newState)
+    const routeLabel =
+      newState?.routeIddropdown?.[0]?.label || newState?.routeId;
+    console.log("newState", newState);
     const isTranshipment = routeLabel === "Transhipment" || 11058;
 
     const isSwitchBl = newState?.switchBl === "1";
@@ -1340,7 +1345,6 @@ export default function AddEditFormControll() {
       console.error("Error in functionHideDisable:", error);
     }
   };
-
 
   useEffect(() => {
     const updateCharges = async () => {
@@ -2035,7 +2039,7 @@ export default function AddEditFormControll() {
                 ],
                 buyCurrencyId:
                   item.buyCurrencyId !== null &&
-                    item.buyCurrencyId !== undefined
+                  item.buyCurrencyId !== undefined
                     ? String(item.buyCurrencyId)
                     : null,
                 buyCurrencyIddropdown: [
@@ -2046,7 +2050,7 @@ export default function AddEditFormControll() {
                 ],
                 sellCurrencyId:
                   item.sellCurrencyId !== null &&
-                    item.sellCurrencyId !== undefined
+                  item.sellCurrencyId !== undefined
                     ? String(item.sellCurrencyId)
                     : null,
                 sellCurrencyIddropdown: [
@@ -2057,12 +2061,12 @@ export default function AddEditFormControll() {
                 ],
                 buyExchangeRate:
                   item.buyExchangeRate !== null &&
-                    item.buyExchangeRate !== undefined
+                  item.buyExchangeRate !== undefined
                     ? String(item.buyExchangeRate)
                     : null,
                 sellExchangeRate:
                   item.sellExchangeRate !== null &&
-                    item.sellExchangeRate !== undefined
+                  item.sellExchangeRate !== undefined
                     ? String(item.sellExchangeRate)
                     : null,
               };
@@ -2308,6 +2312,64 @@ export default function AddEditFormControll() {
     handleCreateBatch: async () => {
       setCreateBatch(true);
     },
+    handleOpenPrint: async () => {
+      if (isReportPresent && search?.id !== null) {
+        setOpenPrintModal((prev) => !prev);
+        setSubmittedMenuId(search?.menuName);
+      }
+    },
+    createMrgRateRequestCharges: async () => {
+      try {
+        const qtyRows = newState?.tblRateRequestQty || [];
+        const { companyId, clientId, financialYear, branchId } =
+          getUserDetails();
+        if (!Array.isArray(qtyRows) || qtyRows.length === 0) {
+          toast.error("Please add quantity details in grid");
+          return;
+        }
+
+        const filterCondition = {
+          plrId: newState?.plrId || null,
+          polId: newState?.polId || null,
+          podId: newState?.podId || null,
+          fpdId: newState?.fpdId || null,
+          clientId: clientId || null,
+          companyId: companyId || null,
+          companyBranchId: branchId || null,
+          financialYearId: financialYear || null,
+          tblRateRequestQty: qtyRows,
+        };
+
+        const response = await fetchDynamicReportSpData(
+          "getRaterequestcharges",
+          filterCondition,
+        );
+
+        if (response?.success) {
+          const chargesData = Array.isArray(response?.data)
+            ? response.data.map((item, index) => ({
+                ...item,
+                indexValue: index,
+              }))
+            : [];
+
+          setNewState((prev) => ({
+            ...prev,
+            tblRateRequestCharge: chargesData,
+          }));
+
+          setSubmitNewState((prev) => ({
+            ...prev,
+            tblRateRequestCharge: chargesData,
+          }));
+        } else {
+          toast.error(response?.message || "Failed to fetch charge details");
+        }
+      } catch (error) {
+        console.error("createMrgRateRequestCharges error:", error);
+        toast.error("Something went wrong while fetching charge details");
+      }
+    },
   };
 
   const onConfirm = async (conformData) => {
@@ -2496,7 +2558,7 @@ export default function AddEditFormControll() {
       {openPrintModal && (
         <PrintModal
           setOpenPrintModal={setOpenPrintModal}
-          submittedRecordId={submittedRecordId}
+          submittedRecordId={submittedRecordId || search?.id}
           submittedMenuId={submittedMenuId}
           openPrintModal={openPrintModal}
           pageType={"Forms"}
@@ -3154,12 +3216,12 @@ function ChildAccordianComponent({
         const newValue =
           item.gridTypeTotal === "s"
             ? rowData?.reduce((sum, row) => {
-              const parsedValue =
-                typeof row[item.fieldname] === "number"
-                  ? row[item.fieldname]
-                  : parseFloat(row[item.fieldname] || 0);
-              return isNaN(parsedValue) ? sum : sum + parsedValue;
-            }, 0) // Calculate sum for 's' type
+                const parsedValue =
+                  typeof row[item.fieldname] === "number"
+                    ? row[item.fieldname]
+                    : parseFloat(row[item.fieldname] || 0);
+                return isNaN(parsedValue) ? sum : sum + parsedValue;
+              }, 0) // Calculate sum for 's' type
             : rowData?.filter((row) => row[item.fieldname]).length; // Calculate count for 'c' type
         setColumnTotals((prevColumnTotals) => ({
           ...prevColumnTotals,
@@ -3203,7 +3265,6 @@ function ChildAccordianComponent({
   //     if (!newState || !Array.isArray(newState.tblJobContainer)) {
   //       return newState; // Return unchanged state if invalid
   //     }
-
 
   //     const toNum = (v) =>
   //       v == null || v === "" ? 0 : Number(String(v).replace(/,/g, "")) || 0;
@@ -3339,11 +3400,10 @@ function ChildAccordianComponent({
           }
 
           if (updatedData) {
-
             setNewState((prevState) => {
-              const updatedRows = updatedData.newState[section.tableName].filter(
-                (_, idx) => idx !== index,
-              );
+              const updatedRows = updatedData.newState[
+                section.tableName
+              ].filter((_, idx) => idx !== index);
               const updatedState = {
                 ...updatedData.newState,
                 [section.tableName]: updatedRows,
@@ -3353,9 +3413,9 @@ function ChildAccordianComponent({
             });
 
             setSubmitNewState((prevState) => {
-              const updatedRows = updatedData.newState[section.tableName].filter(
-                (_, idx) => idx !== index,
-              );
+              const updatedRows = updatedData.newState[
+                section.tableName
+              ].filter((_, idx) => idx !== index);
               const updatedState = {
                 ...updatedData.newState,
                 [section.tableName]: updatedRows,
@@ -3648,7 +3708,7 @@ function ChildAccordianComponent({
         newCopy[tableName] = [];
       }
       // Append the new state for the tableName
-      newCopy[tableName].push(newState[tableName]);
+      // newCopy[tableName].push(newState[tableName]);
       // Return the modified copy
       return newCopy;
     });
@@ -3902,7 +3962,7 @@ function ChildAccordianComponent({
       const right = Math.round(
         Math.floor(
           tableRef.current?.getBoundingClientRect()?.width +
-          tableRef.current?.scrollLeft,
+            tableRef.current?.scrollLeft,
         ),
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
@@ -4055,7 +4115,10 @@ function ChildAccordianComponent({
           className={` ${styles.txtColor} relative flex `}
           sx={{
             padding: inputFieldsVisible ? "0" : "0",
-            height: newState[section.tableName]?.length <= 0 && !inputFieldsVisible ? "2.5rem" : "auto",
+            height:
+              newState[section.tableName]?.length <= 0 && !inputFieldsVisible
+                ? "2.5rem"
+                : "auto",
             width: "100%",
           }}
         >
@@ -4209,20 +4272,22 @@ function ChildAccordianComponent({
                                           zIndex: 10,
                                         }}
                                       >
-                                        {!isView && !isChildAddHidden && index === 0 && (
-                                          <HoverIcon
-                                            defaultIcon={addLogo}
-                                            hoverIcon={plusIconHover}
-                                            altText={"Add"}
-                                            title={"Add"}
-                                            onClick={() => {
-                                              inputFieldsVisible == false &&
-                                                setInputFieldsVisible(
-                                                  (prev) => !prev,
-                                                );
-                                            }}
-                                          />
-                                        )}
+                                        {!isView &&
+                                          !isChildAddHidden &&
+                                          index === 0 && (
+                                            <HoverIcon
+                                              defaultIcon={addLogo}
+                                              hoverIcon={plusIconHover}
+                                              altText={"Add"}
+                                              title={"Add"}
+                                              onClick={() => {
+                                                inputFieldsVisible == false &&
+                                                  setInputFieldsVisible(
+                                                    (prev) => !prev,
+                                                  );
+                                              }}
+                                            />
+                                          )}
                                         <span className={`${styles.labelText}`}>
                                           Sr No.
                                         </span>
@@ -4237,7 +4302,7 @@ function ChildAccordianComponent({
                                         isView && index === 0
                                           ? "29px"
                                           : section?.showSrNo == true ||
-                                            section?.showSrNo == "true"
+                                              section?.showSrNo == "true"
                                             ? "29px !important"
                                             : "0px !important",
                                       zIndex: 10,
@@ -4343,7 +4408,7 @@ function ChildAccordianComponent({
                               isGridEdit={
                                 checker
                                   ? section?.gridEditableOnLoad?.toLowerCase() ===
-                                  "true"
+                                    "true"
                                   : isGridEdit
                               }
                               setIsGridEdit={setIsGridEdit}
@@ -4406,10 +4471,10 @@ function ChildAccordianComponent({
                                               {(field.type === "number" ||
                                                 field.type === "decimal" ||
                                                 field.type === "string") &&
-                                                field.gridTotal
+                                              field.gridTotal
                                                 ? columnTotals[
-                                                  field.fieldname
-                                                ].toString()
+                                                    field.fieldname
+                                                  ].toString()
                                                 : ""}
                                             </div>
                                           </div>

@@ -37,7 +37,7 @@ import {
 import { toast } from "react-toastify";
 import Checkbox from "@mui/material/Checkbox";
 import { ActionButton } from "@/components/ActionsButtons";
-import * as onSubmitValidation from "@/helper/onSubmitFunction";
+import * as onGridSaveValidation from "@/helper/onGridSave";
 
 const icons = [PlayIcon1, PlayIcon2, PlayIcon3, PlayIcon4];
 
@@ -50,17 +50,25 @@ function isConfigFlagEnabled(value) {
   return false;
 }
 
-function onSubmitFunctionCall(functionData, data) {
+async function onGridSaveFunctionCall(
+  functionData,
+  newState,
+  formControlData,
+  values,
+  setStateVariable,
+  submitNewState,
+  setSubmitNewState,
+) {
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
-  console.log(functionData, "functionData");
+  //console.log(functionData, "functionData");
   // Check if we have a function name match, and we have an argsMatch (even if there are no arguments)
   if (funcNameMatch && argsMatch !== null) {
     const funcName = funcNameMatch[1];
     const argsStr = argsMatch[1] || "";
 
     // Find the function in formControlValidation by the extracted name
-    const func = onSubmitValidation?.[funcName];
+    const func = onGridSaveValidation?.[funcName];
 
     if (typeof func === "function") {
       // Prepare arguments: If there are no arguments, argsStr will be an empty string
@@ -70,11 +78,18 @@ function onSubmitFunctionCall(functionData, data) {
       } else {
         args = argsStr; // Has arguments, pass them as an object
       }
-      console.log(args);
+      //console.log(args);
       // Call the function with the prepared arguments
-      onSubmitValidation?.[funcName]({
-        ...data,
+      let result = onGridSaveValidation?.[funcName]({
+        args,
+        newState,
+        formControlData,
+        values,
+        setStateVariable,
+        submitNewState,
+        setSubmitNewState,
       });
+      return result;
       // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
     }
   }
@@ -827,7 +842,7 @@ export default function RowComponent({
                         hoverIcon={saveIconHover}
                         altText={"Save"}
                         title={"Save"}
-                        onClick={() => {
+                        onClick={ async () => {
                           const nextChildRow = applyVoucherDetailManualFlags(
                             childValuseObj,
                             row,
@@ -850,19 +865,77 @@ export default function RowComponent({
                               return;
                             }
                           }
-                          try {
+                           try {
                             if (
-                              sectionData.functionOnSubmit &&
-                              sectionData.functionOnSubmit !== null
+                              sectionData.functionOnGridSave &&
+                              sectionData.functionOnGridSave != null
                             ) {
-                              sectionData?.functionOnSubmit
-                                .split(";")
-                                .forEach((fn) => {
-                                  onSubmitFunctionCall(fn, childValuseObj);
-                                });
-                              // onSubmitValidation[sectionData.functionOnSubmit]({
-                              //   ...childValuseObj})
+                              for (const fun of sectionData.functionOnGridSave
+                                .trim()
+                                .split(";") || []) {
+                                let updatedData = await onGridSaveFunctionCall(
+                                  fun,
+                                  newState,
+                                  formControlData,
+                                  childValuseObj,
+                                  setChildValuseObj,
+                                );
+                                if (updatedData?.alertShow == true) {
+                                  setParaText(updatedData.message);
+                                  setIsError(true);
+                                  setOpenModal((prev) => !prev);
+                                  setTypeofModal("onCheck");
+                                }
+                                if (updatedData) {
+                                  setChildValuseObj((prev) => {
+                                    return { ...prev, ...updatedData?.values };
+                                  });
+
+                             setNewState((prev) => {
+                               const newState = { ...prev, ...updatedData?.newState };
+                      
+                            const idToUpdate = childValuseObj.indexValue;
+
+                            newState[sectionData.tableName] = newState[
+                              sectionData.tableName
+                            ].map((record) => {
+                           
+                              console.log(record.indexValue);
+                              if (record.indexValue === idToUpdate) {
+               
+                                return childValuseObj;
+                              }
+                              return record;
+                            });
+
+                            return newState;
+                                  });
+
+                                  setSubmitNewState((prev) => {
+                                   const newState = { ...prev, ...updatedData?.newState };
+                      
+                            const idToUpdate = childValuseObj.indexValue;
+
+                            newState[sectionData.tableName] = newState[
+                              sectionData.tableName
+                            ].map((record) => {
+                           
+                              if (record.indexValue === idToUpdate) {
+               
+                                return childValuseObj;
+                              }
+                              return record;
+                            });
+
+                            return newState;
+                            
+                                  });
+
+
+                                }
+                              }
                             }
+
                           } catch (error) {
                             return toast.error(error.message);
                           }

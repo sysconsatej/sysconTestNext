@@ -1,4 +1,4 @@
-import { fetchReportData } from "@/services/auth/FormControl.services";
+import { fetchReportData,fetchThirdLevelDetailsFromApi } from "@/services/auth/FormControl.services";
 import { getUserDetails } from "./userDetails";
 
 const setJobContainer = async (obj) => {
@@ -144,4 +144,201 @@ const setJobContainer = async (obj) => {
   }
 };
 
-export { setJobContainer,copyContainerData };
+const getThirdLevelDetails = async (obj) => {
+  const {
+    args,
+    newState,
+    formControlData,
+    setFormControlData,
+    values,
+    fieldName,
+    tableName,
+    setStateVariable,
+    onChangeHandler,
+  } = obj;
+
+  const { companyId, clientId, branchId, userId, financialYear } =
+    getUserDetails();
+
+  // Parse args
+  let argNames;
+  let splitArgs = [];
+  if (
+    args === undefined ||
+    args === null ||
+    args === "" ||
+    (typeof args === "object" && Object.keys(args).length === 0)
+  ) {
+    argNames = args;
+  } else {
+    argNames = args.split(",").map((arg) => arg.trim());
+    for (const iterator of argNames) {
+      splitArgs.push(iterator.split("."));
+    }
+  }
+
+  const {
+    businessSegmentId,
+    voucherTypeId,
+    blId,
+    plrId,
+    podId,
+    fpdId,
+    polId,
+    depotId,
+    billingPartyId,
+    containerStatusId,
+    fromDate,
+    toDate,
+    exchangeRate,
+  } = newState;
+
+  const {
+    jobId,
+    chargeId,
+    cargoTypeId,
+    sizeId,
+    typeId,
+    containerRepairId,
+    containerTransactionId,
+  } = values;
+
+  const requestData = {
+    billingPartyId: billingPartyId,
+    clientId: clientId,
+    jobId: jobId,
+    chargeId: chargeId,
+    companyId: companyId,
+    companyBranchId: branchId,
+    fromDate: fromDate,
+    toDate: toDate,
+    clientId: clientId,
+    businessSegmentId: businessSegmentId,
+    voucherTypeId: voucherTypeId,
+    blId: blId,
+    plrId: plrId,
+    podId: podId,
+    fpdId: fpdId,
+    polId: polId,
+    depotId: depotId,
+    containerStatusId: containerStatusId,
+    cargoTypeId: cargoTypeId,
+    sizeId: sizeId,
+    typeId: typeId,
+    containerRepairId: containerRepairId,
+    containerTransactionId: containerTransactionId,
+    invoiceExchageRate: exchangeRate,
+  };
+
+  const fetchChargeDetails = await fetchThirdLevelDetailsFromApi(requestData);
+
+  if (fetchChargeDetails) {
+    const { Chargers = [] } = fetchChargeDetails;
+
+    const toNum = (v) =>
+      v === null || v === undefined || v === "" ? null : Number(v);
+
+    const updatedChargers = Chargers.map((item, i) => {
+      const _containerId = toNum(item.containerId);
+      const _sizeId = toNum(item.sizeId);
+      const _typeId = toNum(item.typeId);
+      const _jobId = toNum(item.jobId);
+      const _containerTransactionId = toNum(item.containerTransactionId);
+      const _containerRepairId = toNum(item.containerRepairId);
+      const _blId = toNum(item.blId);
+      return {
+        ...item,
+        indexValue: i,
+        containerIddropdown:
+          _containerId !== null
+            ? [
+              {
+                value: _containerId,
+                label: item.containerNo ?? String(_containerId),
+              },
+            ]
+            : [],
+        sizeIddropdown:
+          _sizeId !== null
+            ? [{ value: _sizeId, label: item.sizeName ?? String(_sizeId) }]
+            : [],
+        typeIddropdown:
+          _typeId !== null
+            ? [{ value: _typeId, label: item.typeName ?? String(_typeId) }]
+            : [],
+        jobIddropdown:
+          _jobId !== null
+            ? [{ value: _jobId, label: item.jobNo ?? String(_jobId) }]
+            : [],
+        containerTransactionIddropdown:
+          _containerTransactionId !== null
+            ? [
+              {
+                value: _containerTransactionId,
+                label:
+                  item.containerTransactionName ??
+                  String(_containerTransactionId),
+              },
+            ]
+            : [],
+        containerRepairIddropdown:
+          _containerRepairId !== null
+            ? [
+              {
+                value: _containerRepairId,
+                label: item.containerRepairName ?? String(_containerRepairId),
+              },
+            ]
+            : [],
+        blIddropdown:
+          _blId !== null
+            ? [{ value: _blId, label: item.blNo ?? String(_blId) }]
+            : [],
+        // optional: keep per-row calculated amount for clarity
+        calculatedAmount:
+          (Number(item.noOfDays) || 0) * (Number(item.rate) || 0),
+      };
+    });
+
+    // ✅ total qty
+    const qty = updatedChargers.reduce(
+      (acc, item) => acc + (Number(item["qty"]) || 0),
+      0,
+    );
+
+    // ✅ total of (noOfDays * rate)
+    const totalWeighted = updatedChargers.reduce(
+      (acc, item) =>
+        acc + (Number(item["noOfDays"]) || 0) * (Number(item["rate"]) || 0),
+      0,
+    );
+
+    // ✅ average rate
+    const avgRate = qty > 0 ? totalWeighted / qty : 0;
+
+    values.tblInvoiceChargeDetails = updatedChargers;
+    values["qty"] = qty;
+    values["rate"] = avgRate.toFixed(2);
+    values["totalAmountHc"] = (qty * avgRate * 1).toFixed(2);
+    values["totalAmountFc"] = (
+      qty *
+      avgRate *
+      Number(newState.exchangeRate || 1)
+    ).toFixed(2);
+
+    setStateVariable((prev) => ({
+      ...prev,
+      tblInvoiceChargeDetails: updatedChargers,
+      qty: qty,
+      rate: avgRate.toFixed(2),
+      totalAmountHc: (qty * avgRate).toFixed(2),
+      totalAmountFc: (
+        qty *
+        avgRate *
+        Number(newState.exchangeRate || 1)
+      ).toFixed(2),
+    }));
+  }
+};
+
+export { setJobContainer,copyContainerData,getThirdLevelDetails};

@@ -58,13 +58,18 @@ function rptQuotation() {
 
   useEffect(() => {
     const selectedReports = Array.isArray(reportIds) ? reportIds : [];
-    const isSeaQuotationPrint = selectedReports.some((reportId) =>
-      ["Quotation Sea Print", "Quotation Sea Print FSA"].includes(reportId),
+
+    const portraitReports = [
+      "Quotation Sea Print",
+      "Quotation Sea Print FSA",
+      "Customer Quotation Air",
+    ];
+
+    const isPortraitReport = selectedReports.some((reportId) =>
+      portraitReports.includes(reportId),
     );
 
-    if (isSeaQuotationPrint) {
-      setPrintOrientation("portrait");
-    }
+    setPrintOrientation(isPortraitReport ? "portrait" : null);
   }, [reportIds]);
 
   useEffect(() => {
@@ -5630,15 +5635,16 @@ Operator/ Airport Authority or any other third party.
                     : ""}
                 </td>
               </tr>
-              <tr>
+              {/* as told by Tabish */}
+              {/* <tr>
                 <th style={{ fontSize: "9px" }}>Trade Terms:</th>
                 <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].pickupAddress !== ""
                     ? data[0].tradeTerms
                     : ""}
                 </td>
-              </tr>
-              <tr>
+              </tr> */}
+              {/* <tr>
                 <th style={{ fontSize: "9px" }}>Validity From:</th>
                 <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].validityFrom
@@ -5652,7 +5658,7 @@ Operator/ Airport Authority or any other third party.
                     )
                     : ""}
                 </td>
-              </tr>
+              </tr> */}
             </tbody>
           </table>
         </div>
@@ -5663,7 +5669,7 @@ Operator/ Airport Authority or any other third party.
                 <th style={{ fontSize: "9px" }}>Consignee:</th>
                 <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].consName !== ""
-                    ? data[0].consigneeText
+                    ? data[0].consigneeName
                     : ""}
                 </td>
               </tr>
@@ -5675,7 +5681,7 @@ Operator/ Airport Authority or any other third party.
                     : ""}
                 </td>
               </tr>
-              <tr>
+              {/* <tr>
                 <th style={{ fontSize: "9px" }}>Validity To:</th>
                 <td className="pl-5" style={{ fontSize: "9px" }}>
                   {data && data.length > 0 && data[0].validityTo
@@ -5689,7 +5695,7 @@ Operator/ Airport Authority or any other third party.
                     )
                     : ""}
                 </td>
-              </tr>
+              </tr> */}
             </tbody>
           </table>
         </div>
@@ -7187,42 +7193,47 @@ Operator/ Airport Authority or any other third party.
   //   );
   // };
   const QuotationExportChargeModuleAirWithoutTax = ({ data }) => {
-    console.log("data", data);
     const rateRequestCharge =
       data && Array.isArray(data) && data.length > 0
-        ? data[0].tblRateRequestCharge
+        ? data[0]?.tblRateRequestCharge || []
         : [];
 
-    console.log("NEWCharge", rateRequestCharge);
+    const toNum = (value) => {
+      const num = Number(String(value ?? "").replace(/,/g, ""));
+      return Number.isFinite(num) ? num : 0;
+    };
 
-    const filteredRateRequestCharge = rateRequestCharge.filter((charge) => {
-      return !data.some(
-        (dataItem) => dataItem.vendorName !== charge.vendorName,
-      );
-    });
+    const to2 = (value) => toNum(value).toFixed(2);
 
-    // const sortedRateRequestCharge = rateRequestCharge.sort((a, b) => {
-    //   if (a.sellCurrencyName === "") return 1;
-    //   if (b.sellCurrencyName === "") return -1;
-    //   return a.sellCurrencyName?.localeCompare(b.sellCurrencyName);
-    // });
+    const getCurrency = (item) =>
+      item?.sellCurrencyName ||
+      item?.sellCurrency ||
+      item?.currencyName ||
+      item?.currencyCode ||
+      "";
 
-    const sortedRateRequestCharge = rateRequestCharge.filter(
-      (item) => item.sellTaxAmount == null || item.sellTaxAmount === "",
-    );
+    const sortedRateRequestCharge = rateRequestCharge
+      .filter((item) => item.sellTaxAmount == null || item.sellTaxAmount === "")
+      .sort((a, b) => getCurrency(a).localeCompare(getCurrency(b)));
 
     const subtotals = sortedRateRequestCharge.reduce((acc, curr) => {
-      const currency = curr.sellCurrencyName || "";
+      const currency = getCurrency(curr);
+
       if (!acc[currency]) {
-        acc[currency] = { amount: 0, totalAmount: 0 };
+        acc[currency] = {
+          amount: 0,
+          totalAmount: 0,
+        };
       }
-      acc[currency].amount += curr.sellAmount || 0;
-      acc[currency].totalAmount += curr.sellTotalAmount || 0;
+
+      acc[currency].amount += toNum(curr.sellAmount);
+      acc[currency].totalAmount += toNum(curr.sellTotalAmount);
+
       return acc;
     }, {});
 
     const grandTotal = sortedRateRequestCharge.reduce(
-      (acc, charge) => acc + (charge.sellTotalAmount || 0),
+      (acc, charge) => acc + toNum(charge.sellTotalAmount),
       0,
     );
 
@@ -7266,41 +7277,71 @@ Operator/ Airport Authority or any other third party.
                 Total Amount
               </th>
               <th className="text-center border-black border-b border-r pt-2">
-                Remarks:
+                Remarks
               </th>
             </tr>
           </thead>
+
           <tbody>
             {sortedRateRequestCharge.map((item, index, array) => {
+              const currency = getCurrency(item);
+
+              const nextCurrency =
+                index < array.length - 1 ? getCurrency(array[index + 1]) : "";
+
+              const lastOfCurrency =
+                index === array.length - 1 || nextCurrency !== currency;
+
+              const subtotal = subtotals[currency] || {
+                amount: 0,
+                totalAmount: 0,
+              };
+
               const rows = [
                 <tr key={`item-${index}`}>
                   <td
                     className="px-3 border-black border-b border-r py-px"
                     style={{ maxWidth: "150px", overflowWrap: "break-word" }}
                   >
-                    {item.chargeDescription || ""}
+                    {item.chargeDescription || item.chargeName || ""}
                   </td>
+
                   <td className="text-left border-black border-b border-r py-px">
-                    {item.sizeName || ""} / {item.typeName || ""}
+                    {item.sizeName || ""} / {item.typeName || item.typeCode || ""}
                   </td>
+
                   <td className="text-right border-black border-b border-r py-px">
-                    {item.qty?.toFixed(2) || ""}
+                    {item.qty != null && item.qty !== "" ? to2(item.qty) : ""}
                   </td>
+
                   <td className="text-right border-black border-b border-r py-px">
-                    {item.sellCurrency || ""}
+                    {currency}
                   </td>
-                  <td className="text-left border-black border-b border-r py-px">
-                    {item.sellExchangeRate?.toFixed(2) || ""}
-                  </td>
+
                   <td className="text-right border-black border-b border-r py-px">
-                    {item.sellRate?.toFixed(2) || ""}
+                    {item.sellExchangeRate != null && item.sellExchangeRate !== ""
+                      ? to2(item.sellExchangeRate)
+                      : ""}
                   </td>
+
                   <td className="text-right border-black border-b border-r py-px">
-                    {item.sellAmount?.toFixed(2) || ""}
+                    {item.sellRate != null && item.sellRate !== ""
+                      ? to2(item.sellRate)
+                      : ""}
                   </td>
+
                   <td className="text-right border-black border-b border-r py-px">
-                    {item.sellTotalAmount?.toFixed(2) || ""}
+                    {item.sellAmount != null && item.sellAmount !== ""
+                      ? to2(item.sellAmount)
+                      : ""}
                   </td>
+
+                  <td className="text-right border-black border-b border-r py-px">
+                    {item.sellTotalAmount != null && item.sellTotalAmount !== ""
+                      ? to2(item.sellTotalAmount)
+                      : ""}
+                  </td>
+
                   <td
                     className="text-left border-black border-b border-r py-px"
                     style={{ maxWidth: "150px", overflowWrap: "break-word" }}
@@ -7310,34 +7351,37 @@ Operator/ Airport Authority or any other third party.
                 </tr>,
               ];
 
-              const lastOfCurrency =
-                index === array.length - 1 ||
-                array[index + 1].sellCurrency !== item.sellCurrency;
               if (lastOfCurrency) {
-                const subtotal = subtotals[item.sellCurrency];
                 rows.push(
-                  <tr key={`subtotal-${item.sellCurrency}`}>
+                  <tr key={`subtotal-${currency || index}`}>
                     <td className="border-black border-b border-r font-bold py-px">
-                      Total ({item.sellCurrency}):
+                      Total {currency ? `(${currency})` : ""}:
                     </td>
+
                     <td
                       colSpan={5}
                       className="text-center border-black border-b border-r"
                     ></td>
+
                     <td className="text-right border-black border-b border-r font-bold py-px">
-                      {subtotal?.amount.toFixed(2)} ({item.sellCurrency})
+                      {to2(subtotal.amount)} {currency ? `(${currency})` : ""}
                     </td>
+
                     <td className="text-right border-black border-b border-r font-bold py-px">
-                      {subtotal?.totalAmount.toFixed(2)} ({item.sellCurrency})
+                      {to2(subtotal.totalAmount)}{" "}
+                      {currency ? `(${currency})` : ""}
                     </td>
+
                     <td className="text-center border-black border-b border-r"></td>
                   </tr>,
                 );
               }
+
               return rows;
             })}
           </tbody>
         </table>
+
         <div
           className="mt-2 flex flex-wrap"
           style={{ width: "100%", marginTop: "5px" }}
@@ -7355,6 +7399,7 @@ Operator/ Airport Authority or any other third party.
               {grandTotal.toFixed(2)}
             </div>
           </div>
+
           <div
             className="text-xs w-full flex justify-between"
             style={{ border: "1px solid black" }}
@@ -7519,14 +7564,14 @@ Operator/ Airport Authority or any other third party.
                 <th>Routing: </th>
                 <td className="pl-5"></td>
               </tr>
-              <tr>
+              {/* <tr>
                 <th>Commodity: </th>
                 <td className="pl-5">
                   {data && data.length > 0 && data[0].commodity !== ""
                     ? data[0].commodity
                     : ""}
                 </td>
-              </tr>
+              </tr> */}
               <tr>
                 <th>Chargeable Wt: </th>
                 <td className="pl-5">
@@ -10849,12 +10894,26 @@ Operator/ Airport Authority or any other third party.
   );
 
   const ExportQuotationAirModule = () => (
-    <div>
-      <div className="container mx-auto p-14 bodyColour text-black h-auto bgTheme">
+    <div
+      style={{
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        className="bodyColour text-black bgTheme"
+        style={quotationSeaPageStyle}
+      >
         <CompanyImgModule />
-        <h1 style={{ textAlign: "center", fontWeight: "bold" }}>
-          Quotation {data[0]?.businessSegmentName}
+
+        <h1
+          style={{ textAlign: "center", fontWeight: "bold" }}
+          className="mt-2"
+        >
+          Quotation {data?.[0]?.businessSegmentName || ""}
         </h1>
+
         <QuotationSeaCustomerModule data={data} />
         <QuotationExportShipperModule data={data} />
         <QuotationExportShipperDetailsModuleAir data={data} />
@@ -10862,7 +10921,8 @@ Operator/ Airport Authority or any other third party.
         <QuotationExportAirChargeModuleWithTax data={data} />
         <QuotationExportChargeModuleAirWithoutTax data={data} />
         <QuotationAirGridChargeWise data={data} />
-        <QuotationExportParagrafModule data={data} />
+        {/* <QuotationExportParagrafModule data={data} /> */}
+        <TermsAndConditionDynamic termsAndConditions={termsAndConditions} />
       </div>
     </div>
   );
@@ -11679,6 +11739,20 @@ Operator/ Airport Authority or any other third party.
                   className="pl-2 pt-1 pb-1"
                 >
                   {formatDate(data[0]?.validityTo)}
+                </td>
+              </tr>
+              <tr>
+                <th
+                  style={{ width: "40%", fontSize: "10px" }}
+                  className="pr-1 pt-0 pb-0"
+                >
+                  Container No:
+                </th>
+                <td
+                  style={{ width: "60%", fontSize: "10px" }}
+                  className="pl-2 pt-1 pb-1"
+                >
+                  {data?.[0]?.remarks || ""}
                 </td>
               </tr>
             </tbody>
@@ -12728,17 +12802,19 @@ Operator/ Airport Authority or any other third party.
               );
             case "Customer Quotation Air":
               return (
-                <>
+                <React.Fragment key={`${reportId}-${index}`}>
                   <div
-                    key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
-                    className={
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    }
+                    className={index < reportIds.length - 1 ? "report-spacing" : ""}
+                    style={{
+                      pageBreakAfter: index < reportIds.length - 1 ? "always" : "auto",
+                      backgroundColor: "lightgrey",
+                      padding: "10px",
+                    }}
                   >
                     {ExportQuotationAirModule()}
                   </div>
-                </>
+                </React.Fragment>
               );
             case "Quotation Transportation (FTL)":
               return (

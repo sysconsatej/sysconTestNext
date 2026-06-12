@@ -777,18 +777,16 @@ export default function rptDoLetter() {
     return (
       <div
         style={{
-          minHeight: "calc(297mm - 48px)",
-          display: "flex",
-          flexDirection: "column",
+          width: "100%",
+          height: "auto",
+          display: "block",
         }}
       >
         <div
           className="mx-auto"
           style={{
             width: "100%",
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
+            display: "block",
           }}
         >
           <CompanyImgModule />
@@ -1150,19 +1148,15 @@ export default function rptDoLetter() {
           {/* This section creates the large bordered area like Voucher0 */}
           <div
             style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
+              display: "block",
               borderLeft: "1px solid #000",
               borderRight: "1px solid #000",
               borderBottom: "1px solid #000",
-              minHeight: "0",
             }}
           >
             <div
               style={{
                 padding: "8px 4px",
-                flex: 1,
               }}
             >
               <p
@@ -1274,8 +1268,7 @@ export default function rptDoLetter() {
                             margin: "auto",
                             padding: "24px",
                             boxSizing: "border-box",
-                            display: "flex",
-                            flexDirection: "column",
+                            display: "block",
                             position: "relative",
                             overflow: "hidden",
                           }}
