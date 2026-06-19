@@ -52,14 +52,26 @@ export default function Print({
       );
 
       const iframe = document.createElement("iframe");
+      let cleanupTimer;
+
+      const cleanupPrintFrame = () => {
+        window.clearTimeout(cleanupTimer);
+
+        if (iframe.parentNode) {
+          document.body.removeChild(iframe);
+        }
+
+        window.URL.revokeObjectURL(pdfUrl);
+      };
 
       iframe.style.position = "fixed";
       iframe.style.right = "0";
       iframe.style.bottom = "0";
-      iframe.style.width = "0";
-      iframe.style.height = "0";
+      iframe.style.width = "1px";
+      iframe.style.height = "1px";
       iframe.style.border = "0";
-      iframe.style.visibility = "hidden";
+      iframe.style.opacity = "0";
+      iframe.style.pointerEvents = "none";
 
       iframe.src = pdfUrl;
 
@@ -67,13 +79,21 @@ export default function Print({
 
       iframe.onload = () => {
         setTimeout(() => {
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
+          const printWindow = iframe.contentWindow;
 
-          setTimeout(() => {
-            document.body.removeChild(iframe);
-            window.URL.revokeObjectURL(pdfUrl);
-          }, 3000);
+          if (!printWindow) {
+            cleanupPrintFrame();
+            toast.error("Error while opening print.");
+            return;
+          }
+
+          printWindow.onafterprint = cleanupPrintFrame;
+          printWindow.focus();
+          printWindow.print();
+
+          // Edge can close the print dialog if the iframe/blob URL disappears
+          // while the dialog is still open, so keep them alive as a fallback.
+          cleanupTimer = window.setTimeout(cleanupPrintFrame, 60000);
         }, 500);
       };
     } catch (error) {

@@ -28,6 +28,7 @@ export const getSocket = ({ serverUrl }) => {
             reconnectionDelay: 1000,
             reconnectionDelayMax: 30000,
             transports: ['websocket', 'polling'],
+            path: '/chat-app/socket.io',
 
         })
     }

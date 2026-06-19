@@ -269,7 +269,7 @@ function CustomeInputFields({
   //   }
   // }, []);
 
-    useEffect(() => {
+  useEffect(() => {
     let defaultValues = {};
     inputFieldData.forEach((field) => {
       if (field.controlDefaultValue && !values[field.fieldname]) {
@@ -345,7 +345,7 @@ function CustomeInputFields({
     Object.assign(updatedValues, {
       [field.fieldname]:
         Array.isArray(formattedValue) &&
-        field.controlname?.toLowerCase() === "dropdown"
+          field.controlname?.toLowerCase() === "dropdown"
           ? formattedValue.join(",")
           : formattedValue,
     });
@@ -443,7 +443,7 @@ function CustomeInputFields({
     Object.assign(updatedValues, {
       [field.fieldname]:
         Array.isArray(formattedValue) &&
-        field.controlname?.toLowerCase() === "dropdown"
+          field.controlname?.toLowerCase() === "dropdown"
           ? formattedValue.join(",")
           : formattedValue,
     });
@@ -588,11 +588,10 @@ function CustomeInputFields({
 
   return (
     <div
-      className={`flex flex-wrap py-[3px] ${
-        inputFieldData?.map((field) => field.isBreak).includes(true)
-          ? ""
-          : "mr-2 "
-      }
+      className={`flex flex-wrap py-[3px] ${inputFieldData?.map((field) => field.isBreak).includes(true)
+        ? ""
+        : "mr-2 "
+        }
       `}
     >
       {inputFieldData?.map((field, index, array) => {
@@ -879,16 +878,11 @@ function InputFieldRenderer(props) {
     return value.length >= format.length;
   };
 
-  const canCommitPickerDate = (value, fieldName, format) => {
+  const canCommitPickerDate = (value) => {
     if (!value) return true;
 
-    const typedValue = dateInputTextRef.current[fieldName];
-    if (dateInputTypingRef.current[fieldName]) {
-      return (
-        typedValue &&
-        hasCompleteDateInputText(typedValue, format) &&
-        dayjs(typedValue, format, true).isValid()
-      );
+    if (dayjs.isDayjs(value)) {
+      return value.isValid();
     }
 
     return dayjs(value).isValid();
@@ -1138,8 +1132,8 @@ function InputFieldRenderer(props) {
       referenceView: field.referenceView,
       dropdownFilter:
         field.dropdownFilter &&
-        field.dropdownFilter !== null &&
-        field.dropdownFilter !== ""
+          field.dropdownFilter !== null &&
+          field.dropdownFilter !== ""
           ? dynamicValuReplace(field.dropdownFilter)
           : "",
       search: inputValueForDataFetch,
@@ -1461,25 +1455,76 @@ function InputFieldRenderer(props) {
     dateInputTypingRef.current[field.fieldname] = false;
   };
 
+  // const handleDateTimeChange = (e, field) => {
+  //   const dateStr = (e?.target?.value ?? "").trim();
+  //   const fmt = dateTimePickerFormat;
+  //   rememberDateInputText(e, field.fieldname);
+  //   if (!dateStr) {
+  //     handleChange("", field);
+  //     return;
+  //   }
+  //   if (!hasCompleteDateInputText(dateStr, fmt)) return;
+
+  //   const dateObj = dayjs(dateStr, fmt, true);
+  //   if (!dateObj.isValid()) {
+  //     toast.error("Invalid date");
+  //     return;
+  //   }
+  //   handleChange(dateObj, field);
+  //   dateInputTypingRef.current[field.fieldname] = false;
+  // };
+
   const handleDateTimeChange = (e, field) => {
-    const dateStr = (e?.target?.value ?? "").trim();
     const fmt = dateTimePickerFormat;
-    rememberDateInputText(e, field.fieldname);
+    const fieldName = field.fieldname;
+
+    const dateStr = (e?.target?.value ?? "").trim();
+
+    rememberDateInputText(e, fieldName);
+
     if (!dateStr) {
+      dateInputTypingRef.current[fieldName] = false;
+      dateInputTextRef.current[fieldName] = "";
       handleChange("", field);
       return;
     }
-    if (!hasCompleteDateInputText(dateStr, fmt)) return;
+
+    if (!hasCompleteDateInputText(dateStr, fmt)) {
+      dateInputTypingRef.current[fieldName] = true;
+      return;
+    }
 
     const dateObj = dayjs(dateStr, fmt, true);
+
     if (!dateObj.isValid()) {
+      dateInputTypingRef.current[fieldName] = true;
       toast.error("Invalid date");
       return;
     }
-    handleChange(dateObj, field);
-    dateInputTypingRef.current[field.fieldname] = false;
-  };
 
+    dateInputTypingRef.current[fieldName] = false;
+    dateInputTextRef.current[fieldName] = "";
+
+    handleChange(dateObj, field);
+  };
+  const getDateTimePickerValue = (value) => {
+    if (!value) return null;
+
+    if (dayjs.isDayjs(value)) {
+      return value.isValid() ? value : null;
+    }
+
+    const dbFormat = "YYYY-MM-DD HH:mm:ss";
+
+    const parsedDbDate = dayjs(value, dbFormat, true);
+    if (parsedDbDate.isValid()) return parsedDbDate;
+
+    const parsedDisplayDate = dayjs(value, dateTimePickerFormat, true);
+    if (parsedDisplayDate.isValid()) return parsedDisplayDate;
+
+    const parsedNormalDate = dayjs(value);
+    return parsedNormalDate.isValid() ? parsedNormalDate : null;
+  };
   const handleChangeDynamic = (value, field, switchToText) => {
     let formattedValue = value;
     let updatedValues = {};
@@ -1542,7 +1587,7 @@ function InputFieldRenderer(props) {
     Object.assign(updatedValues, {
       [field.fieldname]:
         Array.isArray(formattedValue) &&
-        field.controlname?.toLowerCase() === "dropdown"
+          field.controlname?.toLowerCase() === "dropdown"
           ? formattedValue.join(",")
           : formattedValue,
     });
@@ -1746,10 +1791,10 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase(),
-                      ) && !field.isEditable
+                      field.isEditableMode?.toLowerCase(),
+                    ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                    !field.isEditable)
+                  !field.isEditable)
               }
               InputLabelProps={{
                 classes: {
@@ -1765,15 +1810,14 @@ function InputFieldRenderer(props) {
               }}
             >
               <p
-                className={`absolute left-[11px] z-10 px-2 transition-all duration-200 ${
-                  showLabel ||
+                className={`absolute left-[11px] z-10 px-2 transition-all duration-200 ${showLabel ||
                   values[field.fieldname] ||
                   inputValueChange.length > 0
-                    ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 opacity-100" // Label moves to the top
-                    : inputValueChange.length == 0 || !values[field.fieldname]
-                      ? "top-[calc(100%-1.2rem)] opacity-100"
-                      : "" // Label sits at the bottom, emulating a placeholder
-                }`}
+                  ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 opacity-100" // Label moves to the top
+                  : inputValueChange.length == 0 || !values[field.fieldname]
+                    ? "top-[calc(100%-1.2rem)] opacity-100"
+                    : "" // Label sits at the bottom, emulating a placeholder
+                  }`}
                 style={{ fontSize: "var(--inputFontSize)" }}
               >
                 <span
@@ -1831,17 +1875,17 @@ function InputFieldRenderer(props) {
                     ? inEditMode?.isCopy === true
                       ? !field?.isCopyEditable
                       : ["e", "b"].includes(
-                          field.isEditableMode?.toLowerCase(),
-                        ) && !field.isEditable
-                    : ["a", "b"].includes(
                         field.isEditableMode?.toLowerCase(),
-                      ) && !field.isEditable)
+                      ) && !field.isEditable
+                    : ["a", "b"].includes(
+                      field.isEditableMode?.toLowerCase(),
+                    ) && !field.isEditable)
                 }
                 value={
                   Array.isArray(dropDownValues)
                     ? dropDownValues?.find(
-                        (item) => item.value == values?.[field.fieldname],
-                      )
+                      (item) => item.value == values?.[field.fieldname],
+                    )
                     : null
                 }
                 noOptionsMessage={() =>
@@ -1984,15 +2028,14 @@ function InputFieldRenderer(props) {
         <LightTooltip title={getTooltipValue() || inputLabel}>
           <div className="relative ">
             <p
-              className={`text-[8px] absolute left-[11px] z-10 px-2 transition-all duration-200 ${
-                showLabel ||
+              className={`text-[8px] absolute left-[11px] z-10 px-2 transition-all duration-200 ${showLabel ||
                 values[field.fieldname] ||
                 inputValueChange.length > 0
-                  ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-75 opacity-100" // Label moves to the top
-                  : inputValueChange.length == 0 || !values[field.fieldname]
-                    ? "top-[calc(100%-1.2rem)] opacity-100"
-                    : "" // Label sits at the bottom, emulating a placeholder
-              }`}
+                ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-75 opacity-100" // Label moves to the top
+                : inputValueChange.length == 0 || !values[field.fieldname]
+                  ? "top-[calc(100%-1.2rem)] opacity-100"
+                  : "" // Label sits at the bottom, emulating a placeholder
+                }`}
             >
               <span
                 onClick={() => {
@@ -2000,12 +2043,11 @@ function InputFieldRenderer(props) {
                   setMenuOpen(true);
                 }}
                 style={{ color: "rgba(0, 0, 0, 0.75)" }}
-                className={`${
-                  (showLabel || inputValueChange.length > 0) &&
+                className={`${(showLabel || inputValueChange.length > 0) &&
                   values[field.fieldname]
-                    ? "text-[8px]"
-                    : "text-[9px]"
-                }`}
+                  ? "text-[8px]"
+                  : "text-[9px]"
+                  }`}
               >
                 {field.isRequired ? (
                   <span className={`${styles.inputTextColor}`}>
@@ -2072,19 +2114,19 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase(),
-                      ) && !field.isEditable
+                      field.isEditableMode?.toLowerCase(),
+                    ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                    !field.isEditable)
+                  !field.isEditable)
               }
               value={
                 values?.[`${field.fieldname}multiselect`] ||
-                dropDownValues?.length > 0
+                  dropDownValues?.length > 0
                   ? dropDownValues?.filter((value) =>
-                      values?.[`${field.fieldname}`]
-                        ?.split(",")
-                        ?.includes(value.value.toString()),
-                    )
+                    values?.[`${field.fieldname}`]
+                      ?.split(",")
+                      ?.includes(value.value.toString()),
+                  )
                   : [] || []
               }
               noOptionsMessage={() =>
@@ -2213,9 +2255,8 @@ function InputFieldRenderer(props) {
               className="absolute px-2 inline bg-[--inputBg] pr-[10%] leading-[0.8px] top-[-1px] left-[8px] p-0 scale-100"
             >
               <span
-                className={`${
-                  isView ? "text-[#B2BAC2]" : styles.inputTextColor
-                } font-[var(--inputFontWeight)]`}
+                className={`${isView ? "text-[#B2BAC2]" : styles.inputTextColor
+                  } font-[var(--inputFontWeight)]`}
                 style={{ fontSize: "var(--inputFontSize)" }}
               >
                 {field.isRequired ? (
@@ -2279,86 +2320,86 @@ function InputFieldRenderer(props) {
               {/* Array source */}
               {Array.isArray(field.dropDownValues)
                 ? field.dropDownValues.map((item, idx) => {
-                    const optionValue = item.id.toString();
-                    const optionLabel = item.value.toString();
-                    return (
-                      <FormControlLabel
-                        key={idx}
-                        value={optionValue}
-                        label={optionLabel}
-                        labelPlacement="start"
-                        sx={radioControlStyle}
-                        control={
-                          <Radio
-                            disabled={
-                              isView ||
-                              (inEditMode?.isEditMode
-                                ? inEditMode?.isCopy === true
-                                  ? !field?.isCopyEditable
-                                  : ["e", "b"].includes(
-                                      field.isEditableMode?.toLowerCase(),
-                                    ) && !field.isEditable
-                                : ["a", "b"].includes(
-                                    field.isEditableMode?.toLowerCase(),
-                                  ) && !field.isEditable)
+                  const optionValue = item.id.toString();
+                  const optionLabel = item.value.toString();
+                  return (
+                    <FormControlLabel
+                      key={idx}
+                      value={optionValue}
+                      label={optionLabel}
+                      labelPlacement="start"
+                      sx={radioControlStyle}
+                      control={
+                        <Radio
+                          disabled={
+                            isView ||
+                            (inEditMode?.isEditMode
+                              ? inEditMode?.isCopy === true
+                                ? !field?.isCopyEditable
+                                : ["e", "b"].includes(
+                                  field.isEditableMode?.toLowerCase(),
+                                ) && !field.isEditable
+                              : ["a", "b"].includes(
+                                field.isEditableMode?.toLowerCase(),
+                              ) && !field.isEditable)
+                          }
+                          sx={radioControlStyle}
+                          onClick={(e) => {
+                            // Deselect when clicking the already-selected radio
+                            const current =
+                              values[field.fieldname]?.toString() ?? null;
+                            if (current === optionValue) {
+                              e.stopPropagation();
+                              handleChange(null, field);
+                              values[field.fieldname] = null;
                             }
-                            sx={radioControlStyle}
-                            onClick={(e) => {
-                              // Deselect when clicking the already-selected radio
-                              const current =
-                                values[field.fieldname]?.toString() ?? null;
-                              if (current === optionValue) {
-                                e.stopPropagation();
-                                handleChange(null, field);
-                                values[field.fieldname] = null;
-                              }
-                            }}
-                          />
-                        }
-                      />
-                    );
-                  })
+                          }}
+                        />
+                      }
+                    />
+                  );
+                })
                 : /* CSV string source */
-                  field.dropDownValues.split(",").map((item, idx) => {
-                    const parts = item.split(".");
-                    const optionValue = parts[0].trim();
-                    const optionLabel = parts[1]?.trim() || optionValue;
-                    return (
-                      <FormControlLabel
-                        key={idx}
-                        value={optionValue}
-                        label={optionLabel}
-                        labelPlacement="start"
-                        sx={radioControlStyle}
-                        control={
-                          <Radio
-                            disabled={
-                              isView ||
-                              (inEditMode?.isEditMode
-                                ? inEditMode?.isCopy === true
-                                  ? !field?.isCopyEditable
-                                  : ["e", "b"].includes(
-                                      field.isEditableMode?.toLowerCase(),
-                                    ) && !field.isEditable
-                                : ["a", "b"].includes(
-                                    field.isEditableMode?.toLowerCase(),
-                                  ) && !field.isEditable)
+                field.dropDownValues.split(",").map((item, idx) => {
+                  const parts = item.split(".");
+                  const optionValue = parts[0].trim();
+                  const optionLabel = parts[1]?.trim() || optionValue;
+                  return (
+                    <FormControlLabel
+                      key={idx}
+                      value={optionValue}
+                      label={optionLabel}
+                      labelPlacement="start"
+                      sx={radioControlStyle}
+                      control={
+                        <Radio
+                          disabled={
+                            isView ||
+                            (inEditMode?.isEditMode
+                              ? inEditMode?.isCopy === true
+                                ? !field?.isCopyEditable
+                                : ["e", "b"].includes(
+                                  field.isEditableMode?.toLowerCase(),
+                                ) && !field.isEditable
+                              : ["a", "b"].includes(
+                                field.isEditableMode?.toLowerCase(),
+                              ) && !field.isEditable)
+                          }
+                          sx={radioControlStyle}
+                          onClick={(e) => {
+                            const current =
+                              values[field.fieldname]?.toString() ?? null;
+                            if (current === optionValue) {
+                              e.stopPropagation();
+                              handleChange(null, field);
+                              values[field.fieldname] = null;
                             }
-                            sx={radioControlStyle}
-                            onClick={(e) => {
-                              const current =
-                                values[field.fieldname]?.toString() ?? null;
-                              if (current === optionValue) {
-                                e.stopPropagation();
-                                handleChange(null, field);
-                                values[field.fieldname] = null;
-                              }
-                            }}
-                          />
-                        }
-                      />
-                    );
-                  })}
+                          }}
+                        />
+                      }
+                    />
+                  );
+                })}
             </RadioGroup>
           </div>
         </LightTooltip>
@@ -2373,9 +2414,8 @@ function InputFieldRenderer(props) {
               className={`absolute px-2 inline left-[8px] bg-[--inputBg] pr-[10%] leading-[0.8px] top-[-1px] scale-100 text-[8px] `}
             >
               <span
-                className={`${
-                  isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
-                }`}
+                className={`${isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
+                  }`}
               >
                 {field.isRequired ? (
                   <span className={`${styles.inputTextColor}`}>
@@ -2458,11 +2498,11 @@ function InputFieldRenderer(props) {
                           ? inEditMode?.isCopy === true
                             ? !field?.isCopyEditable
                             : ["e", "b"].includes(
-                                field.isEditableMode?.toLowerCase(),
-                              ) && !field.isEditable
-                          : ["a", "b"].includes(
                               field.isEditableMode?.toLowerCase(),
-                            ) && !field.isEditable)
+                            ) && !field.isEditable
+                          : ["a", "b"].includes(
+                            field.isEditableMode?.toLowerCase(),
+                          ) && !field.isEditable)
                       }
                     />
                   }
@@ -2483,9 +2523,8 @@ function InputFieldRenderer(props) {
               className={`absolute px-2 inline top-[-8px] left-[8px] text-[8px] ${styles.pageBackground}`}
             >
               <span
-                className={`${
-                  isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
-                }`}
+                className={`${isView ? "text-[#B2BAC2]" : `${styles.inputTextColor}`
+                  }`}
               >
                 {field.isRequired ? (
                   <span className={`${styles.inputTextColor}`}>
@@ -2592,11 +2631,11 @@ function InputFieldRenderer(props) {
                               ? inEditMode?.isCopy === true
                                 ? !field?.isCopyEditable
                                 : ["e", "b"].includes(
-                                    field.isEditableMode?.toLowerCase(),
-                                  ) && !field.isEditable
-                              : ["a", "b"].includes(
                                   field.isEditableMode?.toLowerCase(),
-                                ) && !field.isEditable)
+                                ) && !field.isEditable
+                              : ["a", "b"].includes(
+                                field.isEditableMode?.toLowerCase(),
+                              ) && !field.isEditable)
                           }
                         />
                       }
@@ -2639,11 +2678,11 @@ function InputFieldRenderer(props) {
             // }
             value={
               values?.[field.fieldname] !== undefined &&
-              values?.[field.fieldname] !== null
+                values?.[field.fieldname] !== null
                 ? values[field.fieldname]
                 : field.controlDefaultValue !== undefined &&
-                    field.controlDefaultValue !== null &&
-                    field.controlDefaultValue !== ""
+                  field.controlDefaultValue !== null &&
+                  field.controlDefaultValue !== ""
                   ? parseInt(field.controlDefaultValue, 10)
                   : ""
             }
@@ -2757,9 +2796,9 @@ function InputFieldRenderer(props) {
                 ? inEditMode?.isCopy === true
                   ? !field?.isCopyEditable
                   : ["e", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                    !field.isEditable
+                  !field.isEditable
                 : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                !field.isEditable)
             }
             InputLabelProps={{
               classes: {
@@ -3110,10 +3149,10 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase(),
-                      ) && !field.isEditable
+                      field.isEditableMode?.toLowerCase(),
+                    ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                    !field.isEditable)
+                  !field.isEditable)
               }
             />
           </div>
@@ -3314,21 +3353,260 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase(),
-                      ) && !field.isEditable
+                      field.isEditableMode?.toLowerCase(),
+                    ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                    !field.isEditable)
+                  !field.isEditable)
               }
             />
           </div>
         </LightTooltip>
       );
+    // case "datetime":
+    //   return (
+    //     <LightTooltip title={getTooltipValue() || inputLabel}>
+    //       <div>
+    //         <DateTimePicker
+    //           autoFocus={clearFlag.isClear} // Automatically focus if clearDateFlag is true
+    //           size="small"
+    //           id={uniqueId}
+    //           key={index}
+    //           label={
+    //             <span className={`${styles.inputTextColor}`}>
+    //               {inputLabel}
+    //               {field.isRequired && <span style={{ color: "red" }}> *</span>}
+    //             </span>
+    //           }
+    //           inputRef={inputRef}
+    //           onOpen={() => {
+    //             setIsFocused(true);
+    //             setonFocusValue(values?.[field.fieldname]);
+    //           }}
+    //           onClose={() => {
+    //             setIsFocused(false);
+    //             if (onFocusValue !== values[field.fieldname]) {
+    //               const funcCallString = field.functionOnChange;
+    //               if (
+    //                 funcCallString !== undefined &&
+    //                 funcCallString !== null &&
+    //                 funcCallString !== ""
+    //               ) {
+    //                 let multiCallFunctions = funcCallString.split(";");
+    //                 multiCallFunctions.forEach((funcCall) => {
+    //                   handleFuncChangeCall(
+    //                     funcCall,
+    //                     values,
+    //                     field.fieldname,
+    //                     tableName,
+    //                   );
+    //                 });
+    //               }
+    //             }
+    //             const funcCallString = field.functionOnBlur;
+    //             if (
+    //               funcCallString !== undefined &&
+    //               funcCallString !== null &&
+    //               funcCallString !== ""
+    //             ) {
+    //               let multiCallFunctions = funcCallString.split(";");
+    //               multiCallFunctions.forEach((funcCall) => {
+    //                 handleFuncChangeCall(
+    //                   funcCall,
+    //                   values,
+    //                   field.fieldname,
+    //                   tableName,
+    //                 );
+    //               });
+    //             }
+    //             if (index == inputFieldData.length - 1) {
+    //               if (typeof callSaveFunctionOnLastTab === "function") {
+    //                 callSaveFunctionOnLastTab();
+    //               }
+    //             }
+    //           }}
+    //           ampm={false}
+    //           format={
+    //             dateTimePickerFormat
+    //           }
+    //           viewRenderers={{
+    //             hours: renderTimeViewClock,
+    //             minutes: renderTimeViewClock,
+    //             seconds: renderTimeViewClock,
+    //           }}
+    //           slotProps={{
+    //             textField: {
+    //               style: {
+    //                 background: "white",
+    //               },
+    //               inputProps: {
+    //                 onFocus: () => rememberPreviousFieldValue(field.fieldname),
+    //                 onKeyDown: () => rememberDateInputKey(field.fieldname),
+    //                 onChange: (e) =>
+    //                   rememberDateInputText(e, field.fieldname),
+    //                 onBlur: (e) => handleDateTimeChange(e, field),
+    //               },
+    //             },
+    //             field: { clearable: true },
+    //             actionBar: {
+    //               actions: ["cancel"],
+    //             },
+    //             switchViewIcon: {
+    //               sx: {
+    //                 color: "var(--table-text-color)",
+    //                 backgroundColor: "var(--accordion-summary-bg)",
+    //               },
+    //             },
+    //             day: {
+    //               sx: {
+    //                 color: "var(--table-text-color)",
+    //                 backgroundColor: "var(--accordion-summary-bg)",
+    //               },
+    //             },
+    //             layout: {
+    //               sx: {
+    //                 color: "var(--table-text-color)",
+    //                 borderRadius: "2px",
+    //                 borderWidth: "1px",
+    //                 borderColor: "var(--accordion-summary-bg)",
+    //                 border: "1px solid",
+    //                 backgroundColor: "var(--accordion-summary-bg)",
+    //               },
+    //             },
+    //             leftArrowIcon: {
+    //               sx: {
+    //                 color: "var(--table-text-color)",
+    //                 backgroundColor: "var(--accordion-summary-bg)",
+    //               },
+    //             },
+    //             rightArrowIcon: {
+    //               sx: {
+    //                 color: "var(--table-text-color)",
+    //                 backgroundColor: "var(--accordion-summary-bg)",
+    //               },
+    //             },
+    //             calendarHeader: {
+    //               sx: {
+    //                 color: "var(--table-text-color)",
+    //                 backgroundColor: "var(--accordion-summary-bg)",
+    //               },
+    //             },
+    //             weekDayLabel: {
+    //               sx: {
+    //                 color: "var(--table-text-color)",
+    //                 backgroundColor: "var(--accordion-summary-bg)",
+    //               },
+    //             },
+    //           }}
+    //           value={
+    //             values[`${field.fieldname}`]
+    //               ? dayjs(values[`${field.fieldname}`])
+    //               : null
+    //           } // Use the state value, converted to a Day.js object
+    //           onChange={(time) => {
+    //             if (
+    //               !canCommitPickerDate(
+    //                 time,
+    //                 field.fieldname,
+    //                 dateTimePickerFormat,
+    //               )
+    //             ) {
+    //               return;
+    //             }
+
+    //             handleChange(time, field);
+    //             dateInputTypingRef.current[field.fieldname] = false;
+
+    //             let formattedValue = time;
+    //             if (time && typeof time.format === "function") {
+    //               formattedValue = dayjs(time).format("YYYY-MM-DD HH:mm:ss");
+    //               values[`${field.fieldname}`] = formattedValue; // Adjust the format as needed
+    //             }
+    //           }}
+    //           onBlur={(e) => {
+    //             if (
+    //               onFocusValue !== values[field.fieldname] &&
+    //               values[field.fieldname] !== ""
+    //             ) {
+    //               // values[field.fieldname] = e.target.value;
+    //               const funcCallString = field.functionOnChange;
+    //               if (
+    //                 funcCallString !== undefined &&
+    //                 funcCallString !== null &&
+    //                 funcCallString !== ""
+    //               ) {
+    //                 let multiCallFunctions = funcCallString.split(";");
+    //                 multiCallFunctions.forEach((funcCall) => {
+    //                   handleFuncChangeCall(
+    //                     funcCall,
+    //                     values,
+    //                     field.fieldname,
+    //                     tableName,
+    //                   );
+    //                 });
+    //               }
+    //             }
+    //             typeof formControlValidation?.[field.functionOnBlur] ===
+    //               "function" &&
+    //               onBlurHandler((state) => {
+    //                 return formControlValidation?.[field.functionOnBlur](
+    //                   state,
+    //                   field.fieldname,
+    //                   e.target.value,
+    //                 );
+    //               });
+
+    //             // values[field.fieldname] = e.target.value;
+    //             const funcCallString = field.functionOnBlur;
+    //             if (
+    //               funcCallString !== undefined &&
+    //               funcCallString !== null &&
+    //               funcCallString !== ""
+    //             ) {
+    //               let multiCallFunctions = funcCallString.split(";");
+    //               multiCallFunctions.forEach((funcCall) => {
+    //                 handleFuncBlurCall(
+    //                   funcCall,
+    //                   values,
+    //                   field.fieldname,
+    //                   tableName,
+    //                 );
+    //               });
+    //             }
+    //             if (index == inputFieldData.length - 1) {
+    //               if (typeof callSaveFunctionOnLastTab === "function") {
+    //                 callSaveFunctionOnLastTab();
+    //               }
+    //             }
+    //           }}
+    //           required={field.isRequired}
+    //           sx={{
+    //             ...customDateTimePickerStyleCss({
+    //               fieldname: values?.[`${field.fieldname}`],
+    //               isFocused,
+    //             }),
+    //           }}
+    //           className={styles.inputField}
+    //           disabled={
+    //             isView ||
+    //             (inEditMode?.isEditMode
+    //               ? inEditMode?.isCopy === true
+    //                 ? !field?.isCopyEditable
+    //                 : ["e", "b"].includes(
+    //                   field.isEditableMode?.toLowerCase(),
+    //                 ) && !field.isEditable
+    //               : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
+    //               !field.isEditable)
+    //           }
+    //         />
+    //       </div>
+    //     </LightTooltip>
+    //   );
     case "datetime":
       return (
         <LightTooltip title={getTooltipValue() || inputLabel}>
           <div>
             <DateTimePicker
-              autoFocus={clearFlag.isClear} // Automatically focus if clearDateFlag is true
+              autoFocus={clearFlag.isClear}
               size="small"
               id={uniqueId}
               key={index}
@@ -3345,14 +3623,17 @@ function InputFieldRenderer(props) {
               }}
               onClose={() => {
                 setIsFocused(false);
+
                 if (onFocusValue !== values[field.fieldname]) {
                   const funcCallString = field.functionOnChange;
+
                   if (
                     funcCallString !== undefined &&
                     funcCallString !== null &&
                     funcCallString !== ""
                   ) {
                     let multiCallFunctions = funcCallString.split(";");
+
                     multiCallFunctions.forEach((funcCall) => {
                       handleFuncChangeCall(
                         funcCall,
@@ -3363,13 +3644,16 @@ function InputFieldRenderer(props) {
                     });
                   }
                 }
+
                 const funcCallString = field.functionOnBlur;
+
                 if (
                   funcCallString !== undefined &&
                   funcCallString !== null &&
                   funcCallString !== ""
                 ) {
                   let multiCallFunctions = funcCallString.split(";");
+
                   multiCallFunctions.forEach((funcCall) => {
                     handleFuncChangeCall(
                       funcCall,
@@ -3379,6 +3663,7 @@ function InputFieldRenderer(props) {
                     );
                   });
                 }
+
                 if (index == inputFieldData.length - 1) {
                   if (typeof callSaveFunctionOnLastTab === "function") {
                     callSaveFunctionOnLastTab();
@@ -3386,9 +3671,7 @@ function InputFieldRenderer(props) {
                 }
               }}
               ampm={false}
-              format={
-                dateTimePickerFormat
-              }
+              format={dateTimePickerFormat}
               viewRenderers={{
                 hours: renderTimeViewClock,
                 minutes: renderTimeViewClock,
@@ -3402,8 +3685,7 @@ function InputFieldRenderer(props) {
                   inputProps: {
                     onFocus: () => rememberPreviousFieldValue(field.fieldname),
                     onKeyDown: () => rememberDateInputKey(field.fieldname),
-                    onChange: (e) =>
-                      rememberDateInputText(e, field.fieldname),
+                    onChange: (e) => rememberDateInputText(e, field.fieldname),
                     onBlur: (e) => handleDateTimeChange(e, field),
                   },
                 },
@@ -3458,44 +3740,53 @@ function InputFieldRenderer(props) {
                   },
                 },
               }}
-              value={
-                values[`${field.fieldname}`]
-                  ? dayjs(values[`${field.fieldname}`])
-                  : null
-              } // Use the state value, converted to a Day.js object
-              onChange={(time) => {
-                if (
-                  !canCommitPickerDate(
-                    time,
-                    field.fieldname,
-                    dateTimePickerFormat,
-                  )
-                ) {
+              value={getDateTimePickerValue(values?.[field.fieldname])}
+              onChange={(time, context) => {
+                const fieldName = field.fieldname;
+
+                if (time === null) {
+                  dateInputTypingRef.current[fieldName] = false;
+                  dateInputTextRef.current[fieldName] = "";
+                  handleChange("", field);
                   return;
                 }
 
-                handleChange(time, field);
-                dateInputTypingRef.current[field.fieldname] = false;
-
-                let formattedValue = time;
-                if (time && typeof time.format === "function") {
-                  formattedValue = dayjs(time).format("YYYY-MM-DD HH:mm:ss");
-                  values[`${field.fieldname}`] = formattedValue; // Adjust the format as needed
+                if (context?.validationError) {
+                  dateInputTypingRef.current[fieldName] = true;
+                  return;
                 }
+
+                if (!canCommitPickerDate(time)) {
+                  dateInputTypingRef.current[fieldName] = true;
+                  return;
+                }
+
+                const selectedDate = dayjs.isDayjs(time) ? time : dayjs(time);
+
+                if (!selectedDate.isValid()) {
+                  dateInputTypingRef.current[fieldName] = true;
+                  return;
+                }
+
+                dateInputTypingRef.current[fieldName] = false;
+                dateInputTextRef.current[fieldName] = "";
+
+                handleChange(selectedDate, field);
               }}
               onBlur={(e) => {
                 if (
                   onFocusValue !== values[field.fieldname] &&
                   values[field.fieldname] !== ""
                 ) {
-                  // values[field.fieldname] = e.target.value;
                   const funcCallString = field.functionOnChange;
+
                   if (
                     funcCallString !== undefined &&
                     funcCallString !== null &&
                     funcCallString !== ""
                   ) {
                     let multiCallFunctions = funcCallString.split(";");
+
                     multiCallFunctions.forEach((funcCall) => {
                       handleFuncChangeCall(
                         funcCall,
@@ -3506,6 +3797,7 @@ function InputFieldRenderer(props) {
                     });
                   }
                 }
+
                 typeof formControlValidation?.[field.functionOnBlur] ===
                   "function" &&
                   onBlurHandler((state) => {
@@ -3516,14 +3808,15 @@ function InputFieldRenderer(props) {
                     );
                   });
 
-                // values[field.fieldname] = e.target.value;
                 const funcCallString = field.functionOnBlur;
+
                 if (
                   funcCallString !== undefined &&
                   funcCallString !== null &&
                   funcCallString !== ""
                 ) {
                   let multiCallFunctions = funcCallString.split(";");
+
                   multiCallFunctions.forEach((funcCall) => {
                     handleFuncBlurCall(
                       funcCall,
@@ -3533,6 +3826,7 @@ function InputFieldRenderer(props) {
                     );
                   });
                 }
+
                 if (index == inputFieldData.length - 1) {
                   if (typeof callSaveFunctionOnLastTab === "function") {
                     callSaveFunctionOnLastTab();
@@ -3552,11 +3846,10 @@ function InputFieldRenderer(props) {
                 (inEditMode?.isEditMode
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
-                    : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase(),
-                      ) && !field.isEditable
+                    : ["e", "b"].includes(field.isEditableMode?.toLowerCase()) &&
+                    !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                    !field.isEditable)
+                  !field.isEditable)
               }
             />
           </div>
@@ -3570,11 +3863,10 @@ function InputFieldRenderer(props) {
             style={{ position: "relative", minHeight: "27px" }}
           >
             <p
-              className={`custom-placeholder ${
-                textareaLabel || values?.[field.fieldname]
-                  ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 "
-                  : "top-[7px]"
-              } `}
+              className={`custom-placeholder ${textareaLabel || values?.[field.fieldname]
+                ? "bg-[--inputBg] pr-[10%] leading-[0.8px] top-[0px] scale-100 "
+                : "top-[7px]"
+                } `}
               style={{
                 ...textAreaLabelStyle,
               }}
@@ -3595,10 +3887,10 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase(),
-                      ) && !field.isEditable
+                      field.isEditableMode?.toLowerCase(),
+                    ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                    !field.isEditable)
+                  !field.isEditable)
               }
               onPaste={handlePaste}
               onChange={(e) => {
@@ -3721,10 +4013,10 @@ function InputFieldRenderer(props) {
                   ? inEditMode?.isCopy === true
                     ? !field?.isCopyEditable
                     : ["e", "b"].includes(
-                        field.isEditableMode?.toLowerCase(),
-                      ) && !field.isEditable
+                      field.isEditableMode?.toLowerCase(),
+                    ) && !field.isEditable
                   : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                    !field.isEditable)
+                  !field.isEditable)
               }
             >
               <span className="text-[10px]">
@@ -3958,11 +4250,10 @@ function InputFieldRenderer(props) {
             size="small"
             name={field.fieldname}
             required={field.isRequired}
-            className={`${styles.inputField} ${
-              field.type === "decimal" || field.type === "number"
-                ? "w-[100%] lg:w-[12rem]"
-                : ""
-            }`}
+            className={`${styles.inputField} ${field.type === "decimal" || field.type === "number"
+              ? "w-[100%] lg:w-[12rem]"
+              : ""
+              }`}
             value={values?.[field.fieldname] ?? field.controlDefaultValue ?? ""}
             onChange={(e) => {
               if (
@@ -4055,9 +4346,9 @@ function InputFieldRenderer(props) {
                 ? inEditMode?.isCopy === true
                   ? !field?.isCopyEditable
                   : ["e", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                    !field.isEditable
+                  !field.isEditable
                 : ["a", "b"].includes(field.isEditableMode?.toLowerCase()) &&
-                  !field.isEditable)
+                !field.isEditable)
             }
             InputLabelProps={{
               classes: {

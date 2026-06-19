@@ -58,19 +58,19 @@ export default function ChatApp({
   const { reactions, toggleReaction } = useReactions();
 
   // socketRef is wired below after useChatSocket initialises it
-  const call = useCall({ socketRef: { current: null }, users, me });
-
+  
   const chat = useChatSocket({
     socketUrl,
     ioFactory,
     socketFactory,
     destroySocket,
     users,
-    wireCallEvents: call.wireCallEvents,
   });
+  const call = useCall({ socketRef: chat.socketRef, users, me });
+  chat.setWireCallEvents(call.wireCallEvents);
 
   // Patch call's socketRef to use chat's socketRef
-  call.socketRef = chat.socketRef;
+  // call.socketRef = chat.socketRef;
 
   // Keep chat's activePeerKeyRef in sync
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function ChatApp({
     clearMention,
   } = useMention({ users, me, activePeer, inputRef, draft, setDraft });
 
-  // ── Notifications ────────────────────────────────────────────────────────
+  // ── Notifications 
   useEffect(() => {
     fetch(`${apiBase}/api/health`)
       .then(() => {}) // serverStatus is managed in useChatSocket
@@ -127,7 +127,7 @@ export default function ChatApp({
       });
   }, []);
 
-  // ── Auto-connect once cookie user is resolved ───────────────────────────
+  // ── Auto-connect once user is resolved 
   useEffect(() => {
     if (!me) return;
     chat.connectSocket(me);
@@ -294,7 +294,6 @@ export default function ChatApp({
           onSendMsg={handleSend}
           onAttachClick={() => fileInputRef.current?.click()}
           fileInputRef={fileInputRef}
-          cle
           onFileChosen={onFileChosen}
           uploadProgress={uploadProgress}
           mention={mention}

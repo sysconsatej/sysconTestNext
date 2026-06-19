@@ -263,9 +263,8 @@ const SetDecimalsGeneric = (obj) => {
         return {
           isCheck: false,
           type: "success",
-          message: `You can enter Max ${
-            fieldSize - decimalCheck - 1
-          } Characters`,
+          message: `You can enter Max ${fieldSize - decimalCheck - 1
+            } Characters`,
           alertShow: true,
           fieldName: fieldName,
           values: values,
@@ -914,11 +913,11 @@ const setNoOfContainer = (obj) => {
 
       let size = currentItem.length
         ? currentItem[0].sizeIdDropdown ||
-          currentItem[0].sizeIddropdown[0]?.label
+        currentItem[0].sizeIddropdown[0]?.label
         : "";
       let type = currentItem.length
         ? currentItem[0].typeIdDropdown ||
-          currentItem[0].typeIddropdown[0]?.label
+        currentItem[0].typeIddropdown[0]?.label
         : "";
 
       if (fieldName === "sizeId" && childCommonItem.length !== 0) {
@@ -933,11 +932,9 @@ const setNoOfContainer = (obj) => {
             return {
               isCheck: false,
               type: "error",
-              message: `For type ${
-                typeIdDropdown || type
-              } and No Of Containers ${values.qty}, the size should be ${
-                sizeIdDropdown || size
-              }.`,
+              message: `For type ${typeIdDropdown || type
+                } and No Of Containers ${values.qty}, the size should be ${sizeIdDropdown || size
+                }.`,
               alertShow: true,
               values: values,
               newState: newState,
@@ -966,11 +963,9 @@ const setNoOfContainer = (obj) => {
             return {
               isCheck: false,
               type: "error",
-              message: `For size ${
-                sizeIdDropdown || size
-              } and No Of Container ${values.qty} the type should be ${
-                typeIdDropdown || type
-              } `,
+              message: `For size ${sizeIdDropdown || size
+                } and No Of Container ${values.qty} the type should be ${typeIdDropdown || type
+                } `,
               alertShow: true,
               values: values,
               newState: newState,
@@ -1978,6 +1973,12 @@ const setTaxDetails = async (obj) => {
   } = newState;
 
   const { chargeId, chargeGlId, taxApplicable, SelectedParentInvId } = values;
+  const sacCodeId =
+    values?.sacCodeId ||
+    values?.sacId ||
+    values?.hsnId ||
+    values?.hsnCodeId ||
+    0;
   const requestData = {
     chargeId: chargeId,
     invoiceDate: moment(invoiceDate).format("YYYY-MM-DD"),
@@ -1991,7 +1992,7 @@ const setTaxDetails = async (obj) => {
     formControlId: newState.menuID,
     totalAmount: values.totalAmount,
     totalAmountFc: values.totalAmountFc,
-    sacCodeId: values.sacId,
+    sacCodeId: sacCodeId,
     totalAmountHc: values?.totalAmountHc || values?.totalAmount,
     taxType: taxType || "G",
     companyId: companyId,
@@ -2542,7 +2543,7 @@ const getJobCharges = async (obj) => {
         chargeValues?.ledgerId ||
         0;
 
-      const safeSacId = chargeValues?.sacId || chargeValues?.sacCodeId || 0;
+      const safeSacId = chargeValues?.sacId || chargeValues?.sacCodeId || chargeValues?.hsnId || 0;
 
       /**
        * GST / TAX CALCULATION
@@ -2619,8 +2620,8 @@ const getJobCharges = async (obj) => {
 
           const tdsData = normalizeArray(
             fetchTDSDetails?.data ||
-              fetchTDSDetails?.tblTds ||
-              fetchTDSDetails?.tblInvoiceChargeTds,
+            fetchTDSDetails?.tblTds ||
+            fetchTDSDetails?.tblInvoiceChargeTds,
           );
 
           updatedCharges[index].tblInvoiceChargeTds = tdsData;
@@ -3190,10 +3191,10 @@ const removeFilterCondition = (obj) => {
         ...prev.formControlData,
         fields: prev.formControlData?.fields
           ? prev.formControlData.fields.map((field) =>
-              field.fieldname === fieldName
-                ? { ...field, dropdownFilter: null }
-                : field,
-            )
+            field.fieldname === fieldName
+              ? { ...field, dropdownFilter: null }
+              : field,
+          )
           : [],
       },
     }));
@@ -4080,9 +4081,8 @@ const checkGridsDuplication = (obj) => {
     const fieldsList =
       labels.slice(0, -1).join(", ") +
       (labels.length > 1 ? `, and ${labels.slice(-1)}` : labels[0]);
-    const message = `Duplicate entry found for ${fieldsList}. Please enter different ${
-      labels[labels.length - 1]
-    }.`;
+    const message = `Duplicate entry found for ${fieldsList}. Please enter different ${labels[labels.length - 1]
+      }.`;
 
     return {
       type: "error",
@@ -6286,11 +6286,10 @@ const setSameSizeValues = (obj) => {
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
-      const editedString = `${dropFilterValueWithoutBraces} and ${
-        Array.isArray(sizeIds)
+      const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
           ? `id in (${sizeIds.join(",")})`
           : `id = ${sizeIds}`
-      } `;
+        } `;
 
       console.log("editedString", editedString);
 
@@ -6337,11 +6336,10 @@ const setSameSizeValues = (obj) => {
       );
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
-      const editedString = `${dropFilterValueWithoutBraces} and ${
-        Array.isArray(sizeIds)
+      const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
           ? `id in (${sizeIds.join(",")})`
           : `id = ${sizeIds}`
-      } `;
+        } `;
 
       if (editedString.trim()) {
         setterField.dropdownFilter = editedString;
@@ -6362,8 +6360,8 @@ const setSameSizeValues = (obj) => {
       let getterSize = newState[argsArray[0]];
       let currentSize =
         values &&
-        Array.isArray(values.sizeIddropdown) &&
-        values.sizeIddropdown.length > 0
+          Array.isArray(values.sizeIddropdown) &&
+          values.sizeIddropdown.length > 0
           ? values.sizeIddropdown[0].label
           : "";
 
@@ -6453,8 +6451,8 @@ const setSameSizeValues = (obj) => {
       let getterSize = newState[argsArray[0]];
       let currentSize =
         values &&
-        Array.isArray(values.sizeIddropdown) &&
-        values.sizeIddropdown.length > 0
+          Array.isArray(values.sizeIddropdown) &&
+          values.sizeIddropdown.length > 0
           ? values.sizeIddropdown[0].label
           : "";
 
@@ -7539,9 +7537,9 @@ const getVoucherInvoiceDetails = async (obj) => {
     const invoiceNumbers =
       Array.isArray(fetchInvoice?.Chargers) && fetchInvoice.Chargers.length > 0
         ? fetchInvoice.Chargers.map((invoice) => ({
-            value: invoice?.value ?? invoice?.invoiceNo, // Use invoiceNo if value is missing
-            label: invoice?.label ?? invoice?.invoiceNo, // Ensure label is never undefined
-          }))
+          value: invoice?.value ?? invoice?.invoiceNo, // Use invoiceNo if value is missing
+          label: invoice?.label ?? invoice?.invoiceNo, // Ensure label is never undefined
+        }))
         : [];
 
     console.log("invoiceNumbers", invoiceNumbers);
@@ -9553,11 +9551,11 @@ const getThirdLevelDetails = async (obj) => {
         containerIddropdown:
           _containerId !== null
             ? [
-                {
-                  value: _containerId,
-                  label: item.containerNo ?? String(_containerId),
-                },
-              ]
+              {
+                value: _containerId,
+                label: item.containerNo ?? String(_containerId),
+              },
+            ]
             : [],
         sizeIddropdown:
           _sizeId !== null
@@ -9574,22 +9572,22 @@ const getThirdLevelDetails = async (obj) => {
         containerTransactionIddropdown:
           _containerTransactionId !== null
             ? [
-                {
-                  value: _containerTransactionId,
-                  label:
-                    item.containerTransactionName ??
-                    String(_containerTransactionId),
-                },
-              ]
+              {
+                value: _containerTransactionId,
+                label:
+                  item.containerTransactionName ??
+                  String(_containerTransactionId),
+              },
+            ]
             : [],
         containerRepairIddropdown:
           _containerRepairId !== null
             ? [
-                {
-                  value: _containerRepairId,
-                  label: item.containerRepairName ?? String(_containerRepairId),
-                },
-              ]
+              {
+                value: _containerRepairId,
+                label: item.containerRepairName ?? String(_containerRepairId),
+              },
+            ]
             : [],
         blIddropdown:
           _blId !== null
@@ -10026,11 +10024,11 @@ const getBlChargesForPaty = async (obj) => {
         billingPartyId: finalBillingPartyId,
         billingPartyIddropdown: finalBillingPartyId
           ? [
-              {
-                value: finalBillingPartyId,
-                label: selectedLedger?.LedgerName || "",
-              },
-            ]
+            {
+              value: finalBillingPartyId,
+              label: selectedLedger?.LedgerName || "",
+            },
+          ]
           : [],
       };
 
@@ -10464,9 +10462,8 @@ const setTransit = async (obj) => {
 
     // --- Prepare Updated goodsDesc ---
     let updatedGoodsDesc = goodsDesc || "";
-    const transitRemark = `Cargo in transit to ${
-      countryDestination || "(country of destination)"
-    } on consignee’s risk, cost & responsibilities`;
+    const transitRemark = `Cargo in transit to ${countryDestination || "(country of destination)"
+      } on consignee’s risk, cost & responsibilities`;
 
     // Remove any previous existing instance of this line (avoid duplicates)
     updatedGoodsDesc = updatedGoodsDesc
@@ -10746,7 +10743,7 @@ const getBlCharges = async (obj) => {
       Number(charge.totalAmount || charge.totalAmountHc) || 0;
     const safeTotalAmountFc = Number(charge.totalAmountFc) || 0;
     const safeChargeGlId = charge.chargeGlId || charge.glId || 0;
-    const safeSacId = charge.sacId || 0;
+    const safeSacId = charge.sacId || charge.hsnId || 0;
     const safeExchangeRate = Number(newState?.exchangeRate || 1) || 1;
 
     // 2️⃣ Fetch GST / Tax
@@ -11233,34 +11230,88 @@ const setSameCurrencyFc = async (obj) => {
   }
 };
 
+
 // const setSameCurrencyHc = async (obj) => {
 //   const { args, newState, setStateVariable } = obj;
 
 //   try {
-//     // 🔹 Utility: safely convert to number
-
 //     const toNum = (v) => {
 //       if (v === null || v === undefined || v === "") return 0;
 //       const n = Number(String(v).replace(/,/g, ""));
 //       return Number.isNaN(n) ? 0 : n;
 //     };
 
-//     const hcData = toNum(newState?.amtRec);
-//     const bankCharges = toNum(newState?.bankCharges);
+//     const round2 = (v) => Number(toNum(v).toFixed(2));
+
+//     const getCurrencyValue = (val) => {
+//       if (Array.isArray(val)) return String(val?.[0]?.value ?? "").trim();
+//       if (typeof val === "object" && val !== null) {
+//         return String(val?.value ?? val?.id ?? "").trim();
+//       }
+//       return String(val ?? "").trim();
+//     };
+
+//     const { companyId } = getUserDetails();
+
+//     const request = {
+//       columns: "currencyId",
+//       tableName: "tblCompanyParameter",
+//       whereCondition: `companyId=${companyId}`,
+//       clientIdCondition: `status=1 FOR JSON PATH ,INCLUDE_NULL_VALUES`,
+//     };
+
+//     const companyCurrencyRes = await fetchReportData(request);
+
+//     const companyCurrencyId = getCurrencyValue(
+//       companyCurrencyRes?.data?.[0]?.currencyId,
+//     );
+
+//     const voucherCurrencyId = getCurrencyValue(
+//       newState?.currencyId || newState?.currencyIddropdown,
+//     );
+
+//     const isSameCurrency = voucherCurrencyId === companyCurrencyId;
+
+//     const amtRec = toNum(newState?.amtRec);
+//     const amtRecFC = toNum(newState?.amtRecFC);
+//     const exchangeRate = toNum(newState?.exchangeRate);
+
+//     let bankCharges = toNum(newState?.bankCharges);
+//     let bankChargesFc = toNum(newState?.bankChargesFc);
+
 //     const exGainLoss = toNum(newState?.exGainLoss);
 
-//     const balanceAmtHc = hcData + bankCharges + exGainLoss;
+//     if (isSameCurrency) {
+//       // Same currency: HC and FC bank charges should be same
+//       bankChargesFc = round2(bankCharges);
+//     } else {
+//       // Different currency: HC bank charge comes from FC * exchange rate
+//       bankCharges = round2(exchangeRate * bankChargesFc);
+//     }
 
-//     // Store in newState
+//     const balanceAmtHc = round2(amtRec + bankCharges + exGainLoss);
+
+//     // This will work for different currency also:
+//     // balanceAmtFc = amtRecFC + bankChargesFc
+//     const balanceAmtFc = round2(amtRecFC + bankChargesFc);
+
 //     setStateVariable((prev) => ({
 //       ...prev,
+
+//       bankCharges: bankCharges.toFixed(2),
+//       bankChargesFc: bankChargesFc.toFixed(2),
+
 //       balanceAmtHc,
+//       balanceAmtFc,
+
+//       balanceAmt: balanceAmtHc.toFixed(2),
+//       balanceAmtFC: balanceAmtFc.toFixed(2),
 //     }));
 
 //     return {
 //       type: "success",
 //       result: true,
-//       message: "Amount & TDS calculated successfully",
+//       message: "Amount calculated successfully",
 //     };
 //   } catch (error) {
 //     console.error("Error in setSameCurrencyHc:", error);
@@ -11271,7 +11322,6 @@ const setSameCurrencyFc = async (obj) => {
 //     };
 //   }
 // };
-
 const setSameCurrencyHc = async (obj) => {
   const { args, newState, setStateVariable } = obj;
 
@@ -11312,41 +11362,22 @@ const setSameCurrencyHc = async (obj) => {
     );
 
     const isSameCurrency = voucherCurrencyId === companyCurrencyId;
-
-    const amtRec = toNum(newState?.amtRec);
-    const amtRecFC = toNum(newState?.amtRecFC);
     const exchangeRate = toNum(newState?.exchangeRate);
 
     let bankCharges = toNum(newState?.bankCharges);
     let bankChargesFc = toNum(newState?.bankChargesFc);
 
-    const exGainLoss = toNum(newState?.exGainLoss);
 
     if (isSameCurrency) {
-      // Same currency: HC and FC bank charges should be same
       bankChargesFc = round2(bankCharges);
     } else {
-      // Different currency: HC bank charge comes from FC * exchange rate
       bankCharges = round2(exchangeRate * bankChargesFc);
     }
-
-    const balanceAmtHc = round2(amtRec + bankCharges + exGainLoss);
-
-    // This will work for different currency also:
-    // balanceAmtFc = amtRecFC + bankChargesFc
-    const balanceAmtFc = round2(amtRecFC + bankChargesFc);
-
     setStateVariable((prev) => ({
       ...prev,
 
       bankCharges: bankCharges.toFixed(2),
       bankChargesFc: bankChargesFc.toFixed(2),
-
-      balanceAmtHc,
-      balanceAmtFc,
-
-      balanceAmt: balanceAmtHc.toFixed(2),
-      balanceAmtFC: balanceAmtFc.toFixed(2),
     }));
 
     return {
@@ -11960,9 +11991,9 @@ const getBlChargesForTariff = async (obj) => {
     const argNames = Array.isArray(args)
       ? args.map((a) => String(a).trim())
       : String(args ?? "")
-          .split(",")
-          .map((a) => a.trim())
-          .filter(Boolean);
+        .split(",")
+        .map((a) => a.trim())
+        .filter(Boolean);
 
     const rateKey = argNames[0];
     const currencyIdKey = argNames[1];
@@ -12395,8 +12426,8 @@ const checkRate = (obj) => {
       );
       const vCurrencyId = pickVal(
         values?.currencyId ??
-          values?.currencyIdText ??
-          values?.currencyIddropdown,
+        values?.currencyIdText ??
+        values?.currencyIddropdown,
       );
       const vRateBasisId = pickVal(
         values?.rateBasisId ?? values?.rateBasisIddropdown,
@@ -12752,9 +12783,6 @@ const setexFromVoyageDailyExrate = async (obj) => {
 
   try {
     const argNames = args.split(",").map((arg) => arg.trim());
-
-    // Expected args example:
-    // "date,blId,currencyId"
     const dateCol = argNames[0];
     const blIdCol = argNames[1];
     const currencyCol = argNames[2];
@@ -12783,10 +12811,6 @@ const setexFromVoyageDailyExrate = async (obj) => {
       newState?.clientId || values?.clientId || userData?.clientId || clientId; // keeping your existing global fallback if available
 
     let finalExchangeRate = "";
-
-    // =========================
-    // 1) FIRST TRY: Voyage Route
-    // =========================
     if (effectiveBlId) {
       const request = {
         columns:
@@ -12935,21 +12959,55 @@ const setexFromVoyageDailyExrate = async (obj) => {
   }
 };
 const activityDateCompare = async (obj) => {
-  const { args, values, setStateVariable } = obj;
+  const { args, values } = obj;
 
   try {
-    const argNames = args.split(",").map((arg) => arg.trim());
+    const argNames = String(args || "")
+      .split(",")
+      .map((arg) => arg.trim());
 
-    const lastActivityDate = values[argNames[0]];
-    const nextActivityDate = values[argNames[1]];
+    const lastActivityDate = values?.[argNames[0]];
+    const nextActivityDate = values?.[argNames[1]];
 
     const parseDate = (dateValue) => {
       if (!dateValue) return null;
-      const normalized = String(dateValue).replace(" ", "T");
+
+      // If already Date object
+      if (dateValue instanceof Date) {
+        return isNaN(dateValue.getTime()) ? null : dateValue;
+      }
+
+      // If dayjs object
+      if (dateValue?.$d instanceof Date) {
+        return isNaN(dateValue.$d.getTime()) ? null : dateValue.$d;
+      }
+
+      // If moment object
+      if (typeof dateValue?.toDate === "function") {
+        const d = dateValue.toDate();
+        return isNaN(d.getTime()) ? null : d;
+      }
+
+      const strDate = String(dateValue).trim();
+
+      // Only replace space for SQL-style date: 2026-06-12 10:30:00
+      const normalized = /^\d{4}-\d{2}-\d{2}/.test(strDate)
+        ? strDate.replace(" ", "T")
+        : strDate;
+
       const d = new Date(normalized);
 
       return isNaN(d.getTime()) ? null : d;
     };
+
+    // Important: allow value to get set while user is entering data
+    if (!lastActivityDate || !nextActivityDate) {
+      return {
+        type: "success",
+        result: true,
+        message: "Activity date validation skipped.",
+      };
+    }
 
     const lastDateObj = parseDate(lastActivityDate);
     const nextDateObj = parseDate(nextActivityDate);
@@ -12967,6 +13025,7 @@ const activityDateCompare = async (obj) => {
       toast.error(
         "Next activity date should be greater than last activity date.",
       );
+
       return {
         type: "error",
         result: false,
@@ -12974,10 +13033,6 @@ const activityDateCompare = async (obj) => {
           "Next activity date should be greater than last activity date.",
       };
     }
-
-    setStateVariable((prev) => ({
-      ...prev,
-    }));
 
     return {
       type: "success",
@@ -12995,7 +13050,6 @@ const activityDateCompare = async (obj) => {
     };
   }
 };
-
 const setPartyLedgerData = async (obj) => {
   const { args, newState, values, setStateVariable } = obj;
   try {
@@ -13879,7 +13933,7 @@ const setLabourAndMaterial = (obj) => {
   const labourHours = values[splitArgs[0]];
   const materialCost = values[splitArgs[1]];
   const tableName = splitArgs[2];
-  const quantity = Number(values[fieldName]);
+  const quantity = Number(values?.quantity);
   const editInitialQnt = newState?.[tableName]?.filter(
     (item) => item?.indexValue === values?.indexValue,
   )?.[0]?.[fieldName];
@@ -13890,12 +13944,13 @@ const setLabourAndMaterial = (obj) => {
 
   setStateVariable((prev) => ({
     ...prev,
-    labourHours: setLabourHourse,
-    materialCost: setMaterialCost,
+    labourHours: setLabourHourse || 0,
+    materialCost: setMaterialCost || 0,
     prevQuantity: quantity,
     totalAmoumt: newState?.labourRate * setLabourHourse + setMaterialCost,
   }));
 };
+
 const setParentFieldsDisableOnEdit = (obj) => {
   const {
     args,
@@ -14091,6 +14146,102 @@ const setVoucherCalOnHCFC = async (obj) => {
     };
   }
 };
+const calculateRateRequestChargeProfit = async (obj) => {
+  const {
+    newState,
+    values,
+    setStateVariable,
+  } = obj;
+
+  const toNumber = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  try {
+    const chargeRows = Array.isArray(newState?.tblRateRequestCharge)
+      ? newState.tblRateRequestCharge
+      : Array.isArray(values?.tblRateRequestCharge)
+        ? values.tblRateRequestCharge
+        : [];
+
+    const updatedTblRateRequestCharge = chargeRows.map((row, index) => {
+      const qty = toNumber(row?.qty);
+      const sellRate = toNumber(row?.sellRate);
+      const buyRate = toNumber(row?.buyRate);
+
+      const sellAmount = sellRate * qty;
+      const buyAmount = buyRate * qty;
+
+      // profit = sell rate * qty - buy rate * qty
+      const profit = sellAmount - buyAmount;
+
+      return {
+        ...row,
+        indexValue: row?.indexValue ?? index,
+
+        sellAmount: sellAmount.toFixed(2),
+        buyAmount: buyAmount.toFixed(2),
+        profit: profit.toFixed(2),
+      };
+    });
+
+    const totalSellAmount = updatedTblRateRequestCharge.reduce(
+      (acc, row) => acc + toNumber(row?.sellAmount),
+      0
+    );
+
+    const totalBuyAmount = updatedTblRateRequestCharge.reduce(
+      (acc, row) => acc + toNumber(row?.buyAmount),
+      0
+    );
+
+    const totalProfit = updatedTblRateRequestCharge.reduce(
+      (acc, row) => acc + toNumber(row?.profit),
+      0
+    );
+
+    const finalValues = {
+      ...values,
+      tblRateRequestCharge: updatedTblRateRequestCharge,
+      totalSellAmount: totalSellAmount.toFixed(2),
+      totalBuyAmount: totalBuyAmount.toFixed(2),
+      profit: totalProfit.toFixed(2),
+    };
+
+    const finalNewState = {
+      ...newState,
+      tblRateRequestCharge: updatedTblRateRequestCharge,
+      totalSellAmount: totalSellAmount.toFixed(2),
+      totalBuyAmount: totalBuyAmount.toFixed(2),
+      profit: totalProfit.toFixed(2),
+    };
+
+    setStateVariable((prev) => ({
+      ...prev,
+      tblRateRequestCharge: updatedTblRateRequestCharge,
+      totalSellAmount: totalSellAmount.toFixed(2),
+      totalBuyAmount: totalBuyAmount.toFixed(2),
+      profit: totalProfit.toFixed(2),
+    }));
+
+    return {
+      values: finalValues,
+      newState: finalNewState,
+    };
+  } catch (error) {
+    console.error("calculateRateRequestChargeProfit error:", error);
+
+    return {
+      values: {
+        ...values,
+      },
+      newState: {
+        ...newState,
+      },
+    };
+  }
+};
 
 export {
   setSameCurrencyFc,
@@ -14254,4 +14405,5 @@ export {
   setParentFieldsDisableOnEdit,
   checkDuplicateVendorInvoiceNo,
   setVoucherCalOnHCFC,
+  calculateRateRequestChargeProfit
 };

@@ -94,7 +94,7 @@ export default function DocumentReadingLoader({
                 className="mt-1 text-[13px] leading-5"
                 style={{ color: "#64748b" }}
               >
-                {subtitle}
+                {/* {subtitle} */}
               </p>
             </div>
           </div>

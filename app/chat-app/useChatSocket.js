@@ -8,8 +8,9 @@ function dmRoomId(a, b) {
     return "dm:" + [a, b].sort().join(":");
 }
 
-export function useChatSocket({ socketUrl, ioFactory, socketFactory, destroySocket, users, wireCallEvents }) {
+export function useChatSocket({ socketUrl, ioFactory, socketFactory, destroySocket, users }) {
     const socketRef = useRef(null);
+    const wireCallEventsRef = useRef(null);
     const activePeerKeyRef = useRef(null);
     const typingTimerRef = useRef(null);
     const typingActiveRef = useRef(false);
@@ -23,6 +24,12 @@ export function useChatSocket({ socketUrl, ioFactory, socketFactory, destroySock
     const [dmMessages, setDmMessages] = useState({});
     const [peerTyping, setPeerTyping] = useState({});
     const [dmTyping, setDmTyping] = useState({});
+
+
+    function setWireCallEvents(fn) {
+        wireCallEventsRef.current = fn;
+    }
+
 
     // Keep activePeerKeyRef in sync (set externally via syncActivePeerKey)
     function syncActivePeerKey(key) {
@@ -76,7 +83,8 @@ export function useChatSocket({ socketUrl, ioFactory, socketFactory, destroySock
         socketRef.current = socket;
 
         // Wire call events via injected function
-        wireCallEvents(socket);
+        // wireCallEvents(socket);
+        wireCallEventsRef.current?.(socket);
 
         socket.on("connect", () => {
             setServerOnline(true);
@@ -227,5 +235,6 @@ export function useChatSocket({ socketUrl, ioFactory, socketFactory, destroySock
         syncActivePeerKey,
         connectSocket, disconnectSocket, resetChatState,
         sendMessage, emitTyping, getDmHistory, markRead,
+        setWireCallEvents,
     };
 }

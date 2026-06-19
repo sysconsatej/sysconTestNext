@@ -172,7 +172,7 @@ export default function StickyHeadTable() {
           columns: "*",
           tableName: "tblMenuAccess",
           whereCondition: `menuId = ${search}`,
-          clientIdCondition: `userId = ${userId} and clientId in (${clientId}) FOR JSON PATH, INCLUDE_NULL_VALUES`,
+          clientIdCondition: `userId = ${userId} and companyId = ${companyId} and companyBranchId = ${branchId} and clientId in (${clientId}) FOR JSON PATH, INCLUDE_NULL_VALUES`,
         };
         const fetchedUserData = await fetchReportData(menuAccessRequest);
         const menuAccessData = fetchedUserData.data[0];

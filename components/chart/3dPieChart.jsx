@@ -11,7 +11,6 @@ ThreePieChart.propTypes = {
 };
 
 export default function ThreePieChart({ node, onDrillDown }) {
-    console.log("Rendering ThreePieChart with node:", node);
   const mountRef = useRef(null);
   const labelRefs = useRef([]);
 
@@ -80,8 +79,23 @@ export default function ThreePieChart({ node, onDrillDown }) {
       const midA = cumAngle + sliceAngle / 2;
       cumAngle += sliceAngle;
 
+      const palette = [
+        "#4F46E5", // indigo
+        "#06B6D4", // cyan
+        "#10B981", // green
+        "#F59E0B", // amber
+        "#EF4444", // red
+        "#8B5CF6", // violet
+        "#EC4899", // pink
+        "#14B8A6", // teal
+      ];
+
+      const getPaletteColor = () => {
+        return palette[Math.floor(Math.random() * palette.length)];
+      };
+      const col = new THREE.Color(getPaletteColor());
+
       const geo = makePieSlice(startA, endA, outerR, innerR, sliceH, 52);
-      const col = new THREE.Color(child.color);
       const mat = new THREE.MeshPhongMaterial({
         color: col,
         shininess: 55,

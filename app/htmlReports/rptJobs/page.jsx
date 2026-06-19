@@ -7803,6 +7803,7 @@ const rptJobs = () => {
                   </td>
                   <td style={{ width: "70%", fontSize: "10px" }}>
                     {/* {releaseRefNo} */}
+                    {jobData && jobData.length > 0 ? jobData[0].croReferenceNo : ""}
                   </td>
                 </tr>
               </tbody>

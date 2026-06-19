@@ -25,7 +25,7 @@ import { balanceSheetReportData } from "@/services/auth/FormControl.services.js"
 const BalanceSheetPNL = () => {
   const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
   const searchParams = useSearchParams();
-  const [toggle, setToggle] = useState(false);
+  const [toggle, setToggle] = useState(true);
   const [companyBranch, setCompanyBranch] = useState(null);
   const [selectedRadio, setSelectedRadio] = useState("S");
   const [

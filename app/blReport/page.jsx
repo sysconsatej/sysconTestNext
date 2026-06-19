@@ -461,6 +461,45 @@ function applyTokens(text, data, opts = {}) {
   });
 }
 
+function parseLooseBoolean(v) {
+  if (v === true || v === false) return v;
+  if (typeof v === "number") {
+    if (v === 1) return true;
+    if (v === 0) return false;
+  }
+
+  const s = String(v ?? "").trim().toLowerCase();
+  if (["true", "1", "yes", "y"].includes(s)) return true;
+  if (["false", "0", "no", "n"].includes(s)) return false;
+  return null;
+}
+
+function readBooleanFlag(data, names) {
+  for (const name of names || []) {
+    const v = getByPath(data, name);
+    const parsed = parseLooseBoolean(v);
+    if (parsed !== null) return parsed;
+  }
+  return null;
+}
+
+function shouldGenerateAttachmentSheets(data) {
+  const isAttachSheet = readBooleanFlag(data, [
+    "isAttachSheet",
+    "is_attach_sheet",
+    "IsAttachSheet",
+    "IS_ATTACH_SHEET",
+  ]);
+  const isContainerGrid = readBooleanFlag(data, [
+    "isContainerGrid",
+    "is_container_grid",
+    "IsContainerGrid",
+    "IS_CONTAINER_GRID",
+  ]);
+
+  return !(isAttachSheet === false && isContainerGrid === false);
+}
+
 function normalizeDecimalPlaces(v) {
   if (v === "" || v === null || v === undefined) return null;
   const n = Number(v);
@@ -1503,7 +1542,11 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
 
   const paperMm = opts.paperMm || { w: A4_W_MM, h: A4_H_MM };
   const marginMm = opts.marginMm || { top: 0, bottom: 0 };
-  const maxPages = Math.max(1, Number(opts.maxPages || MAX_SAFE_RENDER_PAGES));
+  const allowAttachmentSheets =
+    opts.allowAttachmentSheets ?? shouldGenerateAttachmentSheets(data);
+  const maxPages = allowAttachmentSheets
+    ? Math.max(1, Number(opts.maxPages || MAX_SAFE_RENDER_PAGES))
+    : 1;
   const flowWarnings = [];
   const flowErrors = [];
 
@@ -1661,6 +1704,11 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
       }
 
       if (maxBodyRowsHere <= 0) {
+        if (!allowAttachmentSheets) {
+          rebuilt.push({ ...el, __overflowPinned: true });
+          continue;
+        }
+
         if (!ensurePageObject(pages, pIndex + 1, page, maxPages)) {
           flowErrors.push(
             `Repeat table ${el?.id || ""} cannot be moved because generated pages exceeded safe limit (${maxPages}).`,
@@ -1685,12 +1733,16 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
 
       const chunks = [];
       let start = 0;
-      const maxMorePagesForThisTable = Math.max(1, maxPages - pIndex);
+      const maxMorePagesForThisTable = allowAttachmentSheets
+        ? Math.max(1, maxPages - pIndex)
+        : 1;
       while (start < arr.length) {
         if (chunks.length >= maxMorePagesForThisTable) {
-          flowErrors.push(
-            `Repeat table ${el?.id || ""} has too many rows (${arr.length}) and was stopped at safe page limit (${maxPages}).`,
-          );
+          if (allowAttachmentSheets) {
+            flowErrors.push(
+              `Repeat table ${el?.id || ""} has too many rows (${arr.length}) and was stopped at safe page limit (${maxPages}).`,
+            );
+          }
           break;
         }
 
@@ -1776,6 +1828,11 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
 
     page.elements = rebuilt;
 
+    if (!allowAttachmentSheets) {
+      page.__disableAttachmentSheets = true;
+      continue;
+    }
+
     let overflow = paginateOverflowElementsOnPageBody(page);
     let nextPageIdx = pIndex + 1;
 
@@ -1827,9 +1884,16 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
     }
   }
 
+  const finalPages = allowAttachmentSheets
+    ? pages
+    : pages.slice(0, 1).map((p) => ({
+        ...p,
+        __disableAttachmentSheets: true,
+      }));
+
   return {
     ...tpl,
-    pages,
+    pages: finalPages,
     __layoutWarnings: [
       ...toStringArray(tpl?.__layoutWarnings),
       ...Array.from(new Set(flowWarnings)),
@@ -2897,6 +2961,8 @@ function renderElement(el, data) {
 
 function getPageRenderHeightMm(pg, paperMm) {
   const baseH = Number(paperMm?.h || A4_H_MM) || A4_H_MM;
+  if (pg?.__disableAttachmentSheets) return baseH;
+
   const els = Array.isArray(pg?.elements) ? pg.elements : [];
 
   const maxBottom = els.reduce((mx, el) => {

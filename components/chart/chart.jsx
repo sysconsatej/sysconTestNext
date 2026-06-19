@@ -8,6 +8,7 @@ import CustomeInputFields from "../Inputs/customeInputFields";
 import jsPDF from "jspdf";
 import PropTypes from "prop-types";
 import { dynamicReportFilter } from "@/services/auth/FormControl.services";
+import LogisticsThreeDCharts from "./3dCharts";
 
 const ChartReports = ({
   newState,
@@ -15,7 +16,9 @@ const ChartReports = ({
   formControlData,
   chartData,
   clientId,
+  menuType,
 }) => {
+  console.log(menuType, "menuType");
   const chartRef = useRef(null); // canvas
   const wrapRef = useRef(null); // wrapper for ResizeObserver
   const chartInstanceRef = useRef(null);
@@ -60,7 +63,7 @@ const ChartReports = ({
         const { data } = await dynamicReportFilter(
           chartData,
           clientId,
-          formControlData?.spName
+          formControlData?.spName,
         );
 
         if (Array.isArray(data) && data.length > 0) {
@@ -281,7 +284,14 @@ const ChartReports = ({
                 : undefined
             }
           >
-            <canvas ref={chartRef} />
+            {menuType === "Z" && (
+              <LogisticsThreeDCharts
+                chartData={jobData}
+                type={chartType === "doughnut" ? "pie" : chartType}
+              />
+            )}
+
+            {menuType === "C" && <canvas ref={chartRef} />}
           </div>
         </div>
       )}
@@ -297,4 +307,5 @@ ChartReports.propTypes = {
   formControlData: PropTypes.any,
   clientId: PropTypes.any,
   chartData: PropTypes.any,
+  menuType: PropTypes.string,
 };

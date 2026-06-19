@@ -18,7 +18,7 @@ LogisticsThreeDCharts.propTypes = {
 export default function LogisticsThreeDCharts({ chartData, type }) {
   const [stack, setStack] = useState([]);
   const currentNode = stack.length === 0 ? chartData : stack[stack.length - 1];
-  const children = currentNode?.children ?? [];
+  const children = Array.isArray(currentNode) ? currentNode[0].children : currentNode.children || [];
   const total = children.reduce((s, c) => s + c.value, 0);
 
   const handleDrillDown = useCallback((child) => {
@@ -34,6 +34,7 @@ export default function LogisticsThreeDCharts({ chartData, type }) {
 
   if (!ChartComponent) return <div>Invalid Chart type</div>;
 
+
   return (
     <div className="p-4 font-sans">
       <ChartsBreadCrumbs stack={stack} onNavigate={handleNavigate} />
@@ -46,7 +47,7 @@ export default function LogisticsThreeDCharts({ chartData, type }) {
       </div>
       <Suspense fallback={<div>Loading chart...</div>}>
         <ChartComponent
-          node={currentNode ? currentNode : {}}
+          node={Array.isArray(currentNode) ? currentNode[0] : currentNode || {}}
           onDrillDown={handleDrillDown}
         />
       </Suspense>

@@ -1,4 +1,4 @@
-import { fetchReportData,fetchThirdLevelDetailsFromApi } from "@/services/auth/FormControl.services";
+import { fetchReportData, fetchThirdLevelDetailsFromApi } from "@/services/auth/FormControl.services";
 import { getUserDetails } from "./userDetails";
 
 const setJobContainer = async (obj) => {
@@ -12,7 +12,7 @@ const setJobContainer = async (obj) => {
 
   try {
     const { clientId } = getUserDetails();
-    const jobNumbers = newState?.tblJob?.map((item) => `'${item?.masterJobIddropdown?.[0]?.label}'`).join(","); 
+    const jobNumbers = newState?.tblJob?.map((item) => `'${item?.masterJobIddropdown?.[0]?.label}'`).join(",");
 
     const RequestBody = {
       columns: `jc.*,
@@ -69,7 +69,7 @@ const setJobContainer = async (obj) => {
   }
 };
 
- const copyContainerData = (obj) => {
+const copyContainerData = (obj) => {
   const { args = "", newState = {}, values = {} } = obj;
 
   try {
@@ -144,6 +144,290 @@ const setJobContainer = async (obj) => {
   }
 };
 
+// const getThirdLevelDetails = async (obj) => {
+//   const {
+//     args,
+//     newState,
+//     formControlData,
+//     setFormControlData,
+//     values,
+//     fieldName,
+//     tableName,
+//     setStateVariable,
+//     onChangeHandler,
+//   } = obj;
+
+//   const { companyId, clientId, branchId, userId, financialYear } =
+//     getUserDetails();
+
+//   let argNames;
+//   let splitArgs = [];
+
+//   if (
+//     args === undefined ||
+//     args === null ||
+//     args === "" ||
+//     (typeof args === "object" && Object.keys(args).length === 0)
+//   ) {
+//     argNames = args;
+//   } else {
+//     argNames = args.split(",").map((arg) => arg.trim());
+
+//     for (const iterator of argNames) {
+//       splitArgs.push(iterator.split("."));
+//     }
+//   }
+
+//   const {
+//     businessSegmentId,
+//     voucherTypeId,
+//     blId,
+//     plrId,
+//     podId,
+//     fpdId,
+//     polId,
+//     vesselId,
+//     voyageId,
+//     depotId,
+//     billingPartyId,
+//     containerStatusId,
+//     fromDate,
+//     toDate,
+//     exchangeRate,
+//   } = newState;
+
+//   const {
+//     jobId,
+//     chargeId,
+//     cargoTypeId,
+//     sizeId,
+//     typeId,
+//     containerRepairId,
+//     containerTransactionId,
+//   } = values;
+
+//   const zeroIfEmpty = (v) =>
+//     v === undefined || v === null || v === "" ? 0 : v;
+
+//   const nullIfEmpty = (v) =>
+//     v === undefined || v === null || v === "" ? null : v;
+
+//   const requestData = {
+//     billingPartyId: zeroIfEmpty(billingPartyId),
+//     clientId: clientId,
+//     jobId: zeroIfEmpty(jobId),
+//     chargeId: zeroIfEmpty(chargeId),
+//     companyId: companyId,
+//     companyBranchId: branchId,
+
+//     fromDate: nullIfEmpty(fromDate),
+//     toDate: nullIfEmpty(toDate),
+
+//     businessSegmentId: zeroIfEmpty(businessSegmentId),
+//     voucherTypeId: zeroIfEmpty(voucherTypeId),
+
+//     blId: zeroIfEmpty(blId),
+//     plrId: zeroIfEmpty(plrId),
+//     podId: zeroIfEmpty(podId),
+//     fpdId: zeroIfEmpty(fpdId),
+//     polId: zeroIfEmpty(polId),
+//     vesselId: zeroIfEmpty(vesselId),
+//     voyageId: zeroIfEmpty(voyageId),
+//     depotId: zeroIfEmpty(depotId),
+
+//     containerStatusId: zeroIfEmpty(containerStatusId),
+//     cargoTypeId: zeroIfEmpty(cargoTypeId),
+
+//     // IMPORTANT:
+//     // Your direct EXEC gives data with sizeId = 0 and typeId = 0.
+//     // So keep this 0 unless you really want to filter by selected size/type.
+//     sizeId: 0,
+//     typeId: 0,
+
+//     containerRepairId: zeroIfEmpty(containerRepairId),
+//     containerTransactionId: zeroIfEmpty(containerTransactionId),
+
+//     invoiceExchageRate: exchangeRate || 1,
+//   };
+
+//   console.log("Third level requestData:", requestData);
+
+//   const fetchChargeDetails = await fetchThirdLevelDetailsFromApi(requestData);
+
+//   console.log("Third level API response:", fetchChargeDetails);
+
+//   if (!fetchChargeDetails || fetchChargeDetails.success === false) {
+//     values.tblInvoiceChargeDetails = [];
+//     values["qty"] = 0;
+//     values["rate"] = "0.00";
+//     values["totalAmountHc"] = "0.00";
+//     values["totalAmountFc"] = "0.00";
+
+//     setStateVariable((prev) => ({
+//       ...prev,
+//       tblInvoiceChargeDetails: [],
+//       qty: 0,
+//       rate: "0.00",
+//       totalAmountHc: "0.00",
+//       totalAmountFc: "0.00",
+//     }));
+
+//     return;
+//   }
+
+//   const Chargers =
+//     fetchChargeDetails?.Chargers ||
+//     fetchChargeDetails?.data ||
+//     [];
+
+//   if (!Chargers || Chargers.length === 0) {
+//     values.tblInvoiceChargeDetails = [];
+//     values["qty"] = 0;
+//     values["rate"] = "0.00";
+//     values["totalAmountHc"] = "0.00";
+//     values["totalAmountFc"] = "0.00";
+
+//     setStateVariable((prev) => ({
+//       ...prev,
+//       tblInvoiceChargeDetails: [],
+//       qty: 0,
+//       rate: "0.00",
+//       totalAmountHc: "0.00",
+//       totalAmountFc: "0.00",
+//     }));
+
+//     return;
+//   }
+
+//   const toNum = (v) =>
+//     v === null || v === undefined || v === "" ? null : Number(v);
+
+//   const updatedChargers = Chargers.map((item, i) => {
+//     const _containerId = toNum(item.containerId);
+//     const _sizeId = toNum(item.sizeId);
+//     const _typeId = toNum(item.typeId);
+//     const _jobId = toNum(item.jobId);
+//     const _containerTransactionId = toNum(item.containerTransactionId);
+//     const _containerRepairId = toNum(item.containerRepairId);
+//     const _blId = toNum(item.blId);
+
+//     return {
+//       ...item,
+//       indexValue: i,
+
+//       containerIddropdown:
+//         _containerId !== null
+//           ? [
+//             {
+//               value: _containerId,
+//               label: item.containerNo ?? String(_containerId),
+//             },
+//           ]
+//           : [],
+
+//       sizeIddropdown:
+//         _sizeId !== null
+//           ? [
+//             {
+//               value: _sizeId,
+//               label: item.sizeName ?? String(_sizeId),
+//             },
+//           ]
+//           : [],
+
+//       typeIddropdown:
+//         _typeId !== null
+//           ? [
+//             {
+//               value: _typeId,
+//               label: item.typeName ?? String(_typeId),
+//             },
+//           ]
+//           : [],
+
+//       jobIddropdown:
+//         _jobId !== null
+//           ? [
+//             {
+//               value: _jobId,
+//               label: item.jobNo ?? String(_jobId),
+//             },
+//           ]
+//           : [],
+
+//       containerTransactionIddropdown:
+//         _containerTransactionId !== null
+//           ? [
+//             {
+//               value: _containerTransactionId,
+//               label:
+//                 item.containerTransactionName ??
+//                 String(_containerTransactionId),
+//             },
+//           ]
+//           : [],
+
+//       containerRepairIddropdown:
+//         _containerRepairId !== null
+//           ? [
+//             {
+//               value: _containerRepairId,
+//               label:
+//                 item.containerRepairName ??
+//                 String(_containerRepairId),
+//             },
+//           ]
+//           : [],
+
+//       blIddropdown:
+//         _blId !== null
+//           ? [
+//             {
+//               value: _blId,
+//               label: item.blNo ?? String(_blId),
+//             },
+//           ]
+//           : [],
+
+//       calculatedAmount:
+//         (Number(item.noOfDays) || 0) * (Number(item.rate) || 0),
+//     };
+//   });
+
+//   const qty = updatedChargers.reduce(
+//     (acc, item) => acc + (Number(item["qty"]) || 0),
+//     0
+//   );
+
+//   const totalWeighted = updatedChargers.reduce(
+//     (acc, item) =>
+//       acc +
+//       (Number(item["noOfDays"]) || 0) *
+//       (Number(item["rate"]) || 0),
+//     0
+//   );
+
+//   const avgRate = qty > 0 ? totalWeighted / qty : 0;
+
+//   const totalAmountHc = qty * avgRate;
+//   const totalAmountFc =
+//     qty * avgRate * Number(newState.exchangeRate || 1);
+
+//   values.tblInvoiceChargeDetails = updatedChargers;
+//   values["qty"] = qty;
+//   values["rate"] = avgRate.toFixed(2);
+//   values["totalAmountHc"] = totalAmountHc.toFixed(2);
+//   values["totalAmountFc"] = totalAmountFc.toFixed(2);
+
+//   setStateVariable((prev) => ({
+//     ...prev,
+//     tblInvoiceChargeDetails: updatedChargers,
+//     qty: qty,
+//     rate: avgRate.toFixed(2),
+//     totalAmountHc: totalAmountHc.toFixed(2),
+//     totalAmountFc: totalAmountFc.toFixed(2),
+//   }));
+// };
 const getThirdLevelDetails = async (obj) => {
   const {
     args,
@@ -157,98 +441,193 @@ const getThirdLevelDetails = async (obj) => {
     onChangeHandler,
   } = obj;
 
-  const { companyId, clientId, branchId, userId, financialYear } =
-    getUserDetails();
+  const { companyId, clientId, branchId } = getUserDetails();
 
-  // Parse args
-  let argNames;
-  let splitArgs = [];
-  if (
-    args === undefined ||
-    args === null ||
-    args === "" ||
-    (typeof args === "object" && Object.keys(args).length === 0)
-  ) {
-    argNames = args;
-  } else {
-    argNames = args.split(",").map((arg) => arg.trim());
-    for (const iterator of argNames) {
-      splitArgs.push(iterator.split("."));
+  const isEmpty = (v) =>
+    v === undefined ||
+    v === null ||
+    v === "" ||
+    (Array.isArray(v) && v.length === 0);
+
+  const getIdValue = (v) => {
+    if (Array.isArray(v)) {
+      return v?.[0]?.value ?? v?.[0]?.id ?? v?.[0]?.Id ?? 0;
     }
-  }
 
-  const {
-    businessSegmentId,
-    voucherTypeId,
-    blId,
-    plrId,
-    podId,
-    fpdId,
-    polId,
-    depotId,
-    billingPartyId,
-    containerStatusId,
-    fromDate,
-    toDate,
-    exchangeRate,
-  } = newState;
+    if (typeof v === "object" && v !== null) {
+      return v?.value ?? v?.id ?? v?.Id ?? 0;
+    }
 
-  const {
-    jobId,
-    chargeId,
-    cargoTypeId,
-    sizeId,
-    typeId,
-    containerRepairId,
-    containerTransactionId,
-  } = values;
-
-  const requestData = {
-    billingPartyId: billingPartyId,
-    clientId: clientId,
-    jobId: jobId,
-    chargeId: chargeId,
-    companyId: companyId,
-    companyBranchId: branchId,
-    fromDate: fromDate,
-    toDate: toDate,
-    clientId: clientId,
-    businessSegmentId: businessSegmentId,
-    voucherTypeId: voucherTypeId,
-    blId: blId,
-    plrId: plrId,
-    podId: podId,
-    fpdId: fpdId,
-    polId: polId,
-    depotId: depotId,
-    containerStatusId: containerStatusId,
-    cargoTypeId: cargoTypeId,
-    sizeId: sizeId,
-    typeId: typeId,
-    containerRepairId: containerRepairId,
-    containerTransactionId: containerTransactionId,
-    invoiceExchageRate: exchangeRate,
+    return isEmpty(v) ? 0 : v;
   };
 
-  const fetchChargeDetails = await fetchThirdLevelDetailsFromApi(requestData);
+  const zeroIfEmpty = (v) => {
+    const val = getIdValue(v);
+    return isEmpty(val) ? 0 : val;
+  };
 
-  if (fetchChargeDetails) {
-    const { Chargers = [] } = fetchChargeDetails;
+  const toNumberOrNull = (v) => {
+    if (v === null || v === undefined || v === "") return null;
 
-    const toNum = (v) =>
-      v === null || v === undefined || v === "" ? null : Number(v);
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const toNumber = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const formatDateForApi = (v) => {
+    if (v === undefined || v === null || v === "") return null;
+
+    if (typeof v === "string") return v;
+
+    if (typeof v?.format === "function") {
+      const formatted = v.format("YYYY-MM-DD HH:mm:ss");
+      return formatted === "Invalid date" ? null : formatted;
+    }
+
+    if (v instanceof Date && !isNaN(v.getTime())) {
+      const yyyy = v.getFullYear();
+      const mm = String(v.getMonth() + 1).padStart(2, "0");
+      const dd = String(v.getDate()).padStart(2, "0");
+      const hh = String(v.getHours()).padStart(2, "0");
+      const mi = String(v.getMinutes()).padStart(2, "0");
+      const ss = String(v.getSeconds()).padStart(2, "0");
+
+      return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+    }
+
+    return v;
+  };
+
+  try {
+    /*
+      Your save payload has tblInvoiceCharge array.
+      So first we find the current charge row.
+    */
+    const chargeRows = Array.isArray(values?.tblInvoiceCharge)
+      ? values.tblInvoiceCharge
+      : Array.isArray(newState?.tblInvoiceCharge)
+        ? newState.tblInvoiceCharge
+        : [];
+
+    let currentChargeIndex = 0;
+
+    if (chargeRows.length > 0) {
+      const checkedIndex = chargeRows.findIndex(
+        (row) => row?.isChecked === true
+      );
+
+      if (checkedIndex > -1) {
+        currentChargeIndex = checkedIndex;
+      } else {
+        const indexValue =
+          newState?.indexValue ??
+          values?.indexValue ??
+          chargeRows?.[0]?.indexValue;
+
+        const matchedIndex = chargeRows.findIndex(
+          (row, index) =>
+            Number(row?.indexValue) === Number(indexValue) ||
+            Number(index) === Number(indexValue)
+        );
+
+        currentChargeIndex = matchedIndex > -1 ? matchedIndex : 0;
+      }
+    }
+
+    const currentChargeRow =
+      chargeRows.length > 0 ? chargeRows[currentChargeIndex] || {} : values || {};
+
+    const getLatestValue = (key) => {
+      // First root newState
+      if (!isEmpty(newState?.[key])) return newState[key];
+
+      // Then current charge row because chargeId, sizeId, typeId are inside tblInvoiceCharge row
+      if (!isEmpty(currentChargeRow?.[key])) return currentChargeRow[key];
+
+      // Then root values/Data
+      if (!isEmpty(values?.[key])) return values[key];
+
+      return null;
+    };
+
+    const exchangeRate =
+      toNumber(getLatestValue("exchangeRate")) > 0
+        ? toNumber(getLatestValue("exchangeRate"))
+        : 1;
+
+    const requestData = {
+      billingPartyId: zeroIfEmpty(getLatestValue("billingPartyId")),
+      clientId: clientId,
+      jobId: zeroIfEmpty(getLatestValue("jobId")),
+      chargeId: zeroIfEmpty(getLatestValue("chargeId")),
+      companyId: companyId,
+      companyBranchId: branchId,
+
+      fromDate: formatDateForApi(getLatestValue("fromDate")),
+      toDate: formatDateForApi(getLatestValue("toDate")),
+
+      businessSegmentId: zeroIfEmpty(getLatestValue("businessSegmentId")),
+      voucherTypeId: zeroIfEmpty(getLatestValue("voucherTypeId")),
+
+      blId: zeroIfEmpty(getLatestValue("blId")),
+      plrId: zeroIfEmpty(getLatestValue("plrId")),
+      podId: zeroIfEmpty(getLatestValue("podId")),
+      fpdId: zeroIfEmpty(getLatestValue("fpdId")),
+      polId: zeroIfEmpty(getLatestValue("polId")),
+
+      vesselId: zeroIfEmpty(getLatestValue("vesselId")),
+      voyageId: zeroIfEmpty(getLatestValue("voyageId")),
+
+      depotId: zeroIfEmpty(getLatestValue("depotId")),
+      containerStatusId: zeroIfEmpty(getLatestValue("containerStatusId")),
+      cargoTypeId: zeroIfEmpty(getLatestValue("cargoTypeId")),
+
+      // As per your previous logic
+      sizeId: 0,
+      typeId: 0,
+
+      containerRepairId: zeroIfEmpty(getLatestValue("containerRepairId")),
+      containerTransactionId: zeroIfEmpty(
+        getLatestValue("containerTransactionId")
+      ),
+
+      invoiceExchageRate: exchangeRate,
+    };
+
+    console.log("getThirdLevelDetails requestData:", requestData);
+
+    const fetchChargeDetails = await fetchThirdLevelDetailsFromApi(requestData);
+
+    console.log("getThirdLevelDetails response:", fetchChargeDetails);
+
+    const Chargers =
+      fetchChargeDetails?.Chargers || fetchChargeDetails?.data || [];
 
     const updatedChargers = Chargers.map((item, i) => {
-      const _containerId = toNum(item.containerId);
-      const _sizeId = toNum(item.sizeId);
-      const _typeId = toNum(item.typeId);
-      const _jobId = toNum(item.jobId);
-      const _containerTransactionId = toNum(item.containerTransactionId);
-      const _containerRepairId = toNum(item.containerRepairId);
-      const _blId = toNum(item.blId);
+      const _containerId = toNumberOrNull(item.containerId);
+      const _sizeId = toNumberOrNull(item.sizeId);
+      const _typeId = toNumberOrNull(item.typeId);
+      const _jobId = toNumberOrNull(item.jobId);
+      const _containerTransactionId = toNumberOrNull(
+        item.containerTransactionId
+      );
+      const _containerRepairId = toNumberOrNull(item.containerRepairId);
+      const _blId = toNumberOrNull(item.blId);
+
+      const rowQty = toNumber(item.qty);
+      const rowNoOfDays = toNumber(item.noOfDays);
+      const rowRate = toNumber(item.rate);
+
+      const calculatedAmount = rowQty * rowNoOfDays * rowRate;
+
       return {
         ...item,
         indexValue: i,
+
         containerIddropdown:
           _containerId !== null
             ? [
@@ -258,18 +637,37 @@ const getThirdLevelDetails = async (obj) => {
               },
             ]
             : [],
+
         sizeIddropdown:
           _sizeId !== null
-            ? [{ value: _sizeId, label: item.sizeName ?? String(_sizeId) }]
+            ? [
+              {
+                value: _sizeId,
+                label: item.sizeName ?? String(_sizeId),
+              },
+            ]
             : [],
+
         typeIddropdown:
           _typeId !== null
-            ? [{ value: _typeId, label: item.typeName ?? String(_typeId) }]
+            ? [
+              {
+                value: _typeId,
+                label: item.typeName ?? String(_typeId),
+              },
+            ]
             : [],
+
         jobIddropdown:
           _jobId !== null
-            ? [{ value: _jobId, label: item.jobNo ?? String(_jobId) }]
+            ? [
+              {
+                value: _jobId,
+                label: item.jobNo ?? String(_jobId),
+              },
+            ]
             : [],
+
         containerTransactionIddropdown:
           _containerTransactionId !== null
             ? [
@@ -281,64 +679,194 @@ const getThirdLevelDetails = async (obj) => {
               },
             ]
             : [],
+
         containerRepairIddropdown:
           _containerRepairId !== null
             ? [
               {
                 value: _containerRepairId,
-                label: item.containerRepairName ?? String(_containerRepairId),
+                label:
+                  item.containerRepairName ?? String(_containerRepairId),
               },
             ]
             : [],
+
         blIddropdown:
           _blId !== null
-            ? [{ value: _blId, label: item.blNo ?? String(_blId) }]
+            ? [
+              {
+                value: _blId,
+                label: item.blNo ?? String(_blId),
+              },
+            ]
             : [],
-        // optional: keep per-row calculated amount for clarity
-        calculatedAmount:
-          (Number(item.noOfDays) || 0) * (Number(item.rate) || 0),
+
+        calculatedAmount: calculatedAmount,
       };
     });
 
-    // ✅ total qty
     const qty = updatedChargers.reduce(
-      (acc, item) => acc + (Number(item["qty"]) || 0),
-      0,
+      (acc, item) => acc + toNumber(item.qty),
+      0
     );
 
-    // ✅ total of (noOfDays * rate)
-    const totalWeighted = updatedChargers.reduce(
-      (acc, item) =>
-        acc + (Number(item["noOfDays"]) || 0) * (Number(item["rate"]) || 0),
-      0,
+    const totalAmountHc = updatedChargers.reduce(
+      (acc, item) => acc + toNumber(item.calculatedAmount),
+      0
     );
 
-    // ✅ average rate
-    const avgRate = qty > 0 ? totalWeighted / qty : 0;
+    const avgRate = qty > 0 ? totalAmountHc / qty : 0;
+    const totalAmountFc = totalAmountHc * exchangeRate;
 
-    values.tblInvoiceChargeDetails = updatedChargers;
-    values["qty"] = qty;
-    values["rate"] = avgRate.toFixed(2);
-    values["totalAmountHc"] = (qty * avgRate * 1).toFixed(2);
-    values["totalAmountFc"] = (
-      qty *
-      avgRate *
-      Number(newState.exchangeRate || 1)
-    ).toFixed(2);
+    const updatedChargeRow = {
+      ...currentChargeRow,
+
+      tblInvoiceChargeDetails: updatedChargers,
+
+      qty: qty,
+      rate: avgRate.toFixed(2),
+      totalAmountHc: totalAmountHc.toFixed(2),
+      totalAmountFc: totalAmountFc.toFixed(2),
+      totalAmount: totalAmountHc.toFixed(2),
+    };
+
+    let updatedTblInvoiceCharge = [];
+
+    if (chargeRows.length > 0) {
+      updatedTblInvoiceCharge = chargeRows.map((row, index) =>
+        index === currentChargeIndex ? updatedChargeRow : row
+      );
+    } else {
+      updatedTblInvoiceCharge = [updatedChargeRow];
+    }
+
+    const finalValues = {
+      ...values,
+      tblInvoiceCharge: updatedTblInvoiceCharge,
+    };
+
+    const finalNewState = {
+      ...newState,
+      tblInvoiceCharge: updatedTblInvoiceCharge,
+    };
 
     setStateVariable((prev) => ({
       ...prev,
-      tblInvoiceChargeDetails: updatedChargers,
-      qty: qty,
-      rate: avgRate.toFixed(2),
-      totalAmountHc: (qty * avgRate).toFixed(2),
-      totalAmountFc: (
-        qty *
-        avgRate *
-        Number(newState.exchangeRate || 1)
-      ).toFixed(2),
+      tblInvoiceCharge: updatedTblInvoiceCharge,
     }));
+
+    return {
+      values: finalValues,
+      newState: finalNewState,
+    };
+  } catch (error) {
+    console.error("getThirdLevelDetails error:", error);
+
+    return {
+      values: {
+        ...values,
+      },
+      newState: {
+        ...newState,
+      },
+    };
   }
 };
 
-export { setJobContainer,copyContainerData,getThirdLevelDetails};
+const calculateRateRequestChargeProfit = async (obj) => {
+  const {
+    newState,
+    values,
+    setStateVariable,
+  } = obj;
+
+  const toNumber = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  try {
+    const chargeRows = Array.isArray(newState?.tblRateRequestCharge)
+      ? newState.tblRateRequestCharge
+      : Array.isArray(values?.tblRateRequestCharge)
+        ? values.tblRateRequestCharge
+        : [];
+
+    const updatedTblRateRequestCharge = chargeRows.map((row, index) => {
+      const qty = toNumber(row?.qty);
+      const sellRate = toNumber(row?.sellRate);
+      const buyRate = toNumber(row?.buyRate);
+
+      const sellAmount = sellRate * qty;
+      const buyAmount = buyRate * qty;
+
+      // profit = sell rate * qty - buy rate * qty
+      const profit = sellAmount - buyAmount;
+
+      return {
+        ...row,
+        indexValue: row?.indexValue ?? index,
+
+        sellAmount: sellAmount.toFixed(2),
+        buyAmount: buyAmount.toFixed(2),
+        profit: profit.toFixed(2),
+      };
+    });
+
+    const totalSellAmount = updatedTblRateRequestCharge.reduce(
+      (acc, row) => acc + toNumber(row?.sellAmount),
+      0
+    );
+
+    const totalBuyAmount = updatedTblRateRequestCharge.reduce(
+      (acc, row) => acc + toNumber(row?.buyAmount),
+      0
+    );
+
+    const totalProfit = updatedTblRateRequestCharge.reduce(
+      (acc, row) => acc + toNumber(row?.profit),
+      0
+    );
+
+    const finalValues = {
+      ...values,
+      tblRateRequestCharge: updatedTblRateRequestCharge,
+      totalSellAmount: totalSellAmount.toFixed(2),
+      totalBuyAmount: totalBuyAmount.toFixed(2),
+      profit: totalProfit.toFixed(2),
+    };
+
+    const finalNewState = {
+      ...newState,
+      tblRateRequestCharge: updatedTblRateRequestCharge,
+      totalSellAmount: totalSellAmount.toFixed(2),
+      totalBuyAmount: totalBuyAmount.toFixed(2),
+      profit: totalProfit.toFixed(2),
+    };
+
+    setStateVariable((prev) => ({
+      ...prev,
+      tblRateRequestCharge: updatedTblRateRequestCharge,
+      totalSellAmount: totalSellAmount.toFixed(2),
+      totalBuyAmount: totalBuyAmount.toFixed(2),
+      profit: totalProfit.toFixed(2),
+    }));
+
+    return {
+      values: finalValues,
+      newState: finalNewState,
+    };
+  } catch (error) {
+    console.error("calculateRateRequestChargeProfit error:", error);
+
+    return {
+      values: {
+        ...values,
+      },
+      newState: {
+        ...newState,
+      },
+    };
+  }
+};
+export { setJobContainer, copyContainerData, getThirdLevelDetails ,calculateRateRequestChargeProfit };

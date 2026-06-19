@@ -48,12 +48,12 @@ export function ChatSidebar({
           <div className="you-status">{me ? "online" : ""}</div>
         </div>
         <div className="sidebar-icons">
-          <button className="icon-btn" type="button">
+          {/* <button className="icon-btn" type="button">
             💬
           </button>
           <button className="icon-btn" type="button">
             ⋮
-          </button>
+          </button> */}
         </div>
       </div>
 

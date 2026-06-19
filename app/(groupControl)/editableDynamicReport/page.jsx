@@ -2973,6 +2973,60 @@ export default function AddEditFormControll({ reportData }) {
       }
       //toast.error(response.message);
     },
+    handleGenerateFreightManifestReport: async () => {
+      let selectedReportIds = null;
+      if (selectedIds.length > 0) {
+        selectedReportIds = selectedIds.map((row) => row?.id).join(",");
+      } else {
+        toast.error("Please select at least one row.");
+        return;
+      }
+      // setOpenPrintModal((prev) => !prev);
+      // setSubmittedMenuId(search);
+      // setSubmittedRecordId(selectedReportIds);
+
+      sessionStorage.setItem(
+        "selectedReportIds",
+        JSON.stringify("Freight Manifest Report"),
+      );
+      localStorage.setItem("selectedIgmRecordId", selectedReportIds || "");
+      const filterConditionWithoutDropdowns =
+        removeDropdownFields(filterCondition);
+      const updatedCondition = {
+        ...filterConditionWithoutDropdowns,
+        companyId,
+        branchId,
+        financialYear,
+        userId,
+        clientId,
+      };
+      localStorage.setItem(
+        "selectedReportCreatorId",
+        JSON.stringify(updatedCondition) || "",
+      );
+      const url = `/htmlReports/rptFreightManifest?reportId=2831`;
+      if (url) {
+        window.open(url, "_blank");
+      } else {
+        console.error(
+          "Unable to open the report: URL or ID is not defined.",
+          report,
+        );
+      }
+      const json = {
+        ...updatedCondition,
+        data: selectedRows,
+      };
+      const response = await saveEditedReport({
+        json,
+        spName: saveSpName,
+      });
+      if (response.success === true) {
+        return;
+        //toast.success(response.message);
+      }
+      //toast.error(response.message);
+    },
     handleMergeBl: async () => {
       const storedUserData = localStorage.getItem("userData");
       if (storedUserData) {

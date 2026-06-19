@@ -2333,6 +2333,8 @@ export default function AddEditFormControll() {
           polId: newState?.polId || null,
           podId: newState?.podId || null,
           fpdId: newState?.fpdId || null,
+          plrAgentId: newState?.plrAgentId || null,
+          fpdAgentId: newState?.fpdAgentId || null,
           clientId: clientId || null,
           companyId: companyId || null,
           companyBranchId: branchId || null,

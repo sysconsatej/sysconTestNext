@@ -79,7 +79,7 @@ const MenuAccess = () => {
   const handleChange = async (updatedValue) => {
     const { user, copyUser } = updatedValue;
 
-    const { companyId } = getUserDetails();
+    const { companyId, branchId} = getUserDetails();
 
     let selectedUserId = null;
 
@@ -97,7 +97,7 @@ const MenuAccess = () => {
     const requestBodyMenuAccess = {
       columns: "menuId,isEdit,isView,isAdd,isDelete,isCopy,isExport,isAccess",
       tableName: "tblMenuAccess",
-      whereCondition: `userId = ${selectedUserId} and companyId = ${companyId}`,
+      whereCondition: `userId = ${selectedUserId} and companyId = ${companyId} and companyBranchId = ${branchId}`,
       clientIdCondition: `status = 1 FOR JSON PATH, include_null_values`,
     };
     const { data } = await fetchReportData(requestBodyMenuAccess);

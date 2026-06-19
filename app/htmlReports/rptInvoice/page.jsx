@@ -1199,7 +1199,8 @@ function rptInvoice() {
             reportNames[0] === "CreditNote Print" ||
             reportNames[0] === "Tax Invoice Container" ||
             reportNames[0] === "Domestic Invoice" ||
-            reportNames[0] === "Purchase Invoice"
+            reportNames[0] === "Purchase Invoice" ||
+            reportNames[0] === "TGK CreditNote"
           ) {
             const result = splitIntoChunksWithExtraArray(
               data.data[0]?.tblInvoiceCharge,
@@ -1584,7 +1585,7 @@ function rptInvoice() {
         }}
       >
         {/* 70% left side */}
-        <div className=" flex items-center" style={{ width: "85%" }}>
+        <div className=" flex items-center p-0.5" style={{ width: "85%" }}>
           <img
             src={`${baseUrlNext}${ImageUrl}`}
             alt="LOGO"
@@ -1722,7 +1723,7 @@ function rptInvoice() {
         <div className="w-[100%] flex items-center">
           <img
             src={`${baseUrlNext}${footerImageUrl}`}
-            alt="Footer LOGO"
+            alt=""
             className="w-full my-auto"
             style={{ maxHeight: "70px", width: "100%" }}
           />
@@ -1793,31 +1794,31 @@ function rptInvoice() {
         </div>
         <div className="flex justify-between w-full p-2">
           <div style={{ width: "25%" }}>
-            <p style={{ fontSize: "9px" }}>
+            <p style={{ fontSize: "10px" }}>
               <span className="font-bold">CIN No.:</span>{" "}
               {data[0]?.ownCinNo || ""}
             </p>
           </div>
           <div style={{ width: "20%" }}>
-            <p style={{ fontSize: "9px" }}>
+            <p style={{ fontSize: "10px" }}>
               <span className="font-bold">State:</span>{" "}
               {data[0]?.ownState || ""}
             </p>
           </div>
           <div style={{ width: "15%" }}>
-            <p style={{ fontSize: "9px" }}>
+            <p style={{ fontSize: "10px" }}>
               <span className="font-bold">State Code:</span>{" "}
               {data[0]?.ownStateCode || ""}
             </p>
           </div>
           <div style={{ width: "20%" }}>
-            <p style={{ fontSize: "9px" }}>
+            <p style={{ fontSize: "10px" }}>
               <span className="font-bold">GSTIN:</span>{" "}
               {data[0]?.ownGstin || ""}
             </p>
           </div>
           <div style={{ width: "20%" }}>
-            <p style={{ fontSize: "9px" }}>
+            <p style={{ fontSize: "10px" }}>
               <span className="font-bold">PAN No:</span>{" "}
               {data[0]?.ownPanNo || ""}
             </p>
@@ -1826,13 +1827,13 @@ function rptInvoice() {
         <div className="border-t border-black">
           <div className="flex">
             <div style={{ width: "60%" }}>
-              <p className="pl-2 pt-1 pb-1" style={{ fontSize: "9px" }}>
+              <p className="pl-2 pt-1 pb-1" style={{ fontSize: "10px" }}>
                 <span className="font-bold">IRN : </span>
                 {data[0]?.irn || ""}
               </p>
             </div>
             <div style={{ width: "40%" }}>
-              <p className="pl-2 pt-1 pb-1" style={{ fontSize: "9px" }}>
+              <p className="pl-2 pt-1 pb-1" style={{ fontSize: "10px" }}>
                 <span className="font-bold">Ack No. / Ack Date : </span>
                 {/* {data[0]?.irn || ""} */}
                 {data[0]?.ackNo || ""} <span className="font-bold"> / </span>
@@ -1855,31 +1856,31 @@ function rptInvoice() {
         </div>
         <div className="flex justify-between w-full p-2">
           <div style={{ width: "25%" }}>
-            <p style={{ fontSize: "9px" }}>
+            <p style={{ fontSize: "10px" }}>
               <span className="font-bold">CIN No.:</span>{" "}
               {data[0]?.ownCinNo || ""}
             </p>
           </div>
           <div style={{ width: "20%" }}>
-            <p style={{ fontSize: "9px" }}>
+            <p style={{ fontSize: "10px" }}>
               <span className="font-bold">State:</span>{" "}
               {data[0]?.ownState || ""}
             </p>
           </div>
           <div style={{ width: "15%" }}>
-            <p style={{ fontSize: "9px" }}>
+            <p style={{ fontSize: "10px" }}>
               <span className="font-bold">State Code:</span>{" "}
               {data[0]?.ownStateCode || ""}
             </p>
           </div>
           <div style={{ width: "20%" }}>
-            <p style={{ fontSize: "9px" }}>
+            <p style={{ fontSize: "10px" }}>
               <span className="font-bold">GSTIN:</span>{" "}
               {data[0]?.ownGstin || ""}
             </p>
           </div>
           <div style={{ width: "20%" }}>
-            <p style={{ fontSize: "9px" }}>
+            <p style={{ fontSize: "10px" }}>
               <span className="font-bold">PAN No:</span>{" "}
               {data[0]?.ownPanNo || ""}
             </p>
@@ -2162,7 +2163,7 @@ function rptInvoice() {
   const TaxInvoiceBillingDetails = ({ data }) => {
     return (
       <div className="flex border-r border-l border-b border-black p-1">
-        <div style={{ fontSize: "9px", width: "50%" }}>
+        <div style={{ fontSize: "10px", width: "50%" }}>
           <div
             className="pt-1 w-full"
             style={{
@@ -2213,7 +2214,7 @@ function rptInvoice() {
             </div>
           </div>
         </div>
-        <div className="ps-1" style={{ fontSize: "9px", width: "20%" }}>
+        <div className="ps-1" style={{ fontSize: "10px", width: "25%" }}>
           <div className="flex w-full">
             <p className="font-bold" style={{ width: "35%" }}>
               PAN No.{" "}
@@ -2239,7 +2240,7 @@ function rptInvoice() {
             <p style={{ width: "65%" }}>: {data[0]?.partyGstin || ""}</p>
           </div>
         </div>
-        <div className="ps-1" style={{ fontSize: "9px", width: "20%" }}>
+        <div className="ps-1" style={{ fontSize: "10px", width: "25%" }}>
           <div className="flex w-full">
             <p className="font-bold" style={{ width: "35%" }}>
               Invoice No.{" "}
@@ -2278,7 +2279,7 @@ function rptInvoice() {
         <div
           className="pl-1"
           style={{
-            fontSize: "9px",
+            fontSize: "10px",
             width: "60%",
             borderRight: "1px solid black",
           }}
@@ -2337,7 +2338,7 @@ function rptInvoice() {
               gridTemplateColumns: "30px 6px 1fr 70px 6px 55px 45px 6px 1fr",
               alignItems: "start",
               columnGap: "2px",
-              fontSize: "9px",
+              fontSize: "10px",
               lineHeight: "1.25",
             }}
           >
@@ -2354,7 +2355,7 @@ function rptInvoice() {
             <div>{data[0]?.partyGstin || ""}</div>
           </div>
         </div>
-        <div className="ps-1 " style={{ fontSize: "9px", width: "40%" }}>
+        <div className="ps-1 " style={{ fontSize: "10px", width: "40%" }}>
           <div className="flex w-full">
             <p className="font-bold" style={{ width: "35%" }}>
               Invoice No.{" "}
@@ -2782,6 +2783,83 @@ function rptInvoice() {
     );
   };
 
+  const TgkTaxCreditNoteBillingDetails = ({ data }) => {
+    return (
+      <div className="flex border-r border-l border-b border-black p-2">
+        <div style={{ fontSize: "9px", width: "40%" }}>
+          <div className="flex w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Billing Party Name :{" "}
+            </p>
+            <p style={{ width: "60%" }}>{data[0]?.party || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Address :{" "}
+            </p>
+            <p style={{ width: "60%" }}>{data[0]?.billingPartyAddress || ""}</p>
+          </div>
+        </div>
+        <div
+          className="ps-2 pt-1 pb-2"
+          style={{ fontSize: "9px", width: "24%" }}
+        >
+          <div className="flex w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              TIN No. :{" "}
+            </p>
+            <p style={{ width: "65%" }}>{data[0]?.partyPanNo || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "35%" }}>
+              SST No. :{" "}
+            </p>
+            <p style={{ width: "65%" }}>{data[0]?.partyState || ""}</p>
+          </div>
+        </div>
+        <div
+          className="ps-2 pt-1 pb-2"
+          style={{ fontSize: "9px", width: "41%" }}
+        >
+          <div className="flex w-full">
+            <p className="font-bold" style={{ width: "30%" }}>
+              Invoice No. :{" "}
+            </p>
+            <p style={{ width: "70%" }}>{data[0]?.invoiceNo || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "30%" }}>
+              Invoice Date :{" "}
+            </p>
+            <p style={{ width: "70%" }}>
+              {formatDateToDDMMYYYY(data[0]?.invoiceDate) || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "30%" }}>
+              Credit Period :{" "}
+            </p>
+            <p style={{ width: "70%" }}>{data[0]?.creditPeriod || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "30%" }}>
+              Due Date :{" "}
+            </p>
+            <p style={{ width: "70%" }}>
+              {formatDateToDDMMYYYY(data[0]?.dueDate) || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "30%" }}>
+              Parent Invoice No :{" "}
+            </p>
+            <p style={{ width: "70%" }}>{data[0]?.parentInvoiceNo || ""}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const InvoicePrintBillingDetails = ({ data }) => {
     return (
       <div>
@@ -3170,10 +3248,13 @@ function rptInvoice() {
           style={{ minHeight: "45px", maxHeight: "45px" }}
         >
           <div className="flex w-full pb-1">
-            <p className="font-bold" style={{ fontSize: "9px ", width: "10%" }}>
+            <p
+              className="font-bold"
+              style={{ fontSize: "10px ", width: "10%" }}
+            >
               Remarks :
             </p>
-            <p style={{ fontSize: "9px ", width: "90%" }}>
+            <p style={{ fontSize: "10px", width: "90%" }}>
               {data[0]?.remarks || ""}
             </p>
           </div>
@@ -3191,7 +3272,7 @@ function rptInvoice() {
           <div
             className="p-2"
             style={{
-              fontSize: "9px",
+              fontSize: "10px",
               width: "50%",
               borderRight: "1px solid black",
             }}
@@ -3217,7 +3298,7 @@ function rptInvoice() {
               <p style={{ width: "85%" }}>{data[0]?.partyPanNo || ""}</p>
             </div>
           </div>
-          <div className="p-1 " style={{ fontSize: "9px", width: "50%" }}>
+          <div className="p-1 " style={{ fontSize: "10px", width: "50%" }}>
             <div className="flex w-full pb-1">
               <div className="flex w-full" style={{ width: "65%" }}>
                 <p className="font-bold" style={{ width: "30%" }}>
@@ -3263,10 +3344,10 @@ function rptInvoice() {
           style={{ minHeight: "45px", maxHeight: "45px" }}
         >
           <div className="flex w-full pb-1">
-            <p className="font-bold" style={{ fontSize: "9px ", width: "10%" }}>
+            <p className="font-bold" style={{ fontSize: "10px", width: "10%" }}>
               Remarks :
             </p>
-            <p style={{ fontSize: "9px ", width: "90%" }}>
+            <p style={{ fontSize: "10px", width: "90%" }}>
               {data[0]?.remarks || ""}
             </p>
           </div>
@@ -3279,7 +3360,7 @@ function rptInvoice() {
     console.log("sizeType", sizeType);
     return (
       <div className="flex border-r border-l border-b border-black">
-        <div className="p-1" style={{ fontSize: "9px", width: "38%" }}>
+        <div className="p-1" style={{ fontSize: "10px", width: "38%" }}>
           {/* <div className="flex w-full">
             <p className="font-bold" style={{ width: "40%" }}>
               Job No. {" "}
@@ -3350,7 +3431,7 @@ function rptInvoice() {
         </div>
         <div
           className="border-r border-black p-1"
-          style={{ fontSize: "9px", width: "22%" }}
+          style={{ fontSize: "10px", width: "22%" }}
         >
           {/* <div className="flex w-full">
             <p className="font-bold" style={{ width: "40%" }}>
@@ -3406,7 +3487,7 @@ function rptInvoice() {
             <p style={{ width: "60%" }}>: {sizeType || ""}</p>
           </div>
         </div>
-        <div className="p-1" style={{ fontSize: "9px", width: "40%" }}>
+        <div className="p-1" style={{ fontSize: "10px", width: "40%" }}>
           <div className="flex w-full">
             <p className="font-bold" style={{ width: "40%" }}>
               Shipper.{" "}
@@ -3735,7 +3816,7 @@ function rptInvoice() {
         <div
           className="p-1"
           style={{
-            fontSize: "9px",
+            fontSize: "10px",
             width: "60%",
             borderRight: "1px solid black",
           }}
@@ -3782,7 +3863,7 @@ function rptInvoice() {
           </div>
         </div>
 
-        <div className="p-1" style={{ fontSize: "9px", width: "40%" }}>
+        <div className="p-1" style={{ fontSize: "10px", width: "40%" }}>
           <div className="flex w-full">
             <p className="font-bold" style={{ width: "40%" }}>
               Vessel/Voy{" "}
@@ -5144,7 +5225,7 @@ function rptInvoice() {
         {currentPageLength > 0 && (
           <div
             className="flex w-full border-black border-r border-l border-b text-center font-bold"
-            style={{ fontSize: "9px", width: "100%" }}
+            style={{ fontSize: "10px", width: "100%" }}
           >
             <p className="border-r border-black" style={{ width: "27%" }}>
               DESCRIPTION
@@ -5209,7 +5290,7 @@ function rptInvoice() {
                         : "border-b"
                       : ""
                   }`}
-                  style={{ fontSize: "9px", width: "100%" }}
+                  style={{ fontSize: "10px", width: "100%" }}
                 >
                   <p
                     className="pb-1 border-r border-black"
@@ -5345,7 +5426,7 @@ function rptInvoice() {
                 {/* Final row - Amount in Words kash */}
                 <div
                   className="flex w-full border-black text-center font-bold"
-                  style={{ fontSize: "8px", width: "100%" }}
+                  style={{ fontSize: "10px", width: "100%" }}
                 >
                   <p
                     className="border-t  border-r border-black text-right pr-1"
@@ -5394,7 +5475,7 @@ function rptInvoice() {
                 {/* amountInWords */}
                 <div
                   className={`flex w-full border-t border-black ${index != 0 ? "border-b" : ""} `}
-                  style={{ fontSize: "8px", width: "100%" }}
+                  style={{ fontSize: "10px", width: "100%" }}
                 >
                   <p
                     className="pl-1 uppercase"
@@ -5557,7 +5638,7 @@ function rptInvoice() {
           <div
             className="flex w-full border-black border-r border-l border-b text-center font-bold"
             style={{
-              fontSize: "8px",
+              fontSize: "9px",
               width: "100%",
               lineHeight: "1.15",
             }}
@@ -5630,7 +5711,7 @@ function rptInvoice() {
                   key={idx}
                   className="flex w-full border-l border-r border-black"
                   style={{
-                    fontSize: "8px",
+                    fontSize: "9px",
                     width: "100%",
                     lineHeight: "1.15",
                     minHeight: "17px",
@@ -5723,7 +5804,7 @@ function rptInvoice() {
                 <div
                   className="flex w-full border-l border-r border-t border-black text-center font-bold"
                   style={{
-                    fontSize: "9px",
+                    fontSize: "10px",
                     width: "100%",
                     lineHeight: "2",
                   }}
@@ -5757,7 +5838,7 @@ function rptInvoice() {
                 <div
                   className="flex w-full border-l border-r border-t border-black font-bold"
                   style={{
-                    fontSize: "9px",
+                    fontSize: "10px",
                     width: "100%",
                     lineHeight: "1.35",
                     minHeight: "18px",
@@ -5793,7 +5874,7 @@ function rptInvoice() {
                 <div
                   className="flex w-full border-l border-r border-t border-black font-bold"
                   style={{
-                    fontSize: "9px",
+                    fontSize: "10px",
                     width: "100%",
                     lineHeight: "1.35",
                     minHeight: "18px",
@@ -5811,7 +5892,7 @@ function rptInvoice() {
                 <div
                   className="flex w-full border-l border-r border-t border-b border-black"
                   style={{
-                    fontSize: "9px",
+                    fontSize: "10px",
                     width: "100%",
                     lineHeight: "1.35",
                     minHeight: "18px",
@@ -7921,14 +8002,14 @@ function rptInvoice() {
 
     return (
       <div className="border-r border-l border-b border-black ps-1">
-        <p style={{ fontSize: "8px" }}>
+        <p style={{ fontSize: "10px" }}>
           <span className="font-bold">Remarks : </span>
           {remarks}
         </p>
 
         <p
           style={{
-            fontSize: "8px",
+            fontSize: "10px",
             marginTop: "1px",
             display: "flex",
             alignItems: "flex-start",
@@ -9457,11 +9538,11 @@ function rptInvoice() {
         </div>
         <div
           className="flex w-full border-l border-b border-r border-black"
-          style={{ fontSize: "9px", width: "100%" }}
+          style={{ fontSize: "10px", width: "100%" }}
         >
           <p
             className="p-1 uppercase"
-            style={{ width: "85%", paddingRight: "15px", fontSize: "8px" }}
+            style={{ width: "85%", paddingRight: "15px", fontSize: "10px" }}
           >
             <span className="font-bold ">Tax Amount in Words </span>
             {data?.[0]?.currency || ""} {totalTaxAmountInWords || ""}
@@ -9470,7 +9551,7 @@ function rptInvoice() {
         {Number(data[0]?.isHomeCurrency) !== 1 && (
           <div
             className="flex w-full border-l border-b border-r border-black"
-            style={{ fontSize: "9px", width: "100%" }}
+            style={{ fontSize: "10px", width: "100%" }}
           >
             <p
               className="p-1 uppercase"
@@ -10144,6 +10225,52 @@ function rptInvoice() {
     </div>
   );
 
+  const tgkCreditNote = (index) => (
+    <div
+      style={{
+        height: "290mm",
+        position: "relative",
+        boxSizing: "border-box",
+        overflow: "hidden",
+        color: "black",
+        paddingBottom: "18mm", // space for footer
+      }}
+    >
+      <TgkCompanyImgModule data={data} />
+      <TgkTaxInvoiceHeader data={data} />
+      <TgkTaxCreditNoteBillingDetails data={data} />
+      {index === 0 && <TgkTaxInvoiceJobDetails data={data} />}
+      <TgkTaxInvoiceRemarks data={data} />
+      <TgkTaxInvoiceChargeDetails
+        data={data}
+        charge={invoiceChargeDataForTaxInvoice}
+        index={index}
+        hsnSac={hsnSac}
+      />
+      {index === 0 && (
+        <>
+          <TgkTaxInvoiceTermsAndCondition
+            data={data}
+            index={index}
+            termsAndConditions={data[0]?.termsConditionMst}
+          />
+          <TgkTaxInvoiceBanksDetails index={index} />
+        </>
+      )}
+      {/* Footer fixed at bottom of A4 */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+        }}
+      >
+        <TgkFooterModule />
+      </div>
+    </div>
+  );
+
   const taxInvoiceWithoutCharges = (index) => (
     <div>
       <div className="mx-auto !text-black">
@@ -10206,6 +10333,24 @@ function rptInvoice() {
         <TgkCompanyImgModule data={data} />
         <TgkTaxInvoiceHeader data={data} />
         <TgkTaxInvoiceBillingDetails data={data} />
+        <TgkTaxInvoiceJobDetails data={data} />
+        <TgkTaxInvoiceSpacing />
+        <TgkTaxInvoiceTermsAndCondition
+          data={data}
+          index={0}
+          // termsAndConditions={termsAndConditions}
+          termsAndConditions={data[0]?.termsConditionMst}
+        />
+      </div>
+    </div>
+  );
+
+  const tgkCreditNoteWithoutCharges = (index) => (
+    <div>
+      <div className="mx-auto !text-black">
+        <TgkCompanyImgModule data={data} />
+        <TgkTaxInvoiceHeader data={data} />
+        <TgkTaxCreditNoteBillingDetails data={data} />
         <TgkTaxInvoiceJobDetails data={data} />
         <TgkTaxInvoiceSpacing />
         <TgkTaxInvoiceTermsAndCondition
@@ -20920,6 +21065,77 @@ function rptInvoice() {
                 </>
               );
             }
+            case "TGK CreditNote":
+              return (
+                <>
+                  <div
+                    ref={(el) => (enquiryModuleRefs.current[index] = el)}
+                    id="TaxInvoice"
+                  >
+                    {invoiceChargeDataForTaxInvoice?.length > 0 ? (
+                      // Render taxInvoice if there are charges
+                      Array.from({
+                        length: invoiceChargeDataForTaxInvoice?.length,
+                      }).map((_, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            width: "210mm",
+                            height: "297mm",
+                            margin: "auto",
+                            boxSizing: "border-box",
+                            pageBreakAfter:
+                              index < data[0]?.tblInvoiceCharge?.length - 1
+                                ? "always"
+                                : "auto",
+                            padding: "5mm",
+                            display: "flex",
+                            flexDirection: "column",
+                            marginBottom: "22px",
+                          }}
+                          className="bgTheme removeFontSize"
+                        >
+                          <div
+                            style={{
+                              flex: 1,
+                              width: "100%",
+                              boxSizing: "border-box",
+                              fontFamily: "Arial sans-serif !important",
+                            }}
+                          >
+                            {tgkCreditNote(index)}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div
+                        style={{
+                          width: "210mm",
+                          height: "297mm",
+                          margin: "auto",
+                          boxSizing: "border-box",
+                          padding: "5mm",
+                          display: "flex",
+                          flexDirection: "column",
+                          marginBottom: "22px",
+                        }}
+                        className="bgTheme removeFontSize"
+                      >
+                        <div
+                          style={{
+                            flex: 1,
+                            width: "100%",
+                            boxSizing: "border-box",
+                            fontFamily: "Arial sans-serif !important",
+                          }}
+                        >
+                          {tgkCreditNoteWithoutCharges()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
 
             default:
               return null;
@@ -20929,4 +21145,5 @@ function rptInvoice() {
     </main>
   );
 }
+
 export default rptInvoice;

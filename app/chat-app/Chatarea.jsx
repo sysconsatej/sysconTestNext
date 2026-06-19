@@ -50,7 +50,7 @@ export function ChatArea({
   mention,
   mentionCandidates,
   onPickMention,
-  // onStartCall,  
+  onStartCall,
 }) {
   if (!activePeer)
     return (
@@ -86,21 +86,18 @@ export function ChatArea({
                 : "last seen recently"}
           </div>
         </div>
-        {/* <div className="chat-h-icons">
+        <div className="chat-h-icons">
           {activePeer !== "group" ? (
             <button
               className="call-start-btn"
               type="button"
-              onClick={() => {
-                console.log("Rendering ChatArea with activePeer:", activePeer);
-                onStartCall(activePeer.id);
-              }}
+              onClick={() => onStartCall(activePeer.id)}
               title="Video call"
             >
               ▷
             </button>
           ) : null}
-          <button className="icon-btn" type="button">
+          {/* <button className="icon-btn" type="button">
             🔍
           </button>
           <button className="icon-btn" type="button">
@@ -108,8 +105,8 @@ export function ChatArea({
           </button>
           <button className="icon-btn" type="button">
             ⋮
-          </button>
-        </div>  */}
+          </button> */}
+        </div>
       </div>
 
       {/* Messages */}

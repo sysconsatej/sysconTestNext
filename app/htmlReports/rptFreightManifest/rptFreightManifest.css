@@ -1,0 +1,19 @@
+@media print {
+  .reader-page {
+    width: 297mm;
+    height: 210mm;
+    break-after: page;
+    page-break-after: always;
+    overflow: visible !important;
+  }
+  .reader-content {
+    overflow: visible !important;
+  }
+}
+
+.reader-page {
+  width: 297mm;
+  height: 210mm;
+  margin: 8px auto;
+  background: #fff;
+}

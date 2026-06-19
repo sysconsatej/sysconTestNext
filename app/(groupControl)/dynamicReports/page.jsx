@@ -111,134 +111,6 @@ import {
 } from "@/app/globalCss";
 import { image } from "d3";
 
-const response = {
-  success: true,
-  message: "PDF data extracted successfully",
-  data: {
-    documentTypeOrDocumentHeading: "INVOICE",
-    invoiceType: "TERMINAL SERVICES",
-    CustomerCode: "C-050246, SMD",
-    CustomerName: "Samudera Shipping Line (India) Pvt Ltd.",
-    CustomerAddress:
-      "4024Th FlrRustomjee AspireeEver-Aed Ngr RdOff East'N ExpresSionMumbai, Maharashtra, IN, 400022",
-    gstinNo: "27AAGCS7372A1ZD",
-    irnNo: "b2196471eb61781ad6fe900b7da84f801d32469cc0fb722ad11d6ae7c10bba35",
-    stateName: "27",
-    creditLimit: "0",
-    poNo: null,
-    icpCodeBuyer: null,
-    icpCodeSeller: null,
-    invoiceNo: "GTICD1302313",
-    invoiceDate: "2025-12-02",
-    gtiGstin: "27AACCG1899E1ZH",
-    panNo: "AACCG1899E",
-    tanNo: "PNEG15315G",
-    VesselCallNo: "R2214",
-    vesselName: "MOL CREATION",
-    voyageName: null,
-    timeOfArrival: "2025-11-30 07:00:00.0",
-    timeOfDeparture: "2025-12-01 22:30:00.0",
-    trainNo: "254845",
-    trainArrivalTime: "2025-12-01 22:20:00.0",
-    trainDepartureTime: "2025-12-02 14:50:00.0",
-    ackNo: "122529879397086",
-    ackDate: "3/12/25 12:50 AM",
-    activityCode: null,
-    icfHfm: null,
-    tblCharges: [
-      {
-        sNo: "1",
-        serviceDescription: "CRO CHARGES ON RAIL OUT CTR 20",
-        sacCode: "996751",
-        sacPercent: "18",
-        unitQtyPerDay: "2.00",
-        tariffRate: "808.32",
-        tariffCurrency: "INR",
-        exchRate: "1.0",
-        amountInTariffCurrency: "1,616.64",
-        sgst: "145.50",
-        cgst: "145.50",
-        igst: "0.00",
-        amountInINR: "1,907.64",
-      },
-    ],
-    chargesTotal: {
-      actual: "1,616.64",
-      total: "1,907.64",
-      advance: "0",
-      balanceInvoice: "1,907.64",
-    },
-    tblContainer: [
-      {
-        chargeGroup: "CRORAILOUT20 - CRO CHARGES ON RAIL OUT CTR 20",
-        no: "1",
-        containerNo: "BMOU1321352",
-        fe: "F",
-        size: "20",
-        iso: "2210",
-        weight: "24760.0",
-        entryDate: "30-11-2025 15:14",
-        performedDate: "01-12-2025 23:31",
-        exitDate: "02-12-2025 14:50",
-        entryMode: "VESSEL",
-        exitMode: "TRAIN",
-        pol: "CNSHA",
-        pod: "INNSA",
-        oog: "N",
-        haz: "N",
-        rfr: "N",
-        eventName: "UNIT_RAMP",
-      },
-      {
-        chargeGroup: "CRORAILOUT20 - CRO CHARGES ON RAIL OUT CTR 20",
-        no: "2",
-        containerNo: "BMOU1359300",
-        fe: "F",
-        size: "20",
-        iso: "2210",
-        weight: "24760.0",
-        entryDate: "30-11-2025 15:28",
-        performedDate: "01-12-2025 23:16",
-        exitDate: "02-12-2025 14:50",
-        entryMode: "VESSEL",
-        exitMode: "TRAIN",
-        pol: "CNSHA",
-        pod: "INNSA",
-        oog: "N",
-        haz: "N",
-        rfr: "N",
-        eventName: "UNIT_RAMP",
-      },
-    ],
-    warnings: ["stateName value '27' might be a code, not a name."],
-    missingFields: [
-      "poNo",
-      "icpCodeBuyer",
-      "icpCodeSeller",
-      "voyageName",
-      "activityCode",
-      "icfHfm",
-    ],
-    reviewRequired: true,
-    usageMetadata: {
-      promptTokenCount: 1264,
-      candidatesTokenCount: 1409,
-      totalTokenCount: 5629,
-      promptTokensDetails: [
-        {
-          modality: "TEXT",
-          tokenCount: 490,
-        },
-        {
-          modality: "DOCUMENT",
-          tokenCount: 774,
-        },
-      ],
-      thoughtsTokenCount: 2956,
-    },
-  },
-};
-
 export default function AddEditFormControll({ reportData }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -5572,7 +5444,10 @@ export default function AddEditFormControll({ reportData }) {
 
           const HEADER_IMAGE_WIDTH_PX = 700;
           const HEADER_IMAGE_HEIGHT_PX = 120;
-          const HEADER_IMAGE_PADDING_PX = 12;
+          const HEADER_IMAGE_PADDING_PX = 18;
+          const HEADER_IMAGE_ROW_MIN_HEIGHT = 120;
+          const HEADER_IMAGE_ROW_EXTRA_HEIGHT = 28;
+          const HEADER_IMAGE_SPACER_ROW_HEIGHT = 12;
           const EXCEL_HEADING_BG = "0766AD";
           const EXCEL_HEADING_TEXT = "FFFFFF";
           const SECTION_HEADING_ROW_HEIGHT = 24;
@@ -5726,15 +5601,15 @@ export default function AddEditFormControll({ reportData }) {
             const imageHeightPx = Math.min(
               HEADER_IMAGE_HEIGHT_PX,
               Math.round(
-                imageWidthPx *
-                  (HEADER_IMAGE_HEIGHT_PX / HEADER_IMAGE_WIDTH_PX),
+                imageWidthPx * (HEADER_IMAGE_HEIGHT_PX / HEADER_IMAGE_WIDTH_PX),
               ),
             );
             const rImg = ws.addRow(new Array(colCount).fill(""));
 
             rImg.height = Math.max(
-              40,
-              Math.ceil((imageHeightPx + HEADER_IMAGE_PADDING_PX * 2) * 0.75),
+              HEADER_IMAGE_ROW_MIN_HEIGHT,
+              Math.ceil((imageHeightPx + HEADER_IMAGE_PADDING_PX * 2) * 0.9) +
+                HEADER_IMAGE_ROW_EXTRA_HEIGHT,
             );
 
             ws.mergeCells(rImg.number, 1, rImg.number, colCount);
@@ -5765,6 +5640,11 @@ export default function AddEditFormControll({ reportData }) {
             });
 
             styleRowByColCount(rImg, colCount, { border: undefined });
+
+            const spacerRow = ws.addRow(new Array(colCount).fill(""));
+            spacerRow.height = HEADER_IMAGE_SPACER_ROW_HEIGHT;
+            ws.mergeCells(spacerRow.number, 1, spacerRow.number, colCount);
+            styleRowByColCount(spacerRow, colCount, { border: undefined });
           };
 
           const buildGstrSectionSheet = async (sheetKey, sectionObj) => {
@@ -6454,11 +6334,12 @@ export default function AddEditFormControll({ reportData }) {
     handleUploadPurchaseInvoice: async () => {
       try {
         setFileUploadingLoader(true);
-        setFileUploadProgress(0);
+        setFileUploadProgress(5);
         setFileUploadStage("starting");
         setFileUploadMessage("Starting PDF extraction");
         setUploadedMessages([]);
         setUploadedTitle("Processing Purchase Invoice");
+        await showFileUploadStatus(5, "starting", "Starting PDF extraction");
 
         const requestBodyForMenuReportDetails = {
           columns:
@@ -6468,11 +6349,17 @@ export default function AddEditFormControll({ reportData }) {
           clientIdCondition: `status = 1 FOR JSON PATH,INCLUDE_NULL_VALUES`,
         };
 
+        await showFileUploadStatus(
+          10,
+          "configuration",
+          "Loading report configuration",
+        );
         const reportData = await fetchReportData(
           requestBodyForMenuReportDetails,
         );
         const spName = reportData?.data?.[0]?.spName;
 
+        await showFileUploadStatus(18, "validating", "Validating selected PDF");
         const files = uploadedFileData?.invoiceUploads || [];
 
         if (!Array.isArray(files) || files.length === 0) {
@@ -6489,6 +6376,7 @@ export default function AddEditFormControll({ reportData }) {
           return null;
         }
 
+        await showFileUploadStatus(25, "uploading", "Uploading PDF file");
         const startResponse = await UploadPurchaseInvoice(uploadedFileData);
 
         if (
@@ -6513,6 +6401,11 @@ export default function AddEditFormControll({ reportData }) {
           return null;
         }
 
+        await showFileUploadStatus(
+          35,
+          "extracting",
+          "PDF uploaded, extracting data",
+        );
         const finalStatus = await pollPdfReadingStatus({
           setFileUploadingLoader,
           setFileUploadProgress,
@@ -6522,16 +6415,13 @@ export default function AddEditFormControll({ reportData }) {
 
         const extractedData = finalStatus?.data ?? {};
 
-        console.log("finalStatus =>", finalStatus);
-        console.log("extractedData =>", extractedData);
-        console.log("finalStatus.data =>", finalStatus?.data);
-
         if (!extractedData || Object.keys(extractedData).length === 0) {
           toast.error("No extracted data found from PDF");
           setFileUploadingLoader(false);
           return null;
         }
 
+        await showFileUploadStatus(88, "preparing", "Preparing extracted data");
         const json = {
           data: finalStatus?.data || {},
           companyId,
@@ -6541,15 +6431,18 @@ export default function AddEditFormControll({ reportData }) {
           clientId,
         };
 
+        await showFileUploadStatus(92, "formatting", "Formatting data");
         const formatJson = removeSingleQuotes(json);
-        const spResponse = await fetchExcelDataInsert(spName, formatJson);
-        console.log("handleUploadPurchaseInvoice spResponse =>", spResponse);
+        await showFileUploadStatus(96, "saving", "Saving extracted PDF data");
 
-        if (spResponse.success == true) {
-          setFileUploadingLoader(false);
+        const spResponse = await fetchExcelDataInsert(spName, formatJson);
+
+        if (spResponse.rowsAffected[0].success == true) {
           setFileUploadProgress(100);
           setFileUploadStage("completed");
           setFileUploadMessage("PDF data extracted successfully");
+          await sleep(300);
+          setFileUploadingLoader(false);
           return toast.success(
             `${spResponse?.rowsAffected[0]?.message || "PDF Uploaded successfully"}`,
           );
@@ -6559,6 +6452,10 @@ export default function AddEditFormControll({ reportData }) {
           setEditableErrorsData(spResponse.rowsAffected[0].errors);
           setFileUploadingLoader(false);
           setFileUploadProgress(100);
+          setFileUploadStage("failed");
+          setFileUploadMessage(
+            spResponse?.rowsAffected?.[0]?.message || "PDF upload failed",
+          );
           toast.error(
             `${spResponse?.rowsAffected[0]?.message || "PDF Uploaded Failed"}`,
           );
@@ -7028,6 +6925,19 @@ export default function AddEditFormControll({ reportData }) {
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+  const showFileUploadStatus = async (
+    progress,
+    stage,
+    message,
+    delayMs = 250,
+  ) => {
+    setFileUploadingLoader(true);
+    setFileUploadProgress(progress);
+    setFileUploadStage(stage);
+    setFileUploadMessage(message);
+    await sleep(delayMs);
+  };
+
   async function pollPdfReadingStatus({
     setFileUploadingLoader,
     setFileUploadProgress,
@@ -7050,9 +6960,14 @@ export default function AddEditFormControll({ reportData }) {
       }
 
       const currentStatus = statusResponse?.readingStatus || {};
+      const extractionProgress = Number(currentStatus?.progress || 0);
+      const mappedProgress = Math.min(
+        88,
+        Math.max(35, Math.round(35 + extractionProgress * 0.53)),
+      );
 
       setFileUploadingLoader?.(true);
-      setFileUploadProgress?.(Number(currentStatus?.progress || 0));
+      setFileUploadProgress?.(mappedProgress);
       setFileUploadStage?.(currentStatus?.stage || "");
       setFileUploadMessage?.(currentStatus?.message || "");
 
@@ -9122,7 +9037,7 @@ export default function AddEditFormControll({ reportData }) {
                       // title={fileUploadStage || "Processing purchase invoice"}
                       // subtitle={fileUploadMessage || "Reading document"}
                       title={uploadedTitle || "Processing Purchase Invoice"}
-                      subtitle={"Reading document"}
+                      subtitle={fileUploadMessage || "Reading document"}
                       allowPageInteraction={true}
                       showOverlay={true}
                     />
@@ -9361,13 +9276,14 @@ export default function AddEditFormControll({ reportData }) {
                       </Paper>
                     </>
                   )}
-                  {menuType === "C" && (
+                  {(menuType === "C"  || menuType ===  'Z')  && (
                     <ChartReports
                       newState={newState}
                       chartExpand={toggle}
                       formControlData={formControlData}
                       chartData={chartData}
                       clientId={clientId}
+                      menuType={menuType}
                     />
                   )}
                   {menuType === "A" && (

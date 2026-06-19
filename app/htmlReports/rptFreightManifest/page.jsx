@@ -3,7 +3,7 @@
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 import React, { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import "./rptCargoManifest.css";
+import "./rptFreightManifest.css";
 import Print from "@/components/Print/page";
 const baseUrlNext = process.env.NEXT_PUBLIC_BASE_URL_SQL_Reports;
 import "@/public/style/reportTheme.css";
@@ -22,12 +22,12 @@ export default function RptIGM() {
   const MAX_CONTAINERS_PER_PAGE_ATTACH = 45;
 
   useEffect(() => {
-    setReportIds(["Cargo Manifest Report"]);
+    setReportIds(["Freight Manifest Report"]);
     const storedReportIds = sessionStorage.getItem("selectedReportIds");
     if (storedReportIds) {
       let reportIds = JSON.parse(storedReportIds);
       reportIds = Array.isArray(reportIds) ? reportIds : [reportIds];
-      setReportIds(["Cargo Manifest Report"]);
+      setReportIds(["Freight Manifest Report"]);
     } else {
       console.log("No Report IDs found in sessionStorage");
     }
@@ -144,7 +144,7 @@ export default function RptIGM() {
           className="text-center font-bold text-lg tracking-wide"
           style={{ width: "35%" }}
         >
-          CARGO MANIFEST
+          FREIGHT MANIFEST
         </h1>
 
         <div
@@ -431,10 +431,12 @@ export default function RptIGM() {
   };
 
   const CargoManifestContainerGrid = ({ data }) => {
+    const renderChargeValue = (value) => value ?? "";
+
     return (
       <>
         <div className="flex" style={{ width: "100%" }}>
-          <div style={{ width: "53%", borderRight: "1px solid black" }}>
+          <div style={{ width: "50%", borderRight: "1px solid black" }}>
             <table className="w-full">
               <thead>
                 <tr>
@@ -490,7 +492,7 @@ export default function RptIGM() {
               </thead>
               <tbody>
                 {data?.tblBlContainer?.map((item, index) => (
-                  <tr className="text-center">
+                  <tr className="text-center" key={item?.id || index}>
                     <td
                       className="border-b border-black text-black"
                       style={{ fontSize: "8px", padding: "2px" }}
@@ -547,8 +549,117 @@ export default function RptIGM() {
               </tbody>
             </table>
           </div>
-          <div style={{ width: "47%" }}>
-            <p className="text-black"></p>
+          <div style={{ width: "50%" }}>
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th
+                    className="p-1 border-b border-black text-black font-bold"
+                    style={{ fontSize: "8px" }}
+                  >
+                    TYPE
+                  </th>
+                  <th
+                    className="p-1 border-b border-black text-black font-bold"
+                    style={{ fontSize: "8px" }}
+                  >
+                    CHARGE
+                  </th>
+                  <th
+                    className="p-1 border-b border-black text-black font-bold"
+                    style={{ fontSize: "8px" }}
+                  >
+                    QUANTITY
+                  </th>
+                  <th
+                    className="p-1 border-b border-black text-black font-bold"
+                    style={{ fontSize: "8px" }}
+                  >
+                    RATE
+                  </th>
+                  <th
+                    className="p-1 border-b border-black text-black font-bold"
+                    style={{ fontSize: "8px" }}
+                  >
+                    CURRENCY
+                  </th>
+                  <th
+                    className="p-1 border-b border-black text-black font-bold"
+                    style={{ fontSize: "8px" }}
+                  >
+                    EX. RATE
+                  </th>
+                  <th
+                    className="p-1 border-b border-black text-black font-bold"
+                    style={{ fontSize: "8px" }}
+                  >
+                    TOTAL AMOUNT
+                  </th>
+                  <th
+                    className="p-1 border-b border-black text-black font-bold"
+                    style={{ fontSize: "8px" }}
+                  >
+                    P / C
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.tblBlCharge?.map((item, index) => (
+                  <tr className="text-center" key={item?.id || index}>
+                    <td
+                      className="border-b border-black text-black"
+                      style={{ fontSize: "8px", padding: "2px" }}
+                    >
+                      {renderChargeValue(item?.containerSize)}
+                      {item?.containerSize || item?.ContainerType ? " / " : ""}
+                      {renderChargeValue(item?.ContainerType)}
+                    </td>
+                    <td
+                      className="border-b border-black text-black"
+                      style={{ fontSize: "8px", padding: "2px" }}
+                    >
+                      {renderChargeValue(item?.Charge)}
+                    </td>
+                    <td
+                      className="border-b border-black text-black"
+                      style={{ fontSize: "8px", padding: "2px" }}
+                    >
+                      {renderChargeValue(item?.Qty)}
+                    </td>
+                    <td
+                      className="border-b border-black text-black"
+                      style={{ fontSize: "8px", padding: "2px" }}
+                    >
+                      {renderChargeValue(item?.Rate)}
+                    </td>
+                    <td
+                      className="border-b border-black text-black"
+                      style={{ fontSize: "8px", padding: "2px" }}
+                    >
+                      {renderChargeValue(item?.Currency)}
+                    </td>
+                    <td
+                      className="border-b border-black text-black"
+                      style={{ fontSize: "8px", padding: "2px" }}
+                    >
+                      {renderChargeValue(item?.ExRate)}
+                    </td>
+                    <td
+                      className="border-b border-black text-black"
+                      style={{ fontSize: "8px", padding: "2px" }}
+                    >
+                      {renderChargeValue(item?.TotalAmount)}
+                    </td>
+                    <td
+                      className="border-b border-black text-black"
+                      style={{ fontSize: "8px", padding: "2px" }}
+                    >
+                      {renderChargeValue(item?.PC)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </>
@@ -685,7 +796,7 @@ export default function RptIGM() {
       <div>
         {reportIds.map((reportId, index) => {
           switch (reportId) {
-            case "Cargo Manifest Report":
+            case "Freight Manifest Report":
               return data.map((dataItem, dataIdx) => {
                 const containersAll = Array.isArray(dataItem?.tblBlContainer)
                   ? dataItem.tblBlContainer

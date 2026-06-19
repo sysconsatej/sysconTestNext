@@ -619,6 +619,45 @@ export function applyTokens(text, data, opts = {}) {
   });
 }
 
+function parseLooseBoolean(v) {
+  if (v === true || v === false) return v;
+  if (typeof v === "number") {
+    if (v === 1) return true;
+    if (v === 0) return false;
+  }
+
+  const s = String(v ?? "").trim().toLowerCase();
+  if (["true", "1", "yes", "y"].includes(s)) return true;
+  if (["false", "0", "no", "n"].includes(s)) return false;
+  return null;
+}
+
+function readBooleanFlag(data, names) {
+  for (const name of names || []) {
+    const v = getByPath(data, name);
+    const parsed = parseLooseBoolean(v);
+    if (parsed !== null) return parsed;
+  }
+  return null;
+}
+
+function shouldGenerateAttachmentSheets(data) {
+  const isAttachSheet = readBooleanFlag(data, [
+    "isAttachSheet",
+    "is_attach_sheet",
+    "IsAttachSheet",
+    "IS_ATTACH_SHEET",
+  ]);
+  const isContainerGrid = readBooleanFlag(data, [
+    "isContainerGrid",
+    "is_container_grid",
+    "IsContainerGrid",
+    "IS_CONTAINER_GRID",
+  ]);
+
+  return !(isAttachSheet === false && isContainerGrid === false);
+}
+
 /* =========================================================
    Table helpers
 ========================================================= */
@@ -2166,6 +2205,7 @@ export function layoutTemplateForData(
 
     const outPages = [];
     let __attachNo = 0;
+    const allowAttachmentSheets = shouldGenerateAttachmentSheets(data);
 
     for (const p of tpl.pages || []) {
       let page = clone(p);
@@ -2514,6 +2554,17 @@ export function layoutTemplateForData(
             page.elements,
             `${page.name || page.id} (single)`,
           );
+          if (!allowAttachmentSheets) page.__disableAttachmentSheets = true;
+          outPages.push(page);
+          continue;
+        }
+
+        if (!allowAttachmentSheets) {
+          page.__disableAttachmentSheets = true;
+          pruneNeighborsNotInSamePage(
+            page.elements,
+            `${page.name || page.id} (attachments-disabled)`,
+          );
           outPages.push(page);
           continue;
         }
@@ -2594,6 +2645,12 @@ export function layoutTemplateForData(
     }
 
     let finalTpl = { ...tpl, pages: outPages };
+    if (!allowAttachmentSheets) {
+      finalTpl.pages = (finalTpl.pages || []).slice(0, 1).map((p) => ({
+        ...p,
+        __disableAttachmentSheets: true,
+      }));
+    }
     finalTpl = forceA4OnTemplateAndPages(finalTpl, paperMm);
     return finalTpl;
   } catch (err) {
