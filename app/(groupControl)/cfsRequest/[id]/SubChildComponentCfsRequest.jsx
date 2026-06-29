@@ -77,7 +77,7 @@ function onSubmitFunctionCall(
   childName,
   childIndex
 ) {
-  debugger
+  // debugger
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
   console.log(functionData, "functionData");
@@ -242,7 +242,7 @@ export default function SubChildComponent({
           if (subChild.functionOnSubmit && subChild.functionOnSubmit !== null) {
             // subChild?.functionOnSubmit.split(";").forEach((e) => onSubmitFunctionCall(e, subChildObject));
             for (const fun of subChild?.functionOnSubmit.split(";") || []) {
-              debugger
+              // debugger
               let updatedData = onSubmitFunctionCall(
                 fun,
                 newState,

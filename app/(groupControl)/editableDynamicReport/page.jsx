@@ -5517,11 +5517,8 @@ export default function AddEditFormControll({ reportData }) {
                                                   setselectedRow={
                                                     setselectedRow
                                                   }
-                                                  setGridData={
-                                                    setFinalPaginatedData
-                                                  }
-                                                  originalData={paginatedData}
-                                                  gridData={finalPaginatedData}
+                                                  setGridData={setPaginatedData}
+                                                  originalData={tableData}
                                                   setCurrentPage={
                                                     setCurrentPage
                                                   }
@@ -5590,7 +5587,6 @@ export default function AddEditFormControll({ reportData }) {
                                                 isInputVisible={isInputVisible}
                                                 setGridData={setPaginatedData}
                                                 originalData={tableData}
-                                                gridData={paginatedData}
                                                 setCurrentPage={setCurrentPage}
                                               />
                                             )}
@@ -5857,11 +5853,8 @@ export default function AddEditFormControll({ reportData }) {
                                                   setselectedRow={
                                                     setselectedRow
                                                   }
-                                                  setGridData={
-                                                    setFinalPaginatedData
-                                                  }
-                                                  originalData={paginatedData}
-                                                  gridData={finalPaginatedData}
+                                                  setGridData={setPaginatedData}
+                                                  originalData={tableData}
                                                   setCurrentPage={
                                                     setCurrentPage
                                                   }
@@ -5930,7 +5923,6 @@ export default function AddEditFormControll({ reportData }) {
                                                 isInputVisible={isInputVisible}
                                                 setGridData={setPaginatedData}
                                                 originalData={tableData}
-                                                gridData={paginatedData}
                                                 setCurrentPage={setCurrentPage}
                                               />
                                             )}
@@ -6234,7 +6226,6 @@ CustomizedInputBase.propTypes = {
   setSelectedIds: PropTypes.func,
   setGridData: PropTypes.func,
   originalData: PropTypes.array,
-  gridData: PropTypes.array,
   setCurrentPage: PropTypes.func, // Reset to first page after filtering
 };
 function CustomizedInputBase({
@@ -6247,7 +6238,6 @@ function CustomizedInputBase({
   setselectedRow,
   setGridData,
   originalData,
-  gridData,
   setCurrentPage, // Reset to first page after filtering
 }) {
   const [searchInputGridData, setSearchInputGridData] = useState(
@@ -6258,15 +6248,18 @@ function CustomizedInputBase({
   const filterFunction = (searchValue, columnKey) => {
     if (!searchValue.trim()) {
       setInputVisible(false);
-      // setSelectedIds([]);
-      setselectedRow(new Set());
+      setPrevSearchInput("");
+      setselectedRow?.(new Set());
       setDataToGetSelectedRowData(originalData);
+      setCurrentPage(1);
       return setGridData(originalData);
     }
     const lowercasedInput = searchValue.toLowerCase();
-    const filtered = gridData.filter((item) => {
+    // Always search the complete data set, not only the rows rendered on the
+    // current page. Pagination is applied again after the filtered state updates.
+    const filtered = originalData.filter((item) => {
       // Access the item's property based on columnKey and convert to string for comparison
-      let columnValue = String(item[columnKey]).toLowerCase();
+      let columnValue = String(item?.[columnKey] ?? "").toLowerCase();
 
       const iso8601Regex = /^\d{4}-\d{2}-\d{2}t\d{2}:\d{2}:\d{2}\.\d{3}z$/;
 
@@ -6283,7 +6276,7 @@ function CustomizedInputBase({
     setGridData(filtered);
     setDataToGetSelectedRowData(filtered);
     // setSelectedIds([]);
-    setselectedRow(new Set());
+    setselectedRow?.(new Set());
     setInputVisible(false);
     setCurrentPage(1); // Reset to first page after filtering
     setPrevSearchInput(searchValue);
@@ -6292,6 +6285,11 @@ function CustomizedInputBase({
   function handleClose() {
     setSearchInputGridData("");
     setPrevSearchInput("");
+    setselectedRow?.(new Set());
+    setDataToGetSelectedRowData(originalData);
+    setGridData(originalData);
+    setCurrentPage(1);
+    setInputVisible(false);
   }
 
   return (

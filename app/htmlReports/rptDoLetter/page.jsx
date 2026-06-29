@@ -39,6 +39,10 @@ export default function rptDoLetter() {
   const [canData, setCANData] = useState([]);
   const [getDisplayButton, setDisplayButton] = useState(true);
   const [userName, setUserName] = useState(null);
+  const [ImageUrl, setImageUrl] = useState("");
+  const [companyImageUrl, setCompanyImageUrl] = useState("");
+  const [companyLogoName, setCompanyLogoName] = useState("");
+  const [companyLogoAddress, setCompanyLogoAddress] = useState("");
   const enquiryModuleRefs = useRef([]);
   // enquiryModuleRefs.current = []; // do not remove this line
   const { clientId } = getUserDetails();
@@ -108,7 +112,7 @@ export default function rptDoLetter() {
       {
         clientId === 15 && localStorage.setItem("token", JSON.stringify(token));
       }
-    } catch { }
+    } catch {}
   }, []);
 
   // Hide print if hb=cfm (kept your original rule)
@@ -117,6 +121,26 @@ export default function rptDoLetter() {
       setDisplayButton(false);
     }
   }, [displayButton]);
+
+  useEffect(() => {
+    const storedUserData = localStorage.getItem("userData");
+    if (!storedUserData) return;
+
+    try {
+      const decryptedData = decrypt(storedUserData);
+      const userData = JSON.parse(decryptedData);
+      const user = userData?.[0] ?? {};
+
+      setImageUrl(user?.headerLogoPath ?? "");
+      setCompanyImageUrl(user?.companyLogo ?? "");
+      setCompanyLogoName(user?.companyName ?? "");
+      setCompanyLogoAddress(
+        user?.companyAddress ?? user?.branchAddress ?? user?.address ?? "",
+      );
+    } catch (error) {
+      console.error("Error reading company header data:", error);
+    }
+  }, []);
 
   // ------------------------------------------------------------------
   // 1) Resolve record id from ?rid (decrypt) OR fallback to ?recordId
@@ -178,7 +202,7 @@ export default function rptDoLetter() {
           try {
             const tk = localStorage.getItem("token");
             if (tk) headers["x-access-token"] = JSON.parse(tk);
-          } catch { }
+          } catch {}
         }
 
         const body = { id: resolvedRecordId }; // minimal for public route
@@ -482,19 +506,61 @@ export default function rptDoLetter() {
   };
 
   const CompanyImgModule = () => {
-    const storedUserData = localStorage.getItem("userData");
-    let imageHeader = null;
-    if (storedUserData) {
-      const decryptedData = decrypt(storedUserData);
-      const userData = JSON.parse(decryptedData);
-      imageHeader = userData[0]?.headerLogoPath;
-    }
+    const hasHeaderImage = Boolean(ImageUrl?.trim());
+    const fallbackCompanyName =
+      companyLogoName || data?.[0]?.companyName || data?.[0]?.company || "";
+    const fallbackCompanyAddress =
+      companyLogoAddress ||
+      data?.[0]?.companyAddress ||
+      data?.[0]?.branchAddress ||
+      data?.[0]?.address ||
+      "";
+    const normalizedCompanyLogoPath = companyImageUrl
+      ?.trim()
+      .replace(/\\/g, "/")
+      .replace(/^~\//, "");
+    const companyLogoSrc = normalizedCompanyLogoPath
+      ? /^(https?:\/\/|data:|blob:)/i.test(normalizedCompanyLogoPath)
+        ? normalizedCompanyLogoPath
+        : `${(baseUrlNext || "").replace(/\/+$/, "")}/${normalizedCompanyLogoPath.replace(/^\/+/, "")}`
+      : "";
+
     return (
-      <img
-        src={imageHeader ? baseUrlNext + imageHeader : ""}
-        style={{ width: "100%" }}
-        alt="LOGO"
-      />
+      <>
+        {hasHeaderImage ? (
+          <img
+            src={`${baseUrlNext}${ImageUrl}`}
+            style={{ width: "100%" }}
+            alt="LOGO"
+          />
+        ) : (
+          <div
+            className="flex items-center w-full px-3"
+            style={{ minHeight: "90px" }}
+          >
+            {companyLogoSrc && (
+              <img
+                src={companyLogoSrc}
+                alt={`${fallbackCompanyName || "Company"} logo`}
+                className="object-contain"
+                style={{ maxHeight: "85px", maxWidth: "160px" }}
+              />
+            )}
+
+            <div className="flex-1 pl-4 text-center">
+              <h1 style={{ fontSize: "20px" }} className="text-2xl font-bold">
+                {fallbackCompanyName}
+              </h1>
+              <p
+                style={{ fontSize: "15px" }}
+                className="text-xs whitespace-pre-line"
+              >
+                {fallbackCompanyAddress}
+              </p>
+            </div>
+          </div>
+        )}
+      </>
     );
   };
 
@@ -540,9 +606,9 @@ export default function rptDoLetter() {
   const chunks =
     chunkSize > 0
       ? chunkArray(
-        containers,
-        isTermsAndConditionAvailable ? chunkSize - 1 : chunkSize,
-      )
+          containers,
+          isTermsAndConditionAvailable ? chunkSize - 1 : chunkSize,
+        )
       : [containers];
 
   // const chunks =
@@ -1537,7 +1603,7 @@ export default function rptDoLetter() {
         </div>
         <div className="flex justify-between w-full">
           <div className="flex items-end justify-start w-[40%]">
-            <p
+            {/* <p
               className="text-black font-bold mr-2"
               style={{ fontSize: "10px" }}
             >
@@ -1546,6 +1612,21 @@ export default function rptDoLetter() {
               {data[0]?.emptyDepot || ""}
               <br />
               {data[0]?.emptyDepotAddress || ""}
+            </p> */}
+            {/* as discused by neha and anisha  23-06-2026*/}
+            <p
+              className="text-black font-bold mr-2"
+              style={{ fontSize: "10px" }}
+            >
+              To,
+              <br />
+              The Manager,
+              <br />
+              {data[0]?.depotName ?? data[0]?.emptyDepot ?? ""}
+              <br />
+              {data[0]?.depotName
+                ? (data[0]?.depotAddress ?? "")
+                : (data[0]?.emptyDepotAddress ?? "")}
             </p>
           </div>
           <div className="flex items-start justify-end">
@@ -1838,7 +1919,9 @@ export default function rptDoLetter() {
                     className="text-black font-normal"
                     style={{ fontSize: "9px" }}
                   >
-                    {formatDateToYMD(data?.[0]?.doValidDate)}
+                    {/* {formatDateToYMD(data?.[0]?.doValidDate)} */}
+                    {/* as discused by anisha and neha ma'am date 19-06-2026*/}
+                    {formatDateToYMD(item.doValidityDate)}
                   </p>
                 </th>
               </tr>
@@ -4875,12 +4958,12 @@ export default function rptDoLetter() {
                           item?.destinationFreeDays
                         )} */}
                         {item?.doValidityDate != null &&
-                          String(item.doValidityDate).trim() !== ""
+                        String(item.doValidityDate).trim() !== ""
                           ? formatDateToYMDMonths(item?.doValidityDate)
                           : getValidTillDateNew(
-                            item?.dischargeDate,
-                            item?.destinationFreeDays,
-                          )}
+                              item?.dischargeDate,
+                              item?.destinationFreeDays,
+                            )}
                       </p>
                     </th>
                   </tr>
@@ -5226,8 +5309,9 @@ export default function rptDoLetter() {
 
     const vesselVoy =
       row.vesselVoy ||
-      `${row.vesselName || ""}${row.voyageNo ? ` / ${row.voyageNo}` : ""
-        }`.trim();
+      `${row.vesselName || ""}${
+        row.voyageNo ? ` / ${row.voyageNo}` : ""
+      }`.trim();
 
     // shared classes
     const tblBase = "w-full table-auto text-[11px] text-black border-collapse";
@@ -7171,7 +7255,84 @@ export default function rptDoLetter() {
               ))}
           </tbody>
         </table>
-        {/* Description  */}
+
+        <div
+          style={{
+            width: "100%",
+            marginTop: "8px",
+            color: "#000",
+            fontFamily: "Arial, sans-serif",
+          }}
+        >
+          {/* Hard-coded line told by Anisha */}
+          <p
+            style={{
+              margin: 0,
+              fontSize: "10px",
+              lineHeight: "13px",
+            }}
+          >
+            There are only {canData?.[0]?.destinationFreeDays ?? ""} days free
+            time for CNEE at destination including arrival date, thereafter $
+            {canData?.[0]?.destinationDemurrageRate ?? ""} Per Day PerTank,
+          </p>
+          <table
+            style={{
+              width: "100%",
+              marginTop: "8px",
+              borderCollapse: "collapse",
+              tableLayout: "fixed",
+            }}
+          >
+            <colgroup>
+              <col style={{ width: "95px" }} />
+              <col style={{ width: "12px" }} />
+              <col style={{ width: "auto" }} />
+            </colgroup>
+
+            <tbody>
+              <tr>
+                <td style={{ verticalAlign: "top" }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Description
+                  </p>
+                </td>
+
+                <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "9px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    :
+                  </p>
+                </td>
+
+                <td style={{ padding: "0 4px", verticalAlign: "top" }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "9px",
+                      lineHeight: "13px",
+                      whiteSpace: "pre-line",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {canData?.[0]?.goodsDesc || ""}
+                  </p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <div className="flex mt-2" style={{ width: "100%" }}>
           <p className="text-black" style={{ fontSize: "10px" }}>
             Dear Sir/ Madam,
@@ -7251,8 +7412,9 @@ export default function rptDoLetter() {
                               enquiryModuleRefs.current[startRefIndex + i] = el;
                           }}
                           id="Delivery Order"
-                          className={`relative bg-white shadow-lg black-text ${i < deliveryOrder.length - 1 ? "report-spacing" : ""
-                            }`}
+                          className={`relative bg-white shadow-lg black-text ${
+                            i < deliveryOrder.length - 1 ? "report-spacing" : ""
+                          }`}
                           style={{
                             width: "210mm",
                             minHeight: "297mm",
@@ -7318,8 +7480,9 @@ export default function rptDoLetter() {
                               enquiryModuleRefs.current[startRefIndex + i] = el;
                           }}
                           id="Survey Letter"
-                          className={`relative bg-white shadow-lg black-text ${i < reportIds.length - 1 ? "report-spacing" : ""
-                            }`}
+                          className={`relative bg-white shadow-lg black-text ${
+                            i < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                           style={{
                             width: "210mm",
                             minHeight: "297mm",
@@ -7392,8 +7555,9 @@ export default function rptDoLetter() {
                             enquiryModuleRefs.current[startRefIndex + i] = el;
                         }}
                         id="EMPTY OFF LOADING LETTER"
-                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -7450,8 +7614,9 @@ export default function rptDoLetter() {
                       if (el) enquiryModuleRefs.current[startRefIndex] = el;
                     }}
                     id="Destuffing letter"
-                    className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      }`}
+                    className={`relative bg-white shadow-lg black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       minHeight: "297mm",
@@ -7510,8 +7675,9 @@ export default function rptDoLetter() {
                               enquiryModuleRefs.current[startRefIndex + i] = el;
                           }}
                           id="CMC Letter"
-                          className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                            }`}
+                          className={`relative bg-white shadow-lg black-text ${
+                            index < reportIds.length - 1 ? "report-spacing" : ""
+                          }`}
                           style={{
                             width: "210mm",
                             minHeight: "297mm",
@@ -7569,8 +7735,9 @@ export default function rptDoLetter() {
                       if (el) enquiryModuleRefs.current[startRefIndex] = el;
                     }}
                     id="Customs Examination Order"
-                    className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      }`}
+                    className={`relative bg-white shadow-lg black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       minHeight: "297mm",
@@ -7631,8 +7798,9 @@ export default function rptDoLetter() {
                             enquiryModuleRefs.current[startRefIndex + i] = el;
                         }}
                         id="Bond Letter"
-                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -7705,8 +7873,9 @@ export default function rptDoLetter() {
                             enquiryModuleRefs.current[startRefIndex + i] = el;
                         }}
                         id="SEAL CUTTING LETTER"
-                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -7762,8 +7931,9 @@ export default function rptDoLetter() {
                       if (el) enquiryModuleRefs.current[startRefIndex] = el;
                     }}
                     id="NOC For Console Party"
-                    className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      }`}
+                    className={`relative bg-white shadow-lg black-text ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    }`}
                     style={{
                       width: "210mm",
                       minHeight: "297mm",
@@ -7805,7 +7975,7 @@ export default function rptDoLetter() {
 
               const deliveryOrderKenyaCount =
                 Array.isArray(deliveryOrderKenyaChunks) &&
-                  deliveryOrderKenyaChunks.length
+                deliveryOrderKenyaChunks.length
                   ? deliveryOrderKenyaChunks.length
                   : 1;
               const startRefIndex = refCursor;
@@ -7814,7 +7984,7 @@ export default function rptDoLetter() {
               return (
                 <>
                   {(Array.isArray(deliveryOrderKenyaChunks) &&
-                    deliveryOrderKenyaChunks.length
+                  deliveryOrderKenyaChunks.length
                     ? deliveryOrderKenyaChunks
                     : [undefined]
                   ).map((container, i) => (
@@ -7826,8 +7996,9 @@ export default function rptDoLetter() {
                             enquiryModuleRefs.current[startRefIndex + i] = el;
                         }}
                         id="Delivery Order"
-                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                         style={{
                           width: "210mm",
                           minHeight: "295mm",
@@ -7934,8 +8105,9 @@ export default function rptDoLetter() {
                             enquiryModuleRefs.current[startRefIndex + i] = el;
                         }}
                         id="EMPTY CONTAINER OFF LOADING LETTER"
-                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -8025,8 +8197,9 @@ export default function rptDoLetter() {
                             enquiryModuleRefs.current[startRefIndex + i] = el;
                         }}
                         id="Empty Container Return Notification"
-                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",
@@ -8142,8 +8315,9 @@ export default function rptDoLetter() {
                         if (el) enquiryModuleRefs.current[startRefIndex] = el;
                       }}
                       id="SAUDI DELIVERY ORDER"
-                      className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                        }`}
+                      className={`relative bg-white shadow-lg black-text ${
+                        index < reportIds.length - 1 ? "report-spacing" : ""
+                      }`}
                       style={{
                         width: "210mm",
                         minHeight: "297mm",
@@ -8270,8 +8444,9 @@ export default function rptDoLetter() {
                                   el;
                             }}
                             id={`CAN Report-${i}`}
-                            className={`bg-white black-text ${i < canReportCount - 1 ? "report-spacing" : ""
-                              }`}
+                            className={`bg-white black-text ${
+                              i < canReportCount - 1 ? "report-spacing" : ""
+                            }`}
                             style={{
                               width: "210mm",
                               minWidth: "210mm",
@@ -8376,8 +8551,9 @@ export default function rptDoLetter() {
                                   el;
                             }}
                             id={`CAN Report-${i}`}
-                            className={`bg-white black-text ${i < canReportCount - 1 ? "report-spacing" : ""
-                              }`}
+                            className={`bg-white black-text ${
+                              i < canReportCount - 1 ? "report-spacing" : ""
+                            }`}
                             style={{
                               width: "210mm",
                               minWidth: "210mm",
@@ -8485,8 +8661,9 @@ export default function rptDoLetter() {
                             enquiryModuleRefs.current[startRefIndex + i] = el;
                         }}
                         id="EMPTY OFF LOADING LETTER SLS"
-                        className={`relative bg-white shadow-lg black-text ${index < reportIds.length - 1 ? "report-spacing" : ""
-                          }`}
+                        className={`relative bg-white shadow-lg black-text ${
+                          index < reportIds.length - 1 ? "report-spacing" : ""
+                        }`}
                         style={{
                           width: "210mm",
                           minHeight: "297mm",

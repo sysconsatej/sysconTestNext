@@ -38,6 +38,7 @@ import {
 import { toast } from "react-toastify";
 import Checkbox from "@mui/material/Checkbox";
 import * as onSubmitValidation from "@/helper/onSubmitFunction";
+import * as onGridClickFunctions from "@/helper/onGridClick";
 import * as onGridSaveValidation from "@/helper/onGridSave";
 import { ActionButton } from "@/components/ActionsButtons";
 ("");
@@ -138,6 +139,21 @@ async function onGridSaveFunctionCall(
       // onChangeHandler(updatedValues); // Assuming you have an onChangeHandler function to handle the updated values
     }
   }
+}
+async function onGridClickFunctionCall(functionName, functionObject) {
+  const name = String(functionName || "").trim();
+
+  if (!name) return null;
+
+  const functionToCall = onGridClickFunctions?.[name];
+
+  if (typeof functionToCall !== "function") {
+    throw new Error(
+      `Grid click function "${name}" not found in onGridClick.js`,
+    );
+  }
+
+  return await functionToCall(functionObject);
 }
 
 RowComponent.propTypes = {
@@ -337,22 +353,22 @@ export default function RowComponent({
 
   function handleChangeFunction(result) {
     if (result?.isCheck === false) {
-      if (result.alertShow) {
+      if (result?.alertShow) {
         setParaText(result.message);
         setIsError(true);
-        setOpenModal((prev) => !prev);
+        setOpenModal((previous) => !previous);
         setTypeofModal("onCheck");
       }
+
       return;
     }
-    let data = { ...result?.values };
-    // let data = { ...result.newState };
-    setChildValuseObj((pre) => {
-      return {
-        ...pre,
-        ...data,
-      };
-    });
+
+    if (!result?.values) return;
+
+    setChildValuseObj((previous) => ({
+      ...previous,
+      ...result.values,
+    }));
   }
   function handleBlurFunction(result) {
     if (result.isCheck === false) {
@@ -374,42 +390,182 @@ export default function RowComponent({
     });
   }
 
-  function addChildRecordToInsert(obj, index) {
-    // if (Object.keys(obj).length !== 0) {
-    //   const tmpData = { ...submitNewState };
-    //   tmpData[sectionData.tableName].push({ ...obj, isChecked: true });
-    //   setSubmitNewState(tmpData);
-    // }
-    if (Object.keys(obj).length !== 0) {
-      setSubmitNewState((prevState) => {
-        const newStateCopy = { ...newState, ...prevState };
-        // Assume each entry in the array has an 'id' property
-        let updatedData = newStateCopy[sectionData.tableName].filter(
-          (_, idx) => idx === index,
-        );
-        updatedData = { ...updatedData[0], isChecked: true };
-        newStateCopy[sectionData.tableName][index] = updatedData;
-        return newStateCopy;
-      });
-      setNewState((prevState) => {
-        const newStateCopy = { ...newState, ...prevState };
-        // Assume each entry in the array has an 'id' property
-        let updatedData = newStateCopy[sectionData.tableName].filter(
-          (_, idx) => idx === index,
-        );
-        updatedData = { ...updatedData[0], isChecked: true };
-        newStateCopy[sectionData.tableName][index] = updatedData;
-        return newStateCopy;
-      });
+  // function addChildRecordToInsert(obj, index) {
+  //   // if (Object.keys(obj).length !== 0) {
+  //   //   const tmpData = { ...submitNewState };
+  //   //   tmpData[sectionData.tableName].push({ ...obj, isChecked: true });
+  //   //   setSubmitNewState(tmpData);
+  //   // }
+  //   if (Object.keys(obj).length !== 0) {
+  //     setSubmitNewState((prevState) => {
+  //       const newStateCopy = { ...newState, ...prevState };
+  //       // Assume each entry in the array has an 'id' property
+  //       let updatedData = newStateCopy[sectionData.tableName].filter(
+  //         (_, idx) => idx === index,
+  //       );
+  //       updatedData = { ...updatedData[0], isChecked: true };
+  //       newStateCopy[sectionData.tableName][index] = updatedData;
+  //       return newStateCopy;
+  //     });
+  //     setNewState((prevState) => {
+  //       const newStateCopy = { ...newState, ...prevState };
+  //       // Assume each entry in the array has an 'id' property
+  //       let updatedData = newStateCopy[sectionData.tableName].filter(
+  //         (_, idx) => idx === index,
+  //       );
+  //       updatedData = { ...updatedData[0], isChecked: true };
+  //       newStateCopy[sectionData.tableName][index] = updatedData;
+  //       return newStateCopy;
+  //     });
+  //   }
+  // }
+
+  async function addChildRecordToInsert(obj, index, isChecked = true) {
+    if (!obj || Object.keys(obj).length === 0) return;
+
+    const tableName = sectionData?.tableName;
+
+    if (!tableName) return;
+
+    const configuredFunctions = String(sectionData?.functionOnClick || "")
+      .split(";")
+      .map((functionName) => functionName.trim())
+      .filter(Boolean);
+
+    // Preserve old checkbox behaviour for other grids.
+    if (configuredFunctions.length === 0) {
+      if (!isChecked) {
+        removeChildRecordFromInsert(obj.id, index);
+        return;
+      }
+
+      setNewState((previous) => ({
+        ...previous,
+        [tableName]: previous[tableName].map((item, rowIndex) =>
+          rowIndex === index
+            ? {
+                ...item,
+                isChecked: true,
+              }
+            : item,
+        ),
+      }));
+
+      setSubmitNewState((previous) => ({
+        ...previous,
+        [tableName]: (previous?.[tableName] || newState?.[tableName] || []).map(
+          (item, rowIndex) =>
+            rowIndex === index
+              ? {
+                  ...item,
+                  isChecked: true,
+                }
+              : item,
+        ),
+      }));
+
+      return;
+    }
+
+    try {
+      const functionValues = await configuredFunctions.reduce(
+        async (previousPromise, functionName) => {
+          const previousValues = await previousPromise;
+
+          const result = await onGridClickFunctionCall(functionName, {
+            values: {
+              ...obj,
+              ...previousValues,
+            },
+            isChecked,
+            newState,
+          });
+
+          if (result?.isCheck === false) {
+            if (result?.alertShow) {
+              setParaText(result.message);
+              setIsError(true);
+              setOpenModal((previous) => !previous);
+              setTypeofModal("onCheck");
+            }
+
+            throw new Error("__VALIDATION_STOP__");
+          }
+
+          return {
+            ...previousValues,
+            ...(result?.values || {}),
+          };
+        },
+        Promise.resolve({}),
+      );
+
+      setChildValuseObj((previous) => ({
+        ...previous,
+        ...functionValues,
+        isChecked,
+      }));
+
+      setRenderedData((previous) =>
+        (previous || []).map((item, rowIndex) =>
+          rowIndex === index
+            ? {
+                ...item,
+                ...functionValues,
+                isChecked,
+              }
+            : item,
+        ),
+      );
+
+      setNewState((previous) => ({
+        ...previous,
+        [tableName]: (previous?.[tableName] || []).map((item, rowIndex) =>
+          rowIndex === index
+            ? {
+                ...item,
+                ...functionValues,
+                isChecked,
+              }
+            : item,
+        ),
+      }));
+
+      setSubmitNewState((previous) => ({
+        ...previous,
+        [tableName]: (previous?.[tableName] || newState?.[tableName] || []).map(
+          (item, rowIndex) =>
+            rowIndex === index
+              ? {
+                  ...item,
+                  ...functionValues,
+                  isChecked,
+                }
+              : item,
+        ),
+      }));
+    } catch (error) {
+      if (error?.message === "__VALIDATION_STOP__") return;
+
+      toast.error(
+        error?.message || "Error while executing grid checkbox function.",
+      );
     }
   }
 
-  const handleChange = (event, row, index) => {
-    if (event.target.checked === false) {
-      removeChildRecordFromInsert(row.id, index);
-    } else {
-      addChildRecordToInsert(row, index);
-    }
+  const handleChange = async (event, currentRow, index) => {
+    const checked = event.target.checked;
+    setChildValuseObj((previous) => ({
+      ...previous,
+      isChecked: checked,
+    }));
+    const latestRowValues = {
+      ...currentRow,
+      ...childValuseObj,
+      isChecked: checked,
+    };
+
+    await addChildRecordToInsert(latestRowValues, index, checked);
   };
 
   // const handleValuesChangeOfChildGrid = (e,index) => {
@@ -700,7 +856,9 @@ export default function RowComponent({
                                 sx={{
                                   ...checkBoxStyle,
                                 }}
-                                checked={row.isChecked}
+                                checked={Boolean(
+                                  childValuseObj?.isChecked ?? row?.isChecked,
+                                )}
                                 tabIndex={-1}
                                 disableRipple
                                 inputProps={{
@@ -774,7 +932,9 @@ export default function RowComponent({
                               sx={{
                                 ...checkBoxStyle,
                               }}
-                              checked={row.isChecked}
+                              checked={Boolean(
+                                childValuseObj?.isChecked ?? row?.isChecked,
+                              )}
                               tabIndex={-1}
                               disableRipple
                               inputProps={{
@@ -1017,7 +1177,7 @@ export default function RowComponent({
                               return;
                             }
                           }
- 
+
                           setNewState((prev) => {
                             const newState = { ...prev };
                             // Assuming you have the index of the item you want to update
@@ -1060,7 +1220,7 @@ export default function RowComponent({
                             return newState;
                           });
 
-                           try {
+                          try {
                             if (
                               sectionData.functionOnGridSave &&
                               sectionData.functionOnGridSave != null
@@ -1086,51 +1246,51 @@ export default function RowComponent({
                                     return { ...prev, ...updatedData?.values };
                                   });
 
-                             setNewState((prev) => {
-                               const newState = { ...prev, ...updatedData?.newState };
-                      
-                            const idToUpdate = childValuseObj.indexValue;
+                                  setNewState((prev) => {
+                                    const newState = {
+                                      ...prev,
+                                      ...updatedData?.newState,
+                                    };
 
-                            newState[sectionData.tableName] = newState[
-                              sectionData.tableName
-                            ].map((record) => {
-                           
-                              console.log(record.indexValue);
-                              if (record.indexValue === idToUpdate) {
-               
-                                return childValuseObj;
-                              }
-                              return record;
-                            });
+                                    const idToUpdate =
+                                      childValuseObj.indexValue;
 
-                            return newState;
+                                    newState[sectionData.tableName] = newState[
+                                      sectionData.tableName
+                                    ].map((record) => {
+                                      console.log(record.indexValue);
+                                      if (record.indexValue === idToUpdate) {
+                                        return childValuseObj;
+                                      }
+                                      return record;
+                                    });
+
+                                    return newState;
                                   });
 
                                   setSubmitNewState((prev) => {
-                                   const newState = { ...prev, ...updatedData?.newState };
-                      
-                            const idToUpdate = childValuseObj.indexValue;
+                                    const newState = {
+                                      ...prev,
+                                      ...updatedData?.newState,
+                                    };
 
-                            newState[sectionData.tableName] = newState[
-                              sectionData.tableName
-                            ].map((record) => {
-                           
-                              if (record.indexValue === idToUpdate) {
-               
-                                return childValuseObj;
-                              }
-                              return record;
-                            });
+                                    const idToUpdate =
+                                      childValuseObj.indexValue;
 
-                            return newState;
-                            
+                                    newState[sectionData.tableName] = newState[
+                                      sectionData.tableName
+                                    ].map((record) => {
+                                      if (record.indexValue === idToUpdate) {
+                                        return childValuseObj;
+                                      }
+                                      return record;
+                                    });
+
+                                    return newState;
                                   });
-
-
                                 }
                               }
                             }
-
                           } catch (error) {
                             return toast.error(error.message);
                           }

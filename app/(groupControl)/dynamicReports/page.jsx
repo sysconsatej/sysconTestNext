@@ -168,6 +168,7 @@ export default function AddEditFormControll({ reportData }) {
   const [toggle, setToggle] = useState(true);
   const [menuType, setMenuType] = useState(null);
   const [menuName, setMenuName] = useState(null);
+  const [downloadTemplatePath, setDownloadTemplatePath] = useState(null);
   const [allErrors, setAllErrors] = useState([]);
   const sortedErrors = allErrors?.sort((a, b) => a.row - b.row);
   const [reportName, setReportName] = useState(null);
@@ -289,7 +290,7 @@ export default function AddEditFormControll({ reportData }) {
   useEffect(() => {
     const fetchMenuType = async () => {
       const requestBodyMenu = {
-        columns: "menuName,menuType",
+        columns: "menuName,menuType,downloadTemplatePath",
         tableName: "tblMenu",
         whereCondition: `id = ${search}`,
         clientIdCondition: `status = 1 FOR JSON PATH`,
@@ -299,6 +300,7 @@ export default function AddEditFormControll({ reportData }) {
         if (data && data.data && data.data.length > 0) {
           setMenuType(data.data[0].menuType);
           setMenuName(data.data[0].menuName);
+          setDownloadTemplatePath(data.data[0].downloadTemplatePath);
         } else {
           console.error("No data found");
         }
@@ -797,8 +799,67 @@ export default function AddEditFormControll({ reportData }) {
 
     return updatedFilterCondition;
   };
+  const buildTemplateUrl = (path) => {
+    const cleanPath = String(path || "").trim();
+
+    if (!cleanPath) return "";
+
+    // If DB already stores full URL
+    if (/^https?:\/\//i.test(cleanPath)) {
+      return cleanPath;
+    }
+
+    // If DB stores relative path
+    const base = String(BackEndUrl || "").replace(/\/$/, "");
+    const relativePath = cleanPath.replace(/^\//, "");
+
+    return `${base}/${relativePath}`;
+  };
 
   const handleButtonClick = {
+    handleDownloadTemplate: async () => {
+      try {
+        if (!downloadTemplatePath) {
+          toast.error("Download template path not found.");
+          return;
+        }
+
+        const templateUrl = buildTemplateUrl(downloadTemplatePath);
+
+        if (!templateUrl) {
+          toast.error("Invalid template path.");
+          return;
+        }
+
+        const fileName =
+          String(downloadTemplatePath).split(/[\\/]/).pop() ||
+          `${menuName || "template"}.xlsx`;
+
+        const response = await fetch(encodeURI(templateUrl));
+
+        if (!response.ok) {
+          toast.error("Template file not found.");
+          return;
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        window.URL.revokeObjectURL(url);
+
+        toast.success("Template downloaded successfully");
+      } catch (error) {
+        console.error("Template download failed:", error);
+        toast.error("Template download failed.");
+      }
+    },
     handleSubmit: async () => {
       setCurrentPage(1);
       setIsLoading(true);
@@ -9276,7 +9337,7 @@ export default function AddEditFormControll({ reportData }) {
                       </Paper>
                     </>
                   )}
-                  {(menuType === "C"  || menuType ===  'Z')  && (
+                  {(menuType === "C" || menuType === "Z") && (
                     <ChartReports
                       newState={newState}
                       chartExpand={toggle}

@@ -44,8 +44,8 @@ const norm = (s = "") =>
 
 const sortTopLevelPnL = (entries) => {
   const order = {
-    expense: 0,
-    income: 1,
+    income: 0,
+    expense: 1,
     "gross profit": 2,
     "gross loss": 2,
     "net profit": 3,
@@ -91,12 +91,19 @@ const buildTree = (data, showAllLevels) => {
         : splitAmount(row.openingBalance);
 
     const tran =
-      row.TransactionDrAmt !== undefined
+      row.transactionBalanceDr !== undefined ||
+      row.transactionBalanceCr !== undefined
         ? {
-            dr: Number(row.TransactionDrAmt || 0),
-            cr: Number(row.TransactionCrAmt || 0),
+            dr: Number(row.transactionBalanceDr || 0),
+            cr: Number(row.transactionBalanceCr || 0),
           }
-        : splitAmount(row.transactionBalance);
+        : row.TransactionDrAmt !== undefined ||
+            row.TransactionCrAmt !== undefined
+          ? {
+              dr: Number(row.TransactionDrAmt || 0),
+              cr: Number(row.TransactionCrAmt || 0),
+            }
+          : splitAmount(row.transactionBalance);
 
     const close =
       row.ClosingDrAmt !== undefined
@@ -762,27 +769,27 @@ const BalanceDetailedGrid = forwardRef(
           return true;
         });
 
-        // Direct Expense groups
-        if (exp)
-          pickGroups("Expense", exp[1], true).forEach((e) =>
-            walkEntryExcel(e, 1, "Expense"),
-          );
         // Direct Income groups
         if (inc)
           pickGroups("Income", inc[1], true).forEach((e) =>
             walkEntryExcel(e, 1, "Income"),
           );
-        // Gross
-        if (gross) walkEntryExcel(gross, 0, "ROOT");
-        // Indirect Expense groups
+        // Direct Expense groups
         if (exp)
-          pickGroups("Expense", exp[1], false).forEach((e) =>
+          pickGroups("Expense", exp[1], true).forEach((e) =>
             walkEntryExcel(e, 1, "Expense"),
           );
+        // Gross
+        if (gross) walkEntryExcel(gross, 0, "ROOT");
         // Indirect Income groups
         if (inc)
           pickGroups("Income", inc[1], false).forEach((e) =>
             walkEntryExcel(e, 1, "Income"),
+          );
+        // Indirect Expense groups
+        if (exp)
+          pickGroups("Expense", exp[1], false).forEach((e) =>
+            walkEntryExcel(e, 1, "Expense"),
           );
         // Rest
         rest.forEach((e) => walkEntryExcel(e, 0, "ROOT"));
@@ -936,32 +943,36 @@ const BalanceDetailedGrid = forwardRef(
           return true;
         });
 
-        if (exp) {
-          pushSectionRow("Expense");
-          pickGroups("Expense", exp[1], true).forEach((e) =>
-            walkEntryPdf(e, 1),
-          );
+        if (inc) {
+          const direct = pickGroups("Income", inc[1], true);
+          if (direct.length) {
+            pushSectionRow("Income");
+            direct.forEach((e) => walkEntryPdf(e, 1));
+          }
         }
 
-        if (inc) {
-          pushSectionRow("Income");
-          pickGroups("Income", inc[1], true).forEach((e) => walkEntryPdf(e, 1));
+        if (exp) {
+          const direct = pickGroups("Expense", exp[1], true);
+          if (direct.length) {
+            pushSectionRow("Expense");
+            direct.forEach((e) => walkEntryPdf(e, 1));
+          }
         }
 
         if (gross) walkEntryPdf(gross, 0);
-
-        if (exp) {
-          const ind = pickGroups("Expense", exp[1], false);
-          if (ind.length) {
-            pushSectionRow("Expense");
-            ind.forEach((e) => walkEntryPdf(e, 1));
-          }
-        }
 
         if (inc) {
           const ind = pickGroups("Income", inc[1], false);
           if (ind.length) {
             pushSectionRow("Income");
+            ind.forEach((e) => walkEntryPdf(e, 1));
+          }
+        }
+
+        if (exp) {
+          const ind = pickGroups("Expense", exp[1], false);
+          if (ind.length) {
+            pushSectionRow("Expense");
             ind.forEach((e) => walkEntryPdf(e, 1));
           }
         }
@@ -1140,39 +1151,41 @@ const BalanceDetailedGrid = forwardRef(
                   );
                 };
 
-                // 1) Direct Expenses
-                if (exp) {
-                  out.push(renderSection("Expense", "SEC-EXP-D"));
-                  pickGroups("Expense", exp[1], true).forEach((e) =>
-                    walkAll(e, 1, "Expense"),
-                  );
+                // 1) Direct Incomes
+                if (inc) {
+                  const direct = pickGroups("Income", inc[1], true);
+                  if (direct.length) {
+                    out.push(renderSection("Income", "SEC-INC-D"));
+                    direct.forEach((e) => walkAll(e, 1, "Income"));
+                  }
                 }
 
-                // 2) Direct Incomes
-                if (inc) {
-                  out.push(renderSection("Income", "SEC-INC-D"));
-                  pickGroups("Income", inc[1], true).forEach((e) =>
-                    walkAll(e, 1, "Income"),
-                  );
+                // 2) Direct Expenses
+                if (exp) {
+                  const direct = pickGroups("Expense", exp[1], true);
+                  if (direct.length) {
+                    out.push(renderSection("Expense", "SEC-EXP-D"));
+                    direct.forEach((e) => walkAll(e, 1, "Expense"));
+                  }
                 }
 
                 // 3) Gross
                 if (gross) walkAll(gross, 0, "ROOT");
 
-                // 4) Indirect Expenses
-                if (exp) {
-                  const ind = pickGroups("Expense", exp[1], false);
-                  if (ind.length)
-                    out.push(renderSection("Expense", "SEC-EXP-I"));
-                  ind.forEach((e) => walkAll(e, 1, "Expense"));
-                }
-
-                // 5) Indirect Incomes
+                // 4) Indirect Incomes
                 if (inc) {
                   const ind = pickGroups("Income", inc[1], false);
                   if (ind.length)
                     out.push(renderSection("Income", "SEC-INC-I"));
                   ind.forEach((e) => walkAll(e, 1, "Income"));
+                }
+
+                // 5) Indirect Expenses
+                if (exp) {
+                  const ind = pickGroups("Expense", exp[1], false);
+                  if (ind.length)
+                    out.push(renderSection("Expense", "SEC-EXP-I"));
+                  ind.forEach((e) => walkAll(e, 1, "Expense"));
                 }
 
                 // 6) Rest

@@ -19,7 +19,7 @@ export default function LogisticsThreeDCharts({ chartData, type }) {
   const [stack, setStack] = useState([]);
   const currentNode = stack.length === 0 ? chartData : stack[stack.length - 1];
   const children = Array.isArray(currentNode) ? currentNode[0].children : currentNode.children || [];
-  const total = children.reduce((s, c) => s + c.value, 0);
+  const total = children?.reduce((s, c) => s + c.value, 0);
 
   const handleDrillDown = useCallback((child) => {
     setStack((prev) => [...prev, child]);
@@ -38,10 +38,9 @@ export default function LogisticsThreeDCharts({ chartData, type }) {
   return (
     <div className="p-4 font-sans">
       <ChartsBreadCrumbs stack={stack} onNavigate={handleNavigate} />
-
       <div className="text-sm text-gray-500 mb-4">
-        {children.length} segments · Total: {total.toLocaleString()} units
-        {children[0]?.children
+        {children?.length} segments · Total: {total?.toLocaleString()} units
+        {children  &&  children[0]?.children
           ? "  ·  Click a slice to drill down"
           : "  ·  Deepest level"}
       </div>
@@ -51,7 +50,7 @@ export default function LogisticsThreeDCharts({ chartData, type }) {
           onDrillDown={handleDrillDown}
         />
       </Suspense>
-      {children.length > 0 ? <Legend total={total}>{children}</Legend> : <></>}
+      {children?.length > 0 ? <Legend total={total}>{children}</Legend> : <></>}
 
       <p className="text-xs text-gray-400 mt-2.5 text-center">
         Click a slice to drill down · Scroll to zoom · Drag to rotate

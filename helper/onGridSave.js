@@ -157,277 +157,324 @@ const copyContainerData = (obj) => {
 //     onChangeHandler,
 //   } = obj;
 
-//   const { companyId, clientId, branchId, userId, financialYear } =
-//     getUserDetails();
+//   const { companyId, clientId, branchId } = getUserDetails();
 
-//   let argNames;
-//   let splitArgs = [];
+//   const isEmpty = (v) =>
+//     v === undefined ||
+//     v === null ||
+//     v === "" ||
+//     (Array.isArray(v) && v.length === 0);
 
-//   if (
-//     args === undefined ||
-//     args === null ||
-//     args === "" ||
-//     (typeof args === "object" && Object.keys(args).length === 0)
-//   ) {
-//     argNames = args;
-//   } else {
-//     argNames = args.split(",").map((arg) => arg.trim());
-
-//     for (const iterator of argNames) {
-//       splitArgs.push(iterator.split("."));
+//   const getIdValue = (v) => {
+//     if (Array.isArray(v)) {
+//       return v?.[0]?.value ?? v?.[0]?.id ?? v?.[0]?.Id ?? 0;
 //     }
-//   }
 
-//   const {
-//     businessSegmentId,
-//     voucherTypeId,
-//     blId,
-//     plrId,
-//     podId,
-//     fpdId,
-//     polId,
-//     vesselId,
-//     voyageId,
-//     depotId,
-//     billingPartyId,
-//     containerStatusId,
-//     fromDate,
-//     toDate,
-//     exchangeRate,
-//   } = newState;
+//     if (typeof v === "object" && v !== null) {
+//       return v?.value ?? v?.id ?? v?.Id ?? 0;
+//     }
 
-//   const {
-//     jobId,
-//     chargeId,
-//     cargoTypeId,
-//     sizeId,
-//     typeId,
-//     containerRepairId,
-//     containerTransactionId,
-//   } = values;
-
-//   const zeroIfEmpty = (v) =>
-//     v === undefined || v === null || v === "" ? 0 : v;
-
-//   const nullIfEmpty = (v) =>
-//     v === undefined || v === null || v === "" ? null : v;
-
-//   const requestData = {
-//     billingPartyId: zeroIfEmpty(billingPartyId),
-//     clientId: clientId,
-//     jobId: zeroIfEmpty(jobId),
-//     chargeId: zeroIfEmpty(chargeId),
-//     companyId: companyId,
-//     companyBranchId: branchId,
-
-//     fromDate: nullIfEmpty(fromDate),
-//     toDate: nullIfEmpty(toDate),
-
-//     businessSegmentId: zeroIfEmpty(businessSegmentId),
-//     voucherTypeId: zeroIfEmpty(voucherTypeId),
-
-//     blId: zeroIfEmpty(blId),
-//     plrId: zeroIfEmpty(plrId),
-//     podId: zeroIfEmpty(podId),
-//     fpdId: zeroIfEmpty(fpdId),
-//     polId: zeroIfEmpty(polId),
-//     vesselId: zeroIfEmpty(vesselId),
-//     voyageId: zeroIfEmpty(voyageId),
-//     depotId: zeroIfEmpty(depotId),
-
-//     containerStatusId: zeroIfEmpty(containerStatusId),
-//     cargoTypeId: zeroIfEmpty(cargoTypeId),
-
-//     // IMPORTANT:
-//     // Your direct EXEC gives data with sizeId = 0 and typeId = 0.
-//     // So keep this 0 unless you really want to filter by selected size/type.
-//     sizeId: 0,
-//     typeId: 0,
-
-//     containerRepairId: zeroIfEmpty(containerRepairId),
-//     containerTransactionId: zeroIfEmpty(containerTransactionId),
-
-//     invoiceExchageRate: exchangeRate || 1,
+//     return isEmpty(v) ? 0 : v;
 //   };
 
-//   console.log("Third level requestData:", requestData);
+//   const zeroIfEmpty = (v) => {
+//     const val = getIdValue(v);
+//     return isEmpty(val) ? 0 : val;
+//   };
 
-//   const fetchChargeDetails = await fetchThirdLevelDetailsFromApi(requestData);
+//   const toNumberOrNull = (v) => {
+//     if (v === null || v === undefined || v === "") return null;
 
-//   console.log("Third level API response:", fetchChargeDetails);
+//     const n = Number(v);
+//     return Number.isFinite(n) ? n : null;
+//   };
 
-//   if (!fetchChargeDetails || fetchChargeDetails.success === false) {
-//     values.tblInvoiceChargeDetails = [];
-//     values["qty"] = 0;
-//     values["rate"] = "0.00";
-//     values["totalAmountHc"] = "0.00";
-//     values["totalAmountFc"] = "0.00";
+//   const toNumber = (v) => {
+//     const n = Number(v);
+//     return Number.isFinite(n) ? n : 0;
+//   };
+
+//   const formatDateForApi = (v) => {
+//     if (v === undefined || v === null || v === "") return null;
+
+//     if (typeof v === "string") return v;
+
+//     if (typeof v?.format === "function") {
+//       const formatted = v.format("YYYY-MM-DD HH:mm:ss");
+//       return formatted === "Invalid date" ? null : formatted;
+//     }
+
+//     if (v instanceof Date && !isNaN(v.getTime())) {
+//       const yyyy = v.getFullYear();
+//       const mm = String(v.getMonth() + 1).padStart(2, "0");
+//       const dd = String(v.getDate()).padStart(2, "0");
+//       const hh = String(v.getHours()).padStart(2, "0");
+//       const mi = String(v.getMinutes()).padStart(2, "0");
+//       const ss = String(v.getSeconds()).padStart(2, "0");
+
+//       return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+//     }
+
+//     return v;
+//   };
+
+//   try {
+//     const chargeRows = Array.isArray(values?.tblInvoiceCharge)
+//       ? values.tblInvoiceCharge
+//       : Array.isArray(newState?.tblInvoiceCharge)
+//         ? newState.tblInvoiceCharge
+//         : [];
+
+//     let currentChargeIndex = 0;
+
+//     if (chargeRows.length > 0) {
+//       const checkedIndex = chargeRows.findIndex(
+//         (row) => row?.isChecked === true
+//       );
+
+//       if (checkedIndex > -1) {
+//         currentChargeIndex = checkedIndex;
+//       } else {
+//         const indexValue =
+//           newState?.indexValue ??
+//           values?.indexValue ??
+//           chargeRows?.[0]?.indexValue;
+
+//         const matchedIndex = chargeRows.findIndex(
+//           (row, index) =>
+//             Number(row?.indexValue) === Number(indexValue) ||
+//             Number(index) === Number(indexValue)
+//         );
+
+//         currentChargeIndex = matchedIndex > -1 ? matchedIndex : 0;
+//       }
+//     }
+
+//     const currentChargeRow =
+//       chargeRows.length > 0 ? chargeRows[currentChargeIndex] || {} : values || {};
+
+//     const getLatestValue = (key) => {
+//       if (!isEmpty(newState?.[key])) return newState[key];
+//       if (!isEmpty(currentChargeRow?.[key])) return currentChargeRow[key];
+//       if (!isEmpty(values?.[key])) return values[key];
+//       return null;
+//     };
+//     const exchangeRate =
+//       toNumber(getLatestValue("exchangeRate")) > 0
+//         ? toNumber(getLatestValue("exchangeRate"))
+//         : 1;
+//     const requestData = {
+//       billingPartyId: zeroIfEmpty(getLatestValue("billingPartyId")),
+//       clientId: clientId,
+//       jobId: zeroIfEmpty(getLatestValue("jobId")),
+//       chargeId: zeroIfEmpty(getLatestValue("chargeId")),
+//       companyId: companyId,
+//       companyBranchId: branchId,
+
+//       fromDate: formatDateForApi(getLatestValue("fromDate")),
+//       toDate: formatDateForApi(getLatestValue("toDate")),
+
+//       businessSegmentId: zeroIfEmpty(getLatestValue("businessSegmentId")),
+//       voucherTypeId: zeroIfEmpty(getLatestValue("voucherTypeId")),
+
+//       blId: zeroIfEmpty(getLatestValue("blId")),
+//       plrId: zeroIfEmpty(getLatestValue("plrId")),
+//       podId: zeroIfEmpty(getLatestValue("podId")),
+//       fpdId: zeroIfEmpty(getLatestValue("fpdId")),
+//       polId: zeroIfEmpty(getLatestValue("polId")),
+
+//       vesselId: zeroIfEmpty(getLatestValue("vesselId")),
+//       voyageId: zeroIfEmpty(getLatestValue("voyageId")),
+
+//       depotId: zeroIfEmpty(getLatestValue("depotId")),
+//       containerStatusId: zeroIfEmpty(getLatestValue("containerStatusId")),
+//       cargoTypeId: zeroIfEmpty(getLatestValue("cargoTypeId")),
+//       sizeId: 0,
+//       typeId: 0,
+
+//       containerRepairId: zeroIfEmpty(getLatestValue("containerRepairId")),
+//       containerTransactionId: zeroIfEmpty(
+//         getLatestValue("containerTransactionId")
+//       ),
+
+//       invoiceExchageRate: exchangeRate,
+//     };
+
+//     console.log("getThirdLevelDetails requestData:", requestData);
+
+//     const fetchChargeDetails = await fetchThirdLevelDetailsFromApi(requestData);
+
+//     console.log("getThirdLevelDetails response:", fetchChargeDetails);
+
+//     const Chargers =
+//       fetchChargeDetails?.Chargers || fetchChargeDetails?.data || [];
+
+//     const updatedChargers = Chargers.map((item, i) => {
+//       const _containerId = toNumberOrNull(item.containerId);
+//       const _sizeId = toNumberOrNull(item.sizeId);
+//       const _typeId = toNumberOrNull(item.typeId);
+//       const _jobId = toNumberOrNull(item.jobId);
+//       const _containerTransactionId = toNumberOrNull(
+//         item.containerTransactionId
+//       );
+//       const _containerRepairId = toNumberOrNull(item.containerRepairId);
+//       const _blId = toNumberOrNull(item.blId);
+
+//       const rowQty = toNumber(item.qty);
+//       const rowNoOfDays = toNumber(item.noOfDays);
+//       const rowRate = toNumber(item.rate);
+
+//       const calculatedAmount = rowQty * rowNoOfDays * rowRate;
+
+//       return {
+//         ...item,
+//         indexValue: i,
+
+//         containerIddropdown:
+//           _containerId !== null
+//             ? [
+//               {
+//                 value: _containerId,
+//                 label: item.containerNo ?? String(_containerId),
+//               },
+//             ]
+//             : [],
+
+//         sizeIddropdown:
+//           _sizeId !== null
+//             ? [
+//               {
+//                 value: _sizeId,
+//                 label: item.sizeName ?? String(_sizeId),
+//               },
+//             ]
+//             : [],
+
+//         typeIddropdown:
+//           _typeId !== null
+//             ? [
+//               {
+//                 value: _typeId,
+//                 label: item.typeName ?? String(_typeId),
+//               },
+//             ]
+//             : [],
+
+//         jobIddropdown:
+//           _jobId !== null
+//             ? [
+//               {
+//                 value: _jobId,
+//                 label: item.jobNo ?? String(_jobId),
+//               },
+//             ]
+//             : [],
+
+//         containerTransactionIddropdown:
+//           _containerTransactionId !== null
+//             ? [
+//               {
+//                 value: _containerTransactionId,
+//                 label:
+//                   item.containerTransactionName ??
+//                   String(_containerTransactionId),
+//               },
+//             ]
+//             : [],
+
+//         containerRepairIddropdown:
+//           _containerRepairId !== null
+//             ? [
+//               {
+//                 value: _containerRepairId,
+//                 label:
+//                   item.containerRepairName ?? String(_containerRepairId),
+//               },
+//             ]
+//             : [],
+
+//         blIddropdown:
+//           _blId !== null
+//             ? [
+//               {
+//                 value: _blId,
+//                 label: item.blNo ?? String(_blId),
+//               },
+//             ]
+//             : [],
+
+//         calculatedAmount: calculatedAmount,
+//       };
+//     });
+
+//     const qty = updatedChargers.reduce(
+//       (acc, item) => acc + toNumber(item.qty),
+//       0
+//     );
+
+//     const totalAmountHc = updatedChargers.reduce(
+//       (acc, item) => acc + toNumber(item.calculatedAmount),
+//       0
+//     );
+
+//     const avgRate = qty > 0 ? totalAmountHc / qty : 0;
+//     const totalAmountFc = totalAmountHc * exchangeRate;
+
+//     const updatedChargeRow = {
+//       ...currentChargeRow,
+
+//       tblInvoiceChargeDetails: updatedChargers,
+
+//       qty: qty,
+//       rate: avgRate.toFixed(2),
+//       totalAmountHc: totalAmountHc.toFixed(2),
+//       totalAmountFc: totalAmountFc.toFixed(2),
+//       totalAmount: totalAmountHc.toFixed(2),
+//     };
+
+//     let updatedTblInvoiceCharge = [];
+
+//     if (chargeRows.length > 0) {
+//       updatedTblInvoiceCharge = chargeRows.map((row, index) =>
+//         index === currentChargeIndex ? updatedChargeRow : row
+//       );
+//     } else {
+//       updatedTblInvoiceCharge = [updatedChargeRow];
+//     }
+
+//     const finalValues = {
+//       ...values,
+//       tblInvoiceCharge: updatedTblInvoiceCharge,
+//     };
+
+//     const finalNewState = {
+//       ...newState,
+//       tblInvoiceCharge: updatedTblInvoiceCharge,
+//     };
 
 //     setStateVariable((prev) => ({
 //       ...prev,
-//       tblInvoiceChargeDetails: [],
-//       qty: 0,
-//       rate: "0.00",
-//       totalAmountHc: "0.00",
-//       totalAmountFc: "0.00",
+//       tblInvoiceCharge: updatedTblInvoiceCharge,
 //     }));
-
-//     return;
-//   }
-
-//   const Chargers =
-//     fetchChargeDetails?.Chargers ||
-//     fetchChargeDetails?.data ||
-//     [];
-
-//   if (!Chargers || Chargers.length === 0) {
-//     values.tblInvoiceChargeDetails = [];
-//     values["qty"] = 0;
-//     values["rate"] = "0.00";
-//     values["totalAmountHc"] = "0.00";
-//     values["totalAmountFc"] = "0.00";
-
-//     setStateVariable((prev) => ({
-//       ...prev,
-//       tblInvoiceChargeDetails: [],
-//       qty: 0,
-//       rate: "0.00",
-//       totalAmountHc: "0.00",
-//       totalAmountFc: "0.00",
-//     }));
-
-//     return;
-//   }
-
-//   const toNum = (v) =>
-//     v === null || v === undefined || v === "" ? null : Number(v);
-
-//   const updatedChargers = Chargers.map((item, i) => {
-//     const _containerId = toNum(item.containerId);
-//     const _sizeId = toNum(item.sizeId);
-//     const _typeId = toNum(item.typeId);
-//     const _jobId = toNum(item.jobId);
-//     const _containerTransactionId = toNum(item.containerTransactionId);
-//     const _containerRepairId = toNum(item.containerRepairId);
-//     const _blId = toNum(item.blId);
 
 //     return {
-//       ...item,
-//       indexValue: i,
-
-//       containerIddropdown:
-//         _containerId !== null
-//           ? [
-//             {
-//               value: _containerId,
-//               label: item.containerNo ?? String(_containerId),
-//             },
-//           ]
-//           : [],
-
-//       sizeIddropdown:
-//         _sizeId !== null
-//           ? [
-//             {
-//               value: _sizeId,
-//               label: item.sizeName ?? String(_sizeId),
-//             },
-//           ]
-//           : [],
-
-//       typeIddropdown:
-//         _typeId !== null
-//           ? [
-//             {
-//               value: _typeId,
-//               label: item.typeName ?? String(_typeId),
-//             },
-//           ]
-//           : [],
-
-//       jobIddropdown:
-//         _jobId !== null
-//           ? [
-//             {
-//               value: _jobId,
-//               label: item.jobNo ?? String(_jobId),
-//             },
-//           ]
-//           : [],
-
-//       containerTransactionIddropdown:
-//         _containerTransactionId !== null
-//           ? [
-//             {
-//               value: _containerTransactionId,
-//               label:
-//                 item.containerTransactionName ??
-//                 String(_containerTransactionId),
-//             },
-//           ]
-//           : [],
-
-//       containerRepairIddropdown:
-//         _containerRepairId !== null
-//           ? [
-//             {
-//               value: _containerRepairId,
-//               label:
-//                 item.containerRepairName ??
-//                 String(_containerRepairId),
-//             },
-//           ]
-//           : [],
-
-//       blIddropdown:
-//         _blId !== null
-//           ? [
-//             {
-//               value: _blId,
-//               label: item.blNo ?? String(_blId),
-//             },
-//           ]
-//           : [],
-
-//       calculatedAmount:
-//         (Number(item.noOfDays) || 0) * (Number(item.rate) || 0),
+//       values: finalValues,
+//       newState: finalNewState,
 //     };
-//   });
+//   } catch (error) {
+//     console.error("getThirdLevelDetails error:", error);
 
-//   const qty = updatedChargers.reduce(
-//     (acc, item) => acc + (Number(item["qty"]) || 0),
-//     0
-//   );
-
-//   const totalWeighted = updatedChargers.reduce(
-//     (acc, item) =>
-//       acc +
-//       (Number(item["noOfDays"]) || 0) *
-//       (Number(item["rate"]) || 0),
-//     0
-//   );
-
-//   const avgRate = qty > 0 ? totalWeighted / qty : 0;
-
-//   const totalAmountHc = qty * avgRate;
-//   const totalAmountFc =
-//     qty * avgRate * Number(newState.exchangeRate || 1);
-
-//   values.tblInvoiceChargeDetails = updatedChargers;
-//   values["qty"] = qty;
-//   values["rate"] = avgRate.toFixed(2);
-//   values["totalAmountHc"] = totalAmountHc.toFixed(2);
-//   values["totalAmountFc"] = totalAmountFc.toFixed(2);
-
-//   setStateVariable((prev) => ({
-//     ...prev,
-//     tblInvoiceChargeDetails: updatedChargers,
-//     qty: qty,
-//     rate: avgRate.toFixed(2),
-//     totalAmountHc: totalAmountHc.toFixed(2),
-//     totalAmountFc: totalAmountFc.toFixed(2),
-//   }));
+//     return {
+//       values: {
+//         ...values,
+//       },
+//       newState: {
+//         ...newState,
+//       },
+//     };
+//   }
 // };
+
 const getThirdLevelDetails = async (obj) => {
   const {
     args,
@@ -502,15 +549,40 @@ const getThirdLevelDetails = async (obj) => {
     return v;
   };
 
+  const returnNormalGridSave = (chargeRows) => {
+    const finalValues = {
+      ...values,
+      tblInvoiceCharge: chargeRows,
+    };
+
+    const finalNewState = {
+      ...newState,
+      tblInvoiceCharge: chargeRows,
+    };
+
+    if (typeof setStateVariable === "function") {
+      setStateVariable((prev) => ({
+        ...prev,
+        tblInvoiceCharge: chargeRows,
+      }));
+    }
+
+    return {
+      values: finalValues,
+      newState: finalNewState,
+    };
+  };
+
   try {
     /*
-      Your save payload has tblInvoiceCharge array.
-      So first we find the current charge row.
+      IMPORTANT:
+      In grid save, latest row data mostly comes in newState.
+      So keep newState first, then values.
     */
-    const chargeRows = Array.isArray(values?.tblInvoiceCharge)
-      ? values.tblInvoiceCharge
-      : Array.isArray(newState?.tblInvoiceCharge)
-        ? newState.tblInvoiceCharge
+    const chargeRows = Array.isArray(newState?.tblInvoiceCharge)
+      ? newState.tblInvoiceCharge
+      : Array.isArray(values?.tblInvoiceCharge)
+        ? values.tblInvoiceCharge
         : [];
 
     let currentChargeIndex = 0;
@@ -539,20 +611,44 @@ const getThirdLevelDetails = async (obj) => {
     }
 
     const currentChargeRow =
-      chargeRows.length > 0 ? chargeRows[currentChargeIndex] || {} : values || {};
+      chargeRows.length > 0
+        ? chargeRows[currentChargeIndex] || {}
+        : values || {};
 
     const getLatestValue = (key) => {
-      // First root newState
       if (!isEmpty(newState?.[key])) return newState[key];
-
-      // Then current charge row because chargeId, sizeId, typeId are inside tblInvoiceCharge row
       if (!isEmpty(currentChargeRow?.[key])) return currentChargeRow[key];
-
-      // Then root values/Data
       if (!isEmpty(values?.[key])) return values[key];
-
       return null;
     };
+
+    /*
+      THIRD LEVEL LOGIC ONLY FOR CLIENT ID 17
+      Other clients: no popup, no API call, normal grid save.
+    */
+    const isThirdLevelAllowedClient = Number(clientId) === 17;
+
+    if (!isThirdLevelAllowedClient) {
+      return returnNormalGridSave(chargeRows);
+    }
+
+    /*
+      For client 17 only:
+      Ask user whether to set third level data.
+    */
+    const shouldSetThirdLevelData =
+      typeof window !== "undefined"
+        ? window.confirm("Do you want to set third level data?")
+        : true;
+
+    /*
+      If user clicks No:
+      Do not call API.
+      Preserve latest chargeRows so next save Yes works properly.
+    */
+    if (!shouldSetThirdLevelData) {
+      return returnNormalGridSave(chargeRows);
+    }
 
     const exchangeRate =
       toNumber(getLatestValue("exchangeRate")) > 0
@@ -585,8 +681,6 @@ const getThirdLevelDetails = async (obj) => {
       depotId: zeroIfEmpty(getLatestValue("depotId")),
       containerStatusId: zeroIfEmpty(getLatestValue("containerStatusId")),
       cargoTypeId: zeroIfEmpty(getLatestValue("cargoTypeId")),
-
-      // As per your previous logic
       sizeId: 0,
       typeId: 0,
 
@@ -604,8 +698,11 @@ const getThirdLevelDetails = async (obj) => {
 
     console.log("getThirdLevelDetails response:", fetchChargeDetails);
 
-    const Chargers =
-      fetchChargeDetails?.Chargers || fetchChargeDetails?.data || [];
+    const Chargers = Array.isArray(fetchChargeDetails?.Chargers)
+      ? fetchChargeDetails.Chargers
+      : Array.isArray(fetchChargeDetails?.data)
+        ? fetchChargeDetails.data
+        : [];
 
     const updatedChargers = Chargers.map((item, i) => {
       const _containerId = toNumberOrNull(item.containerId);
@@ -750,10 +847,12 @@ const getThirdLevelDetails = async (obj) => {
       tblInvoiceCharge: updatedTblInvoiceCharge,
     };
 
-    setStateVariable((prev) => ({
-      ...prev,
-      tblInvoiceCharge: updatedTblInvoiceCharge,
-    }));
+    if (typeof setStateVariable === "function") {
+      setStateVariable((prev) => ({
+        ...prev,
+        tblInvoiceCharge: updatedTblInvoiceCharge,
+      }));
+    }
 
     return {
       values: finalValues,
@@ -772,7 +871,6 @@ const getThirdLevelDetails = async (obj) => {
     };
   }
 };
-
 const calculateRateRequestChargeProfit = async (obj) => {
   const {
     newState,
@@ -869,4 +967,4 @@ const calculateRateRequestChargeProfit = async (obj) => {
     };
   }
 };
-export { setJobContainer, copyContainerData, getThirdLevelDetails ,calculateRateRequestChargeProfit };
+export { setJobContainer, copyContainerData, getThirdLevelDetails, calculateRateRequestChargeProfit };

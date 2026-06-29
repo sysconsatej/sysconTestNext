@@ -1,4 +1,4 @@
-import { fetchReportData } from "@/services/auth/FormControl.services";
+import { getActiveInactiveUsers } from "@/services/auth/Auth.services";
 import { useEffect, useState } from "react";
 
 /**
@@ -9,37 +9,36 @@ import { useEffect, useState } from "react";
  *
  * @returns {{ users: Array, loading: boolean, error: string|null }}
  */
-export function useUsers({ clientId }) {
+export function useUsers() {
     const [users, setUsers] = useState([]);
+    const [inActiveUsers, setInactiveUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
         let cancelled = false;
-
         async function fetchUsers() {
             try {
-
-                const queryObj = {
-                    clientIdCondition: 'status = 1 FOR JSON PATH',
-                    columns:
-                        'u.id, u.name as name, u.profilePhoto as avatar',
-                    tableName: 'tblUser u',
-                    whereCondition: `clientId = ${clientId}`,
+                const res = await getActiveInactiveUsers();
+                if (!cancelled) {
+                    setUsers(res?.data?.active || []);
+                    setInactiveUsers(res?.data?.inactiveUsers
+                        || [])
                 }
-
-                const res = await fetchReportData(queryObj);
-                if (!cancelled) setUsers(res.data || []);
             } catch (err) {
                 if (!cancelled) setError(err.message);
             } finally {
                 if (!cancelled) setLoading(false);
             }
         }
+        const interval = setInterval(fetchUsers, 300);
 
-        fetchUsers();
-        return () => { cancelled = true; };
-    }, [clientId]);
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
 
-    return { users, loading, error };
+    }, []);
+
+    return { users, loading, error, inActiveUsers };
 }

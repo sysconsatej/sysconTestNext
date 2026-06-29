@@ -16,7 +16,8 @@
   --divider:#2a3942;
   --tick-read:#53bdeb;
   --font:'Inter',-apple-system,sans-serif;
-  height:100vh;
+  height:80vh;
+  width: 100%;
   overflow:hidden;
   background:var(--sidebar);
   color:var(--text);

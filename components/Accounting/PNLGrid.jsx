@@ -309,16 +309,23 @@ const PNLGrid = forwardRef(
     }
 
     // ✅ ZIP BOTH SIDES (TOP ALIGNED)
-    const maxLen = Math.max(expenseArr.length, incomeArr.length);
+    const displayLeftType = selectedRadioType === "P" ? rightType : leftType;
+    const displayRightType = selectedRadioType === "P" ? leftType : rightType;
+    const displayLeftArr =
+      selectedRadioType === "P" ? incomeArr : expenseArr;
+    const displayRightArr =
+      selectedRadioType === "P" ? expenseArr : incomeArr;
+
+    const maxLen = Math.max(displayLeftArr.length, displayRightArr.length);
 
     const rows = Array.from({ length: maxLen }).map((_, i) => ({
-      expName: expenseArr[i]?.name || "",
-      expAmt: expenseArr[i]?.amt ?? "",
-      expIsGross: expenseArr[i]?.isGross || false, // ✅ NEW
+      leftName: displayLeftArr[i]?.name || "",
+      leftAmt: displayLeftArr[i]?.amt ?? "",
+      leftIsGross: displayLeftArr[i]?.isGross || false,
 
-      incName: incomeArr[i]?.name || "",
-      incAmt: incomeArr[i]?.amt ?? "",
-      incIsGross: incomeArr[i]?.isGross || false, // ✅ NEW
+      rightName: displayRightArr[i]?.name || "",
+      rightAmt: displayRightArr[i]?.amt ?? "",
+      rightIsGross: displayRightArr[i]?.isGross || false,
     }));
 
     const getBase64FromUrl = async (url) => {
@@ -341,6 +348,11 @@ const PNLGrid = forwardRef(
       (a, b) => a + (b.isGross ? 0 : Number(b.calcAmt ?? b.amt ?? 0)),
       0,
     );
+
+    const displayLeftTotal =
+      selectedRadioType === "P" ? incomeTotal : expenseTotal;
+    const displayRightTotal =
+      selectedRadioType === "P" ? expenseTotal : incomeTotal;
 
     const exportSModeExcel = async () => {
       if (!balanceSheetData || balanceSheetData.length === 0) {
@@ -453,35 +465,41 @@ const PNLGrid = forwardRef(
       // ===================== HORIZONTAL =====================
       if (reportOrientation === "H") {
         const headerRow = sheet.addRow([
-          leftType,
+          displayLeftType,
           "Amount",
-          rightType,
+          displayRightType,
           "Amount",
         ]);
         headerRow.eachCell((cell) => Object.assign(cell, HEADER_STYLE));
 
         rows.forEach((r, i) => {
           const expBold =
-            expenseArr[i]?.isBold ||
-            expenseArr[i]?.isGross ||
-            expenseArr[i]?.isNet;
+            displayLeftArr[i]?.isBold ||
+            displayLeftArr[i]?.isGross ||
+            displayLeftArr[i]?.isNet;
           const incBold =
-            incomeArr[i]?.isBold ||
-            incomeArr[i]?.isGross ||
-            incomeArr[i]?.isNet;
+            displayRightArr[i]?.isBold ||
+            displayRightArr[i]?.isGross ||
+            displayRightArr[i]?.isNet;
 
           const row = sheet.addRow([
-            r.expName,
-            r.expAmt !== "" ? Math.abs(r.expAmt) : "",
-            r.incName,
-            r.incAmt !== "" ? Math.abs(r.incAmt) : "",
+            r.leftName,
+            r.leftAmt !== "" ? Math.abs(r.leftAmt) : "",
+            r.rightName,
+            r.rightAmt !== "" ? Math.abs(r.rightAmt) : "",
           ]);
 
           row.getCell(1).alignment = { horizontal: "left" };
           row.getCell(3).alignment = { horizontal: "left" };
 
-          setNumber(row.getCell(2), r.expAmt !== "" ? Math.abs(r.expAmt) : "");
-          setNumber(row.getCell(4), r.incAmt !== "" ? Math.abs(r.incAmt) : "");
+          setNumber(
+            row.getCell(2),
+            r.leftAmt !== "" ? Math.abs(r.leftAmt) : "",
+          );
+          setNumber(
+            row.getCell(4),
+            r.rightAmt !== "" ? Math.abs(r.rightAmt) : "",
+          );
 
           row.getCell(1).style = expBold ? STYLES.L2_BOLD : STYLES.L2_NORMAL;
           row.getCell(2).style = expBold ? STYLES.L2_BOLD : STYLES.L2_NORMAL;
@@ -493,15 +511,15 @@ const PNLGrid = forwardRef(
 
         const totalRow = sheet.addRow([
           "Total",
-          expenseTotal,
+          displayLeftTotal,
           "Total",
-          incomeTotal,
+          displayRightTotal,
         ]);
         totalRow.eachCell((cell) => Object.assign(cell, TOTAL_STYLE));
         totalRow.getCell(1).alignment = { horizontal: "left" };
         totalRow.getCell(3).alignment = { horizontal: "left" };
-        setNumber(totalRow.getCell(2), expenseTotal);
-        setNumber(totalRow.getCell(4), incomeTotal);
+        setNumber(totalRow.getCell(2), displayLeftTotal);
+        setNumber(totalRow.getCell(4), displayRightTotal);
       }
 
       // ===================== VERTICAL =====================
@@ -661,26 +679,26 @@ const PNLGrid = forwardRef(
           // -----------------------------
           addTopHeaderBar();
 
-          // 1) Expense (Direct)
-          addSectionHeader("Expense");
-          expDirect.forEach((r) => addItemRow(r.name, Math.abs(r.amt), false));
-
-          // 2) Income (Direct)
+          // 1) Income (Direct)
           addSectionHeader("Income");
           incDirect.forEach((r) => addItemRow(r.name, Math.abs(r.amt), false));
+
+          // 2) Expense (Direct)
+          addSectionHeader("Expense");
+          expDirect.forEach((r) => addItemRow(r.name, Math.abs(r.amt), false));
 
           // 3) Gross Profit (bold, no section header)
           if (grossRow) addItemRow(grossRow.name, Math.abs(grossRow.amt), true);
 
-          // 4) Expense (Indirect)
-          addSectionHeader("Expense");
-          expIndirect.forEach((r) =>
+          // 4) Income (Indirect)
+          addSectionHeader("Income");
+          incIndirect.forEach((r) =>
             addItemRow(r.name, Math.abs(r.amt), false),
           );
 
-          // 5) Income (Indirect)
-          addSectionHeader("Income");
-          incIndirect.forEach((r) =>
+          // 5) Expense (Indirect)
+          addSectionHeader("Expense");
+          expIndirect.forEach((r) =>
             addItemRow(r.name, Math.abs(r.amt), false),
           );
 
@@ -688,8 +706,8 @@ const PNLGrid = forwardRef(
           if (netRow) addItemRow(netRow.name, Math.abs(netRow.amt), true);
 
           // 7) Totals (blue bars at bottom)
-          addTotalBar("Total Expense", Number(expenseTotal));
           addTotalBar("Total Income", Number(Math.abs(incomeTotal)));
+          addTotalBar("Total Expense", Number(expenseTotal));
 
           const tableEndRow = sheet.lastRow.number;
 
@@ -801,29 +819,29 @@ const PNLGrid = forwardRef(
 
         rows.forEach((r, i) => {
           const expBold =
-            expenseArr[i]?.isBold ||
-            expenseArr[i]?.isGross ||
-            expenseArr[i]?.isNet;
+            displayLeftArr[i]?.isBold ||
+            displayLeftArr[i]?.isGross ||
+            displayLeftArr[i]?.isNet;
 
           const incBold =
-            incomeArr[i]?.isBold ||
-            incomeArr[i]?.isGross ||
-            incomeArr[i]?.isNet;
+            displayRightArr[i]?.isBold ||
+            displayRightArr[i]?.isGross ||
+            displayRightArr[i]?.isNet;
 
           bodyRows.push([
-            r.expName || "",
-            r.expAmt !== "" ? Number(Math.abs(r.expAmt)).toFixed(2) : "",
-            r.incName || "",
-            r.incAmt !== "" ? Number(Math.abs(r.incAmt)).toFixed(2) : "",
+            r.leftName || "",
+            r.leftAmt !== "" ? Number(Math.abs(r.leftAmt)).toFixed(2) : "",
+            r.rightName || "",
+            r.rightAmt !== "" ? Number(Math.abs(r.rightAmt)).toFixed(2) : "",
             "__BOLD__:" + (expBold || incBold ? "1" : "0"),
           ]);
         });
 
         bodyRows.push([
           "Total",
-          Number(expenseTotal).toFixed(2),
+          Number(displayLeftTotal).toFixed(2),
           "Total",
-          Number(incomeTotal).toFixed(2),
+          Number(displayRightTotal).toFixed(2),
           "__BOLD__:1",
         ]);
 
@@ -831,7 +849,7 @@ const PNLGrid = forwardRef(
           startY: 38,
           margin: { top: 38, left: 5, right: 5 },
 
-          head: [[leftType, "Amount", rightType, "Amount"]],
+          head: [[displayLeftType, "Amount", displayRightType, "Amount"]],
           body: bodyRows.map((r) => r.slice(0, -1)),
 
           theme: "grid",
@@ -916,31 +934,31 @@ const PNLGrid = forwardRef(
             "__TOTAL__",
           ]);
 
-        // 1) Expense -> Direct
-        pushHeader("Expense");
-        expDirect.forEach((r) => pushItem(r.name, r.amt, false));
-
-        // 2) Income -> Direct
+        // 1) Income -> Direct
         pushHeader("Income");
         incDirect.forEach((r) => pushItem(r.name, r.amt, false));
+
+        // 2) Expense -> Direct
+        pushHeader("Expense");
+        expDirect.forEach((r) => pushItem(r.name, r.amt, false));
 
         // 3) Gross Profit (bold)
         if (grossRow) pushItem(grossRow.name, grossRow.amt, true);
 
-        // 4) Expense -> Indirect
-        pushHeader("Expense");
-        expIndirect.forEach((r) => pushItem(r.name, r.amt, false));
-
-        // 5) Income -> Indirect
+        // 4) Income -> Indirect
         pushHeader("Income");
         incIndirect.forEach((r) => pushItem(r.name, r.amt, false));
+
+        // 5) Expense -> Indirect
+        pushHeader("Expense");
+        expIndirect.forEach((r) => pushItem(r.name, r.amt, false));
 
         // 6) Net Profit/Loss (bold)
         if (netRow) pushItem(netRow.name, netRow.amt, true);
 
         // 7-8) Totals ONLY at last (blue)
-        pushTotal("Total Expense", expenseTotal);
         pushTotal("Total Income", Math.abs(incomeTotal));
+        pushTotal("Total Expense", expenseTotal);
 
         autoTable(doc, {
           startY: 38,
@@ -1147,7 +1165,7 @@ const PNLGrid = forwardRef(
                       fontSize: FONT_L1,
                     }}
                   >
-                    {leftType}
+                    {displayLeftType}
                   </TableCell>
                   <TableCell
                     align="right"
@@ -1167,7 +1185,7 @@ const PNLGrid = forwardRef(
                       fontSize: FONT_L1,
                     }}
                   >
-                    {rightType}
+                    {displayRightType}
                   </TableCell>
                   <TableCell
                     align="right"
@@ -1189,41 +1207,47 @@ const PNLGrid = forwardRef(
                       sx={{
                         fontSize: FONT_L2,
                         fontWeight:
-                          r.expIsGross || r.expIsNet || expenseArr[i]?.isBold
+                          r.leftIsGross || displayLeftArr[i]?.isBold
                             ? "bold"
                             : "normal",
                       }}
                     >
-                      {r.expName}
+                      {r.leftName}
                     </TableCell>
 
                     <TableCell
                       align="right"
                       sx={{
                         fontSize: FONT_L2,
-                        fontWeight: expenseArr[i]?.isBold ? "bold" : "normal",
+                        fontWeight: displayLeftArr[i]?.isBold
+                          ? "bold"
+                          : "normal",
                       }}
                     >
-                      {r.expAmt !== "" ? fmt(Math.abs(r.expAmt)) : ""}
+                      {r.leftAmt !== "" ? fmt(Math.abs(r.leftAmt)) : ""}
                     </TableCell>
 
                     <TableCell
                       sx={{
                         fontSize: FONT_L2,
-                        fontWeight: incomeArr[i]?.isBold ? "bold" : "normal",
+                        fontWeight: displayRightArr[i]?.isBold
+                          ? "bold"
+                          : "normal",
                       }}
                     >
-                      {r.incName}
+                      {r.rightName}
                     </TableCell>
 
                     <TableCell
                       align="right"
                       sx={{
                         fontSize: FONT_L2,
-                        fontWeight: incomeArr[i]?.isBold ? "bold" : "normal",
+                        fontWeight: displayRightArr[i]?.isBold
+                          ? "bold"
+                          : "normal",
                       }}
                     >
-                      {r.incAmt !== "" ? fmt(Math.abs(r.incAmt)) : ""}
+                      {r.rightAmt !== "" ? fmt(Math.abs(r.rightAmt)) : ""}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1252,7 +1276,7 @@ const PNLGrid = forwardRef(
                       fontSize: FONT_L2,
                     }}
                   >
-                    {fmt(expenseTotal)}
+                    {fmt(displayLeftTotal)}
                   </TableCell>
 
                   <TableCell
@@ -1272,7 +1296,7 @@ const PNLGrid = forwardRef(
                       fontSize: FONT_L2,
                     }}
                   >
-                    {fmt(incomeTotal)}
+                    {fmt(displayRightTotal)}
                   </TableCell>
                 </TableRow>
               </TableBody>
@@ -1460,45 +1484,45 @@ const PNLGrid = forwardRef(
 
                         return (
                           <>
-                            {/* 1) Expense -> Direct */}
-                            {sectionHeader("Expense", "SEC-EXP-D")}
-                            {expDirect.map((r, i) =>
-                              renderRow(r, `EXP-D-${i}`),
-                            )}
-
-                            {/* 2) Income -> Direct */}
+                            {/* 1) Income -> Direct */}
                             {sectionHeader("Income", "SEC-INC-D")}
                             {incDirect.map((r, i) =>
                               renderRow(r, `INC-D-${i}`),
                             )}
 
+                            {/* 2) Expense -> Direct */}
+                            {sectionHeader("Expense", "SEC-EXP-D")}
+                            {expDirect.map((r, i) =>
+                              renderRow(r, `EXP-D-${i}`),
+                            )}
+
                             {/* 3) Gross Profit */}
                             {grossRow ? renderRow(grossRow, "ROW-GROSS") : null}
 
-                            {/* 4) Expense -> Indirect */}
-                            {sectionHeader("Expense", "SEC-EXP-I")}
-                            {expIndirect.map((r, i) =>
-                              renderRow(r, `EXP-I-${i}`),
-                            )}
-
-                            {/* 6) Income -> Indirect */}
+                            {/* 4) Income -> Indirect */}
                             {sectionHeader("Income", "SEC-INC-I")}
                             {incIndirect.map((r, i) =>
                               renderRow(r, `INC-I-${i}`),
                             )}
 
+                            {/* 5) Expense -> Indirect */}
+                            {sectionHeader("Expense", "SEC-EXP-I")}
+                            {expIndirect.map((r, i) =>
+                              renderRow(r, `EXP-I-${i}`),
+                            )}
+
                             {/* 7) Net Profit/Loss */}
                             {netRow ? renderRow(netRow, "ROW-NET") : null}
 
-                            {/* 5) Total Expense */}
-                            {totalRow("Total Expense", expenseTotal, "TOT-EXP")}
-
-                            {/* 8) Total Income */}
+                            {/* 7) Total Income */}
                             {totalRow(
                               "Total Income",
                               Math.abs(incomeTotal),
                               "TOT-INC",
                             )}
+
+                            {/* 8) Total Expense */}
+                            {totalRow("Total Expense", expenseTotal, "TOT-EXP")}
                           </>
                         );
                       })()

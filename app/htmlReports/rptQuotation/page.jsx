@@ -6183,6 +6183,18 @@ Operator/ Airport Authority or any other third party.
                     : ""}
                 </td>
               </tr>
+               <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Validity From: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
+                  {data && data.length > 0 && data[0].validityFrom
+                    ? new Date(data[0].validityFrom).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : ""}
+                </td>
+              </tr>
               <tr style={{ fontSize: "9px" }}>
                 <th style={{ fontSize: "9px" }}>Validity To: </th>
                 <td className="pl-5" style={{ fontSize: "9px" }}>
@@ -6192,6 +6204,14 @@ Operator/ Airport Authority or any other third party.
                         month: "short",
                         year: "numeric",
                       })
+                    : ""}
+                </td>
+              </tr>
+              <tr style={{ fontSize: "9px" }}>
+                <th style={{ fontSize: "9px" }}>Trade Terms: </th>
+                <td className="pl-5" style={{ fontSize: "9px" }}>
+                  {data && data.length > 0 && data[0].tradeTerms !== ""
+                    ? data[0].tradeTerms
                     : ""}
                 </td>
               </tr>

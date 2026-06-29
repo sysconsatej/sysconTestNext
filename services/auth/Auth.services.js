@@ -468,3 +468,24 @@ export async function menuAccessSubmit(menuObj) {
     return false;
   }
 }
+
+
+//getActiveInactiveUsers
+export const getActiveInactiveUsers = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const url = `${baseUrlSQl}/api/userControl/list`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "x-access-token": JSON.parse(token),
+      },
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error verifying token:", error);
+    return false;
+  }
+}

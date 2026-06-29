@@ -11,10 +11,11 @@ export function ChatSidebar({
   lastMsgInfo,
   activePeerKey,
   filterStr,
-  peerTyping,
+  // peerTyping,
   dmTyping,
   onOpenChat,
   onFilterChange,
+  isActive,
 }) {
   const filteredUsers = users
     .filter((u) => u.id !== me?.id)
@@ -23,10 +24,10 @@ export function ChatSidebar({
         !filterStr || u.name.toLowerCase().includes(filterStr.toLowerCase()),
     );
 
-  const groupTypingText = users
-    .filter((u) => u.id !== me?.id && peerTyping[u.id])
-    .map((u) => u.name)
-    .join(", ");
+  // const groupTypingText = users
+  //   .filter((u) => u.id !== me?.id && peerTyping[u.id])
+  //   .map((u) => u.name)
+  //   .join(", ");
 
   return (
     <div className="sidebar">
@@ -45,7 +46,7 @@ export function ChatSidebar({
         </div>
         <div>
           <div className="you-name">{me ? me.name : "Not logged in"}</div>
-          <div className="you-status">{me ? "online" : ""}</div>
+          <div className="you-status">{me ? "online" : "offline"}</div>
         </div>
         <div className="sidebar-icons">
           {/* <button className="icon-btn" type="button">
@@ -70,7 +71,7 @@ export function ChatSidebar({
       </div>
 
       <div className="user-list">
-        {!filterStr || "group general".includes(filterStr.toLowerCase()) ? (
+        {/* {!filterStr || "group general".includes(filterStr.toLowerCase()) ? (
           <div
             className={`user-item${activePeerKey === "group" ? " active" : ""}`}
             onClick={() => onOpenChat("group")}
@@ -99,7 +100,7 @@ export function ChatSidebar({
               </div>
             </div>
           </div>
-        ) : null}
+        ) : null} */}
 
         {filteredUsers.map((u) => {
           const active = activePeerKey === u.id;
@@ -126,7 +127,9 @@ export function ChatSidebar({
                         ? previewText(lm)
                         : onlineIds.has(u.id)
                           ? "online"
-                          : "last seen recently"}
+                          : isActive
+                            ? "online"
+                            : "offliine"}
                   </span>
                   <span className={`badge${unread[u.id] ? " show" : ""}`}>
                     {unread[u.id] || ""}

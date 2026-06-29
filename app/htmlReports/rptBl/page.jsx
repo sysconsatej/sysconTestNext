@@ -43,6 +43,9 @@ function rptAirwayBill() {
     "COPY 10 (EXTRA COPY FOR CARRIER)",
   ];
 
+
+
+
   const shouldRenderSecondPage = useEffect(() => {
     const loadHtml2pdf = async () => {
       const module = await import("html2pdf.js");
@@ -264,6 +267,8 @@ function rptAirwayBill() {
     // Slice first 'wordCount' words and join back
     return words.slice(0, wordCount).join(" ");
   }
+
+
 
   function trimByWordCountBySup(text, wordCount) {
     if (!text || typeof text !== "string") return "";
@@ -742,6 +747,197 @@ function rptAirwayBill() {
 
   const AirwayBillPrintCharge = () => {
     console.log("data", reportData);
+    let blCharges = [];
+
+    if (Array.isArray(bldata?.tblBLCharge)) {
+      blCharges = bldata.tblBLCharge;
+    } else if (typeof bldata?.tblBLCharge === "string") {
+      try {
+        blCharges = JSON.parse(bldata.tblBLCharge);
+      } catch (error) {
+        blCharges = [];
+      }
+    }
+
+    const airFreightCharges = blCharges.filter(
+      (item) =>
+        String(item?.charge || "")
+          .trim()
+          .toUpperCase() === "AIR FREIGHT CHARGES"
+    );
+
+    const airFreightRate =
+      airFreightCharges.length > 0
+        ? airFreightCharges[0]?.sellRate ?? ""
+        : "";
+
+    const airFreightTotal = airFreightCharges.reduce((total, item) => {
+      const amount =
+        item?.sellAmount ??
+        item?.sellNetAmount ??
+        item?.sellTotalAmountHc ??
+        0;
+
+      return total + Number(amount || 0);
+    }, 0);
+
+    const toNumber = (value) => {
+      const parsedValue = Number(String(value ?? 0).replace(/,/g, ""));
+      return Number.isFinite(parsedValue) ? parsedValue : 0;
+    };
+
+    const getChargeShortName = (chargeName) => {
+      const normalizedName = String(chargeName || "")
+        .trim()
+        .toUpperCase();
+
+      const chargeCodeMap = {
+        "AWB FEES": "AWB",
+        "AWB FEE": "AWB",
+        "PCA CHARGES": "PCA",
+        "PCA CHGS": "PCA",
+        "FSC CHARGES": "FSC",
+        "FSC CHGS": "FSC",
+        "XRAY CHARGES": "XRA",
+        "X-RAY CHARGES": "XRA",
+        "XRAY CHGS": "XRA",
+        "MISCELLANEOUS CHARGES": "MIS",
+        "MISCELLANEOUS CHGS": "MIS",
+        "CTG CHARGES": "CTG",
+        "CTG CHGS": "CTG",
+      };
+
+      if (chargeCodeMap[normalizedName]) {
+        return chargeCodeMap[normalizedName];
+      }
+
+      return normalizedName
+        .replace(/\b(CHARGES|CHARGE|CHGS|FEES|FEE)\b/g, "")
+        .trim()
+        .substring(0, 3);
+    };
+
+    const getOtherChargesByDueTo = (dueToName) => {
+      return blCharges
+        .filter((item) => {
+          const chargeName = String(item?.charge || "")
+            .trim()
+            .toUpperCase();
+
+          const dueTo = String(item?.dueTo || "")
+            .trim()
+            .toUpperCase();
+
+          return (
+            dueTo === dueToName &&
+            chargeName !== "AIR FREIGHT CHARGES"
+          );
+        })
+        .map((item) => {
+          const chargeCode = getChargeShortName(item?.charge);
+          const chargeAmount = toNumber(
+            item?.sellAmount ??
+            item?.sellNetAmount ??
+            item?.sellTotalAmountHc ??
+            0
+          );
+
+          return `${chargeCode}-${chargeAmount.toFixed(2)}`;
+        })
+        .join(", ");
+    };
+
+    const agentOtherCharges = getOtherChargesByDueTo("AGENT");
+    const carrierOtherCharges = getOtherChargesByDueTo("CARRIER");
+
+    const getChargeAmount = (item) =>
+      toNumber(
+        item?.sellAmount ??
+        item?.sellNetAmount ??
+        item?.sellTotalAmountHc ??
+        0
+      );
+
+    const isAirFreightCharge = (item) =>
+      String(item?.charge || "")
+        .trim()
+        .toUpperCase() === "AIR FREIGHT CHARGES";
+
+    const isPaymentType = (item, paymentType) => {
+      const prepaidCollect = String(item?.sellPrepaidCollect || "")
+        .trim()
+        .toUpperCase();
+
+      if (paymentType === "PREPAID") {
+        return prepaidCollect === "PREPAID" || prepaidCollect === "P";
+      }
+
+      if (paymentType === "COLLECT") {
+        return prepaidCollect === "COLLECT" || prepaidCollect === "C";
+      }
+
+      return false;
+    };
+
+    const getOtherChargeTotal = (dueToName, paymentType) =>
+      blCharges
+        .filter((item) => {
+          const dueTo = String(item?.dueTo || "")
+            .trim()
+            .toUpperCase();
+
+          return (
+            dueTo === dueToName &&
+            !isAirFreightCharge(item) &&
+            isPaymentType(item, paymentType)
+          );
+        })
+        .reduce((total, item) => total + getChargeAmount(item), 0);
+
+    const getPaymentTotal = (paymentType) =>
+      blCharges
+        .filter((item) => isPaymentType(item, paymentType))
+        .reduce((total, item) => total + getChargeAmount(item), 0);
+
+    const airFreightPrepaidTotal = airFreightCharges
+      .filter((item) => isPaymentType(item, "PREPAID"))
+      .reduce((total, item) => total + getChargeAmount(item), 0);
+
+    const airFreightCollectTotal = airFreightCharges
+      .filter((item) => isPaymentType(item, "COLLECT"))
+      .reduce((total, item) => total + getChargeAmount(item), 0);
+
+    const agentPrepaidTotal = getOtherChargeTotal("AGENT", "PREPAID");
+    const agentCollectTotal = getOtherChargeTotal("AGENT", "COLLECT");
+    const carrierPrepaidTotal = getOtherChargeTotal("CARRIER", "PREPAID");
+    const carrierCollectTotal = getOtherChargeTotal("CARRIER", "COLLECT");
+
+    const totalPrepaid = getPaymentTotal("PREPAID");
+    const totalCollect = getPaymentTotal("COLLECT");
+
+    const formatTotalAmount = (value) => {
+      const amount = toNumber(value);
+      return amount === 0
+        ? "0.00"
+        : amount.toFixed(2).replace(/\.00$/, "");
+    };
+
+    const formatBlPort = (value) => {
+      if (!value) return "";
+
+      const parts = String(value)
+        .split("|")
+        .map((x) => x.trim());
+
+      const portCode = parts[0] || "";
+      const portName = parts[1] || "";
+      const portNo = parts[2] ? parts[2].replace(/^-/, "") : "";
+
+      return [portCode, portName, portNo]
+        .filter(Boolean)
+        .join(" | ");
+    };
+
     return (
       <div>
         <div
@@ -761,13 +957,20 @@ function rptAirwayBill() {
             className="mx-auto"
           >
             <div className="text-left" style={{ flex: 5 }}>
-              <h2 className="text-black pl-1 font-semibold text-left">
-                {bldata?.blPort}
+              <h2
+                className="text-black pl-1 font-semibold text-left"
+                style={{ fontSize: "20px" }}
+              >
+                {formatBlPort(reportData?.blPort)}
               </h2>
             </div>
+
             <div style={{ flex: 5 }}>
-              <h2 className="text-black pr-1 font-semibold text-right ">
-                {bldata?.blNos}
+              <h2
+                className="text-black pr-1 font-semibold text-right"
+                style={{ fontSize: "20px" }}
+              >
+                {reportData?.blNos}
               </h2>
             </div>
           </div>
@@ -922,7 +1125,8 @@ function rptAirwayBill() {
                     fontWeight: "bold",
                   }}
                 >
-                  {bldata?.polAgentName}
+                  {/* {bldata?.polAgentName} */}
+                  {bldata?.companyName}
                 </p>
               </div>
               <hr
@@ -972,14 +1176,14 @@ function rptAirwayBill() {
                         className="text-black font-normal"
                         style={{
                           fontSize: "9px",
-                          marginTop: "5px",
+                          marginTop: "2px",
                           paddingRight: "10px",
                           paddingLeft: "10px",
                           paddingBottom: "5px",
                           fontWeight: "bold",
                         }}
                       >
-                        {bldata?.agentsIATACode}
+                        {bldata?.iataCode}
                       </p>
                     </div>
                   </div>
@@ -1083,15 +1287,15 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {bldata?.blType}
+                      {bldata?.mblHblFlag}
                     </p>
                     <p style={{ fontSize: "10px" }}>(Air Consignment note)</p>
                     <p
                       className="text-black font-normal text-center "
                       style={{
-                        fontSize: "10px ",
+                        fontSize: "12px ",
                         paddingTop: "3px",
-                        paddingBottom: "15px",
+                        paddingBottom: "3px",
                         fontWeight: "bold",
                       }}
                     >
@@ -1192,7 +1396,7 @@ function rptAirwayBill() {
                     fontWeight: "bold",
                   }}
                 >
-                  Accounting Information {bldata?.freightPrepaidCollect}
+                  Accounting Information {reportData?.freightPrepaidCollect}
                 </p>
                 <p
                   className="text-black font-normal"
@@ -1250,7 +1454,7 @@ function rptAirwayBill() {
                   fontWeight: "bold",
                 }}
               >
-                {reportData?.trPort1}
+                {reportData?.polCode}
               </p>
             </div>
             <div
@@ -1333,7 +1537,7 @@ function rptAirwayBill() {
                   fontWeight: "bold",
                 }}
               >
-                {bldata?.trPort2}
+                {reportData?.trPort1}
               </p>
             </div>
             <div
@@ -1448,7 +1652,7 @@ function rptAirwayBill() {
                   paddingBottom: "5px",
                 }}
               >
-                INR
+                {reportData?.declaredCarrierCurrecycode}
               </p>
             </div>
             <div
@@ -1476,7 +1680,7 @@ function rptAirwayBill() {
                   fontWeight: "bold",
                 }}
               >
-                {bldata?.chgsCode}
+                {reportData?.chgsCode}
               </p>
             </div>
             <div
@@ -1526,7 +1730,7 @@ function rptAirwayBill() {
                       fontWeight: "bold",
                     }}
                   >
-                    {bldata?.PP}
+                    {reportData?.PP}
                   </p>
                 </div>
                 <div
@@ -1550,7 +1754,7 @@ function rptAirwayBill() {
                       fontWeight: "bold",
                     }}
                   >
-                    {bldata?.COLL}
+                    {reportData?.COLL}
                   </p>
                 </div>
               </div>
@@ -1602,7 +1806,7 @@ function rptAirwayBill() {
                       fontWeight: "bold",
                     }}
                   >
-                    {bldata?.PP}
+                    {reportData?.PP}
                   </p>
                 </div>
                 <div
@@ -1626,7 +1830,7 @@ function rptAirwayBill() {
                       fontWeight: "bold",
                     }}
                   >
-                    {bldata?.COLL}
+                    {reportData?.COLL}
                   </p>
                 </div>
               </div>
@@ -1651,13 +1855,13 @@ function rptAirwayBill() {
                 className="text-black font-normal"
                 style={{
                   fontSize: "9px",
-                  marginTop: "5px",
+                  marginTop: "1px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
-                  fontWeight: "bold",
+                  fontWeight: "semibold",
                 }}
               >
-                {bldata?.nvd}
+                {reportData?.nvd}
               </p>
             </div>
             <div
@@ -1679,13 +1883,13 @@ function rptAirwayBill() {
                 className="text-black font-normal"
                 style={{
                   fontSize: "9px",
-                  marginTop: "5px",
+                  marginTop: "1px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
-                  fontWeight: "bold",
+                  fontWeight: "semibold",
                 }}
               >
-                {bldata?.nvc}
+                {reportData?.ncv}
               </p>
             </div>
           </div>
@@ -1728,7 +1932,7 @@ function rptAirwayBill() {
                   fontWeight: "bold",
                 }}
               >
-                {bldata?.pod}
+                {reportData?.pod}
               </p>
             </div>
             <div
@@ -1744,7 +1948,15 @@ function rptAirwayBill() {
                   fontSize: "8px",
                   paddingLeft: "5px",
                 }}
-              ></p>
+              >
+                <div style={{
+                  fontSize: "8px",
+                }} className="flex">
+                  <div style={{width:"40%"}}></div>
+                  <div style={{width:"30%"}} className="text-center border-black border-l border-b border-r" >Flight/Date</div>
+                  <div style={{width:"30%"}}></div>
+                </div>
+              </p>
               <p
                 className="text-black font-normal"
                 style={{
@@ -1755,7 +1967,7 @@ function rptAirwayBill() {
                   fontWeight: "bold",
                 }}
               >
-                {bldata?.preCarriage || ""}
+                {reportData?.polVesselText || ""} {reportData?.vesselSailDate || ""}
               </p>
             </div>
             <div
@@ -1852,8 +2064,8 @@ function rptAirwayBill() {
                     }}
                   >
                     Handling Information: PLEASE INFORM CONSIGNEE IMMEDIATELY ON
-                    ARRIVAL OF CARGO.
-                    {bldata?.marksAndNoActual}
+                    ARRIVAL OF CARGO.<br />
+                    {reportData?.marksAndNoActual}
                   </p>
                 </div>
                 <div className="text-center flex justify-end absolute bottom-0 right-0">
@@ -2137,12 +2349,12 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
                 }}
               >
-                {bldata?.containerDetail}
+                {reportData?.noOfPackages}
               </p>
             </div>
 
@@ -2155,12 +2367,12 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
                 }}
               >
-                {bldata?.containerDetail}
+                {reportData?.grossWt}
               </p>
             </div>
 
@@ -2173,12 +2385,12 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
                 }}
               >
-                {bldata?.containerDetail}
+                K/Q
               </p>
             </div>
 
@@ -2191,7 +2403,7 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
                 }}
@@ -2227,12 +2439,12 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black, text-right font-normal"
                 style={{
                   fontSize: "8px",
                 }}
               >
-                {bldata?.containerDetail}
+                {reportData?.chargeableWt}
               </p>
             </div>
 
@@ -2245,12 +2457,12 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
                 }}
               >
-                {bldata?.containerDetail}
+                {airFreightRate}
               </p>
             </div>
 
@@ -2263,12 +2475,12 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
                 }}
               >
-                {bldata?.containerDetail}
+                {airFreightTotal}
               </p>
             </div>
 
@@ -2282,10 +2494,10 @@ function rptAirwayBill() {
               <p
                 className="text-black font-normal"
                 style={{
-                  fontSize: "8px",
+                  fontSize: "12px",
                 }}
               >
-                {bldata?.goodsDescDetails}
+                {reportData?.goodsDesc}
               </p>
             </div>
           </div>
@@ -2315,7 +2527,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                 }}
               >
-                {""}
+                {reportData?.noOfPackages}
               </p>
             </div>
 
@@ -2334,7 +2546,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                 }}
               >
-                {""}
+                {reportData?.grossWt}
               </p>
             </div>
 
@@ -2370,7 +2582,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                 }}
               >
-                {""}
+
               </p>
             </div>
 
@@ -2388,7 +2600,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                 }}
               >
-                {""}
+
               </p>
             </div>
 
@@ -2438,12 +2650,12 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
                 }}
               >
-                {""}
+                {airFreightTotal}
               </p>
             </div>
 
@@ -2599,8 +2811,8 @@ function rptAirwayBill() {
                     <p
                       className="text-black font-normal text-center "
                       style={{
-                        fontSize: "8px",
-                        fontWeight: "bold",
+                        fontSize: "10px",
+                        fontWeight: "semibold",
                         paddingRight: "1px",
                         paddingLeft: "1px",
                         minHeight: "15px",
@@ -2608,7 +2820,7 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {bldata?.preWeightCharge}
+                      {formatTotalAmount(airFreightPrepaidTotal)}
                     </p>
                   </div>
                   <div
@@ -2628,7 +2840,7 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {bldata?.collWeightCharge}
+                      {formatTotalAmount(airFreightCollectTotal)}
                     </p>
                   </div>
                 </div>
@@ -3037,7 +3249,7 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {bldata?.preTotalOtherChargesDueAgent}
+                      {formatTotalAmount(agentPrepaidTotal)}
                     </p>
                   </div>
                   <div
@@ -3057,7 +3269,7 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {bldata?.collTotalOtherChargesDueAgent}
+                      {formatTotalAmount(agentCollectTotal)}
                     </p>
                   </div>
                 </div>
@@ -3184,7 +3396,7 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {bldata?.preTotalOtherChargesDueCarrier}
+                      {formatTotalAmount(carrierPrepaidTotal)}
                     </p>
                   </div>
                   <div
@@ -3204,7 +3416,7 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {bldata?.collTotalOtherChargesDueCarrier}
+                      {formatTotalAmount(carrierCollectTotal)}
                     </p>
                   </div>
                 </div>
@@ -3317,7 +3529,7 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {bldata?.preTotal}
+                      {formatTotalAmount(totalPrepaid)}
                     </p>
                   </div>
                   <div
@@ -3337,7 +3549,7 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {bldata?.collTotal}
+                      {formatTotalAmount(totalCollect)}
                     </p>
                   </div>
                 </div>
@@ -3623,7 +3835,7 @@ function rptAirwayBill() {
                 >
                   Other Charges
                 </p>
-                <p
+                <div
                   className="text-black font-normal"
                   style={{
                     fontSize: "9px",
@@ -3632,11 +3844,15 @@ function rptAirwayBill() {
                     paddingLeft: "5px",
                     paddingBottom: "5px",
                     fontWeight: "bold",
-                    fontWeight: "bold",
                   }}
                 >
-                  {bldata?.otherCharge}
-                </p>
+                  <p style={{ margin: 0 }}>
+                    {agentOtherCharges}
+                  </p>
+                  <p style={{ margin: 0, marginTop: "18px" }}>
+                    {carrierOtherCharges}
+                  </p>
+                </div>
               </div>
               <hr
                 style={{
@@ -3969,7 +4185,7 @@ function rptAirwayBill() {
             </div>
             <div style={{ flex: 2 }}>
               <h2 className="text-black pr-1 font-semibold text-right ">
-                {bldata?.blNos}
+                {reportData?.blNos}
               </h2>
             </div>
           </div>
@@ -4149,7 +4365,6 @@ function rptAirwayBill() {
       </div>
     </div>
   );
-  console.log("bldata", bldata);
   const rptSeawayBillOfLadingDraft = () => (
     <div className="pr-2 pl-2">
       <div id="156" className="mx-auto text-black mt-1">
@@ -21842,7 +22057,7 @@ function rptAirwayBill() {
               </div> */}
               <div>
                 {Array.isArray(bldata.tblBlContainer) &&
-                bldata.tblBlContainer.length < 4 ? (
+                  bldata.tblBlContainer.length < 4 ? (
                   <p></p>
                 ) : (
                   <p>– Continuing on Attach Sheet</p>
@@ -27896,9 +28111,8 @@ function rptAirwayBill() {
                   <div
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
-                    className={`bg-white ${
-                      index < reportIds.length - 1 ? "report-spacing" : ""
-                    }`}
+                    className={`bg-white ${index < reportIds.length - 1 ? "report-spacing" : ""
+                      }`}
                     style={{
                       width: "297mm", // A4 landscape width
                       height: "210mm", // A4 landscape height
@@ -28122,8 +28336,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -28498,8 +28712,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -28894,8 +29108,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
 
                       const showThisPage =
@@ -29200,9 +29414,8 @@ function rptAirwayBill() {
                   key: "No of Packages",
                   header: "Packages",
                   render: (c) =>
-                    `${c.noOfPackages || ""}${" "}${
-                      c.packageCode || ""
-                    }`.trim(),
+                    `${c.noOfPackages || ""}${" "}${c.packageCode || ""
+                      }`.trim(),
                   align: "center",
                 },
                 {
@@ -29287,8 +29500,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -29656,8 +29869,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -30032,8 +30245,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -30408,8 +30621,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                          (mChunks[p]?.length || 0) +
-                          (gChunks[p]?.length || 0) >
+                        (mChunks[p]?.length || 0) +
+                        (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||

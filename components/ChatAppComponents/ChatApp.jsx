@@ -25,6 +25,7 @@ export default function ChatApp({
   socketFactory,
   destroySocket,
   apiBase = "",
+  closeWindow,
 }) {
   // ── User roster from API ────────────────────────────────────────────
   const userDetails = getUserDetails();
@@ -32,7 +33,9 @@ export default function ChatApp({
     users,
     loading: usersLoading,
     error: usersError,
-  } = useUsers({ clientId: userDetails?.clientId });
+    inActiveUsers,
+  } = useUsers();
+  console.log(users, "users");
   const me = users?.find((u) => u.id === userDetails?.userId) || null;
 
   const [activePeerKey, setActivePeerKey] = useState(null);
@@ -45,6 +48,7 @@ export default function ChatApp({
     disabled: false,
     icon: "🔔",
   });
+  const [isActive, setIsactive] = useState(true);
 
   const inputRef = useRef(null);
 
@@ -58,7 +62,7 @@ export default function ChatApp({
   const { reactions, toggleReaction } = useReactions();
 
   // socketRef is wired below after useChatSocket initialises it
-  
+
   const chat = useChatSocket({
     socketUrl,
     ioFactory,
@@ -94,7 +98,7 @@ export default function ChatApp({
     clearMention,
   } = useMention({ users, me, activePeer, inputRef, draft, setDraft });
 
-  // ── Notifications 
+  // ── Notifications
   useEffect(() => {
     fetch(`${apiBase}/api/health`)
       .then(() => {}) // serverStatus is managed in useChatSocket
@@ -127,7 +131,7 @@ export default function ChatApp({
       });
   }, []);
 
-  // ── Auto-connect once user is resolved 
+  // ── Auto-connect once user is resolved
   useEffect(() => {
     if (!me) return;
     chat.connectSocket(me);
@@ -155,6 +159,10 @@ export default function ChatApp({
         icon: "🔕",
       });
   }
+
+  const checkIsActiveOrNot = () => {
+    setIsactive((prev) => !prev);
+  };
 
   // ── Open chat ────────────────────────────────────────────────────────────
   function openChat(key) {
@@ -226,7 +234,7 @@ export default function ChatApp({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          height: "100vh",
+          height: "80vh",
           color: "var(--muted)",
         }}
       >
@@ -243,7 +251,7 @@ export default function ChatApp({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          height: "100vh",
+          height: "80vh",
           color: "var(--muted)",
         }}
       >
@@ -259,21 +267,25 @@ export default function ChatApp({
         serverStatus={chat.serverStatus}
         notif={notif}
         onRequestNotifications={requestNotifications}
+        closeWindow={closeWindow}
+        checkIsActiveOrNot={checkIsActiveOrNot}
+        isActive={isActive}
       />
 
       <div className="app">
         <ChatSidebar
           me={me}
-          users={users}
+          users={isActive ? users : inActiveUsers}
           onlineIds={chat.onlineIds}
           unread={chat.unread}
           lastMsgInfo={chat.lastMsgInfo}
           activePeerKey={activePeerKey}
           filterStr={filterStr}
-          peerTyping={chat.peerTyping}
+          // peerTyping={chat.peerTyping}
           dmTyping={chat.dmTyping}
           onOpenChat={openChat}
           onFilterChange={setFilterStr}
+          isActive={isActive}
         />
 
         <ChatArea
@@ -328,4 +340,5 @@ ChatApp.propTypes = {
   socketFactory: PropTypes.func,
   destroySocket: PropTypes.any,
   apiBase: PropTypes.string,
+  closeWindow: PropTypes.func,
 };

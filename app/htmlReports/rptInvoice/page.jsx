@@ -33,12 +33,15 @@ function rptInvoice() {
   const [chargeAttOfSubLeas, setChargeAttOfSubLeas] = useState([]);
   const [hsnSac, setHsnSac] = useState([]);
   const [CompanyHeader, setCompanyHeader] = useState("");
+  const [companyLogoName, setCompanyLogoName] = useState("");
+  const [companyLogoAddress, setCompanyLogoAddress] = useState("");
   const hsnGridRef = useRef(null);
   const [chargeGridHeight, setChargeGridHeight] = useState("245px");
   const hsnGridHeight = 150;
   const hsnGridHeightFF = 170;
   const [ImageUrl, setImageUrl] = useState("");
   const [footerImageUrl, setFooterImageUrl] = useState("");
+  const [companyImageUrl, setCompanyImageUrl] = useState("");
   const enquiryModuleRefs = useRef([]);
   const [html2pdf, setHtml2pdf] = useState(null);
   const date = new Date();
@@ -671,14 +674,24 @@ function rptInvoice() {
       if (storedUserData) {
         const decryptedData = decrypt(storedUserData);
         const userData = JSON.parse(decryptedData);
+        console.log("userData", userData);
         const headerLogoPath = userData[0]?.headerLogoPath;
         const footerLogoPath = userData[0]?.footerLogoPath;
+        const companyLogoPath = userData[0]?.companyLogo;
+        const companyLogoNameHeader = userData[0]?.companyName;
+        const companyLogoAddressHeader =
+          userData[0]?.companyAddress ??
+          userData[0]?.branchAddress ??
+          userData[0]?.address;
         if (headerLogoPath) {
           setImageUrl(headerLogoPath);
         }
         if (footerLogoPath) {
           setFooterImageUrl(footerLogoPath);
         }
+        setCompanyImageUrl(companyLogoPath ?? "");
+        setCompanyLogoName(companyLogoNameHeader ?? "");
+        setCompanyLogoAddress(companyLogoAddressHeader ?? "");
       }
     };
     fetchHeader();
@@ -1557,6 +1570,24 @@ function rptInvoice() {
   const CompanyImgModule = ({ data }) => {
     const token = data[0]?.signedQrCode; // Get the QR code token from the data
     const [qrCodeDataUrl, setQrCodeDataUrl] = useState(""); // State to hold QR code data URL
+    const hasHeaderImage = Boolean(ImageUrl?.trim());
+    const fallbackCompanyName =
+      companyLogoName || data?.[0]?.companyName || data?.[0]?.company || "";
+    const fallbackCompanyAddress =
+      companyLogoAddress ||
+      data?.[0]?.companyAddress ||
+      data?.[0]?.branchAddress ||
+      data?.[0]?.address ||
+      "";
+    const normalizedCompanyLogoPath = companyImageUrl
+      ?.trim()
+      .replace(/\\/g, "/")
+      .replace(/^~\//, "");
+    const companyLogoSrc = normalizedCompanyLogoPath
+      ? /^(https?:\/\/|data:|blob:)/i.test(normalizedCompanyLogoPath)
+        ? normalizedCompanyLogoPath
+        : `${(baseUrlNext || "").replace(/\/+$/, "")}/${normalizedCompanyLogoPath.replace(/^\/+/, "")}`
+      : "";
 
     useEffect(() => {
       const generateQRCode = async () => {
@@ -1584,14 +1615,41 @@ function rptInvoice() {
           paddingTop: "5px",
         }}
       >
-        {/* 70% left side */}
-        <div className=" flex items-center p-0.5" style={{ width: "85%" }}>
-          <img
-            src={`${baseUrlNext}${ImageUrl}`}
-            alt="LOGO"
-            className="w-full my-auto"
-            style={{ maxHeight: "130px", width: "100%" }}
-          />
+        <div className="flex items-center p-0.5" style={{ width: "85%" }}>
+          {hasHeaderImage ? (
+            <img
+              src={`${baseUrlNext}${ImageUrl}`}
+              alt="Company header"
+              className="w-full my-auto"
+              style={{ maxHeight: "130px", width: "100%" }}
+            />
+          ) : (
+            <div
+              className="flex items-center w-full px-3"
+              style={{ minHeight: "90px" }}
+            >
+              {companyLogoSrc && (
+                <img
+                  src={companyLogoSrc}
+                  alt={`${fallbackCompanyName || "Company"} logo`}
+                  className="object-contain"
+                  style={{ maxHeight: "85px", maxWidth: "160px" }}
+                />
+              )}
+
+              <div className="flex-1 pl-4 text-center">
+                <h1 style={{ fontSize: "20px" }} className="text-2xl font-bold">
+                  {fallbackCompanyName}
+                </h1>
+                <p
+                  style={{ fontSize: "15px" }}
+                  className="text-xs whitespace-pre-line"
+                >
+                  {fallbackCompanyAddress}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="w-[15%] flex justify-end items-start">
@@ -3556,6 +3614,231 @@ function rptInvoice() {
     );
   };
 
+  const TaxInvoiceJobDetailsTaxInvoiceContainer = ({ data }) => {
+    const sizeType = (data?.[0]?.sizeTypeContainer ?? "").replaceAll("/", ", ");
+    console.log("sizeType", sizeType);
+    return (
+      <div className="flex border-r border-l border-b border-black">
+        <div className="p-1" style={{ fontSize: "10px", width: "38%" }}>
+          {/* <div className="flex w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Job No. {" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.jobNo || ""}</p>
+          </div> */}
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              MB/L No.{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.mblNo || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              HB/L No.{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.hblNo || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Vessel/Voy{" "}
+            </p>
+            {/* <p style={{ width: "60%" }}>
+              : {data[0]?.jobVessel || ""} / {data[0]?.jobVoyageNo || ""}
+            </p> */}
+            {/* Vessel and  VoyageNo has been changes to BL vessel and voyage no as discussed with Nilay sir and shahnaz on date 21-05-2026 that it will come from */}
+            <p style={{ width: "60%" }}>
+              : {data[0]?.blVesselName || ""} / {data[0]?.voyageNo || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              POL{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.pol || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              POD{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.pod || ""}</p>
+          </div>
+          {clientId != 17 && clientId != 24 && (
+            <div className="flex pt-1 w-full">
+              <p className="font-bold" style={{ width: "40%" }}>
+                Shipment Terms{" "}
+              </p>
+              <p style={{ width: "60%" }}>
+                :{" "}
+                {clientId == 25
+                  ? data[0]?.deliveryType || ""
+                  : data[0]?.tradeTerms || ""}
+              </p>
+            </div>
+          )}
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Place Of Supply{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.placeOfSupply || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              IGM NO.{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.igmNo || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Terminal{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.terminal || ""}</p>
+          </div>
+        </div>
+        <div
+          className="border-r border-black p-1"
+          style={{ fontSize: "10px", width: "22%" }}
+        >
+          {/* <div className="flex w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Date {" "}
+            </p>
+            <p style={{ width: "60%" }}>
+              : {formatDateToDDMMYYYY(data[0]?.jobDate) || ""}
+            </p>
+          </div> */}
+          <div
+            className={`flex pt-1 w-full ${
+              Number(clientId) === 24 ? "invisible" : ""
+            }`}
+          >
+            <p className="font-bold" style={{ width: "40%" }}>
+              Date{" "}
+            </p>
+
+            <p style={{ width: "60%" }}>
+              : {formatDateToDDMMYYYY(data[0]?.mblDate) || ""}
+            </p>
+          </div>
+          <div
+            className={`flex pt-1 w-full ${
+              Number(clientId) === 24 ? "invisible" : ""
+            }`}
+          >
+            <p className="font-bold" style={{ width: "40%" }}>
+              Date{" "}
+            </p>
+
+            <p style={{ width: "60%" }}>
+              : {formatDateToDDMMYYYY(data[0]?.hblDate) || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Date{" "}
+            </p>
+            <p style={{ width: "60%" }}>
+              :{" "}
+              {formatDateToDDMMYYYY(
+                clientId == 25 ? data[0]?.sobDate : data[0]?.arrivalDate,
+              ) || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              PLR{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.plr || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              FPD{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.fpd || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Size Type{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {sizeType || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              IGM Date{" "}
+            </p>
+            <p style={{ width: "60%" }}>
+              : {formatDateToDDMMYYYY(data[0]?.igmDate) || ""}
+            </p>
+          </div>
+        </div>
+        <div className="p-1" style={{ fontSize: "10px", width: "40%" }}>
+          <div className="flex w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Shipper.{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.shipper || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Consignee{" "}
+            </p>
+            <p style={{ width: "60%" }}>
+              : {data[0]?.consignee || data[0]?.consigneeText || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Cargo Type{" "}
+            </p>
+            <p style={{ width: "60%" }}>
+              : {data[0]?.cargoType || ""}
+              {" / "}
+              {data[0]?.containerStatus || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Commodity{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.commodity || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Cargo Weight{" "}
+            </p>
+            <p style={{ width: "60%" }}>
+              : {data[0]?.cargoWeight || ""} {data[0]?.wtUnitName || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              No. of Pkg{" "}
+            </p>
+            <p style={{ width: "60%" }}>
+              : {data[0]?.blNoOfPackages || ""}{" "}
+              {data[0]?.packagingTypeCode || ""}
+            </p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "40%" }}>
+              Shipper Ref.No.{" "}
+            </p>
+            <p style={{ width: "60%" }}>: {data[0]?.shipperRefNo || ""}</p>
+          </div>
+          <div className="flex pt-1 w-full">
+            <p className="font-bold" style={{ width: "25%" }}>
+              Ex. Rate{" "}
+            </p>
+            <p style={{ width: "25%" }}>: {data[0]?.exchangeRate || ""}</p>
+            <p className="font-bold" style={{ width: "25%" }}>
+              Free Days{" "}
+            </p>
+            <p style={{ width: "25%" }}>: {data[0]?.freeDays || ""}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const DomesticInvoiceJobDetails = ({ data }) => {
     const sizeType = (data?.[0]?.sizeTypeContainer ?? "").replaceAll("/", ", ");
     return (
@@ -3571,7 +3854,7 @@ function rptInvoice() {
             <p className="font-bold" style={{ width: "40%" }}>
               FROM PORT{" "}
             </p>
-            <p style={{ width: "60%" }}>: {data[0]?.fromLocationId || ""}</p>
+            <p style={{ width: "60%" }}>: {data[0]?.pol || ""}</p>
           </div>
           <div className="flex pt-1 w-full">
             <p className="font-bold" style={{ width: "40%" }}>
@@ -3592,12 +3875,12 @@ function rptInvoice() {
               {formatDateToDDMMYYYY(data[0]?.jobDate) || ""}
             </p>
           </div>
-
+          {/* as told by anisha */}
           <div className="flex pt-1 w-full">
             <p className="font-bold" style={{ width: "40%" }}>
               TO PORT{" "}
             </p>
-            <p style={{ width: "60%" }}>: {data[0]?.toLocationId || ""}</p>
+            <p style={{ width: "60%" }}>: {data[0]?.pod || ""}</p>
           </div>
         </div>
         <div className="p-1" style={{ fontSize: "9px", width: "40%" }}>
@@ -3720,7 +4003,10 @@ function rptInvoice() {
               Date{" "}
             </p>
             <p style={{ width: "60%" }}>
-              : {formatDateToDDMMYYYY(data[0]?.arrivalDate) || ""}
+              :{" "}
+              {clientId === 33
+                ? formatDateToDDMMYYYY(data[0]?.sailDate)
+                : formatDateToDDMMYYYY(data[0]?.arrivalDate)}
             </p>
           </div>
           <div className="flex pt-1 w-full">
@@ -3870,7 +4156,7 @@ function rptInvoice() {
             </p>
             <p className="font-bold" style={{ width: "60%" }}>
               {" "}
-              : {data[0]?.blVesselName || ""} / {data[0]?.voyageNo || ""}{" "}
+              : {data[0]?.vessel || ""} / {data[0]?.voyageNo || ""}{" "}
             </p>
           </div>
           <div className="flex pt-1 w-full">
@@ -5227,16 +5513,17 @@ function rptInvoice() {
             className="flex w-full border-black border-r border-l border-b text-center font-bold"
             style={{ fontSize: "10px", width: "100%" }}
           >
-            <p className="border-r border-black" style={{ width: "27%" }}>
+            <p className="border-r border-black" style={{ width: "25%" }}>
               DESCRIPTION
             </p>
+            {/* as told by shahnaz width reduce to 25% */}
             <p className="border-r border-black" style={{ width: "7%" }}>
               HSN / SAC Code
             </p>
             <p className="border-r border-black" style={{ width: "5%" }}>
               Size Type
             </p>
-            <p className="border-r border-black" style={{ width: "3%" }}>
+            <p className="border-r border-black" style={{ width: "5%" }}>
               Qty
             </p>
             <p className="border-r border-black" style={{ width: "8%" }}>
@@ -5294,7 +5581,7 @@ function rptInvoice() {
                 >
                   <p
                     className="pb-1 border-r border-black"
-                    style={{ width: "27%", paddingLeft: "2px" }}
+                    style={{ width: "25%", paddingLeft: "2px" }}
                   >
                     {chargeData?.description || ""}
                   </p>
@@ -5317,7 +5604,7 @@ function rptInvoice() {
 
                   <p
                     className="pb-1 border-r border-black text-center"
-                    style={{ width: "3%" }}
+                    style={{ width: "5%" }}
                   >
                     {showVal(chargeData, chargeData?.qty, "")}
                   </p>
@@ -5432,7 +5719,7 @@ function rptInvoice() {
                     className="border-t  border-r border-black text-right pr-1"
                     style={{ width: "60%" }}
                   >
-                    Total
+                    Total {data?.[0]?.currency || ""}
                   </p>
                   <p
                     className="border-t border-black text-right border-r pr-1"
@@ -5465,6 +5752,349 @@ function rptInvoice() {
                   <p
                     className="border-t border-black text-right pr-1"
                     style={{ width: "9%" }}
+                  >
+                    {Number(gridTotal ?? 0).toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+                {/* amountInWords */}
+                <div
+                  className={`flex w-full border-t border-black ${index != 0 ? "border-b" : ""} `}
+                  style={{ fontSize: "10px", width: "100%" }}
+                >
+                  <p
+                    className="pl-1 uppercase"
+                    style={{ width: "85%", paddingRight: "15px" }}
+                  >
+                    <span className="font-bold">Amount in Words </span>
+                    {data?.[0]?.currency || ""} {totalAmountInWords || ""}
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {showHsnGrid && index === totalPages - 1 && (
+          <div>
+            <TaxInvoiceHsnSummaryGridFF
+              hsnSac={hsnSac}
+              data={data}
+              compact={compactHsnGrid}
+            />
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const TaxInvoiceChargeDetailsForTaxInvoiceReportTaxInvoiceContainer = ({
+    data,
+    charge,
+    index,
+    hsnSac,
+    compactChargeGrid = false,
+    compactHsnGrid = false,
+  }) => {
+    const isCont = (row) => row?.__isContinuation === true;
+
+    const showVal = (row, v, fallback = "") =>
+      isCont(row) ? "" : (v ?? fallback);
+
+    const isHomeCurrency = Number(data?.[0]?.isHomeCurrency) === 1;
+    const chargeList = data?.[0]?.tblInvoiceCharge || [];
+    const chargeTotals = getChargeTotals(chargeList, isHomeCurrency);
+    const gridTotal = chargeTotals.totalAmount;
+    const gridRoundOfTotal = Number(gridTotal || 0).toFixed(2);
+
+    const totalAmountInWords = numberToWordsInIndianAndUsaSystem(
+      parseFloat(gridRoundOfTotal || 0),
+      data?.[0]?.currency,
+    );
+
+    const currentPageLength = charge?.[index]?.length || 0;
+    const nextPageLength = charge?.[index + 1]?.length || 0;
+    const lastPageIndex = (charge?.length || 1) - 1;
+
+    const totalPages = charge?.length || 0;
+
+    const isLastPage =
+      index === lastPageIndex ||
+      (index === lastPageIndex - 1 && nextPageLength < 4);
+
+    const isSinglePage = (charge?.length || 0) === 1;
+
+    const defaultChargeGridHeight = isSinglePage ? "205px" : "350px";
+    const compactChargeGridMinHeight = `${getCompactChargeGridMinHeightPx(
+      currentPageLength,
+    )}px`;
+    const chargeGridStyle = compactChargeGrid
+      ? { minHeight: compactChargeGridMinHeight, overflow: "visible" }
+      : { height: defaultChargeGridHeight, overflow: "hidden" };
+
+    const showHsnGrid =
+      isLastPage || (currentPageLength > 4 && currentPageLength < 10);
+    const showChargeSummary = index === totalPages - 1;
+    const showCreditNoteFirstPageEndBorder =
+      reportIds?.[0] === "CreditNote Print" && index === 0 && totalPages > 1;
+
+    return (
+      <>
+        {currentPageLength > 0 && (
+          <div
+            className="flex w-full border-black border-r border-l border-b text-center font-bold"
+            style={{ fontSize: "10px", width: "100%" }}
+          >
+            <p className="border-r border-black" style={{ width: "26%" }}>
+              DESCRIPTION
+            </p>
+            <p className="border-r border-black" style={{ width: "7%" }}>
+              HSN / SAC Code
+            </p>
+            <p className="border-r border-black" style={{ width: "5%" }}>
+              Size Type
+            </p>
+            <p className="border-r border-black" style={{ width: "4%" }}>
+              No Of Days
+            </p>
+            <p className="border-r border-black" style={{ width: "3%" }}>
+              Qty
+            </p>
+            <p className="border-r border-black" style={{ width: "8%" }}>
+              Rate
+            </p>
+            <p className="border-r border-black" style={{ width: "4%" }}>
+              Curr
+            </p>
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              Ex. Rate
+            </p>
+            <p className="border-r border-black" style={{ width: "7%" }}>
+              Taxable Amount
+            </p>
+            <p className="border-r border-black" style={{ width: "5%" }}>
+              Tax Rate
+            </p>
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              IGST
+            </p>
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              CGST
+            </p>
+            <p className="border-r border-black" style={{ width: "6%" }}>
+              SGST
+            </p>
+            <p className="text-center" style={{ width: "7%" }}>
+              Amount in {data?.[0]?.currency || ""}
+            </p>
+          </div>
+        )}
+
+        {currentPageLength > 0 && (
+          <div
+            className="border-black border-r border-l border-b"
+            style={chargeGridStyle}
+          >
+            {charge?.[index]?.map((chargeData, idx, array) => {
+              const cont = isCont(chargeData);
+              const financials = cont
+                ? null
+                : getChargeFinancials(chargeData, isHomeCurrency);
+
+              return (
+                <div
+                  key={idx}
+                  className={`flex w-full ${
+                    idx === array.length - 1
+                      ? showCreditNoteFirstPageEndBorder
+                        ? "border-b border-black"
+                        : "border-b"
+                      : ""
+                  }`}
+                  style={{ fontSize: "10px", width: "100%" }}
+                >
+                  <p
+                    className="pb-1 border-r border-black"
+                    style={{ width: "26%", paddingLeft: "2px" }}
+                  >
+                    {chargeData?.description || ""}
+                  </p>
+
+                  <p
+                    className=" border-r border-black text-center"
+                    style={{ width: "7%" }}
+                  >
+                    {showVal(chargeData, chargeData?.hsn, "")}{" "}
+                    {showVal(chargeData, chargeData?.sac, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 border-r border-black text-center"
+                    style={{ width: "5%" }}
+                  >
+                    {showVal(chargeData, chargeData?.size, "")}{" "}
+                    {showVal(chargeData, chargeData?.typeCode, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 border-r border-black text-center"
+                    style={{ width: "4%" }}
+                  >
+                    {showVal(chargeData, chargeData?.noOfDays, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 border-r border-black text-center"
+                    style={{ width: "3%" }}
+                  >
+                    {showVal(chargeData, chargeData?.qty, "")}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "8%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      chargeData?.rate != null
+                        ? Number(chargeData.rate).toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
+                        : "",
+                      "",
+                    )}
+                  </p>
+
+                  <p
+                    className="pb-1 border-r border-black text-center"
+                    style={{ width: "4%" }}
+                  >
+                    {showVal(chargeData, chargeData?.chargeCurrency, "")}
+                  </p>
+                  {/* changes to 4 decimal for FCL Client request as discused by anisha  */}
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "6%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      chargeData?.exchangeRate != null &&
+                        chargeData?.exchangeRate !== ""
+                        ? Number(chargeData.exchangeRate).toFixed(4)
+                        : "",
+                      "",
+                    )}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "7%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      formatAmountBlankIfZero(financials?.taxableAmount),
+                      "",
+                    )}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "5%" }}
+                  >
+                    {showVal(
+                      chargeData,
+                      (chargeData?.tblInvoiceChargeTax || [])
+                        .reduce(
+                          (sum, item) =>
+                            sum + (Number(item?.taxPercentage) || 0),
+                          0,
+                        )
+                        .toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }),
+                      "",
+                    )}
+                  </p>
+
+                  {/* ✅ IMPORTANT: remove "|| 0.00" fallback, and hide on continuation */}
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "6%" }}
+                  >
+                    {cont ? "" : formatAmountBlankIfZero(financials?.IGST)}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "6%" }}
+                  >
+                    {cont ? "" : formatAmountBlankIfZero(financials?.CGST)}
+                  </p>
+
+                  <p
+                    className="pb-1 pr-1 border-r border-black text-right"
+                    style={{ width: "6%" }}
+                  >
+                    {cont ? "" : formatAmountBlankIfZero(financials?.SGST)}
+                  </p>
+
+                  <p className="pb-1 pr-1 text-right " style={{ width: "7%" }}>
+                    {cont
+                      ? ""
+                      : formatAmountBlankIfZero(financials?.totalAmount)}
+                  </p>
+                </div>
+              );
+            })}
+
+            {showChargeSummary && (
+              <>
+                {/* Final row - Amount in Words kash */}
+                <div
+                  className="flex w-full border-black text-center font-bold"
+                  style={{ fontSize: "10px", width: "100%" }}
+                >
+                  <p
+                    className="border-t  border-r border-black text-right pr-1"
+                    style={{ width: "63%" }}
+                  >
+                    Total
+                  </p>
+                  <p
+                    className="border-t border-black text-right border-r pr-1"
+                    style={{ width: "7%" }}
+                  >
+                    {formatAmountBlankIfZero(chargeTotals?.taxableAmount)}
+                  </p>
+                  <p
+                    className="border-t border-black text-right border-r pr-1"
+                    style={{ width: "5%" }}
+                  ></p>
+                  <p
+                    className="border-t border-black text-right border-r pr-1"
+                    style={{ width: "6%" }}
+                  >
+                    {formatAmountBlankIfZero(chargeTotals?.IGST)}
+                  </p>
+                  <p
+                    className="border-t border-black text-right border-r pr-1"
+                    style={{ width: "6%" }}
+                  >
+                    {formatAmountBlankIfZero(chargeTotals?.CGST)}
+                  </p>
+                  <p
+                    className="border-t border-black text-right border-r pr-1"
+                    style={{ width: "6%" }}
+                  >
+                    {formatAmountBlankIfZero(chargeTotals?.SGST)}
+                  </p>
+                  <p
+                    className="border-t border-black text-right pr-1"
+                    style={{ width: "7%" }}
                   >
                     {Number(gridTotal ?? 0).toLocaleString("en-IN", {
                       minimumFractionDigits: 2,
@@ -9505,6 +10135,23 @@ function rptInvoice() {
                   {data[0]?.bankAccountNo || ""}
                 </p>
               </div>
+              {/* as told by tabish and neha */}
+              {clientId === 33 && (
+                <div className="flex" style={{ width: "100%" }}>
+                  <p
+                    className="font-bold "
+                    style={{ fontSize: "8px", width: "30%" }}
+                  >
+                    USD A/C NO :{" "}
+                  </p>
+                  <p
+                    className="font-bold"
+                    style={{ fontSize: "8px", width: "70%" }}
+                  >
+                    201002671735
+                  </p>
+                </div>
+              )}
               <div className="flex" style={{ width: "100%" }}>
                 <p
                   className="font-bold"
@@ -18400,7 +19047,7 @@ function rptInvoice() {
       <CompanyImgModule data={data} />
       <TaxInvoiceHeader data={data} />
       <TaxInvoiceBillingDetails data={data} />
-      {index === 0 && <TaxInvoiceJobDetails data={data} />}
+      {index === 0 && <TaxInvoiceJobDetailsTaxInvoiceContainer data={data} />}
       <TaxInvoiceRemarks data={data} />
       {/* <TaxInvoiceChargeDetailsForTaxInvoiceReport
         data={data}
@@ -18408,8 +19055,8 @@ function rptInvoice() {
         index={index}
         hsnSac={hsnSac}
       /> */}
-      {/* same grid for Tax invoice and tax invoice FF grid */}
-      <TaxInvoiceChargeDetailsForTaxInvoiceReportFF
+      {/* grid change for Tax Invoice Container as discused my neha and anish */}
+      <TaxInvoiceChargeDetailsForTaxInvoiceReportTaxInvoiceContainer
         data={data}
         charge={invoiceChargeDataForTaxInvoice}
         index={index}
