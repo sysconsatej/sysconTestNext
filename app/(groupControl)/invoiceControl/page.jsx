@@ -38,6 +38,7 @@ import {
   disableEdit,
   disableAdd,
   disablePrint,
+  disableDelete,
 } from "@/services/auth/FormControl.services.js";
 import {
   viewIcon,
@@ -188,12 +189,12 @@ export default function StickyHeadTable() {
   const [isAdvanceSearchOpen, setIsAdvanceSearchOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [advanceSearch, setadvanceSearch] = useState({});
-  const [prevSearchInput, setPrevSearchInput] = useState("");
+  const [prevSearchInput, setPrevSearchInput] = useState(currentMenu?.keyValue);
   const [dropHeaderFields, setDropHeaderFields] = useState([]);
   const [dropPageNo, setDropPageNo] = useState(1);
   const [isNewSearch, setIsNewSearch] = useState(false);
-  const [columnSearchKeyName, setColumnSearchKeyName] = useState("");
-  const [columnSearchKeyValue, setColumnSearchKeyValue] = useState("");
+  const [columnSearchKeyName, setColumnSearchKeyName] = useState(null);
+  const [columnSearchKeyValue, setColumnSearchKeyValue] = useState(null);
   const [selectedPageNumber, setSelectedPageNumber] = useState(1);
   const [isRequiredAttachment, setIsRequiredAttachment] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
@@ -476,6 +477,8 @@ export default function StickyHeadTable() {
           order: sortData.order,
           search: advanceSearch,
           searchQuery: searchInput,
+          keyName: columnSearchKeyName || currentMenu?.keyName,
+          keyValue: columnSearchKeyValue || currentMenu?.keyValue,
           sortingCondition: tableHeadingsData?.data[0]?.sortingCondition,
         };
         const apiResponse = await masterTableList(requestData);
@@ -697,6 +700,8 @@ export default function StickyHeadTable() {
         menuName: search,
         isCopy: isCopy || false,
         isView: isView || false,
+        keyName: columnSearchKeyName || currentMenu?.keyName,
+        keyValue: columnSearchKeyValue || currentMenu?.keyValue,
       }),
     );
 
@@ -718,6 +723,7 @@ export default function StickyHeadTable() {
 
   const deleteController = async (data) => {
     console.log("deleteController", data);
+    let recordId = data?.id;
     const { clientId, userId } = getUserDetails();
     setDeleteData({
       id: data.id,
@@ -727,6 +733,23 @@ export default function StickyHeadTable() {
       updateBy: parseInt(userId),
       deletedNo: data.id,
     });
+    try {
+      const requestBody = {
+        tableName: tableName,
+        recordId: recordId,
+        clientId: clientId,
+        menuId: search,
+      };
+      const data = await disableDelete(requestBody);
+      if (data.success === false) {
+        setParaText(data.message);
+        setOpenModal((prev) => !prev);
+        return;
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Could not load delete reasons.");
+    }
 
     if (formControlData?.isReasonForDeleteRequired === true) {
       setParaText("");
@@ -2438,6 +2461,9 @@ export default function StickyHeadTable() {
                                 setIsNewSearch={setIsNewSearch}
                                 setRowsPerPage={setRowsPerPage}
                                 setPage={setPage}
+                                router={router}
+                                currentMenu={currentMenu}
+                                encryptUrlFun={encryptUrlFun}
                               />
                             )}
                         </span>
@@ -2797,6 +2823,9 @@ CustomizedInputBase.propTypes = {
   setIsNewSearch: PropTypes.func,
   setRowsPerPage: PropTypes.func,
   setPage: PropTypes.number,
+  router: PropTypes.func,
+  currentMenu: PropTypes.object,
+  encryptUrlFun: PropTypes.func,
 };
 function CustomizedInputBase({
   columnData,
@@ -2810,6 +2839,9 @@ function CustomizedInputBase({
   setIsNewSearch,
   setRowsPerPage,
   setPage,
+  router,
+  currentMenu,
+  encryptUrlFun,
 }) {
   const inputRef = useRef(null); // Ref to the Paper component
   const [searchInputGridData, setSearchInputGridData] = useState(
@@ -2826,6 +2858,15 @@ function CustomizedInputBase({
     if (searchValue === "") {
       setRowsPerPage(17);
       setPage(1);
+    }
+    if (currentMenu?.keyName) {
+      router.push(
+        `/formControl?menuName=${encryptUrlFun({
+          id: currentMenu.id,
+          menuName: currentMenu.menuName,
+          parentMenuId: currentMenu.parentMenuId,
+        })}`,
+      );
     }
   };
 

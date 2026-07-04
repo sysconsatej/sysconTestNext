@@ -3532,9 +3532,10 @@ function InputFieldRenderer(props) {
               className={`${fileWidthClass} h-[27px] text-sm ${styles.inputTextColor} leading-normal p-3 rounded-xl rounded-br-none  focus:shadow-lg border-gray-300 border  hover:border-gray-500 dark:hover:border-gray-500 focus:border-gray-500 dark:focus:border-gray-500 dark:border-slate-600  dark:bg-slate-900 text-slate-900 dark:text-slate-300 focus-visible:outline-0 box-border ${styles.inputField}`}
               role={undefined}
               onChange={(e) => {
-                handleChange(e.target.files[0], field);
+                const selectedFile = e.target.files[0];
+                handleChange(selectedFile, field);
 
-                values[field.fieldname] = e.target.files[0];
+                values[field.fieldname] = selectedFile;
                 const funcCallString = field.functionOnChange;
                 if (
                   funcCallString !== undefined &&
@@ -3551,6 +3552,9 @@ function InputFieldRenderer(props) {
                     );
                   });
                 }
+
+                // Allow reselecting the same file on subsequent uploads
+                e.target.value = "";
               }}
               sx={{
                 ...fileInputStyle,

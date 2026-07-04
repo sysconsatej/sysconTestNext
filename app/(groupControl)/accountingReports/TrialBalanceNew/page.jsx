@@ -13,7 +13,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LightTooltip from "@/components/Tooltip/customToolTip";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
-import { trialBalanceReportData } from "@/services/auth/FormControl.services.js";
+import { balanceSheetReportData } from "@/services/auth/FormControl.services.js";
 import TrialBalanceComponent from "@/components/TrialBalanceComponent/page";
 import { toast } from "react-toastify";
 import { exportLocalPDFReports } from "@/services/auth/FormControl.services";
@@ -398,7 +398,8 @@ const TrialBalance = () => {
     const requestBody = {
       fromDate: formatDate(newState?.fromDate),
       toDate: formatDate(newState?.toDate),
-      branchId: toIntOrNull(defaultBranchId),
+      companyId: toIntOrNull(defaultCompanyId),
+      branchId: toIntOrNull(newState?.companybranchId),
       clientId: toIntOrNull(clientId),
       finYearId: toIntOrNull(defaultFinYearId),
       tbGroupId: toIntOrNull(searchParamsTbGroupId),
@@ -411,10 +412,11 @@ const TrialBalance = () => {
             : null,
     };
 
-    const data = await trialBalanceReportData(requestBody);
-    if (data?.success == true && data?.data.length > 0) {
+    const data = await balanceSheetReportData(requestBody);
+    const glBalance = data?.data?.[0]?.glBalance || [];
+    if (data?.success == true && glBalance.length > 0) {
       toast.success(data?.message);
-      setBalanceSheetData(data?.data?.length > 0 ? data?.data : null);
+      setBalanceSheetData(glBalance);
       if (newState?.reportType && newState?.reportType !== selectedRadio) {
         setSelectedRadio(newState?.reportType);
       }
@@ -443,7 +445,8 @@ const TrialBalance = () => {
     const requestBody = {
       fromDate: formatDate(newState?.fromDate),
       toDate: formatDate(newState?.toDate),
-      branchId: toIntOrNull(defaultBranchId),
+      companyId: toIntOrNull(defaultCompanyId),
+      branchId: toIntOrNull(newState?.companybranchId),
       clientId: toIntOrNull(clientId),
       finYearId: toIntOrNull(defaultFinYearId),
       tbGroupId: toIntOrNull(searchParamsTbGroupId),
@@ -456,10 +459,11 @@ const TrialBalance = () => {
             : null,
     };
 
-    const data = await trialBalanceReportData(requestBody);
-    if (data?.success == true && data?.data.length > 0) {
+    const data = await balanceSheetReportData(requestBody);
+    const glBalance = data?.data?.[0]?.glBalance || [];
+    if (data?.success == true && glBalance.length > 0) {
       toast.success(data?.message);
-      setBalanceSheetData(data?.data?.length > 0 ? data?.data : null);
+      setBalanceSheetData(glBalance);
       if (newState?.reportType && newState?.reportType !== selectedRadio) {
         setSelectedRadio(newState?.reportType);
       }

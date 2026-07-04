@@ -558,9 +558,7 @@ const BalanceSheetPNL = () => {
   };
 
   const fetchBalanceSheetData = async () => {
-    const { clientId } = getUserDetails();
-    const { defaultFinYearId } = getUserDetails();
-    const { defaultBranchId } = getUserDetails();
+    const { clientId,defaultFinYearId,defaultCompanyId } = getUserDetails();
     setLoader(true);
     // if (!newState?.fromDate || !newState?.toDate) {
     //   toast.error("Please select From Date and To Date.");
@@ -569,7 +567,8 @@ const BalanceSheetPNL = () => {
     const requestBody = {
       fromDate: formatDate(newState?.fromDate), //"01/04/2025",
       toDate: formatDate(newState?.toDate), //"31/10/2025",
-      branchId: toIntOrNull(defaultBranchId),
+      companyId: toIntOrNull(defaultCompanyId),
+      branchId: toIntOrNull(newState?.companybranchId),
       clientId: toIntOrNull(clientId),
       finYearId: toIntOrNull(defaultFinYearId),
       tbGroupId: null,

@@ -2231,6 +2231,8 @@ export default function AddEditFormControll() {
                   id: search.menuName,
                   menuName: search.menuName,
                   parentMenuId: search.menuName,
+                  keyName:search.keyName,
+                  keyValue:search.keyValue,
                 })}`,
               );
             }, 500);
@@ -2385,6 +2387,8 @@ export default function AddEditFormControll() {
             id: search.menuName,
             menuName: search.menuName,
             parentMenuId: search.menuName,
+            keyName:search.keyName,
+            keyValue:search.keyValue, 
           })}`,
         );
       }

@@ -20,10 +20,14 @@ export default function rptDoLetter() {
   const [reportIds, setReportIds] = useState([]);
   const [data, setData] = useState([]);
   const [voucherLedgerDetails, setVoucherLedgerDetails] = useState([]);
-  const [companyName, setCompanyName] = useState(null);
 
   const voucherReportSize = 6;
 
+  const voucherPrintFullPageClientIds = [24, 25];
+
+  const isVoucherPrintFullPage = voucherPrintFullPageClientIds.includes(
+    Number(clientId),
+  );
   useEffect(() => {
     const storedReportIds = sessionStorage.getItem("selectedReportIds");
     if (storedReportIds) {
@@ -80,15 +84,6 @@ export default function rptDoLetter() {
             }
           }
 
-          const storedUserData = localStorage.getItem("userData");
-          if (storedUserData) {
-            const decryptedData = decrypt(storedUserData);
-            const userData = JSON.parse(decryptedData);
-            const companyName = userData[0]?.companyName;
-            if (companyName) {
-              setCompanyName(companyName);
-            }
-          }
         } catch (error) {
           console.error("Error fetching job data:", error);
         }
@@ -172,18 +167,69 @@ export default function rptDoLetter() {
 
   const CompanyImgModule = () => {
     const storedUserData = localStorage.getItem("userData");
-    let imageHeader = null;
+    let user = {};
     if (storedUserData) {
       const decryptedData = decrypt(storedUserData);
       const userData = JSON.parse(decryptedData);
-      imageHeader = userData[0]?.headerLogoPath;
+      user = userData?.[0] || {};
     }
+
+    const imageHeader = user?.headerLogoPath;
+    const fallbackCompanyName =
+      data?.[0]?.company || data?.[0]?.companyName || user?.companyName || "";
+    const fallbackCompanyAddress =
+      user?.companyAddress ||
+      user?.branchAddress ||
+      user?.address ||
+      data?.[0]?.companyAddress ||
+      data?.[0]?.branchAddress ||
+      data?.[0]?.address ||
+      "";
+    const normalizedCompanyLogoPath = user?.companyLogo
+      ?.trim()
+      .replace(/\\/g, "/")
+      .replace(/^~\//, "");
+    const companyLogoSrc = normalizedCompanyLogoPath
+      ? /^(https?:\/\/|data:|blob:)/i.test(normalizedCompanyLogoPath)
+        ? normalizedCompanyLogoPath
+        : `${(baseUrlNext || "").replace(/\/+$/, "")}/${normalizedCompanyLogoPath.replace(/^\/+/, "")}`
+      : "";
+
+    if (imageHeader) {
+      return (
+        <img
+          src={`${(baseUrlNext || "").replace(/\/+$/, "")}/${String(imageHeader).replace(/^\/+/, "")}`}
+          style={{ width: "100%", height: "130px" }}
+          alt="Company header"
+        />
+      );
+    }
+
     return (
-      <img
-        src={imageHeader ? baseUrlNext + imageHeader : ""}
-        style={{ width: "100%", height: "130px" }}
-        alt="LOGO"
-      />
+      <div
+        className="flex items-center w-full px-3"
+        style={{ minHeight: "130px" }}
+      >
+        {companyLogoSrc && (
+          <img
+            src={companyLogoSrc}
+            alt={`${fallbackCompanyName || "Company"} logo`}
+            className="object-contain"
+            style={{ maxHeight: "95px", maxWidth: "170px" }}
+          />
+        )}
+        <div className="flex-1 pl-4 text-center">
+          <h1 style={{ fontSize: "16px" }} className="font-bold">
+            {fallbackCompanyName}
+          </h1>
+          <p
+            style={{ fontSize: "13px", paddingLeft: "5px" }}
+            className="whitespace-pre-line"
+          >
+            {fallbackCompanyAddress}
+          </p>
+        </div>
+      </div>
     );
   };
 
@@ -778,15 +824,18 @@ export default function rptDoLetter() {
       <div
         style={{
           width: "100%",
-          height: "auto",
-          display: "block",
+          height: isVoucherPrintFullPage ? "calc(297mm - 36px)" : "auto",
+          display: isVoucherPrintFullPage ? "flex" : "block",
+          flexDirection: "column",
         }}
       >
         <div
           className="mx-auto"
           style={{
             width: "100%",
-            display: "block",
+            height: isVoucherPrintFullPage ? "100%" : "auto",
+            display: isVoucherPrintFullPage ? "flex" : "block",
+            flexDirection: "column",
           }}
         >
           <CompanyImgModule />
@@ -831,7 +880,11 @@ export default function rptDoLetter() {
 
           <table
             className="mt-2"
-            style={{ width: "100%", borderCollapse: "collapse" }}
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              flexShrink: 0,
+            }}
           >
             <thead>
               <tr>
@@ -1148,7 +1201,9 @@ export default function rptDoLetter() {
           {/* This section creates the large bordered area like Voucher0 */}
           <div
             style={{
-              display: "block",
+              display: isVoucherPrintFullPage ? "flex" : "block",
+              flexDirection: "column",
+              flex: isVoucherPrintFullPage ? "1 1 auto" : "initial",
               borderLeft: "1px solid #000",
               borderRight: "1px solid #000",
               borderBottom: "1px solid #000",
@@ -1157,6 +1212,7 @@ export default function rptDoLetter() {
             <div
               style={{
                 padding: "8px 4px",
+                flex: isVoucherPrintFullPage ? "1 1 auto" : "initial",
               }}
             >
               <p

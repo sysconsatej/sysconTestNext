@@ -43,9 +43,6 @@ function rptAirwayBill() {
     "COPY 10 (EXTRA COPY FOR CARRIER)",
   ];
 
-
-
-
   const shouldRenderSecondPage = useEffect(() => {
     const loadHtml2pdf = async () => {
       const module = await import("html2pdf.js");
@@ -267,8 +264,6 @@ function rptAirwayBill() {
     // Slice first 'wordCount' words and join back
     return words.slice(0, wordCount).join(" ");
   }
-
-
 
   function trimByWordCountBySup(text, wordCount) {
     if (!text || typeof text !== "string") return "";
@@ -745,8 +740,22 @@ function rptAirwayBill() {
     return result;
   }
 
+  const getChargeTotal = (chargeText) => {
+    if (!chargeText) return "0.00";
+
+    const total = String(chargeText)
+      .match(/-?\d+(\.\d+)?/g)
+      ?.reduce((sum, value) => sum + Number(value), 0);
+
+    return (total || 0).toFixed(2);
+  };
+
   const AirwayBillPrintCharge = () => {
     console.log("data", reportData);
+    const isCollect = (reportData?.freightPrepaidCollect || "")
+      .toLowerCase()
+      .includes("collect");
+
     let blCharges = [];
 
     if (Array.isArray(bldata?.tblBLCharge)) {
@@ -763,20 +772,17 @@ function rptAirwayBill() {
       (item) =>
         String(item?.charge || "")
           .trim()
-          .toUpperCase() === "AIR FREIGHT CHARGES"
+          .toUpperCase() === "AIR FREIGHT CHARGES",
     );
 
     const airFreightRate =
       airFreightCharges.length > 0
-        ? airFreightCharges[0]?.sellRate ?? ""
+        ? (airFreightCharges[0]?.sellRate ?? "")
         : "";
 
     const airFreightTotal = airFreightCharges.reduce((total, item) => {
       const amount =
-        item?.sellAmount ??
-        item?.sellNetAmount ??
-        item?.sellTotalAmountHc ??
-        0;
+        item?.sellAmount ?? item?.sellNetAmount ?? item?.sellTotalAmountHc ?? 0;
 
       return total + Number(amount || 0);
     }, 0);
@@ -828,18 +834,15 @@ function rptAirwayBill() {
             .trim()
             .toUpperCase();
 
-          return (
-            dueTo === dueToName &&
-            chargeName !== "AIR FREIGHT CHARGES"
-          );
+          return dueTo === dueToName && chargeName !== "AIR FREIGHT CHARGES";
         })
         .map((item) => {
           const chargeCode = getChargeShortName(item?.charge);
           const chargeAmount = toNumber(
             item?.sellAmount ??
-            item?.sellNetAmount ??
-            item?.sellTotalAmountHc ??
-            0
+              item?.sellNetAmount ??
+              item?.sellTotalAmountHc ??
+              0,
           );
 
           return `${chargeCode}-${chargeAmount.toFixed(2)}`;
@@ -852,10 +855,7 @@ function rptAirwayBill() {
 
     const getChargeAmount = (item) =>
       toNumber(
-        item?.sellAmount ??
-        item?.sellNetAmount ??
-        item?.sellTotalAmountHc ??
-        0
+        item?.sellAmount ?? item?.sellNetAmount ?? item?.sellTotalAmountHc ?? 0,
       );
 
     const isAirFreightCharge = (item) =>
@@ -917,9 +917,7 @@ function rptAirwayBill() {
 
     const formatTotalAmount = (value) => {
       const amount = toNumber(value);
-      return amount === 0
-        ? "0.00"
-        : amount.toFixed(2).replace(/\.00$/, "");
+      return amount === 0 ? "0.00" : amount.toFixed(2).replace(/\.00$/, "");
     };
 
     const formatBlPort = (value) => {
@@ -933,10 +931,17 @@ function rptAirwayBill() {
       const portName = parts[1] || "";
       const portNo = parts[2] ? parts[2].replace(/^-/, "") : "";
 
-      return [portCode, portName, portNo]
-        .filter(Boolean)
-        .join(" | ");
+      return [portCode, portName, portNo].filter(Boolean).join(" | ");
     };
+
+    const dueAgentChargeTotal = getChargeTotal(bldata?.dueAgentCharge);
+    const dueCarrierChargeTotal = getChargeTotal(bldata?.dueCarrierCharge);
+
+    const totalOfDueAgentChargeAndDueCarrierCharge = (
+      Number(dueAgentChargeTotal) +
+      Number(dueCarrierChargeTotal) +
+      Number(airFreightTotal)
+    ).toFixed(2);
 
     return (
       <div>
@@ -1402,15 +1407,30 @@ function rptAirwayBill() {
                   className="text-black font-normal"
                   style={{
                     fontSize: "9px",
-                    marginTop: "5px",
+                    marginTop: "2px",
                     paddingRight: "10px",
-                    paddingLeft: "10px",
-                    paddingBottom: "5px",
+                    paddingLeft: "5px",
+                    paddingBottom: "2px",
                     fontWeight: "bold",
                     fontWeight: "bold",
                   }}
                 >
-                  {bldata?.notifyPartyNameAndAddress}
+                  Notify Party :
+                </p>
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "9px",
+                    marginTop: "2px",
+                    paddingRight: "10px",
+                    paddingLeft: "5px",
+                    paddingBottom: "5px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {bldata?.notify1Name || ""}
+                  <br />
+                  {bldata?.notify1Address || ""}
                 </p>
               </div>
             </div>
@@ -1949,12 +1969,20 @@ function rptAirwayBill() {
                   paddingLeft: "5px",
                 }}
               >
-                <div style={{
-                  fontSize: "8px",
-                }} className="flex">
-                  <div style={{width:"40%"}}></div>
-                  <div style={{width:"30%"}} className="text-center border-black border-l border-b border-r" >Flight/Date</div>
-                  <div style={{width:"30%"}}></div>
+                <div
+                  style={{
+                    fontSize: "8px",
+                  }}
+                  className="flex"
+                >
+                  <div style={{ width: "40%" }}></div>
+                  <div
+                    style={{ width: "30%" }}
+                    className="text-center border-black border-l border-b border-r"
+                  >
+                    Flight/Date
+                  </div>
+                  <div style={{ width: "30%" }}></div>
                 </div>
               </p>
               <p
@@ -1967,7 +1995,8 @@ function rptAirwayBill() {
                   fontWeight: "bold",
                 }}
               >
-                {reportData?.polVesselText || ""} {reportData?.vesselSailDate || ""}
+                {reportData?.polVesselText || ""}{" "}
+                {reportData?.vesselSailDate || ""}
               </p>
             </div>
             <div
@@ -2064,7 +2093,8 @@ function rptAirwayBill() {
                     }}
                   >
                     Handling Information: PLEASE INFORM CONSIGNEE IMMEDIATELY ON
-                    ARRIVAL OF CARGO.<br />
+                    ARRIVAL OF CARGO.
+                    <br />
                     {reportData?.marksAndNoActual}
                   </p>
                 </div>
@@ -2331,15 +2361,39 @@ function rptAirwayBill() {
           </div>
 
           {/* Second row with content */}
+          {/* Second row with content */}
           <div
             style={{
               display: "flex",
+              position: "relative",
               borderLeft: "1px solid black",
               borderRight: "1px solid black",
               minHeight: "215px",
               maxHeight: "215px",
+              overflow: "hidden",
             }}
           >
+            {/* Remarks Details - starts after first line data */}
+            <pre
+              style={{
+                position: "absolute",
+                top: "32px",
+                left: "5px",
+                width: "64%",
+                margin: 0,
+                padding: 0,
+                fontSize: "10px",
+                fontFamily: "Arial, sans-serif",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                lineHeight: "14px",
+                zIndex: 2,
+                background: "transparent",
+              }}
+            >
+              {bldata?.remarksDetails || ""}
+            </pre>
+
             {/* Section 1: No of Pieces RCP Content */}
             <div
               style={{
@@ -2352,6 +2406,7 @@ function rptAirwayBill() {
                 className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
                 {reportData?.noOfPackages}
@@ -2370,6 +2425,7 @@ function rptAirwayBill() {
                 className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
                 {reportData?.grossWt}
@@ -2388,6 +2444,7 @@ function rptAirwayBill() {
                 className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
                 K/Q
@@ -2406,6 +2463,7 @@ function rptAirwayBill() {
                 className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
                 {bldata?.containerDetail}
@@ -2424,13 +2482,14 @@ function rptAirwayBill() {
                 className="text-black font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
                 {bldata?.containerDetail}
               </p>
             </div>
 
-            {/* Section 6: Chargeable weight Content Content */}
+            {/* Section 6: Chargeable weight Content */}
             <div
               style={{
                 flexBasis: "10%",
@@ -2439,9 +2498,10 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black, text-right font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
                 {reportData?.chargeableWt}
@@ -2460,6 +2520,7 @@ function rptAirwayBill() {
                 className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
                 {airFreightRate}
@@ -2478,23 +2539,27 @@ function rptAirwayBill() {
                 className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
                 {airFreightTotal}
               </p>
             </div>
 
-            {/* Section 9: Nature and Quantity of Goods (incl.Dimensions of Volume) Content */}
+            {/* Section 9: Nature and Quantity of Goods Content */}
             <div
               style={{
                 flexBasis: "35%",
                 padding: "2px",
+                zIndex: 3,
+                background: "white",
               }}
             >
               <p
                 className="text-black font-normal"
                 style={{
-                  fontSize: "12px",
+                  fontSize: "10px",
+                  margin: 0,
                 }}
               >
                 {reportData?.goodsDesc}
@@ -2581,9 +2646,7 @@ function rptAirwayBill() {
                 style={{
                   fontSize: "8px",
                 }}
-              >
-
-              </p>
+              ></p>
             </div>
 
             {/* Section 5: Commodity Item No Content */}
@@ -2599,9 +2662,7 @@ function rptAirwayBill() {
                 style={{
                   fontSize: "8px",
                 }}
-              >
-
-              </p>
+              ></p>
             </div>
 
             {/* Section 6: Chargeable weight Content Content */}
@@ -2820,7 +2881,8 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {formatTotalAmount(airFreightPrepaidTotal)}
+                      {/* {formatTotalAmount(airFreightPrepaidTotal)} */}
+                      {isCollect == false ? airFreightTotal : ""}
                     </p>
                   </div>
                   <div
@@ -2840,7 +2902,8 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {formatTotalAmount(airFreightCollectTotal)}
+                      {/* {formatTotalAmount(airFreightCollectTotal)} */}
+                      {isCollect == true ? airFreightTotal : ""}
                     </p>
                   </div>
                 </div>
@@ -3249,7 +3312,9 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {formatTotalAmount(agentPrepaidTotal)}
+                      {isCollect == false
+                        ? getChargeTotal(bldata?.dueAgentCharge)
+                        : ""}
                     </p>
                   </div>
                   <div
@@ -3269,7 +3334,10 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {formatTotalAmount(agentCollectTotal)}
+                      {/* Collect */}
+                      {isCollect == true
+                        ? getChargeTotal(bldata?.dueAgentCharge)
+                        : ""}
                     </p>
                   </div>
                 </div>
@@ -3396,7 +3464,9 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {formatTotalAmount(carrierPrepaidTotal)}
+                      {isCollect == false
+                        ? getChargeTotal(bldata?.dueCarrierCharge)
+                        : ""}
                     </p>
                   </div>
                   <div
@@ -3416,7 +3486,10 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {formatTotalAmount(carrierCollectTotal)}
+                      {/* collect */}
+                      {isCollect == true
+                        ? getChargeTotal(bldata?.dueCarrierCharge)
+                        : ""}
                     </p>
                   </div>
                 </div>
@@ -3529,7 +3602,9 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {formatTotalAmount(totalPrepaid)}
+                      {isCollect == false
+                        ? totalOfDueAgentChargeAndDueCarrierCharge
+                        : ""}
                     </p>
                   </div>
                   <div
@@ -3549,7 +3624,10 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {formatTotalAmount(totalCollect)}
+                      {/* collect */}
+                      {isCollect == true
+                        ? totalOfDueAgentChargeAndDueCarrierCharge
+                        : ""}
                     </p>
                   </div>
                 </div>
@@ -3847,10 +3925,11 @@ function rptAirwayBill() {
                   }}
                 >
                   <p style={{ margin: 0 }}>
-                    {agentOtherCharges}
+                    {/* {agentOtherCharges} */}
+                    {bldata?.dueAgentCharge || ""}
                   </p>
                   <p style={{ margin: 0, marginTop: "18px" }}>
-                    {carrierOtherCharges}
+                    {bldata?.dueCarrierCharge || ""}
                   </p>
                 </div>
               </div>
@@ -4350,6 +4429,3669 @@ function rptAirwayBill() {
       </div>
     );
   };
+
+  const AirwayBillAsAgreed = () => {
+    console.log("data", reportData);
+    const isCollect = (reportData?.freightPrepaidCollect || "")
+      .toLowerCase()
+      .includes("collect");
+    let blCharges = [];
+
+    if (Array.isArray(bldata?.tblBLCharge)) {
+      blCharges = bldata.tblBLCharge;
+    } else if (typeof bldata?.tblBLCharge === "string") {
+      try {
+        blCharges = JSON.parse(bldata.tblBLCharge);
+      } catch (error) {
+        blCharges = [];
+      }
+    }
+
+    const airFreightCharges = blCharges.filter(
+      (item) =>
+        String(item?.charge || "")
+          .trim()
+          .toUpperCase() === "AIR FREIGHT CHARGES",
+    );
+
+    const airFreightRate =
+      airFreightCharges.length > 0
+        ? (airFreightCharges[0]?.sellRate ?? "")
+        : "";
+
+    const airFreightTotal = airFreightCharges.reduce((total, item) => {
+      const amount =
+        item?.sellAmount ?? item?.sellNetAmount ?? item?.sellTotalAmountHc ?? 0;
+
+      return total + Number(amount || 0);
+    }, 0);
+
+    const toNumber = (value) => {
+      const parsedValue = Number(String(value ?? 0).replace(/,/g, ""));
+      return Number.isFinite(parsedValue) ? parsedValue : 0;
+    };
+
+    const getChargeShortName = (chargeName) => {
+      const normalizedName = String(chargeName || "")
+        .trim()
+        .toUpperCase();
+
+      const chargeCodeMap = {
+        "AWB FEES": "AWB",
+        "AWB FEE": "AWB",
+        "PCA CHARGES": "PCA",
+        "PCA CHGS": "PCA",
+        "FSC CHARGES": "FSC",
+        "FSC CHGS": "FSC",
+        "XRAY CHARGES": "XRA",
+        "X-RAY CHARGES": "XRA",
+        "XRAY CHGS": "XRA",
+        "MISCELLANEOUS CHARGES": "MIS",
+        "MISCELLANEOUS CHGS": "MIS",
+        "CTG CHARGES": "CTG",
+        "CTG CHGS": "CTG",
+      };
+
+      if (chargeCodeMap[normalizedName]) {
+        return chargeCodeMap[normalizedName];
+      }
+
+      return normalizedName
+        .replace(/\b(CHARGES|CHARGE|CHGS|FEES|FEE)\b/g, "")
+        .trim()
+        .substring(0, 3);
+    };
+
+    const getOtherChargesByDueTo = (dueToName) => {
+      return blCharges
+        .filter((item) => {
+          const chargeName = String(item?.charge || "")
+            .trim()
+            .toUpperCase();
+
+          const dueTo = String(item?.dueTo || "")
+            .trim()
+            .toUpperCase();
+
+          return dueTo === dueToName && chargeName !== "AIR FREIGHT CHARGES";
+        })
+        .map((item) => {
+          const chargeCode = getChargeShortName(item?.charge);
+          const chargeAmount = toNumber(
+            item?.sellAmount ??
+              item?.sellNetAmount ??
+              item?.sellTotalAmountHc ??
+              0,
+          );
+
+          return `${chargeCode}-${chargeAmount.toFixed(2)}`;
+        })
+        .join(", ");
+    };
+
+    const agentOtherCharges = getOtherChargesByDueTo("AGENT");
+    const carrierOtherCharges = getOtherChargesByDueTo("CARRIER");
+
+    const getChargeAmount = (item) =>
+      toNumber(
+        item?.sellAmount ?? item?.sellNetAmount ?? item?.sellTotalAmountHc ?? 0,
+      );
+
+    const isAirFreightCharge = (item) =>
+      String(item?.charge || "")
+        .trim()
+        .toUpperCase() === "AIR FREIGHT CHARGES";
+
+    const isPaymentType = (item, paymentType) => {
+      const prepaidCollect = String(item?.sellPrepaidCollect || "")
+        .trim()
+        .toUpperCase();
+
+      if (paymentType === "PREPAID") {
+        return prepaidCollect === "PREPAID" || prepaidCollect === "P";
+      }
+
+      if (paymentType === "COLLECT") {
+        return prepaidCollect === "COLLECT" || prepaidCollect === "C";
+      }
+
+      return false;
+    };
+
+    const getOtherChargeTotal = (dueToName, paymentType) =>
+      blCharges
+        .filter((item) => {
+          const dueTo = String(item?.dueTo || "")
+            .trim()
+            .toUpperCase();
+
+          return (
+            dueTo === dueToName &&
+            !isAirFreightCharge(item) &&
+            isPaymentType(item, paymentType)
+          );
+        })
+        .reduce((total, item) => total + getChargeAmount(item), 0);
+
+    const getPaymentTotal = (paymentType) =>
+      blCharges
+        .filter((item) => isPaymentType(item, paymentType))
+        .reduce((total, item) => total + getChargeAmount(item), 0);
+
+    const airFreightPrepaidTotal = airFreightCharges
+      .filter((item) => isPaymentType(item, "PREPAID"))
+      .reduce((total, item) => total + getChargeAmount(item), 0);
+
+    const airFreightCollectTotal = airFreightCharges
+      .filter((item) => isPaymentType(item, "COLLECT"))
+      .reduce((total, item) => total + getChargeAmount(item), 0);
+
+    const agentPrepaidTotal = getOtherChargeTotal("AGENT", "PREPAID");
+    const agentCollectTotal = getOtherChargeTotal("AGENT", "COLLECT");
+    const carrierPrepaidTotal = getOtherChargeTotal("CARRIER", "PREPAID");
+    const carrierCollectTotal = getOtherChargeTotal("CARRIER", "COLLECT");
+
+    const totalPrepaid = getPaymentTotal("PREPAID");
+    const totalCollect = getPaymentTotal("COLLECT");
+
+    const formatTotalAmount = (value) => {
+      const amount = toNumber(value);
+      return amount === 0 ? "0.00" : amount.toFixed(2).replace(/\.00$/, "");
+    };
+
+    const formatBlPort = (value) => {
+      if (!value) return "";
+
+      const parts = String(value)
+        .split("|")
+        .map((x) => x.trim());
+
+      const portCode = parts[0] || "";
+      const portName = parts[1] || "";
+      const portNo = parts[2] ? parts[2].replace(/^-/, "") : "";
+
+      return [portCode, portName, portNo].filter(Boolean).join(" | ");
+    };
+
+    const dueAgentChargeTotal = getChargeTotal(bldata?.dueAgentCharge);
+    const dueCarrierChargeTotal = getChargeTotal(bldata?.dueCarrierCharge);
+
+    const totalOfDueAgentChargeAndDueCarrierCharge = (
+      Number(dueAgentChargeTotal) +
+      Number(dueCarrierChargeTotal) +
+      Number(airFreightTotal)
+    ).toFixed(2);
+
+    return (
+      <div>
+        <div
+          className="mx-auto pl-2 pr-2 pt-2"
+          style={{
+            width: "100%",
+            height: "auto",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              width: "100%",
+            }}
+            className="mx-auto"
+          >
+            <div className="text-left" style={{ flex: 5 }}>
+              <h2
+                className="text-black pl-1 font-semibold text-left"
+                style={{ fontSize: "20px" }}
+              >
+                {formatBlPort(reportData?.blPort)}
+              </h2>
+            </div>
+
+            <div style={{ flex: 5 }}>
+              <h2
+                className="text-black pr-1 font-semibold text-right"
+                style={{ fontSize: "20px" }}
+              >
+                {reportData?.blNos}
+              </h2>
+            </div>
+          </div>
+
+          {/* New Division Section */}
+          <div
+            className="h-auto"
+            style={{
+              display: "flex",
+              border: "1px solid black",
+            }}
+          >
+            {/* Left Section */}
+            <div
+              style={{
+                flex: 1,
+                borderRight: "1px solid black",
+              }}
+            >
+              <div style={{ minHeight: "90px" }}>
+                <div
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    width: "100%",
+                  }}
+                >
+                  <div className="flex">
+                    <div style={{ width: "60%" }}>
+                      <span className="p-1" style={{ fontSize: "8px" }}>
+                        Shipper's Name & Address
+                      </span>
+                      :{" "}
+                    </div>
+                    <div
+                      style={{ width: "40%" }}
+                      className="text-left border-b border-black border-l"
+                    >
+                      <span
+                        className="pl-1"
+                        style={{
+                          fontSize: "8px",
+                        }}
+                      >
+                        Shipper's Account No
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p
+                      className="text-black font-normal"
+                      style={{
+                        fontSize: "9px",
+                        marginTop: "2px",
+                        paddingRight: "10px",
+                        paddingLeft: "5px",
+                        paddingBottom: "5px",
+                        // width: "50%",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {bldata?.shipper} <br />
+                      {bldata?.shipperAddress}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                  height: "1px",
+                  margin: "8px 0px 0px 0px",
+                }}
+              />
+              <div style={{ minHeight: "90px" }}>
+                <div
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    width: "100%",
+                  }}
+                >
+                  <div className="flex">
+                    <div style={{ width: "60%" }}>
+                      <span className="p-1" style={{ fontSize: "8px" }}>
+                        Consignee's Name and Address
+                      </span>
+                      :{" "}
+                    </div>
+                    <div
+                      style={{ width: "40%" }}
+                      className="text-left border-b border-black border-l"
+                    >
+                      <span
+                        className="pl-1"
+                        style={{
+                          fontSize: "8px",
+                        }}
+                      >
+                        Consignee's Account Number
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p
+                      className="text-black font-normal"
+                      style={{
+                        fontSize: "9px",
+                        marginTop: "2px",
+                        paddingRight: "10px",
+                        paddingLeft: "5px",
+                        paddingBottom: "5px",
+                        // width: "50%",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {bldata?.consignee} <br />
+                      {bldata?.consigneeAddress}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                  height: "1px",
+                  margin: "2px 0 2px 0",
+                }}
+              />
+              <div style={{ minHeight: "30px", maxHeight: "30px" }}>
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    marginTop: "2px",
+                    paddingRight: "5px",
+                    paddingLeft: "5px",
+                  }}
+                >
+                  Issuing Carriers Agent Name and City
+                </p>
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "9px",
+                    paddingRight: "10px",
+                    paddingLeft: "10px",
+                    marginTop: "2px",
+                    paddingBottom: "5px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {/* {bldata?.polAgentName} */}
+                  {bldata?.companyName}
+                </p>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                  margin: "0px 0px 0px 0px",
+                }}
+              />
+
+              {/* Left Section */}
+              <div
+                style={{
+                  flex: 1,
+                }}
+              >
+                <div
+                  className="h-auto"
+                  style={{
+                    display: "flex",
+                  }}
+                >
+                  {/* Left Section */}
+                  <div
+                    style={{
+                      flex: 1,
+                    }}
+                  >
+                    <div
+                      style={{
+                        minHeight: "30px",
+                        maxHeight: "30px",
+                        borderRight: "1px solid black",
+                      }}
+                    >
+                      <p
+                        className="text-black font-normal"
+                        style={{
+                          fontSize: "8px",
+                          paddingRight: "10px",
+                          paddingLeft: "5px",
+                        }}
+                      >
+                        Agent's IATA Code
+                      </p>
+                      <p
+                        className="text-black font-normal"
+                        style={{
+                          fontSize: "9px",
+                          marginTop: "2px",
+                          paddingRight: "10px",
+                          paddingLeft: "10px",
+                          paddingBottom: "5px",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {bldata?.iataCode}
+                      </p>
+                    </div>
+                  </div>
+                  {/* Right Section */}
+                  <div
+                    style={{
+                      flex: 1,
+                    }}
+                  >
+                    <div style={{ minHeight: "30px", maxHeight: "30px" }}>
+                      <p
+                        className="text-black font-normal"
+                        style={{
+                          fontSize: "8px",
+                          paddingRight: "10px",
+                          paddingLeft: "5px",
+                        }}
+                      >
+                        Account No.
+                      </p>
+                      <p
+                        className="text-black font-normal"
+                        style={{
+                          fontSize: "9px",
+                          marginTop: "5px",
+                          paddingRight: "10px",
+                          paddingLeft: "10px",
+                          paddingBottom: "5px",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {bldata?.accountNo}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <hr
+                  style={{
+                    border: "none",
+                    borderTop: "1px solid black",
+                    height: "2px",
+                    margin: "0px 0px 0px 0px",
+                  }}
+                />
+                <div style={{ minHeight: "30px", maxHeight: "30px" }}>
+                  <p
+                    className="text-black font-normal"
+                    style={{
+                      fontSize: "8px",
+                      marginTop: "2px",
+                      paddingRight: "10px",
+                      paddingLeft: "5px",
+                      width: "100%",
+                    }}
+                  >
+                    Airport of departure(Addr.of First Carrier) and Requested
+                    Routing
+                  </p>
+                  <p
+                    className="text-black font-normal"
+                    style={{
+                      fontSize: "9px",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                      marginTop: "2px",
+                      paddingBottom: "5px",
+                      width: "100%",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {bldata?.pol}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Section */}
+            <div
+              style={{
+                flex: 1,
+                minHeight: "70px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "10px",
+                  paddingRight: "10px",
+                  paddingLeft: "5px",
+                  width: "100%",
+                  marginTop: "2px",
+                  fontWeight: "bold",
+                }}
+              >
+                <div className=" pl-1">
+                  <div className="text-black">
+                    <p
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {bldata?.mblHblFlag}
+                    </p>
+                    <p style={{ fontSize: "10px" }}>(Air Consignment note)</p>
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "12px ",
+                        paddingTop: "3px",
+                        paddingBottom: "3px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {bldata?.shippingLine}
+                    </p>
+                  </div>
+                </div>
+              </p>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                  height: "1px",
+                  margin: "8px 0 5px 0",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "5px",
+                }}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    fontWeight: "bold",
+                    paddingRight: "10px",
+                    paddingLeft: "10px",
+                    width: "100%",
+                    paddingBottom: "5px",
+                  }}
+                >
+                  Copies 1,2 and 3 of this Air Waybill are originals and have
+                  the same valid
+                </p>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                  height: "1px",
+                  margin: "1px 0 2px 0",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "75px",
+                  maxHeight: "75px",
+                }}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "7px",
+                    paddingRight: "8px",
+                    paddingLeft: "8px",
+                    width: "100%",
+                  }}
+                >
+                  It is agreed that the goods declared herein are accepted in
+                  apparent good order and condition (except as noted) for
+                  carriage SUBJECT TO CONDITIONS OF CONTRACT ON THE REVERSE HER
+                  OF. ALL GOODS MAY BE CARRIED BY ANY OTHER MEANS INCLUDING ROAD
+                  OR ANY OTHER CARRIER UNLESS SPECIFIC CONTRART INSTRUCTIONS ARE
+                  GIVEN HEREON BY THE SHIPPER AND SHIPPER AGREES THAT THE
+                  SHIPMENT MAY BE CARRIED VIA INTERMEDIATE STOPPING PLACES WHICH
+                  THE CARRIER DEEMS APPROPRIATE. THE SHIPPER'S ATTENTION IS
+                  DRAWN TO THE NOTICE CONCERNING CARRIER'S LIMITATION OF
+                  LIABILITY.Shipper may increase such limitation of liability by
+                  declaring a higher values for carriage and paying a
+                  supplemental charge if required
+                </p>
+              </div>
+
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                  height: "1px",
+                  margin: "13px 0 2px 0",
+                }}
+              />
+              <div
+                style={{
+                  minHeight: "100px",
+                  maxHeight: "100px",
+                }}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    marginTop: "2px",
+                    paddingRight: "10px",
+                    paddingLeft: "5px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Accounting Information {reportData?.freightPrepaidCollect}
+                </p>
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "9px",
+                    marginTop: "2px",
+                    paddingRight: "10px",
+                    paddingLeft: "5px",
+                    paddingBottom: "2px",
+                    fontWeight: "bold",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Notify Party :
+                </p>
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "9px",
+                    marginTop: "2px",
+                    paddingRight: "10px",
+                    paddingLeft: "5px",
+                    paddingBottom: "5px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {bldata?.notify1Name || ""}
+                  <br />
+                  {bldata?.notify1Address || ""}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* New Division Section */}
+          <div
+            className="h-auto"
+            style={{
+              display: "flex",
+              borderLeft: "1px solid black",
+              borderRight: "1px solid black",
+              borderBottom: "1px solid black",
+              minHeight: "35px",
+              maxHeight: "35px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex-1",
+                width: "6%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                  paddingLeft: "5px",
+                }}
+              >
+                TO
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "5px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {reportData?.polCode}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "12%",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                  paddingLeft: "5px",
+                }}
+              >
+                By First Carrier
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "5px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {bldata?.shippingLineCode}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "12%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                  paddingLeft: "5px",
+                }}
+              >
+                Routing and Dest
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "5px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                }}
+              ></p>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "5%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                  paddingLeft: "5px",
+                }}
+              >
+                TO
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "5px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {reportData?.trPort1}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "5%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                  paddingLeft: "5px",
+                }}
+              >
+                BY
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "5px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {bldata?.trPort1Agent}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "5%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                  paddingLeft: "5px",
+                }}
+              >
+                TO
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "5px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {bldata?.trPort3}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "5.1%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                  paddingLeft: "5px",
+                }}
+              >
+                BY
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "5px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {bldata?.trPort2Agent}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "6%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                  paddingLeft: "5px",
+                }}
+              >
+                Currency
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "5px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                }}
+              >
+                {reportData?.declaredCarrierCurrecycode}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "6%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <p
+                className="text-black font-normal text-center"
+                style={{
+                  fontSize: "7px",
+                }}
+              >
+                CHGS Code
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "5px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {reportData?.chgsCode}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "7%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <div>
+                <p
+                  className="text-black font-normal text-center"
+                  style={{
+                    fontSize: "8px",
+                    borderBottom: "1px solid black",
+                  }}
+                >
+                  WT/VAL
+                </p>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    width: "50%",
+                    alignItems: "center",
+                    borderRight: "1px solid black",
+                  }}
+                >
+                  <p
+                    className="text-black font-normal text-center"
+                    style={{
+                      fontSize: "7px",
+                    }}
+                  >
+                    PP
+                  </p>
+                  <p
+                    className="text-black font-normal text-center"
+                    style={{
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {reportData?.PP}
+                  </p>
+                </div>
+                <div
+                  style={{
+                    width: "50%",
+                    alignItems: "center",
+                  }}
+                >
+                  <p
+                    className="text-black font-normal text-center"
+                    style={{
+                      fontSize: "7px",
+                    }}
+                  >
+                    COLL
+                  </p>
+                  <p
+                    className="text-black font-normal text-center"
+                    style={{
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {reportData?.COLL}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "7%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <div>
+                <p
+                  className="text-black font-normal text-center"
+                  style={{
+                    fontSize: "8px",
+                    borderBottom: "1px solid black",
+                  }}
+                >
+                  Other
+                </p>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    width: "50%",
+                    alignItems: "center",
+                    borderRight: "1px solid black",
+                  }}
+                >
+                  <p
+                    className="text-black font-normal text-center"
+                    style={{
+                      fontSize: "7px",
+                    }}
+                  >
+                    PP
+                  </p>
+                  <p
+                    className="text-black font-normal text-center"
+                    style={{
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {reportData?.PP}
+                  </p>
+                </div>
+                <div
+                  style={{
+                    width: "50%",
+                    alignItems: "center",
+                  }}
+                >
+                  <p
+                    className="text-black font-normal text-center"
+                    style={{
+                      fontSize: "7px",
+                    }}
+                  >
+                    COLL
+                  </p>
+                  <p
+                    className="text-black font-normal text-center"
+                    style={{
+                      fontSize: "8px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {reportData?.COLL}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "12%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "7px",
+                  paddingLeft: "5px",
+                }}
+              >
+                Declared Value for Carriage
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "1px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                  fontWeight: "semibold",
+                }}
+              >
+                {reportData?.nvd}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "12%",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "7px",
+                  paddingLeft: "5px",
+                }}
+              >
+                Declared Value for Customs
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "1px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                  fontWeight: "semibold",
+                }}
+              >
+                {reportData?.ncv}
+              </p>
+            </div>
+          </div>
+
+          {/* New Division Section */}
+          <div
+            className="h-auto"
+            style={{
+              display: "flex",
+              borderLeft: "1px solid black",
+              borderRight: "1px solid black",
+              borderBottom: "1px solid black",
+              minHeight: "35px",
+              maxHeight: "35px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex-1",
+                width: "50%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                  paddingLeft: "5px",
+                }}
+              >
+                Airport of Destination
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "5px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {reportData?.pod}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "50.2%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                  paddingLeft: "5px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "8px",
+                  }}
+                  className="flex"
+                >
+                  <div style={{ width: "40%" }}></div>
+                  <div
+                    style={{ width: "30%" }}
+                    className="text-center border-black border-l border-b border-r"
+                  >
+                    Flight/Date
+                  </div>
+                  <div style={{ width: "30%" }}></div>
+                </div>
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "5px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {reportData?.polVesselText || ""}{" "}
+                {reportData?.vesselSailDate || ""}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "35%",
+                borderRight: "1px solid black",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                  paddingLeft: "5px",
+                }}
+              >
+                Amount of Insurance
+              </p>
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "9px",
+                  marginTop: "5px",
+                  paddingLeft: "10px",
+                  paddingBottom: "5px",
+                }}
+              >
+                XXX
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex-1",
+                width: "65%",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "7px",
+                  paddingLeft: "5px",
+                }}
+              >
+                INSURANCE- If carrier offers insurance, and such insurance is
+                requested in accordance with the conditions there of, indicate
+                amount to be insured in figures in box marked "Amount of
+                Insurance".
+              </p>
+            </div>
+          </div>
+
+          {/* Handling Information: Division Section */}
+          <div
+            className="h-auto"
+            style={{
+              display: "flex",
+              borderLeft: "1px solid black",
+              borderRight: "1px solid black",
+              borderBottom: "1px solid black",
+              minHeight: "50px",
+              maxHeight: "50px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex-1",
+                width: "100%",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex-1",
+                  width: "100%",
+                  maxHeight: "50px",
+                  minHeight: "50px",
+                  position: "relative",
+                }}
+              >
+                <div
+                  className="text-left"
+                  style={{
+                    maxHeight: "20px",
+                    minHeight: "20px",
+                    height: "20px",
+                  }}
+                >
+                  <p
+                    className="text-black font-normal"
+                    style={{
+                      fontSize: "8px",
+                      paddingLeft: "5px",
+                      width: "95%",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Handling Information: PLEASE INFORM CONSIGNEE IMMEDIATELY ON
+                    ARRIVAL OF CARGO.
+                    <br />
+                    {reportData?.marksAndNoActual}
+                  </p>
+                </div>
+                <div className="text-center flex justify-end absolute bottom-0 right-0">
+                  <span
+                    className="pl-1 border-t border-black border-l "
+                    style={{
+                      fontSize: "9px",
+                      paddingTop: "3px",
+                      paddingBottom: "2px",
+                      width: "50px",
+                    }}
+                  >
+                    SCI
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Eight-Section Division */}
+          {/* First row with content */}
+          <div
+            className="h-auto"
+            style={{
+              display: "flex",
+              borderBottom: "1px solid black",
+              borderLeft: "1px solid black",
+              borderRight: "1px solid black",
+              maxHeight: "40px",
+              minHeight: "40px",
+            }}
+          >
+            {/* Section 1: No of Pieces RCP */}
+            <div
+              style={{
+                flexBasis: "5%",
+                borderRight: "1px solid black",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "8px",
+                  textAlign: "center",
+                }}
+              >
+                No of Pieces RCP
+              </p>
+            </div>
+
+            {/* Section 2: Gross Weight */}
+            <div
+              style={{
+                flexBasis: "12%",
+                borderRight: "1px solid black",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "8px",
+                  textAlign: "center",
+                }}
+              >
+                Gross Weight
+              </p>
+            </div>
+
+            {/* Section 3: kg lb */}
+            <div
+              style={{
+                flexBasis: "3%",
+                borderRight: "5px solid lightGrey",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "8px",
+                  textAlign: "center",
+                }}
+              >
+                kg lb
+              </p>
+            </div>
+
+            {/* Section 4: Rate Class & Commodity Item No */}
+            <div
+              style={{
+                flexBasis: "15%",
+                borderRight: "5px solid lightGrey",
+                padding: "2px",
+              }}
+            >
+              <div>
+                <p
+                  className="text-black font-normal w-full"
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: "8px",
+                    textAlign: "left",
+                  }}
+                >
+                  Rate Class
+                </p>
+              </div>
+              <div>
+                <div>
+                  <p
+                    className="text-black font-normal"
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "8px",
+                      textAlign: "center",
+                      width: "10%",
+                    }}
+                  >
+                    {" "}
+                  </p>
+                </div>
+                <div
+                  className="text-black font-normal"
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: "8px",
+                    textAlign: "center",
+                    width: "82%",
+                    borderLeft: "1px solid black",
+                    borderTop: "1px solid black",
+                    float: "right",
+                  }}
+                >
+                  <p
+                    className="text-black font-normal"
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "8px",
+                      textAlign: "center",
+                      width: "82%",
+                    }}
+                  >
+                    Commodity Item No
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 5: Chargeable weight */}
+            <div
+              style={{
+                flexBasis: "10%",
+                borderRight: "5px solid lightGrey",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "8px",
+                  textAlign: "center",
+                }}
+              >
+                Chargeable weight
+              </p>
+            </div>
+
+            {/* Section 6: Rate & Charge */}
+            <div
+              style={{
+                flexBasis: "10%",
+                borderRight: "5px solid lightGrey",
+                position: "relative",
+                height: "40px", // adjust as needed
+                width: "100%",
+              }}
+            >
+              {/* Diagonal Line */}
+              <svg style={{ position: "absolute", top: 0, left: 0, right: 60 }}>
+                <line
+                  x1="0"
+                  y1="100%"
+                  x2="100%"
+                  y2="0"
+                  stroke="black"
+                  strokeWidth="1"
+                />
+              </svg>
+
+              {/* "Rate" - Top Left */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "4px",
+                  left: "16px",
+                  fontWeight: "bold",
+                  color: "black",
+                  fontSize: "8px",
+                }}
+              >
+                Rate
+              </div>
+
+              {/* "Charge" - Bottom Right */}
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "4px",
+                  right: "6px",
+                  fontWeight: "bold",
+                  fontSize: "8px",
+                  color: "black",
+                }}
+              >
+                Charge
+              </div>
+            </div>
+
+            {/* Section 7: Total */}
+            <div
+              style={{
+                flexBasis: "10%",
+                borderRight: "5px solid lightGrey",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "8px",
+                  textAlign: "center",
+                }}
+              >
+                Total
+              </p>
+            </div>
+
+            {/* Section 8: Nature and Quantity of Goods (incl.Dimensions of Volume) */}
+            <div
+              style={{
+                flexBasis: "35%",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontWeight: "bold",
+                  fontSize: "8px",
+                  textAlign: "center",
+                }}
+              >
+                Nature and Quantity of Goods (incl.Dimensions of Volume)
+              </p>
+            </div>
+          </div>
+
+          {/* Second row with content */}
+          {/* Second row with content */}
+          <div
+            style={{
+              display: "flex",
+              position: "relative",
+              borderLeft: "1px solid black",
+              borderRight: "1px solid black",
+              minHeight: "215px",
+              maxHeight: "215px",
+              overflow: "hidden",
+            }}
+          >
+            {/* Remarks Details - starts after first line data */}
+            <pre
+              style={{
+                position: "absolute",
+                top: "32px",
+                left: "5px",
+                width: "64%",
+                margin: 0,
+                padding: 0,
+                fontSize: "10px",
+                fontFamily: "Arial, sans-serif",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                lineHeight: "14px",
+                zIndex: 2,
+                background: "transparent",
+              }}
+            >
+              {bldata?.remarksDetails || ""}
+            </pre>
+
+            {/* Section 1: No of Pieces RCP Content */}
+            <div
+              style={{
+                flexBasis: "5%",
+                borderRight: "1px solid black",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black text-right font-normal"
+                style={{
+                  fontSize: "8px",
+                  margin: 0,
+                }}
+              >
+                {reportData?.noOfPackages}
+              </p>
+            </div>
+
+            {/* Section 2: Gross Weight Content */}
+            <div
+              style={{
+                flexBasis: "12%",
+                borderRight: "1px solid black",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black text-right font-normal"
+                style={{
+                  fontSize: "8px",
+                  margin: 0,
+                }}
+              >
+                {reportData?.grossWt}
+              </p>
+            </div>
+
+            {/* Section 3: kg lb Content */}
+            <div
+              style={{
+                flexBasis: "3%",
+                borderRight: "5px solid lightGrey",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black text-right font-normal"
+                style={{
+                  fontSize: "8px",
+                  margin: 0,
+                }}
+              >
+                K/Q
+              </p>
+            </div>
+
+            {/* Section 4: Rate Class Content */}
+            <div
+              style={{
+                flexBasis: "2.8%",
+                borderRight: "1px solid black",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black text-right font-normal"
+                style={{
+                  fontSize: "8px",
+                  margin: 0,
+                }}
+              >
+                {bldata?.containerDetail}
+              </p>
+            </div>
+
+            {/* Section 5: Commodity Item No Content */}
+            <div
+              style={{
+                flexBasis: "12.2%",
+                borderRight: "5px solid lightGrey",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                  margin: 0,
+                }}
+              >
+                {bldata?.containerDetail}
+              </p>
+            </div>
+
+            {/* Section 6: Chargeable weight Content */}
+            <div
+              style={{
+                flexBasis: "10%",
+                borderRight: "5px solid lightGrey",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black text-right font-normal"
+                style={{
+                  fontSize: "8px",
+                  margin: 0,
+                }}
+              >
+                {reportData?.chargeableWt}
+              </p>
+            </div>
+
+            {/* Section 7: Rate & Charge Content */}
+            <div
+              style={{
+                flexBasis: "10%",
+                borderRight: "5px solid lightGrey",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black text-right font-normal"
+                style={{
+                  fontSize: "8px",
+                  margin: 0,
+                }}
+              >
+                {/* {airFreightRate} */}
+                {"AS AGREED"}
+              </p>
+            </div>
+
+            {/* Section 8: Total Content */}
+            <div
+              style={{
+                flexBasis: "10%",
+                borderRight: "5px solid lightGrey",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black text-right font-normal"
+                style={{
+                  fontSize: "8px",
+                  margin: 0,
+                }}
+              >
+                {/* {airFreightTotal} */}
+                {"AS AGREED"}
+              </p>
+            </div>
+
+            {/* Section 9: Nature and Quantity of Goods Content */}
+            <div
+              style={{
+                flexBasis: "35%",
+                padding: "2px",
+                zIndex: 3,
+                background: "white",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "10px",
+                  margin: 0,
+                }}
+              >
+                {reportData?.goodsDesc}
+              </p>
+            </div>
+          </div>
+
+          {/* Third row with content */}
+          <div
+            style={{
+              display: "flex",
+              borderLeft: "1px solid black",
+              borderRight: "1px solid black",
+              minHeight: "15px",
+              maxHeight: "15px",
+            }}
+          >
+            {/* Section 1: No of Pieces RCP Content */}
+            <div
+              style={{
+                flexBasis: "5%",
+                borderRight: "1px solid black",
+                borderTop: "1px solid black",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                }}
+              >
+                {reportData?.noOfPackages}
+              </p>
+            </div>
+
+            {/* Section 2: Gross Weight Content */}
+            <div
+              style={{
+                flexBasis: "12%",
+                borderRight: "1px solid black",
+                borderTop: "1px solid black",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                }}
+              >
+                {reportData?.grossWt}
+              </p>
+            </div>
+
+            {/* Section 3: kg lb Content */}
+            <div
+              style={{
+                flexBasis: "3%",
+                borderRight: "5px solid lightGrey",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                }}
+              >
+                K/Q
+              </p>
+            </div>
+
+            {/* Section 4: Rate Class Content */}
+            <div
+              style={{
+                flexBasis: "2.8%",
+                borderRight: "1px solid black",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                }}
+              ></p>
+            </div>
+
+            {/* Section 5: Commodity Item No Content */}
+            <div
+              style={{
+                flexBasis: "12.2%",
+                borderRight: "5px solid lightGrey",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                }}
+              ></p>
+            </div>
+
+            {/* Section 6: Chargeable weight Content Content */}
+            <div
+              style={{
+                flexBasis: "10%",
+                borderRight: "5px solid lightGrey",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                }}
+              >
+                {""}
+              </p>
+            </div>
+
+            {/* Section 7: Rate & Charge Content */}
+            <div
+              style={{
+                flexBasis: "10%",
+                borderRight: "5px solid lightGrey",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                }}
+              >
+                {""}
+              </p>
+            </div>
+
+            {/* Section 8: Total Content */}
+            <div
+              style={{
+                flexBasis: "10%",
+                borderRight: "5px solid lightGrey",
+                borderTop: "1px solid black",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black text-right font-normal"
+                style={{
+                  fontSize: "8px",
+                }}
+              >
+                {/* {airFreightTotal} */}
+                {"AS AGREED"}
+              </p>
+            </div>
+
+            {/* Section 9: Nature and Quantity of Goods (incl.Dimensions of Volume) Content */}
+            <div
+              style={{
+                flexBasis: "35%",
+                padding: "2px",
+              }}
+            >
+              <p
+                className="text-black font-normal"
+                style={{
+                  fontSize: "8px",
+                  fontWeight: "bold",
+                }}
+              >
+                {bldata?.GoodsDescription}
+              </p>
+            </div>
+          </div>
+
+          {/* Footer Division Section */}
+          <div
+            className="flex"
+            style={{
+              border: "1px solid black",
+              height: "323px",
+            }}
+          >
+            {/* Left Section */}
+            <div
+              style={{
+                flex: 1,
+                borderRight: "1px solid black",
+                width: "40%",
+              }}
+            >
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "15px",
+                  maxHeight: "15px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "15px",
+                    maxHeight: "15px",
+                    paddingTop: "1px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "25%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        borderRight: "1px solid Black",
+                        borderLeft: "1px solid Black",
+                        borderBottom: "1px solid Black",
+                      }}
+                    >
+                      Prepaid
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "50%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        borderRight: "1px solid Black",
+                        borderLeft: "1px solid Black",
+                        borderBottom: "1px solid Black",
+                      }}
+                    >
+                      Weight Charge
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "25%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center"
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        borderRight: "1px solid Black",
+                        borderLeft: "1px solid Black",
+                        borderBottom: "1px solid Black",
+                      }}
+                    >
+                      Collect
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "21px",
+                  maxHeight: "21px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "21px",
+                    maxHeight: "21px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                      borderRight: "5px solid lightgrey",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: "semibold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        minHeight: "15px",
+                        maxHeight: "15px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {/* {formatTotalAmount(airFreightPrepaidTotal)} */}
+                      {isCollect == false ? "AS AGREED" : ""}
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {/* {formatTotalAmount(airFreightCollectTotal)} */}
+                      {isCollect == true ? "AS AGREED" : ""}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "15px",
+                  maxHeight: "15px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "15px",
+                    maxHeight: "15px",
+                    paddingTop: "1px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "25%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                      }}
+                    ></p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "50%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        borderRight: "1px solid Black",
+                        borderLeft: "1px solid Black",
+                        borderBottom: "1px solid Black",
+                      }}
+                    >
+                      Valuation Charg
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "25%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center"
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                      }}
+                    ></p>
+                  </div>
+                </div>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "21px",
+                  maxHeight: "21px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "21px",
+                    maxHeight: "21px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                      borderRight: "5px solid lightgrey",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        minHeight: "15px",
+                        maxHeight: "15px",
+                      }}
+                    ></p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                      }}
+                    ></p>
+                  </div>
+                </div>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "15px",
+                  maxHeight: "15px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "15px",
+                    maxHeight: "15px",
+                    paddingTop: "1px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "25%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                      }}
+                    ></p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "50%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        borderRight: "1px solid Black",
+                        borderLeft: "1px solid Black",
+                        borderBottom: "1px solid Black",
+                      }}
+                    >
+                      TAX
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "25%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center"
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                      }}
+                    ></p>
+                  </div>
+                </div>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "21px",
+                  maxHeight: "21px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "21px",
+                    maxHeight: "21px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                      borderRight: "5px solid lightgrey",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        minHeight: "15px",
+                        maxHeight: "15px",
+                      }}
+                    ></p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                      }}
+                    ></p>
+                  </div>
+                </div>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "15px",
+                  maxHeight: "15px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "15px",
+                    maxHeight: "15px",
+                    paddingTop: "1px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "25%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                      }}
+                    ></p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "50%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        borderRight: "1px solid Black",
+                        borderLeft: "1px solid Black",
+                        borderBottom: "1px solid Black",
+                      }}
+                    >
+                      Total Other Charges Due Agent
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "25%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center"
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                      }}
+                    ></p>
+                  </div>
+                </div>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "21px",
+                  maxHeight: "21px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "21px",
+                    maxHeight: "21px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                      borderRight: "5px solid lightgrey",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        minHeight: "15px",
+                        maxHeight: "15px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {isCollect == false ? "AS AGREED" : ""}
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {/* Collect */}
+                      {isCollect == true ? "AS AGREED" : ""}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "15px",
+                  maxHeight: "15px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "15px",
+                    maxHeight: "15px",
+                    paddingTop: "1px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "25%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                      }}
+                    ></p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "50%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        borderRight: "1px solid Black",
+                        borderLeft: "1px solid Black",
+                        borderBottom: "1px solid Black",
+                      }}
+                    >
+                      Total Other Charges Due Carrier
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "25%",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center"
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                      }}
+                    ></p>
+                  </div>
+                </div>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "21px",
+                  maxHeight: "21px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "21px",
+                    maxHeight: "21px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                      borderRight: "1px solid black",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        minHeight: "15px",
+                        maxHeight: "15px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {isCollect == false ? "AS AGREED" : ""}
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {/* collect */}
+                      {isCollect == true ? "AS AGREED" : ""}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "30px solid lightgrey",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "15px",
+                  maxHeight: "15px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "15px",
+                    maxHeight: "15px",
+                    paddingTop: "1px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "50%",
+                      paddingRight: "15px",
+                      paddingLeft: "15px",
+                      borderRight: "1px solid black",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        borderRight: "1px solid Black",
+                        borderLeft: "1px solid Black",
+                        borderBottom: "1px solid Black",
+                      }}
+                    >
+                      Total Prepaid
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "50%",
+                      paddingRight: "15px",
+                      paddingLeft: "15px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center"
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        borderRight: "1px solid Black",
+                        borderLeft: "1px solid Black",
+                        borderBottom: "1px solid Black",
+                      }}
+                    >
+                      Total Collect
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "21px",
+                  maxHeight: "21px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "21px",
+                    maxHeight: "21px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                      borderRight: "1px solid black",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        minHeight: "15px",
+                        maxHeight: "15px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {isCollect == false ? "AS AGREED" : ""}
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {/* collect */}
+                      {isCollect == true ? "AS AGREED" : ""}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "15px",
+                  maxHeight: "15px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "15px",
+                    maxHeight: "15px",
+                    paddingTop: "1px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "50%",
+                      paddingRight: "15px",
+                      paddingLeft: "15px",
+                      borderRight: "1px solid black",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        borderRight: "1px solid Black",
+                        borderLeft: "1px solid Black",
+                        borderBottom: "1px solid Black",
+                      }}
+                    >
+                      Currency Conversion Rate
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "50%",
+                      paddingRight: "15px",
+                      paddingLeft: "15px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center"
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        borderRight: "1px solid Black",
+                        borderLeft: "1px solid Black",
+                        borderBottom: "1px solid Black",
+                      }}
+                    >
+                      CC Charge in Dest Currency
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "21px",
+                  maxHeight: "21px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "21px",
+                    maxHeight: "21px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                      borderRight: "1px solid black",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        minHeight: "15px",
+                        maxHeight: "15px",
+                      }}
+                    ></p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                      }}
+                    ></p>
+                  </div>
+                </div>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "15px",
+                  maxHeight: "15px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "15px",
+                    maxHeight: "15px",
+                    paddingTop: "1px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "50%",
+                      paddingRight: "15px",
+                      paddingLeft: "15px",
+                      borderRight: "1px solid black",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                      }}
+                    >
+                      For Carrier's Use Only at Destination
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "50%",
+                      paddingRight: "15px",
+                      paddingLeft: "15px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center"
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        borderRight: "1px solid Black",
+                        borderLeft: "1px solid Black",
+                        borderBottom: "1px solid Black",
+                      }}
+                    >
+                      Charge at Destination
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "21px",
+                  maxHeight: "21px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "21px",
+                    maxHeight: "21px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                      borderRight: "1px solid black",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        minHeight: "15px",
+                        maxHeight: "15px",
+                      }}
+                    ></p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "50%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                      }}
+                    ></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Section */}
+            <div
+              style={{
+                flex: 1,
+                width: "60%",
+              }}
+            >
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "108px",
+                  maxHeight: "108px",
+                }}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    fontWeight: "bold",
+                    paddingRight: "5px",
+                    paddingLeft: "10px",
+                    paddingTop: "5PX",
+                    width: "100%",
+                    paddingBottom: "2px",
+                  }}
+                >
+                  Other Charges
+                </p>
+                <div
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "9px",
+                    marginTop: "2px",
+                    paddingRight: "10px",
+                    paddingLeft: "5px",
+                    paddingBottom: "5px",
+                    fontWeight: "bold",
+                  }}
+                ></div>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                  height: "1px",
+                  margin: "1px 0 2px 0",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "90px",
+                  maxHeight: "90px",
+                }}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "8px",
+                    fontWeight: "bold",
+                    paddingRight: "10px",
+                    paddingLeft: "10px",
+                    width: "100%",
+                    paddingBottom: "5px",
+                  }}
+                >
+                  I hereby Certify that the particulars on the face here of are
+                  correct and that insofar as any part of the consignment
+                  contains dangerous goods. I hereby Certify that the contentd
+                  of this consignment are fully and accurately described above
+                  by proper shipping name and are classified, packaged, marked
+                  and labeled, and in proper condition for carriage by air
+                  according to the applicable dangerous Goods Regulations.
+                </p>
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "9px",
+                    marginTop: "2px",
+                    paddingRight: "10px",
+                    paddingLeft: "5px",
+                    paddingBottom: "5px",
+                    fontWeight: "bold",
+                  }}
+                ></p>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "2px solid black",
+                  height: "1px",
+                  margin: "1px 0 2px 0",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "15px",
+                  maxHeight: "15px",
+                }}
+              >
+                <p
+                  className="text-black font-normal text-center"
+                  style={{
+                    fontSize: "8px",
+                    fontWeight: "bold",
+                    paddingRight: "10px",
+                    paddingLeft: "1px",
+                    width: "100%",
+                    paddingBottom: "1px",
+                  }}
+                >
+                  Signature of Shipper or his Agent
+                </p>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                  height: "1px",
+                  margin: "1px 0 2px 0",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "55px",
+                  maxHeight: "55px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "15px",
+                    maxHeight: "15px",
+                    paddingTop: "35px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "20%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {bldata?.blIssueDate}
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "20%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {bldata?.blIssuePlaceText}
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "60%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-left"
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      As Agent For Carrier {bldata?.shippingLine}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                  height: "1px",
+                  margin: "1px 0 2px 0",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "15px",
+                  maxHeight: "15px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "15px",
+                    maxHeight: "15px",
+                    paddingTop: "1px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "20%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                      }}
+                    >
+                      Executed on (date)
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "20%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                      }}
+                    >
+                      at (place)
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "15px",
+                      maxHeight: "15px",
+                      width: "60%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-left"
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                        paddingBottom: "1px",
+                      }}
+                    >
+                      Signature of Issuing Carrier or its Agent
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid black",
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: "21px",
+                  maxHeight: "21px",
+                }}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    minHeight: "21px",
+                    maxHeight: "21px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "40%",
+                      borderRight: "1px solid black",
+                      paddingRight: "10px",
+                      paddingLeft: "10px",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "1px",
+                        paddingLeft: "1px",
+                        minHeight: "15px",
+                        maxHeight: "15px",
+                        borderLeft: "1px solid black",
+                        borderRight: "1px solid black",
+                        borderBottom: "1px solid black",
+                      }}
+                    >
+                      Total Collect Charges
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      minHeight: "21px",
+                      maxHeight: "21px",
+                      width: "60%",
+                    }}
+                  >
+                    <p
+                      className="text-black font-normal text-center "
+                      style={{
+                        fontSize: "8px",
+                        fontWeight: "bold",
+                        paddingRight: "10px",
+                        paddingLeft: "1px",
+                      }}
+                    ></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              width: "100%",
+            }}
+            className="mx-auto"
+          >
+            <div className="text-left" style={{ flex: 5 }}>
+              <h2 className="text-black pl-1 font-semibold text-left"></h2>
+            </div>
+            <div style={{ flex: 2 }}>
+              <h2 className="text-black pr-1 font-semibold text-right ">
+                {reportData?.blNos}
+              </h2>
+            </div>
+          </div>
+        </div>
+
+        {/* Attachment Section */}
+        {shouldRenderSecondPage && (
+          <div
+            id="second-page"
+            className="mx-auto p-2"
+            style={{ width: "100%", height: "auto" }}
+          >
+            <h2 className="text-black text-lg pb-2 font-semibold text-center">
+              ATTACHED SHEET
+            </h2>
+            {/* B/L No Section */}
+            <div
+              className="flex"
+              style={{ border: "1px solid black", height: "30px" }}
+            >
+              <div
+                style={{
+                  flex: "0 0 50%",
+                  paddingBottom: "10px",
+                  paddingLeft: "10px",
+                  paddingRight: "10px",
+                }}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: "9px",
+                    paddingLeft: "10px",
+                  }}
+                >
+                  B/L No : {bldata?.blNo}
+                </p>
+              </div>
+              <div
+                style={{
+                  flex: "0 0 50%",
+                  paddingBottom: "10px",
+                  paddingLeft: "10px",
+                  paddingRight: "10px",
+                }}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: "9px",
+                    paddingLeft: "10px",
+                  }}
+                >
+                  Vessel Name : {bldata?.oceanVessel?.Name}
+                  <span className="ms-2">{bldata?.voyageNo?.Name}</span>
+                </p>
+              </div>
+            </div>
+            {/* Description of goods */}
+            <div
+              className="flex"
+              style={{
+                borderLeft: "1px solid black",
+                borderRight: "1px solid black",
+                borderBottom: "1px solid black",
+                height: "30px",
+              }}
+            >
+              <div
+                style={{
+                  flex: "0 0 40%",
+                  paddingBottom: "10px",
+                  paddingLeft: "10px",
+                  paddingRight: "10px",
+                  borderRight: "1px solid black",
+                }}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: "9px",
+                    paddingLeft: "10px",
+                  }}
+                >
+                  Marks & Nos.
+                </p>
+              </div>
+              <div
+                style={{
+                  flex: "0 0 40%",
+                  paddingBottom: "10px",
+                  paddingLeft: "10px",
+                  paddingRight: "10px",
+                }}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: "9px",
+                    paddingLeft: "10px",
+                  }}
+                >
+                  Description of goods
+                </p>
+              </div>
+            </div>
+            {/* Description of goods Data*/}
+            <div
+              className="flex"
+              style={{
+                borderLeft: "1px solid black",
+                borderRight: "1px solid black",
+                borderBottom: "1px solid black",
+                minHeight: "70px !important",
+              }}
+            >
+              <div
+                style={{
+                  flex: "0 0 40%",
+                  paddingBottom: "10px",
+                  paddingLeft: "10px",
+                  paddingRight: "10px",
+                  borderRight: "1px solid black",
+                }}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: "9px",
+                    paddingLeft: "10px",
+                  }}
+                ></p>
+              </div>
+              <div
+                style={{
+                  flex: "40%",
+                  paddingBottom: "10px",
+                  paddingLeft: "10px",
+                  paddingRight: "10px",
+                }}
+              >
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: "9px",
+                    paddingLeft: "10px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {bldata?.descOfGoodsDetaislAttach}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -4362,6 +8104,13 @@ function rptAirwayBill() {
     <div>
       <div id="156" className="mx-auto text-black">
         <AirwayBillPrintCharge data={reportData} />
+      </div>
+    </div>
+  );
+  const rptAirwayBillAsAgreed = () => (
+    <div>
+      <div id="156" className="mx-auto text-black">
+        <AirwayBillAsAgreed data={reportData} />
       </div>
     </div>
   );
@@ -5737,8 +9486,63 @@ function rptAirwayBill() {
     </div>
   );
   const AirwayBillPrintChargeCopies = ({ index }) => {
-    console.log("data", reportData);
-    console.log("index - ", index);
+    const isCollect = (reportData?.freightPrepaidCollect || "")
+      .toLowerCase()
+      .includes("collect");
+
+    let blCharges = [];
+
+    const formatBlPort = (value) => {
+      if (!value) return "";
+
+      const parts = String(value)
+        .split("|")
+        .map((x) => x.trim());
+
+      const portCode = parts[0] || "";
+      const portName = parts[1] || "";
+      const portNo = parts[2] ? parts[2].replace(/^-/, "") : "";
+
+      return [portCode, portName, portNo].filter(Boolean).join(" | ");
+    };
+
+    if (Array.isArray(bldata?.tblBLCharge)) {
+      blCharges = bldata.tblBLCharge;
+    } else if (typeof bldata?.tblBLCharge === "string") {
+      try {
+        blCharges = JSON.parse(bldata.tblBLCharge);
+      } catch (error) {
+        blCharges = [];
+      }
+    }
+
+    const airFreightCharges = blCharges.filter(
+      (item) =>
+        String(item?.charge || "")
+          .trim()
+          .toUpperCase() === "AIR FREIGHT CHARGES",
+    );
+
+    const airFreightRate =
+      airFreightCharges.length > 0
+        ? (airFreightCharges[0]?.sellRate ?? "")
+        : "";
+
+    const airFreightTotal = airFreightCharges.reduce((total, item) => {
+      const amount =
+        item?.sellAmount ?? item?.sellNetAmount ?? item?.sellTotalAmountHc ?? 0;
+
+      return total + Number(amount || 0);
+    }, 0);
+
+    const dueAgentChargeTotal = getChargeTotal(bldata?.dueAgentCharge);
+    const dueCarrierChargeTotal = getChargeTotal(bldata?.dueCarrierCharge);
+
+    const totalOfDueAgentChargeAndDueCarrierCharge = (
+      Number(dueAgentChargeTotal) +
+      Number(dueCarrierChargeTotal) +
+      Number(airFreightTotal)
+    ).toFixed(2);
     return (
       <div>
         <div
@@ -5759,7 +9563,7 @@ function rptAirwayBill() {
           >
             <div className="text-left" style={{ flex: 5 }}>
               <h2 className="text-black pl-1 font-semibold text-left">
-                {reportData?.blPort}
+                {formatBlPort(reportData?.blPort)}
               </h2>
             </div>
             <div style={{ flex: 5 }}>
@@ -7088,15 +10892,39 @@ function rptAirwayBill() {
           </div>
 
           {/* Second row with content */}
+          {/* Second row with content */}
           <div
             style={{
               display: "flex",
+              position: "relative",
               borderLeft: "1px solid black",
               borderRight: "1px solid black",
               minHeight: "215px",
               maxHeight: "215px",
+              overflow: "hidden",
             }}
           >
+            {/* Remarks Details - starts after first line data */}
+            <pre
+              style={{
+                position: "absolute",
+                top: "32px",
+                left: "5px",
+                width: "64%",
+                margin: 0,
+                padding: 0,
+                fontSize: "10px",
+                fontFamily: "Arial, sans-serif",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                lineHeight: "14px",
+                zIndex: 2,
+                background: "transparent",
+              }}
+            >
+              {bldata?.remarksDetails || ""}
+            </pre>
+
             {/* Section 1: No of Pieces RCP Content */}
             <div
               style={{
@@ -7106,12 +10934,13 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {reportData?.noOfPackages}
               </p>
             </div>
 
@@ -7124,12 +10953,13 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {reportData?.grossWt}
               </p>
             </div>
 
@@ -7142,12 +10972,13 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                K/Q
               </p>
             </div>
 
@@ -7160,12 +10991,13 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {bldata?.containerDetail}
               </p>
             </div>
 
@@ -7181,13 +11013,14 @@ function rptAirwayBill() {
                 className="text-black font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {bldata?.containerDetail}
               </p>
             </div>
 
-            {/* Section 6: Chargeable weight Content Content */}
+            {/* Section 6: Chargeable weight Content */}
             <div
               style={{
                 flexBasis: "10%",
@@ -7196,12 +11029,13 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {reportData?.chargeableWt}
               </p>
             </div>
 
@@ -7214,12 +11048,13 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {airFreightRate}
               </p>
             </div>
 
@@ -7232,29 +11067,33 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {airFreightTotal}
               </p>
             </div>
 
-            {/* Section 9: Nature and Quantity of Goods (incl.Dimensions of Volume) Content */}
+            {/* Section 9: Nature and Quantity of Goods Content */}
             <div
               style={{
                 flexBasis: "35%",
                 padding: "2px",
+                zIndex: 3,
+                background: "white",
               }}
             >
               <p
                 className="text-black font-normal"
                 style={{
-                  fontSize: "8px",
+                  fontSize: "10px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {reportData?.goodsDesc}
               </p>
             </div>
           </div>
@@ -7284,7 +11123,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                 }}
               >
-                {""}
+                {reportData?.noOfPackages}
               </p>
             </div>
 
@@ -7303,7 +11142,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                 }}
               >
-                {""}
+                {reportData?.grossWt}
               </p>
             </div>
 
@@ -7338,9 +11177,7 @@ function rptAirwayBill() {
                 style={{
                   fontSize: "8px",
                 }}
-              >
-                {""}
-              </p>
+              ></p>
             </div>
 
             {/* Section 5: Commodity Item No Content */}
@@ -7356,9 +11193,7 @@ function rptAirwayBill() {
                 style={{
                   fontSize: "8px",
                 }}
-              >
-                {""}
-              </p>
+              ></p>
             </div>
 
             {/* Section 6: Chargeable weight Content Content */}
@@ -7407,12 +11242,12 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
                 }}
               >
-                {""}
+                {airFreightTotal}
               </p>
             </div>
 
@@ -7427,13 +11262,15 @@ function rptAirwayBill() {
                 className="text-black font-normal"
                 style={{
                   fontSize: "8px",
+                  fontWeight: "bold",
                 }}
               >
-                {reportData?.GoodsDescription}
+                {bldata?.GoodsDescription}
               </p>
             </div>
           </div>
 
+          {/* akash2 */}
           {/* Footer Division Section */}
           <div
             className="flex"
@@ -7575,7 +11412,8 @@ function rptAirwayBill() {
                         maxHeight: "15px",
                       }}
                     >
-                      {reportData?.preWeightCharge}
+                      {/* {formatTotalAmount(airFreightPrepaidTotal)} */}
+                      {isCollect == false ? airFreightTotal : ""}
                     </p>
                   </div>
                   <div
@@ -7594,7 +11432,7 @@ function rptAirwayBill() {
                         paddingLeft: "1px",
                       }}
                     >
-                      {reportData?.collWeightCharge}
+                      {isCollect == true ? airFreightTotal : ""}
                     </p>
                   </div>
                 </div>
@@ -8002,7 +11840,9 @@ function rptAirwayBill() {
                         maxHeight: "15px",
                       }}
                     >
-                      {reportData?.preTotalOtherChargesDueAgent}
+                      {isCollect == false
+                        ? getChargeTotal(bldata?.dueAgentCharge)
+                        : ""}
                     </p>
                   </div>
                   <div
@@ -8021,7 +11861,9 @@ function rptAirwayBill() {
                         paddingLeft: "1px",
                       }}
                     >
-                      {reportData?.collTotalOtherChargesDueAgent}
+                      {isCollect == true
+                        ? getChargeTotal(bldata?.dueAgentCharge)
+                        : ""}
                     </p>
                   </div>
                 </div>
@@ -8147,7 +11989,9 @@ function rptAirwayBill() {
                         maxHeight: "15px",
                       }}
                     >
-                      {reportData?.preTotalOtherChargesDueCarrier}
+                      {isCollect == false
+                        ? getChargeTotal(bldata?.dueCarrierCharge)
+                        : ""}
                     </p>
                   </div>
                   <div
@@ -8166,7 +12010,9 @@ function rptAirwayBill() {
                         paddingLeft: "1px",
                       }}
                     >
-                      {reportData?.collTotalOtherChargesDueCarrier}
+                      {isCollect == true
+                        ? getChargeTotal(bldata?.dueCarrierCharge)
+                        : ""}
                     </p>
                   </div>
                 </div>
@@ -8278,7 +12124,9 @@ function rptAirwayBill() {
                         maxHeight: "15px",
                       }}
                     >
-                      {reportData?.preTotal}
+                      {isCollect == false
+                        ? totalOfDueAgentChargeAndDueCarrierCharge
+                        : ""}
                     </p>
                   </div>
                   <div
@@ -8297,7 +12145,9 @@ function rptAirwayBill() {
                         paddingLeft: "1px",
                       }}
                     >
-                      {reportData?.collTotal}
+                      {isCollect == true
+                        ? totalOfDueAgentChargeAndDueCarrierCharge
+                        : ""}
                     </p>
                   </div>
                 </div>
@@ -8583,7 +12433,7 @@ function rptAirwayBill() {
                 >
                   Other Charges
                 </p>
-                <p
+                <div
                   className="text-black font-normal"
                   style={{
                     fontSize: "9px",
@@ -8594,8 +12444,14 @@ function rptAirwayBill() {
                     fontWeight: "bold",
                   }}
                 >
-                  {reportData?.otherCharge}
-                </p>
+                  <p style={{ margin: 0 }}>
+                    {/* {agentOtherCharges} */}
+                    {bldata?.dueAgentCharge || ""}
+                  </p>
+                  <p style={{ margin: 0, marginTop: "18px" }}>
+                    {bldata?.dueCarrierCharge || ""}
+                  </p>
+                </div>
               </div>
               <hr
                 style={{
@@ -9103,6 +12959,20 @@ function rptAirwayBill() {
   };
   const AirwayBillPrintAsAgreed = () => {
     console.log("data", reportData);
+    const formatBlPort = (value) => {
+      if (!value) return "";
+
+      const parts = String(value)
+        .split("|")
+        .map((x) => x.trim());
+
+      const portCode = parts[0] || "";
+      const portName = parts[1] || "";
+      const portNo = parts[2] ? parts[2].replace(/^-/, "") : "";
+
+      return [portCode, portName, portNo].filter(Boolean).join(" | ");
+    };
+
     return (
       <div>
         <div
@@ -9122,12 +12992,19 @@ function rptAirwayBill() {
             className="mx-auto"
           >
             <div className="text-left" style={{ flex: 5 }}>
-              <h2 className="text-black pl-1 font-semibold text-left">
-                {reportData?.blPort}
+              <h2
+                className="text-black pl-1 font-semibold text-left"
+                style={{ fontSize: "20px" }}
+              >
+                {formatBlPort(reportData?.blPort)}
               </h2>
             </div>
+
             <div style={{ flex: 5 }}>
-              <h2 className="text-black pr-1 font-semibold text-right ">
+              <h2
+                className="text-black pr-1 font-semibold text-right"
+                style={{ fontSize: "20px" }}
+              >
                 {reportData?.blNos}
               </h2>
             </div>
@@ -9190,8 +13067,8 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {reportData?.shipper} <br />
-                      {reportData?.shipperAddress}
+                      {bldata?.shipper} <br />
+                      {bldata?.shipperAddress}
                     </p>
                   </div>
                 </div>
@@ -9246,8 +13123,8 @@ function rptAirwayBill() {
                         fontWeight: "bold",
                       }}
                     >
-                      {reportData?.consignee} <br />
-                      {reportData?.consigneeAddress}
+                      {bldata?.consignee} <br />
+                      {bldata?.consigneeAddress}
                     </p>
                   </div>
                 </div>
@@ -9283,7 +13160,7 @@ function rptAirwayBill() {
                     fontWeight: "bold",
                   }}
                 >
-                  {reportData?.polAgentName}
+                  {bldata?.companyName}
                 </p>
               </div>
               <hr
@@ -9337,9 +13214,10 @@ function rptAirwayBill() {
                           paddingRight: "10px",
                           paddingLeft: "10px",
                           paddingBottom: "5px",
+                          fontWeight: "bold",
                         }}
                       >
-                        {reportData?.agentsIATACode}
+                        {bldata?.iataCode}
                       </p>
                     </div>
                   </div>
@@ -9368,9 +13246,10 @@ function rptAirwayBill() {
                           paddingRight: "10px",
                           paddingLeft: "10px",
                           paddingBottom: "5px",
+                          fontWeight: "bold",
                         }}
                       >
-                        {reportData?.accountNo}
+                        {bldata?.accountNo}
                       </p>
                     </div>
                   </div>
@@ -9406,9 +13285,10 @@ function rptAirwayBill() {
                       marginTop: "2px",
                       paddingBottom: "5px",
                       width: "100%",
+                      fontWeight: "bold",
                     }}
                   >
-                    {reportData?.pol}
+                    {bldata?.pol}
                   </p>
                 </div>
               </div>
@@ -9434,20 +13314,26 @@ function rptAirwayBill() {
               >
                 <div className=" pl-1">
                   <div className="text-black">
-                    <p style={{ fontSize: "14px", fontWeight: "bold" }}>
-                      {reportData?.blType}
+                    <p
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {bldata?.mblHblFlag}
                     </p>
                     <p style={{ fontSize: "10px" }}>(Air Consignment note)</p>
                     <p
                       className="text-black font-normal text-center "
                       style={{
-                        fontSize: "10px ",
+                        fontSize: "12px ",
                         paddingTop: "3px",
-                        paddingBottom: "15px",
+                        paddingBottom: "3px",
                         fontWeight: "bold",
                       }}
                     >
-                      {reportData?.shippingLine}
+                      {bldata?.shippingLine}
                     </p>
                   </div>
                 </div>
@@ -9541,6 +13427,7 @@ function rptAirwayBill() {
                     marginTop: "2px",
                     paddingRight: "10px",
                     paddingLeft: "5px",
+                    fontWeight: "bold",
                   }}
                 >
                   Accounting Information {reportData?.freightPrepaidCollect}
@@ -9549,13 +13436,30 @@ function rptAirwayBill() {
                   className="text-black font-normal"
                   style={{
                     fontSize: "9px",
-                    marginTop: "5px",
+                    marginTop: "2px",
                     paddingRight: "10px",
-                    paddingLeft: "10px",
-                    paddingBottom: "5px",
+                    paddingLeft: "5px",
+                    paddingBottom: "2px",
+                    fontWeight: "bold",
+                    fontWeight: "bold",
                   }}
                 >
-                  {reportData?.notifyPartyNameAndAddress}
+                  Notify Party :
+                </p>
+                <p
+                  className="text-black font-normal"
+                  style={{
+                    fontSize: "9px",
+                    marginTop: "2px",
+                    paddingRight: "10px",
+                    paddingLeft: "5px",
+                    paddingBottom: "5px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {bldata?.notify1Name || ""}
+                  <br />
+                  {bldata?.notify1Address || ""}
                 </p>
               </div>
             </div>
@@ -9596,9 +13500,10 @@ function rptAirwayBill() {
                   marginTop: "5px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
+                  fontWeight: "bold",
                 }}
               >
-                {reportData?.trPort1}
+                {reportData?.polCode}
               </p>
             </div>
             <div
@@ -9623,9 +13528,10 @@ function rptAirwayBill() {
                   marginTop: "5px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
+                  fontWeight: "bold",
                 }}
               >
-                {reportData?.shippingLineCode}
+                {bldata?.shippingLineCode}
               </p>
             </div>
             <div
@@ -9651,6 +13557,7 @@ function rptAirwayBill() {
                   marginTop: "5px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
+                  fontWeight: "bold",
                 }}
               ></p>
             </div>
@@ -9677,9 +13584,10 @@ function rptAirwayBill() {
                   marginTop: "5px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
+                  fontWeight: "bold",
                 }}
               >
-                {reportData?.trPort2}
+                {reportData?.trPort1}
               </p>
             </div>
             <div
@@ -9705,9 +13613,10 @@ function rptAirwayBill() {
                   marginTop: "5px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
+                  fontWeight: "bold",
                 }}
               >
-                {reportData?.trPort1Agent}
+                {bldata?.trPort1Agent}
               </p>
             </div>
             <div
@@ -9733,9 +13642,10 @@ function rptAirwayBill() {
                   marginTop: "5px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
+                  fontWeight: "bold",
                 }}
               >
-                {reportData?.trPort3}
+                {bldata?.trPort3}
               </p>
             </div>
             <div
@@ -9761,9 +13671,10 @@ function rptAirwayBill() {
                   marginTop: "5px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
+                  fontWeight: "bold",
                 }}
               >
-                {reportData?.trPort2Agent}
+                {bldata?.trPort2Agent}
               </p>
             </div>
             <div
@@ -9789,9 +13700,10 @@ function rptAirwayBill() {
                   marginTop: "5px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
+                  fontWeight: "bold",
                 }}
               >
-                INR
+                {reportData?.currency}
               </p>
             </div>
             <div
@@ -9816,6 +13728,7 @@ function rptAirwayBill() {
                   marginTop: "5px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
+                  fontWeight: "bold",
                 }}
               >
                 {reportData?.chgsCode}
@@ -9844,6 +13757,7 @@ function rptAirwayBill() {
                   display: "flex",
                   width: "100%",
                   alignItems: "center",
+                  fontWeight: "bold",
                 }}
               >
                 <div
@@ -9865,6 +13779,7 @@ function rptAirwayBill() {
                     className="text-black font-normal text-center"
                     style={{
                       fontSize: "8px",
+                      fontWeight: "bold",
                     }}
                   >
                     {reportData?.PP}
@@ -9939,6 +13854,7 @@ function rptAirwayBill() {
                     className="text-black font-normal text-center"
                     style={{
                       fontSize: "8px",
+                      fontWeight: "bold",
                     }}
                   >
                     {reportData?.PP}
@@ -9989,9 +13905,10 @@ function rptAirwayBill() {
                 className="text-black font-normal"
                 style={{
                   fontSize: "9px",
-                  marginTop: "5px",
+                  marginTop: "1px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
+                  fontWeight: "semibold",
                 }}
               >
                 {reportData?.nvd}
@@ -10016,12 +13933,13 @@ function rptAirwayBill() {
                 className="text-black font-normal"
                 style={{
                   fontSize: "9px",
-                  marginTop: "5px",
+                  marginTop: "1px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
+                  fontWeight: "semibold",
                 }}
               >
-                {reportData?.nvc}
+                {reportData?.ncv}
               </p>
             </div>
           </div>
@@ -10061,6 +13979,7 @@ function rptAirwayBill() {
                   marginTop: "5px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
+                  fontWeight: "bold",
                 }}
               >
                 {reportData?.pod}
@@ -10079,7 +13998,23 @@ function rptAirwayBill() {
                   fontSize: "8px",
                   paddingLeft: "5px",
                 }}
-              ></p>
+              >
+                <div
+                  style={{
+                    fontSize: "8px",
+                  }}
+                  className="flex"
+                >
+                  <div style={{ width: "40%" }}></div>
+                  <div
+                    style={{ width: "30%" }}
+                    className="text-center border-black border-l border-b border-r"
+                  >
+                    Flight/Date
+                  </div>
+                  <div style={{ width: "30%" }}></div>
+                </div>
+              </p>
               <p
                 className="text-black font-normal"
                 style={{
@@ -10087,9 +14022,11 @@ function rptAirwayBill() {
                   marginTop: "5px",
                   paddingLeft: "10px",
                   paddingBottom: "5px",
+                  fontWeight: "bold",
                 }}
               >
-                {reportData?.preCarriage || ""}
+                {reportData?.polVesselText || ""}{" "}
+                {reportData?.vesselSailDate || ""}
               </p>
             </div>
             <div
@@ -10182,10 +14119,12 @@ function rptAirwayBill() {
                       fontSize: "8px",
                       paddingLeft: "5px",
                       width: "95%",
+                      fontWeight: "bold",
                     }}
                   >
                     Handling Information: PLEASE INFORM CONSIGNEE IMMEDIATELY ON
                     ARRIVAL OF CARGO.
+                    <br />
                     {reportData?.marksAndNoActual}
                   </p>
                 </div>
@@ -10455,12 +14394,34 @@ function rptAirwayBill() {
           <div
             style={{
               display: "flex",
+              position: "relative",
               borderLeft: "1px solid black",
               borderRight: "1px solid black",
               minHeight: "215px",
               maxHeight: "215px",
+              overflow: "hidden",
             }}
           >
+            <pre
+              style={{
+                position: "absolute",
+                top: "32px",
+                left: "5px",
+                width: "64%",
+                margin: 0,
+                padding: 0,
+                fontSize: "10px",
+                fontFamily: "Arial, sans-serif",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                lineHeight: "14px",
+                zIndex: 2,
+                background: "transparent",
+              }}
+            >
+              {bldata?.remarksDetails || ""}
+            </pre>
+
             {/* Section 1: No of Pieces RCP Content */}
             <div
               style={{
@@ -10470,12 +14431,13 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {reportData?.noOfPackages}
               </p>
             </div>
 
@@ -10488,12 +14450,13 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {reportData?.grossWt}
               </p>
             </div>
 
@@ -10506,12 +14469,13 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                K/Q
               </p>
             </div>
 
@@ -10524,12 +14488,13 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {bldata?.containerDetail}
               </p>
             </div>
 
@@ -10545,9 +14510,10 @@ function rptAirwayBill() {
                 className="text-black font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {bldata?.containerDetail}
               </p>
             </div>
 
@@ -10560,12 +14526,13 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {reportData?.chargeableWt}
               </p>
             </div>
 
@@ -10578,9 +14545,10 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal text-center text-bold"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
                 AS AGREED
@@ -10596,9 +14564,10 @@ function rptAirwayBill() {
               }}
             >
               <p
-                className="text-black font-normal text-center text-bold"
+                className="text-black text-right font-normal"
                 style={{
                   fontSize: "8px",
+                  margin: 0,
                 }}
               >
                 AS AGREED
@@ -10610,15 +14579,18 @@ function rptAirwayBill() {
               style={{
                 flexBasis: "35%",
                 padding: "2px",
+                zIndex: 3,
+                background: "white",
               }}
             >
               <p
                 className="text-black font-normal"
                 style={{
-                  fontSize: "8px",
+                  fontSize: "10px",
+                  margin: 0,
                 }}
               >
-                {reportData?.containerDetail}
+                {reportData?.goodsDesc}
               </p>
             </div>
           </div>
@@ -10648,7 +14620,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                 }}
               >
-                {""}
+                {reportData?.noOfPackages}
               </p>
             </div>
 
@@ -10667,7 +14639,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                 }}
               >
-                {""}
+                {reportData?.grossWt}
               </p>
             </div>
 
@@ -10793,7 +14765,7 @@ function rptAirwayBill() {
                   fontSize: "8px",
                 }}
               >
-                {reportData?.GoodsDescription}
+                {bldata?.GoodsDescription}
               </p>
             </div>
           </div>
@@ -10931,15 +14903,15 @@ function rptAirwayBill() {
                     <p
                       className="text-black font-normal text-center "
                       style={{
-                        fontSize: "8px",
-                        fontWeight: "bold",
+                        fontSize: "10px",
+                        fontWeight: "semibold",
                         paddingRight: "1px",
                         paddingLeft: "1px",
                         minHeight: "15px",
                         maxHeight: "15px",
                       }}
                     >
-                      {reportData?.preWeightCharge}
+                      AS AGREED
                     </p>
                   </div>
                   <div
@@ -10958,7 +14930,7 @@ function rptAirwayBill() {
                         paddingLeft: "1px",
                       }}
                     >
-                      {reportData?.collWeightCharge}
+                      {/* {reportData?.collWeightCharge} */}
                     </p>
                   </div>
                 </div>
@@ -11323,8 +15295,8 @@ function rptAirwayBill() {
                     <p
                       className="text-black font-normal text-center"
                       style={{
-                        fontSize: "8px",
-                        fontWeight: "bold",
+                        fontSize: "10px",
+                        fontWeight: "semibold",
                         paddingRight: "10px",
                         paddingLeft: "1px",
                         paddingBottom: "1px",
@@ -11358,15 +15330,15 @@ function rptAirwayBill() {
                     <p
                       className="text-black font-normal text-center "
                       style={{
-                        fontSize: "8px",
-                        fontWeight: "bold",
+                        fontSize: "10px",
+                        fontWeight: "semibold",
                         paddingRight: "1px",
                         paddingLeft: "1px",
                         minHeight: "15px",
                         maxHeight: "15px",
                       }}
                     >
-                      {reportData?.preTotalOtherChargesDueAgent}
+                      AS AGREED
                     </p>
                   </div>
                   <div
@@ -11503,15 +15475,15 @@ function rptAirwayBill() {
                     <p
                       className="text-black font-normal text-center "
                       style={{
-                        fontSize: "8px",
-                        fontWeight: "bold",
+                        fontSize: "10px",
+                        fontWeight: "semibold",
                         paddingRight: "1px",
                         paddingLeft: "1px",
                         minHeight: "15px",
                         maxHeight: "15px",
                       }}
                     >
-                      {reportData?.preTotalOtherChargesDueCarrier}
+                      AS AGREED
                     </p>
                   </div>
                   <div
@@ -11634,15 +15606,15 @@ function rptAirwayBill() {
                     <p
                       className="text-black font-normal text-center "
                       style={{
-                        fontSize: "8px",
-                        fontWeight: "bold",
+                        fontSize: "10px",
+                        fontWeight: "semibold",
                         paddingRight: "1px",
                         paddingLeft: "1px",
                         minHeight: "15px",
                         maxHeight: "15px",
                       }}
                     >
-                      {reportData?.preTotal}
+                      AS AGREED
                     </p>
                   </div>
                   <div
@@ -12461,8 +16433,9 @@ function rptAirwayBill() {
     </div>
   );
   const AirwayBillPrintASAgreedCopies = ({ index }) => {
-    console.log("data", reportData);
-    console.log("index - ", index);
+    const freightType = reportData?.freightPrepaidCollect || "";
+    const isCollect = freightType.toLowerCase().includes("collect");
+
     return (
       <div>
         <div
@@ -14299,7 +18272,7 @@ function rptAirwayBill() {
                         maxHeight: "15px",
                       }}
                     >
-                      {reportData?.preWeightCharge}
+                      {isCollect == false ? "AS AGREED" : ""}
                     </p>
                   </div>
                   <div
@@ -14318,7 +18291,7 @@ function rptAirwayBill() {
                         paddingLeft: "1px",
                       }}
                     >
-                      {reportData?.collWeightCharge}
+                      {isCollect == true ? "AS AGREED" : ""}
                     </p>
                   </div>
                 </div>
@@ -14726,7 +18699,7 @@ function rptAirwayBill() {
                         maxHeight: "15px",
                       }}
                     >
-                      {reportData?.preTotalOtherChargesDueAgent}
+                      {isCollect == false ? "AS AGREED" : ""}
                     </p>
                   </div>
                   <div
@@ -14745,7 +18718,7 @@ function rptAirwayBill() {
                         paddingLeft: "1px",
                       }}
                     >
-                      {reportData?.collTotalOtherChargesDueAgent}
+                      {isCollect == true ? "AS AGREED" : ""}
                     </p>
                   </div>
                 </div>
@@ -14871,7 +18844,7 @@ function rptAirwayBill() {
                         maxHeight: "15px",
                       }}
                     >
-                      {reportData?.preTotalOtherChargesDueCarrier}
+                      {isCollect == false ? "AS AGREED" : ""}
                     </p>
                   </div>
                   <div
@@ -14890,7 +18863,7 @@ function rptAirwayBill() {
                         paddingLeft: "1px",
                       }}
                     >
-                      {reportData?.collTotalOtherChargesDueCarrier}
+                      {isCollect == true ? "AS AGREED" : ""}
                     </p>
                   </div>
                 </div>
@@ -15002,7 +18975,7 @@ function rptAirwayBill() {
                         maxHeight: "15px",
                       }}
                     >
-                      {reportData?.preTotal}
+                      {isCollect == false ? "AS AGREED" : ""}
                     </p>
                   </div>
                   <div
@@ -15021,7 +18994,7 @@ function rptAirwayBill() {
                         paddingLeft: "1px",
                       }}
                     >
-                      {reportData?.collTotal}
+                      {isCollect == true ? "AS AGREED" : ""}
                     </p>
                   </div>
                 </div>
@@ -22057,7 +26030,7 @@ function rptAirwayBill() {
               </div> */}
               <div>
                 {Array.isArray(bldata.tblBlContainer) &&
-                  bldata.tblBlContainer.length < 4 ? (
+                bldata.tblBlContainer.length < 4 ? (
                   <p></p>
                 ) : (
                   <p>– Continuing on Attach Sheet</p>
@@ -28028,7 +32001,7 @@ function rptAirwayBill() {
                         fontFamily: "Arial sans-serif !important",
                       }}
                     >
-                      {rptAirwayBillPrintAsAgreed()}
+                      {rptAirwayBillAsAgreed()}
                     </div>
                   </div>
                 </>
@@ -28111,8 +32084,9 @@ function rptAirwayBill() {
                   <div
                     key={index}
                     ref={(el) => (enquiryModuleRefs.current[index] = el)}
-                    className={`bg-white ${index < reportIds.length - 1 ? "report-spacing" : ""
-                      }`}
+                    className={`bg-white ${
+                      index < reportIds.length - 1 ? "report-spacing" : ""
+                    }`}
                     style={{
                       width: "297mm", // A4 landscape width
                       height: "210mm", // A4 landscape height
@@ -28336,8 +32310,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -28712,8 +32686,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -29108,8 +33082,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
 
                       const showThisPage =
@@ -29414,8 +33388,9 @@ function rptAirwayBill() {
                   key: "No of Packages",
                   header: "Packages",
                   render: (c) =>
-                    `${c.noOfPackages || ""}${" "}${c.packageCode || ""
-                      }`.trim(),
+                    `${c.noOfPackages || ""}${" "}${
+                      c.packageCode || ""
+                    }`.trim(),
                   align: "center",
                 },
                 {
@@ -29500,8 +33475,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -29869,8 +33844,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -30245,8 +34220,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||
@@ -30621,8 +34596,8 @@ function rptAirwayBill() {
                       // Only show this page if it has ANY lines OR it's the last page and we have spill rows
                       const pageHasLines =
                         (cChunks[p]?.length || 0) +
-                        (mChunks[p]?.length || 0) +
-                        (gChunks[p]?.length || 0) >
+                          (mChunks[p]?.length || 0) +
+                          (gChunks[p]?.length || 0) >
                         0;
                       const showThisPage =
                         pageHasLines ||

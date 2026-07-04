@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">AI Assistant Architecture Overview</title>
+  <desc id="desc">Architecture diagram for a Siri-like voice and text assistant integrated into the Next.js SQL project.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#2563eb"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 34px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 16px Arial, sans-serif; fill: #475569; }
+      .laneTitle { font: 700 15px Arial, sans-serif; fill: #334155; letter-spacing: 0.2px; }
+      .boxTitle { font: 700 18px Arial, sans-serif; fill: #0f172a; }
+      .boxText { font: 400 14px Arial, sans-serif; fill: #475569; }
+      .small { font: 400 12px Arial, sans-serif; fill: #64748b; }
+      .label { font: 700 12px Arial, sans-serif; fill: #334155; }
+      .box { stroke-width: 1.5; rx: 12; ry: 12; }
+      .client { fill: #eef6ff; stroke: #93c5fd; }
+      .ui { fill: #f0fdf4; stroke: #86efac; }
+      .api { fill: #fff7ed; stroke: #fdba74; }
+      .ai { fill: #f5f3ff; stroke: #c4b5fd; }
+      .command { fill: #ecfeff; stroke: #67e8f9; }
+      .app { fill: #fdf2f8; stroke: #f9a8d4; }
+      .data { fill: #f1f5f9; stroke: #cbd5e1; }
+      .edge { stroke: #334155; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .edgeBlue { stroke: #2563eb; stroke-width: 2.4; fill: none; marker-end: url(#arrowBlue); }
+      .edgeDash { stroke: #64748b; stroke-width: 2; fill: none; stroke-dasharray: 7 6; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="980"/>
+  <text class="title" x="60" y="64">Siri-like AI Assistant Architecture</text>
+  <text class="subtitle" x="60" y="96">Voice and text commands safely mapped to your existing Next.js menu, form, report, and route metadata.</text>
+
+  <text class="laneTitle" x="90" y="150">USER INPUT</text>
+  <text class="laneTitle" x="310" y="150">ASSISTANT UI</text>
+  <text class="laneTitle" x="570" y="150">NEXT.JS API</text>
+  <text class="laneTitle" x="830" y="150">AI PLANNING</text>
+  <text class="laneTitle" x="1080" y="150">APP COMMAND LAYER</text>
+  <text class="laneTitle" x="1350" y="150">EXISTING APP</text>
+
+  <rect class="box client" x="60" y="185" width="210" height="120"/>
+  <text class="boxTitle" x="165" y="224" text-anchor="middle">User</text>
+  <text class="boxText" x="165" y="254" text-anchor="middle">Voice command</text>
+  <text class="boxText" x="165" y="276" text-anchor="middle">or text command</text>
+
+  <rect class="box ui" x="320" y="170" width="210" height="150"/>
+  <text class="boxTitle" x="425" y="207" text-anchor="middle">Assistant Widget</text>
+  <text class="boxText" x="425" y="237" text-anchor="middle">Mounted in</text>
+  <text class="boxText" x="425" y="259" text-anchor="middle">groupControl layout</text>
+  <text class="small" x="425" y="287" text-anchor="middle">Mic, text box, results</text>
+
+  <rect class="box ui" x="320" y="380" width="210" height="145"/>
+  <text class="boxTitle" x="425" y="418" text-anchor="middle">Speech Layer</text>
+  <text class="boxText" x="425" y="448" text-anchor="middle">STT, TTS, wake UX</text>
+  <text class="boxText" x="425" y="470" text-anchor="middle">Browser speech MVP</text>
+  <text class="small" x="425" y="498" text-anchor="middle">Realtime voice later</text>
+
+  <rect class="box api" x="590" y="170" width="230" height="150"/>
+  <text class="boxTitle" x="705" y="207" text-anchor="middle">Command API</text>
+  <text class="boxText" x="705" y="237" text-anchor="middle">/api/assistant/command</text>
+  <text class="boxText" x="705" y="259" text-anchor="middle">Validates session</text>
+  <text class="small" x="705" y="287" text-anchor="middle">Keeps keys server-side</text>
+
+  <rect class="box api" x="590" y="380" width="230" height="145"/>
+  <text class="boxTitle" x="705" y="418" text-anchor="middle">Realtime Session API</text>
+  <text class="boxText" x="705" y="448" text-anchor="middle">/api/assistant/realtime-session</text>
+  <text class="boxText" x="705" y="470" text-anchor="middle">Short-lived client secret</text>
+  <text class="small" x="705" y="498" text-anchor="middle">Used for WebRTC voice</text>
+
+  <rect class="box ai" x="870" y="170" width="230" height="150"/>
+  <text class="boxTitle" x="985" y="207" text-anchor="middle">AI Intent Planner</text>
+  <text class="boxText" x="985" y="237" text-anchor="middle">OpenAI Responses</text>
+  <text class="boxText" x="985" y="259" text-anchor="middle">or Realtime API</text>
+  <text class="small" x="985" y="287" text-anchor="middle">Returns structured action JSON</text>
+
+  <rect class="box command" x="1140" y="150" width="250" height="115"/>
+  <text class="boxTitle" x="1265" y="187" text-anchor="middle">Allowed Action Registry</text>
+  <text class="boxText" x="1265" y="217" text-anchor="middle">open_menu, fill_field</text>
+  <text class="boxText" x="1265" y="239" text-anchor="middle">search_grid, submit_form</text>
+
+  <rect class="box command" x="1140" y="315" width="250" height="125"/>
+  <text class="boxTitle" x="1265" y="353" text-anchor="middle">Menu Route Resolver</text>
+  <text class="boxText" x="1265" y="383" text-anchor="middle">Uses sidebar route rules</text>
+  <text class="boxText" x="1265" y="405" text-anchor="middle">No AI-generated URLs</text>
+
+  <rect class="box command" x="1140" y="490" width="250" height="125"/>
+  <text class="boxTitle" x="1265" y="528" text-anchor="middle">Safety Guards</text>
+  <text class="boxText" x="1265" y="558" text-anchor="middle">Menu access check</text>
+  <text class="boxText" x="1265" y="580" text-anchor="middle">Unsaved form check</text>
+
+  <rect class="box app" x="1430" y="215" width="130" height="130"/>
+  <text class="boxTitle" x="1495" y="254" text-anchor="middle">Next.js App</text>
+  <text class="boxText" x="1495" y="284" text-anchor="middle">router.push</text>
+  <text class="boxText" x="1495" y="306" text-anchor="middle">UI actions</text>
+
+  <rect class="box data" x="875" y="690" width="225" height="150"/>
+  <text class="boxTitle" x="987" y="728" text-anchor="middle">Assistant Data</text>
+  <text class="boxText" x="987" y="758" text-anchor="middle">Aliases and corrections</text>
+  <text class="boxText" x="987" y="780" text-anchor="middle">Action audit logs</text>
+  <text class="small" x="987" y="808" text-anchor="middle">Per client/user/role</text>
+
+  <rect class="box data" x="1165" y="690" width="225" height="150"/>
+  <text class="boxTitle" x="1277" y="728" text-anchor="middle">Project Metadata</text>
+  <text class="boxText" x="1277" y="758" text-anchor="middle">sideBarMenu()</text>
+  <text class="boxText" x="1277" y="780" text-anchor="middle">formControlMenuList()</text>
+  <text class="small" x="1277" y="808" text-anchor="middle">Menus, forms, reports</text>
+
+  <rect class="box data" x="1430" y="690" width="130" height="150"/>
+  <text class="boxTitle" x="1495" y="728" text-anchor="middle">Existing</text>
+  <text class="boxTitle" x="1495" y="750" text-anchor="middle">Backend</text>
+  <text class="boxText" x="1495" y="780" text-anchor="middle">SQL APIs</text>
+  <text class="boxText" x="1495" y="802" text-anchor="middle">Auth APIs</text>
+
+  <path class="edgeBlue" d="M270 245 H320"/>
+  <path class="edgeBlue" d="M530 245 H590"/>
+  <path class="edgeBlue" d="M820 245 H870"/>
+  <path class="edgeBlue" d="M1100 245 H1140"/>
+  <path class="edgeBlue" d="M1390 377 H1415 Q1430 377 1430 337"/>
+  <path class="edge" d="M1265 265 V315"/>
+  <path class="edge" d="M1265 440 V490"/>
+  <path class="edge" d="M1390 552 H1410 Q1430 552 1430 345"/>
+  <path class="edge" d="M425 320 V380"/>
+  <path class="edge" d="M530 452 H590"/>
+  <path class="edgeDash" d="M705 525 V645 Q705 690 875 735"/>
+  <path class="edgeDash" d="M985 320 V690"/>
+  <path class="edgeDash" d="M1140 377 H1100 Q1080 377 1080 690"/>
+  <path class="edgeDash" d="M1265 615 V690"/>
+  <path class="edgeDash" d="M1390 765 H1430"/>
+  <path class="edgeDash" d="M1495 690 V345"/>
+
+  <text class="label" x="292" y="235" text-anchor="middle">input</text>
+  <text class="label" x="560" y="235" text-anchor="middle">command</text>
+  <text class="label" x="845" y="235" text-anchor="middle">prompt</text>
+  <text class="label" x="1120" y="235" text-anchor="middle">JSON action</text>
+  <text class="label" x="1418" y="532" text-anchor="middle">approved action</text>
+  <text class="label" x="755" y="654" text-anchor="middle">logs</text>
+  <text class="label" x="1126" y="367" text-anchor="end">menu data</text>
+
+  <text class="small" x="60" y="930">Planning note: AI chooses an allowed action. The app resolves menu/form/report routes using trusted metadata and existing permission rules.</text>
+</svg>

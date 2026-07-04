@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="1380" viewBox="0 0 1180 1380" role="img" aria-labelledby="title desc">
+  <title id="title">Assistant Command Execution Flow</title>
+  <desc id="desc">Step-by-step flow showing how a spoken or typed command opens a menu or form in the application.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 32px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 15px Arial, sans-serif; fill: #475569; }
+      .stepTitle { font: 700 18px Arial, sans-serif; fill: #0f172a; }
+      .stepText { font: 400 14px Arial, sans-serif; fill: #475569; }
+      .sideTitle { font: 700 16px Arial, sans-serif; fill: #0f172a; }
+      .sideText { font: 400 13px Arial, sans-serif; fill: #475569; }
+      .num { font: 700 17px Arial, sans-serif; fill: #ffffff; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; rx: 14; ry: 14; }
+      .green { fill: #f0fdf4; stroke: #86efac; }
+      .blue { fill: #eff6ff; stroke: #93c5fd; }
+      .purple { fill: #f5f3ff; stroke: #c4b5fd; }
+      .orange { fill: #fff7ed; stroke: #fdba74; }
+      .pink { fill: #fdf2f8; stroke: #f9a8d4; }
+      .gray { fill: #f1f5f9; stroke: #cbd5e1; }
+      .danger { fill: #fef2f2; stroke: #fca5a5; }
+      .circle { fill: #2563eb; }
+      .line { stroke: #334155; stroke-width: 2.4; fill: none; marker-end: url(#arrow); }
+      .dash { stroke: #64748b; stroke-width: 2; fill: none; stroke-dasharray: 7 6; marker-end: url(#arrow); }
+      .note { font: 700 12px Arial, sans-serif; fill: #334155; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1180" height="1380"/>
+  <text class="title" x="70" y="62">Command Flow: "Open Invoice Control"</text>
+  <text class="subtitle" x="70" y="92">The same flow works for menu opening, report opening, search, and later form-filling commands.</text>
+
+  <rect class="box green" x="110" y="140" width="520" height="100"/>
+  <circle class="circle" cx="150" cy="190" r="20"/>
+  <text class="num" x="150" y="196" text-anchor="middle">1</text>
+  <text class="stepTitle" x="190" y="180">User gives command</text>
+  <text class="stepText" x="190" y="207">Voice: "Open Invoice Control" or typed command.</text>
+
+  <path class="line" d="M370 240 V285"/>
+
+  <rect class="box blue" x="110" y="285" width="520" height="105"/>
+  <circle class="circle" cx="150" cy="337" r="20"/>
+  <text class="num" x="150" y="343" text-anchor="middle">2</text>
+  <text class="stepTitle" x="190" y="327">Assistant captures input</text>
+  <text class="stepText" x="190" y="354">Voice becomes transcript. Text input skips this step.</text>
+
+  <path class="line" d="M370 390 V435"/>
+
+  <rect class="box orange" x="110" y="435" width="520" height="105"/>
+  <circle class="circle" cx="150" cy="487" r="20"/>
+  <text class="num" x="150" y="493" text-anchor="middle">3</text>
+  <text class="stepTitle" x="190" y="477">Send to Assistant Command API</text>
+  <text class="stepText" x="190" y="504">Includes transcript, current route, user/session context.</text>
+
+  <path class="line" d="M370 540 V585"/>
+
+  <rect class="box purple" x="110" y="585" width="520" height="115"/>
+  <circle class="circle" cx="150" cy="642" r="20"/>
+  <text class="num" x="150" y="648" text-anchor="middle">4</text>
+  <text class="stepTitle" x="190" y="632">Resolve intent and action</text>
+  <text class="stepText" x="190" y="660">AI or deterministic parser returns:</text>
+  <text class="stepText" x="190" y="682">open_menu({ menuName: "Invoice Control" })</text>
+
+  <path class="line" d="M370 700 V745"/>
+
+  <rect class="box blue" x="110" y="745" width="520" height="115"/>
+  <circle class="circle" cx="150" cy="802" r="20"/>
+  <text class="num" x="150" y="808" text-anchor="middle">5</text>
+  <text class="stepTitle" x="190" y="792">Match menu from metadata</text>
+  <text class="stepText" x="190" y="820">Search sideBarMenu tree and aliases.</text>
+  <text class="stepText" x="190" y="842">Pick exact or best-ranked match.</text>
+
+  <path class="line" d="M370 860 V905"/>
+
+  <rect class="box blue" x="110" y="905" width="520" height="115"/>
+  <circle class="circle" cx="150" cy="962" r="20"/>
+  <text class="num" x="150" y="968" text-anchor="middle">6</text>
+  <text class="stepTitle" x="190" y="952">Build trusted route</text>
+  <text class="stepText" x="190" y="980">Reuse extracted sidebar route rules.</text>
+  <text class="stepText" x="190" y="1002">Example: /invoiceControl?menuName=...</text>
+
+  <path class="line" d="M370 1020 V1065"/>
+
+  <rect class="box danger" x="110" y="1065" width="520" height="120"/>
+  <circle class="circle" cx="150" cy="1125" r="20"/>
+  <text class="num" x="150" y="1131" text-anchor="middle">7</text>
+  <text class="stepTitle" x="190" y="1115">Run safety checks</text>
+  <text class="stepText" x="190" y="1143">Verify auth, menu access, tenant context.</text>
+  <text class="stepText" x="190" y="1165">If form has unsaved changes, ask confirmation.</text>
+
+  <path class="line" d="M370 1185 V1230"/>
+
+  <rect class="box pink" x="110" y="1230" width="520" height="105"/>
+  <circle class="circle" cx="150" cy="1282" r="20"/>
+  <text class="num" x="150" y="1288" text-anchor="middle">8</text>
+  <text class="stepTitle" x="190" y="1272">Execute app action</text>
+  <text class="stepText" x="190" y="1299">router.push opens Invoice Control page.</text>
+
+  <rect class="box gray" x="740" y="245" width="300" height="135"/>
+  <text class="sideTitle" x="890" y="283" text-anchor="middle">Speech Providers</text>
+  <text class="sideText" x="890" y="315" text-anchor="middle">MVP: Browser speech APIs</text>
+  <text class="sideText" x="890" y="337" text-anchor="middle">Production: OpenAI Realtime</text>
+  <text class="sideText" x="890" y="359" text-anchor="middle">Fallback: Text command box</text>
+
+  <rect class="box gray" x="740" y="535" width="300" height="155"/>
+  <text class="sideTitle" x="890" y="573" text-anchor="middle">Allowed Actions Only</text>
+  <text class="sideText" x="890" y="605" text-anchor="middle">open_menu</text>
+  <text class="sideText" x="890" y="627" text-anchor="middle">open_report</text>
+  <text class="sideText" x="890" y="649" text-anchor="middle">fill_field</text>
+  <text class="sideText" x="890" y="671" text-anchor="middle">search_current_grid</text>
+
+  <rect class="box gray" x="740" y="775" width="300" height="175"/>
+  <text class="sideTitle" x="890" y="813" text-anchor="middle">Trusted Metadata</text>
+  <text class="sideText" x="890" y="845" text-anchor="middle">sideBarMenu()</text>
+  <text class="sideText" x="890" y="867" text-anchor="middle">formControlMenuList()</text>
+  <text class="sideText" x="890" y="889" text-anchor="middle">menu aliases</text>
+  <text class="sideText" x="890" y="911" text-anchor="middle">role and menu access</text>
+
+  <rect class="box gray" x="740" y="1055" width="300" height="170"/>
+  <text class="sideTitle" x="890" y="1093" text-anchor="middle">Audit and Feedback</text>
+  <text class="sideText" x="890" y="1125" text-anchor="middle">Store transcript</text>
+  <text class="sideText" x="890" y="1147" text-anchor="middle">Resolved action</text>
+  <text class="sideText" x="890" y="1169" text-anchor="middle">Success/failure</text>
+  <text class="sideText" x="890" y="1191" text-anchor="middle">User correction</text>
+
+  <path class="dash" d="M630 337 H740"/>
+  <path class="dash" d="M630 642 H740"/>
+  <path class="dash" d="M630 802 H740"/>
+  <path class="dash" d="M630 1125 H740"/>
+
+  <text class="note" x="682" y="324">uses</text>
+  <text class="note" x="682" y="628">checks</text>
+  <text class="note" x="682" y="788">reads</text>
+  <text class="note" x="682" y="1111">writes</text>
+</svg>

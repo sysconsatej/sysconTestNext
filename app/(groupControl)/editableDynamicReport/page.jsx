@@ -268,7 +268,7 @@ export default function AddEditFormControll({ reportData }) {
     } else {
       setFullRowJson([]);
     }
-  }, [selectedRow]);
+  }, [selectedRow, dataToGetSelectedRowData]);
 
   useEffect(() => {
     // Setup code here
@@ -4533,21 +4533,29 @@ export default function AddEditFormControll({ reportData }) {
 
   let rowColors = {};
   const renderTableData = (data, rowIndex, colorCode, indexOfRow) => {
+    const getRowId = (row) => row?.Id ?? row?.id ?? row?.ID;
+    const stableRowKey = getRowId(data) ?? data?.rowIndex ?? indexOfRow ?? rowIndex;
+    const updateRowsByStableKey = (rows, value) =>
+      rows.map((row, idx) => {
+        const rowKey = getRowId(row) ?? row?.rowIndex ?? idx;
+        return String(rowKey) === String(stableRowKey)
+          ? { ...row, ...value }
+          : row;
+      });
+
     function handleOnJsonChange(value) {
       console.log("handleOnJsonChange", value);
       // setValue((prev) => ({ ...prev, ...value }));
       setFinalPaginatedData((prev) => {
-        const updatedData = [...prev];
-        updatedData[rowIndex] = { ...updatedData[rowIndex], ...value };
+        const updatedData = updateRowsByStableKey(prev, value);
         console.log("updatedData", updatedData);
 
         return updatedData;
       });
-      setDataToGetSelectedRowData((prev) => {
-        const updatedData = [...prev];
-        updatedData[indexOfRow] = { ...updatedData[indexOfRow], ...value };
-        return updatedData;
-      });
+      setDataToGetSelectedRowData((prev) => updateRowsByStableKey(prev, value));
+      setPaginatedData((prev) => updateRowsByStableKey(prev, value));
+      setTableData((prev) => updateRowsByStableKey(prev, value));
+      setFilteredSortData((prev) => updateRowsByStableKey(prev, value));
     }
     // function handleFieldChange(value) {
     //   const fieldKey = Object.keys(value)[0]; // 'From' or 'To'
@@ -4684,7 +4692,6 @@ export default function AddEditFormControll({ reportData }) {
       });
     };
 
-    const getRowId = (row) => row?.Id ?? row?.id ?? row?.ID;
     const getSelectedRows = (rowIndex) => {
       const selectedRowId = getRowId(finalPaginatedData[rowIndex]);
       console.log("finalPaginatedData", finalPaginatedData);
@@ -4883,7 +4890,9 @@ export default function AddEditFormControll({ reportData }) {
         // }
         if (colIndex === 0) {
           return (
-            <React.Fragment key={`${item.fieldname}-${rowIndex}-${colIndex}`}>
+            <React.Fragment
+              key={`${item.fieldname}-${stableRowKey}-${colIndex}`}
+            >
               <TableCell
                 style={{
                   backgroundColor: rowColors[rowIndex], // Use stored color
@@ -4938,7 +4947,7 @@ export default function AddEditFormControll({ reportData }) {
         } else {
           return (
             <TableCell
-              key={`${item.fieldname}-${rowIndex}-${colIndex}`}
+              key={`${item.fieldname}-${stableRowKey}-${colIndex}`}
               rowSpan={
                 data.groupSpans[colIndex] > 1
                   ? data.groupSpans[colIndex]
@@ -5609,7 +5618,13 @@ export default function AddEditFormControll({ reportData }) {
                             >
                               {finalPaginatedData.map((data, rowIndex) => (
                                 <TableRow
-                                  key={data.fieldname}
+                                  key={
+                                    data?.Id ??
+                                    data?.id ??
+                                    data?.ID ??
+                                    data?.rowIndex ??
+                                    rowIndex
+                                  }
                                   ref={(el) => {
                                     if (rowRefs.current) {
                                       rowRefs.current[rowIndex] = el;
@@ -5945,7 +5960,13 @@ export default function AddEditFormControll({ reportData }) {
                             >
                               {finalPaginatedData.map((data, rowIndex) => (
                                 <TableRow
-                                  key={data.fieldname}
+                                  key={
+                                    data?.Id ??
+                                    data?.id ??
+                                    data?.ID ??
+                                    data?.rowIndex ??
+                                    rowIndex
+                                  }
                                   ref={(el) => {
                                     if (rowRefs.current) {
                                       rowRefs.current[rowIndex] = el;

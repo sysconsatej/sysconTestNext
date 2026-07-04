@@ -14334,6 +14334,142 @@ const setVendorChargeApprovalOnLoad = (obj = {}) => {
   };
 };
 
+const calcualteTaxMaual = async (obj) => {
+  const {
+    args,
+    values,
+    fieldName,
+    newState,
+    setStateVariable,
+    formControlData,
+  } = obj;
+
+  try {
+    const argNames = args.split(",").map((arg) => arg.trim());
+
+    const toNumber = (value) => {
+      const num = Number(value);
+      return value === null ||
+        value === undefined ||
+        value === "" ||
+        Number.isNaN(num)
+        ? 0
+        : num;
+    };
+
+    const taxPercentage = toNumber(values[argNames[0]]);
+
+    const invoiceChargeList = newState?.tblInvoiceCharge || [];
+
+    const currentCharge =
+      invoiceChargeList.find(
+        (charge) =>
+          values?.invoiceChargeId &&
+          String(charge?.id) === String(values?.invoiceChargeId),
+      ) ||
+      invoiceChargeList.find(
+        (charge) =>
+          Array.isArray(charge?.tblInvoiceChargeTax) &&
+          charge.tblInvoiceChargeTax.some(
+            (tax) => values?.id && String(tax?.id) === String(values?.id),
+          ),
+      ) ||
+      invoiceChargeList[0];
+
+    const totalAmountHc = toNumber(currentCharge?.totalAmountHc);
+    const totalAmountFc = toNumber(currentCharge?.totalAmountFc);
+
+    const taxAmountHc = Number(
+      ((totalAmountHc * taxPercentage) / 100).toFixed(2),
+    );
+
+    const taxAmountFc = Number(
+      ((totalAmountFc * taxPercentage) / 100).toFixed(2),
+    );
+
+    if (setStateVariable) {
+      setStateVariable((prev) => ({
+        ...prev,
+        taxAmountHc,
+        taxAmountFc,
+      }));
+    }
+
+    return {
+      type: "success",
+      result: true,
+      message: "Tax amount calculated successfully.",
+      values: {
+        ...values,
+        taxAmountHc,
+        taxAmountFc,
+      },
+      newState: {
+        ...newState,
+      },
+      formControlData,
+    };
+  } catch (error) {
+    console.error("Error in calcualteTaxMaual:", error);
+
+    return {
+      type: "error",
+      result: false,
+      values,
+      newState,
+      formControlData,
+      message: "Error while calculating tax amount.",
+    };
+  }
+};
+const capsLock = (obj = {}) => {
+  const {
+    args,
+    values = {},
+    fieldName = "",
+    newState = {},
+    formControlData,
+    setStateVariable,
+  } = obj;
+
+  const updatedValues = { ...values };
+  const updatedNewState = { ...newState };
+
+  const fieldNames =
+    typeof args === "string" && args.trim() !== ""
+      ? args
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : [fieldName];
+
+  fieldNames.forEach((name) => {
+    const currentValue = updatedValues[name] ?? updatedNewState[name];
+
+    if (name && typeof currentValue === "string") {
+      const upperValue = currentValue.toUpperCase();
+
+      updatedValues[name] = upperValue;
+      updatedNewState[name] = upperValue;
+
+      setStateVariable?.((prev) => ({
+        ...prev,
+        [name]: upperValue,
+      }));
+    }
+  });
+  console.log(newState);
+  return {
+    isCheck: true,
+    type: "success",
+    message: "",
+    alertShow: false,
+    fieldName,
+    values: updatedValues,
+    newState: updatedNewState,
+    formControlData,
+  };
+};
 export {
   setSameCurrencyFc,
   setSameCurrencyHc,
@@ -14502,4 +14638,6 @@ export {
   setBlNoFromContainer,
   setVendorChargeApprovalValues,
   setVendorChargeApprovalOnLoad,
+  calcualteTaxMaual,
+  capsLock,
 };

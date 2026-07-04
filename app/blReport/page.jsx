@@ -40,6 +40,10 @@ function pxToMm(px) {
 
 function resolveRepeatTableMetricsMm(el, repeat, tmeta) {
   const t = tmeta || el?.table || el?.tbl || el?.meta || {};
+  const style = {
+    ...(el?.style || {}),
+    ...(t?.style || {}),
+  };
 
   const headerBaseMm = Number(repeat?.headerHeightMm ?? 7) || 7;
   const bodyBaseMm = Number(repeat?.rowHeightMm ?? 6) || 6;
@@ -48,12 +52,34 @@ function resolveRepeatTableMetricsMm(el, repeat, tmeta) {
   const gridBW = Math.max(0, Number(t?.gridWidth ?? outerBW) || 0);
   const borderMm = Math.max(0, pxToMm(gridBW));
 
-  const headerRowMm = headerBaseMm + borderMm;
-  const bodyRowMm = bodyBaseMm + borderMm;
+  const lineHeight = Number(style.lineHeight ?? t?.lineHeight ?? 1.2) || 1.2;
+  const headerFontPx =
+    Number(t?.headerFontSize ?? t?.fontSize ?? style.fontSize ?? 11) || 11;
+  const bodyFontPx =
+    Number(t?.bodyFontSize ?? t?.fontSize ?? style.fontSize ?? 11) || 11;
+  const headerPaddingPx =
+    Number(
+      t?.headerCellPadding ??
+        t?.headerPadding ??
+        t?.cellPadding ??
+        style.padding ??
+        6,
+    ) || 0;
+  const bodyPaddingPx = Number(t?.cellPadding ?? style.padding ?? 6) || 0;
+
+  const headerContentMm = pxToMm(
+    headerFontPx * lineHeight + headerPaddingPx * 2,
+  );
+  const bodyContentMm = pxToMm(bodyFontPx * lineHeight + bodyPaddingPx * 2);
+
+  const headerRowMm = Math.max(headerBaseMm, headerContentMm) + borderMm;
+  const bodyRowMm = Math.max(bodyBaseMm, bodyContentMm) + borderMm;
 
   return {
     headerBaseMm,
     bodyBaseMm,
+    headerContentMm,
+    bodyContentMm,
     borderMm,
     headerRowMm,
     bodyRowMm,
@@ -89,6 +115,7 @@ const MAX_SINGLE_PAGE_RENDER_HEIGHT_MM = 2500;
 // taller than A4. Treat tiny overflow as normal A4 height.
 const PAGE_HEIGHT_EPSILON_MM = 0.75;
 const PRINT_SLICE_EPSILON_MM = 0.75;
+const TRAILING_BLANK_TABLE_OVERFLOW_MM = 20;
 
 // ✅ Physical A4 split margins
 // When one logical/template page becomes taller than A4, we slice it into real
@@ -966,12 +993,17 @@ function applyAutoGrowFixedTablesToTemplate(template, data, opts) {
         Array.isArray(tmeta.rowH) && tmeta.rowH.length
           ? tmeta.rowH
           : Array(rows).fill(32);
+      const storedBaseRowH =
+        Array.isArray(tmeta.__baseRowH) && tmeta.__baseRowH.length
+          ? tmeta.__baseRowH
+          : null;
 
       const widthMm = Number(el.w || 10);
       const heightMm = Number(el.h || 10);
 
       const totalW = colW.reduce((a, b) => a + (Number(b) || 0), 0) || 1;
-      const totalH = rowH.reduce((a, b) => a + (Number(b) || 0), 0) || 1;
+      const rowHForBase = storedBaseRowH || rowH;
+      const totalH = rowHForBase.reduce((a, b) => a + (Number(b) || 0), 0) || 1;
 
       const isRowHAlreadyMm =
         String(tmeta.rowHUnit || "").toLowerCase() === "mm";
@@ -980,9 +1012,17 @@ function applyAutoGrowFixedTablesToTemplate(template, data, opts) {
       const colMm = isColWAlreadyMm
         ? colW.map((w) => Number(w) || 0)
         : colW.map((w) => ((Number(w) || 0) / totalW) * widthMm);
-      const rowMmBase = isRowHAlreadyMm
-        ? rowH.map((h) => Number(h) || 0)
-        : rowH.map((h) => ((Number(h) || 0) / totalH) * heightMm);
+      const rowMmBase = storedBaseRowH
+        ? Array.from({ length: rows }, (_, idx) =>
+            Number(
+              storedBaseRowH[idx] ??
+                storedBaseRowH[storedBaseRowH.length - 1] ??
+                0,
+            ) || 0,
+          )
+        : isRowHAlreadyMm
+          ? rowH.map((h) => Number(h) || 0)
+          : rowHForBase.map((h) => ((Number(h) || 0) / totalH) * heightMm);
 
       const cellPad = Number(tmeta.cellPadding ?? el?.style?.padding ?? 6);
       const newRowMm = [...rowMmBase];
@@ -1077,10 +1117,11 @@ function applyAutoGrowFixedTablesToTemplate(template, data, opts) {
       const newH = newRowMm.reduce((a, b) => a + (Number(b) || 0), 0) || el.h;
       const delta = newH - Number(el.h || 0);
 
-      if (delta > 0.01) {
+      if (Math.abs(delta) > 0.01) {
         el.h = newH;
         el.table = {
           ...(el.table || {}),
+          __baseRowH: rowMmBase,
           rowH: newRowMm,
           rowHUnit: "mm",
           autoGrow: true,
@@ -1366,6 +1407,163 @@ function debugNeighborGraph(debug, tpl) {
   dbgGroupEnd(debug);
 }
 
+function getDebugElementBottom(el) {
+  return Number(el?.y || 0) + Number(el?.h || 0);
+}
+
+function summarizeDebugElement(el) {
+  const tmeta = el?.table || el?.tbl || el?.meta || {};
+  const repeatPrint = tmeta.repeatPrint || null;
+  const cells = tmeta.cells || tmeta.cell || tmeta.data || {};
+  const bindings = tmeta.bindings || tmeta.binding || {};
+
+  const cellTextLengths = Object.entries(cells || {}).map(([key, value]) => ({
+    key,
+    textLength: String(
+      value?.text ?? value?.value ?? value?.label ?? value?.content ?? "",
+    ).length,
+  }));
+
+  return {
+    id: el?.id,
+    baseId:
+      el?.__repeatBaseId ||
+      el?.__flowBaseId ||
+      el?.__baseId ||
+      tmeta.__repeatBaseId ||
+      null,
+    type: el?.type,
+    band: el?.attachBand || null,
+    y: Number(el?.y || 0),
+    h: Number(el?.h || 0),
+    bottom: getDebugElementBottom(el),
+    rowH: Array.isArray(tmeta.rowH) ? tmeta.rowH : null,
+    baseRowH: Array.isArray(tmeta.__baseRowH) ? tmeta.__baseRowH : null,
+    repeatBodyRows: Array.isArray(repeatPrint?.body)
+      ? repeatPrint.body.length
+      : null,
+    repeatSourceRowCount: repeatPrint?.sourceRowCount ?? null,
+    repeatChunkRowCount: repeatPrint?.chunkRowCount ?? null,
+    repeatRenderEmptyRow: repeatPrint?.renderEmptyRow ?? null,
+    repeatBodyTextLength: Array.isArray(repeatPrint?.body)
+      ? repeatPrint.body.flat().join("").length
+      : null,
+    bindingKeys: Object.keys(bindings || {}),
+    cellTextLengths,
+  };
+}
+
+function isBlankRepeatBodyRow(row) {
+  if (!Array.isArray(row)) return false;
+  return row.every((cell) => String(cell ?? "").trim() === "");
+}
+
+function collectRepeatDebugDetails(tpl) {
+  const pages = normalizePages(tpl || {});
+  const details = [];
+
+  pages.forEach((pg, pageIndex) => {
+    const elements = compactRenderableRepeatFollowers(
+      Array.isArray(pg?.elements) ? pg.elements : [],
+    )
+      .filter((el) => !el?.hidden && isBodyElement(el))
+      .sort(
+        (a, b) =>
+          Number(a?.y || 0) - Number(b?.y || 0) ||
+          Number(a?.z || 0) - Number(b?.z || 0),
+      );
+
+    elements.forEach((el, elementIndex) => {
+      const tmeta = el?.table || el?.tbl || el?.meta || {};
+      const repeatPrint = tmeta.repeatPrint || null;
+      if (!repeatPrint || !Array.isArray(repeatPrint.body)) return;
+
+      const y = Number(el?.y || 0);
+      const h = Number(el?.h || 0);
+      const bottom = y + h;
+      const nextEl = elements
+        .slice(elementIndex + 1)
+        .find((candidate) => candidate?.id !== el?.id);
+      const nextY = nextEl ? Number(nextEl?.y || 0) : null;
+      const gapToNextMm = nextEl ? nextY - bottom : null;
+
+      details.push({
+        pageIndex: pageIndex + 1,
+        pageName: pg?.name || null,
+        id: el?.id || null,
+        baseId: getOriginalIdForElement(el) || null,
+        arrayPath: repeatPrint.arrayPath || null,
+        chunkIndex: repeatPrint.chunkIndex ?? null,
+        yMm: y,
+        hMm: h,
+        bottomMm: bottom,
+        bodyRows: repeatPrint.body.length,
+        sourceRowCount: repeatPrint.sourceRowCount ?? null,
+        chunkRowCount: repeatPrint.chunkRowCount ?? null,
+        renderEmptyRow: !!repeatPrint.renderEmptyRow,
+        blankBodyRows: repeatPrint.body.filter(isBlankRepeatBodyRow).length,
+        nextId: nextEl?.id || null,
+        nextType: nextEl?.type || null,
+        nextYmm: nextY,
+        gapToNextMm,
+        overlapsNext: gapToNextMm != null && gapToNextMm < -0.01,
+      });
+    });
+  });
+
+  return details;
+}
+
+function debugPhysicalPagePlan(debug, tpl, label = "Physical page plan") {
+  if (!debug || !tpl) return;
+
+  try {
+    const { paperMm, pages, plan } = buildPhysicalPagePlan(tpl);
+    dbgGroup(
+      debug,
+      `📄 [BLReport DEBUG] ${label} | logical=${pages.length} physical=${plan.length}`,
+    );
+
+    pages.forEach((pg, pageIndex) => {
+      const metrics = getPhysicalSliceMetrics(pg, paperMm);
+      const elements = compactRenderableRepeatFollowers(
+        Array.isArray(pg?.elements) ? pg.elements : [],
+      );
+      const visibleElements = elements.filter((el) => !el?.hidden);
+      const bottomElements = visibleElements
+        .slice()
+        .sort((a, b) => getDebugElementBottom(b) - getDebugElementBottom(a))
+        .slice(0, 8)
+        .map(summarizeDebugElement);
+
+      dbgLog(debug, `Logical page ${pageIndex + 1}:`, {
+        id: pg?.id,
+        name: pg?.name,
+        fullH: metrics.fullH,
+        paperH: metrics.paperH,
+        isSplit: metrics.isSplit,
+        slices: metrics.slices,
+        bottomElements,
+      });
+    });
+
+    dbgLog(
+      debug,
+      "Physical pages:",
+      plan.map((item) => ({
+        physicalIndex: item.physicalIndex,
+        logicalPage: item.pageIndex + 1,
+        slice: `${item.sliceIndex + 1}/${item.sliceCount}`,
+        offsetMm: item.slice?.offsetMm,
+        visibleHeightMm: item.slice?.visibleHeightMm,
+      })),
+    );
+    dbgGroupEnd(debug);
+  } catch (e) {
+    dbgLog(debug, "[BLReport DEBUG] physical plan debug failed", e);
+  }
+}
+
 /* =========================================================
    OPTIONAL SNAP PASS
 ========================================================= */
@@ -1487,29 +1685,60 @@ function buildRepeatPrintChunk({
   colsDef,
   chunkRows,
   chunkIndex = 0,
+  renderEmptyRow = false,
+  sourceRowCount = null,
+  debug = false,
 }) {
   const header = colsDef.map((c) => String(c.label ?? c.key ?? ""));
-  const body = chunkRows.map((rowObj, idx) =>
-    colsDef.map((c) => {
-      if (c.key === "__index__") return idx + 1;
-      return getByPath(rowObj || {}, String(c.key || ""));
-    }),
-  );
+  const safeChunkRows = Array.isArray(chunkRows) ? chunkRows : [];
+  const body = safeChunkRows.length
+    ? safeChunkRows.map((rowObj, idx) =>
+        colsDef.map((c) => {
+          if (c.key === "__index__") return idx + 1;
+          return getByPath(rowObj || {}, String(c.key || ""));
+        }),
+      )
+    : renderEmptyRow
+      ? [colsDef.map(() => "")]
+      : [];
 
-  const headerH = Number(repeat.headerHeightMm ?? 7) || 7;
-  const bodyH = Number(repeat.rowHeightMm ?? 6) || 6;
-  const h = headerH + body.length * bodyH;
+  const repeatMetrics = resolveRepeatTableMetricsMm(el, repeat);
+  const h =
+    repeatMetrics.headerRowMm + body.length * repeatMetrics.bodyRowMm;
 
   const tmeta = el.table || el.tbl || el.meta || {};
   const nextTable = {
     ...tmeta,
     __repeatBaseId: el.id,
-    repeatPrint: { header, body, columns: colsDef },
+    repeatPrint: {
+      header,
+      body,
+      columns: colsDef,
+      arrayPath: repeat?.arrayPath || null,
+      chunkIndex,
+      chunkRowCount: safeChunkRows.length,
+      sourceRowCount:
+        sourceRowCount == null ? safeChunkRows.length : sourceRowCount,
+      renderEmptyRow,
+    },
     repeat: { ...repeat, enabled: false },
   };
 
   const baseId = el.id || "repeatTable";
   const chunkId = `${baseId}__chunk_${chunkIndex}`;
+
+  dbgLog(debug, "[REPEAT-CHUNK-BUILD]", {
+    baseId,
+    chunkId,
+    chunkIndex,
+    arrayPath: repeat?.arrayPath || null,
+    sourceRowCount:
+      sourceRowCount == null ? safeChunkRows.length : sourceRowCount,
+    chunkRowCount: safeChunkRows.length,
+    bodyRows: body.length,
+    renderEmptyRow,
+    h,
+  });
 
   return { ...el, id: chunkId, __repeatBaseId: baseId, h, table: nextTable };
 }
@@ -1562,6 +1791,17 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
     return { attachHeaderMm, attachFooterMm, bodyTop, bodyBottom, bodyHeight };
   };
 
+  const isRepeatAnchoredFollowerOnPage = (el, elements) => {
+    if (!el || !isBodyElement(el) || isRenderedRepeatTableAnchor(el))
+      return false;
+
+    const topId = readTopNeighborId(el);
+    if (!topId) return false;
+
+    const topEl = findCurrentElementByOriginalId(elements, topId);
+    return !!topEl && isBodyElement(topEl) && isRenderedRepeatTableAnchor(topEl);
+  };
+
   const paginateOverflowElementsOnPageBody = (page) => {
     const { bodyTop, bodyBottom, bodyHeight } = getBodyBand(page);
 
@@ -1581,18 +1821,39 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
       const y = Number(el.y || 0);
       const h = Number(el.h || 0);
       const bottom = y + h;
+      const repeatAnchoredOverflow =
+        bottom > bodyBottom + 0.001 &&
+        isRepeatAnchoredFollowerOnPage(el, els);
 
       // Important OOM guard:
       // If one element is taller than the printable body area, moving it to the
       // next page will never make it fit. The old loop kept creating pages until
       // Chrome crashed. Pin it on the current page and warn instead.
-      if (el.__overflowPinned || h > bodyHeight + 0.001) {
+      if (
+        el.__overflowPinned ||
+        h > bodyHeight + 0.001 ||
+        repeatAnchoredOverflow
+      ) {
         const pinned = {
           ...el,
           y: Math.max(bodyTop, y),
           __overflowPinned: true,
+          __allowExtendedPage: true,
         };
         stay.push(pinned);
+
+        if (debug && repeatAnchoredOverflow) {
+          dbgLog(debug, "[FLOW][PIN-REPEAT-FOLLOWER]", {
+            pageId: page.id,
+            elId: el.id,
+            y,
+            h,
+            bottom,
+            bodyBottom,
+            topId: readTopNeighborId(el),
+          });
+        }
+
         if (bottom > bodyBottom + 0.001 || h > bodyHeight + 0.001) {
           // flowWarnings.push(
           //   `${page?.name || page?.id || "Page"}: element ${el?.id || ""} is taller than available page body; it was pinned and will be rendered/printed as an extended page to prevent endless pagination.`,
@@ -1676,8 +1937,9 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
         continue;
       }
 
-      const headerH = Number(repeat.headerHeightMm ?? 7) || 7;
-      const bodyH = Number(repeat.rowHeightMm ?? 6) || 6;
+      const repeatMetrics = resolveRepeatTableMetricsMm(el, repeat, tmeta);
+      const headerH = repeatMetrics.headerRowMm;
+      const bodyH = repeatMetrics.bodyRowMm;
 
       const { bodyTop, bodyBottom, bodyHeight } = getBodyBand(page);
 
@@ -1756,7 +2018,7 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
         chunks.push(arr.slice(start, start + cap));
         start += cap;
       }
-      if (!chunks.length) chunks.push([]);
+      if (!chunks.length && arr.length === 0) chunks.push([]);
 
       const originalRepeatId = el?.id;
 
@@ -1766,6 +2028,9 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
         colsDef,
         chunkRows: chunks[0],
         chunkIndex: 0,
+        renderEmptyRow: arr.length === 0,
+        sourceRowCount: arr.length,
+        debug,
       });
 
       rebuilt.push(firstChunkEl);
@@ -1809,6 +2074,8 @@ function applyRepeatTablesFlowToTemplate(tpl, data, opts = {}) {
           colsDef,
           chunkRows: chunks[c],
           chunkIndex: c,
+          sourceRowCount: arr.length,
+          debug,
         });
 
         pages[targetIdx].elements.push(chunkEl);
@@ -1969,6 +2236,71 @@ function findCurrentElementByOriginalId(elements, originalId) {
   );
 }
 
+function findCurrentElementsByOriginalId(elements, originalId) {
+  if (!originalId) return [];
+
+  const oid = String(originalId);
+  const els = Array.isArray(elements) ? elements : [];
+
+  return els.filter((el) => {
+    if (!el) return false;
+    if (String(el?.id || "") === oid) return true;
+    if (String(getOriginalIdForElement(el) || "") === oid) return true;
+    return String(el?.id || "").startsWith(`${oid}__`);
+  });
+}
+
+function getGeneratedChunkIndex(el) {
+  const id = String(el?.id || "");
+  const m = id.match(/__(?:chunk|flow|auto)_(\d+)$/i);
+  return m ? Number(m[1]) : -1;
+}
+
+function isGeneratedFlowElement(el) {
+  return !!(
+    el?.__flowBaseId ||
+    /__flow_\d+$/i.test(String(el?.id || ""))
+  );
+}
+
+function findLastCurrentElementByOriginalId(elements, originalId) {
+  const matches = findCurrentElementsByOriginalId(elements, originalId);
+  if (!matches.length) return null;
+
+  const sorted = matches
+    .slice()
+    .sort((a, b) => {
+      const ay = Number(a?.y || 0);
+      const by = Number(b?.y || 0);
+      if (Math.abs(ay - by) > 0.001) return ay - by;
+
+      const ab = ay + Number(a?.h || 0);
+      const bb = by + Number(b?.h || 0);
+      if (Math.abs(ab - bb) > 0.001) return ab - bb;
+
+      return getGeneratedChunkIndex(a) - getGeneratedChunkIndex(b);
+    });
+
+  return sorted[sorted.length - 1] || null;
+}
+
+function readTopNeighborId(el) {
+  const n =
+    el?.neighbors || el?.neighbours || el?.neighbor || el?.neighbour || {};
+  return n.topId || n.aboveId || n.top || n.above || null;
+}
+
+function isOriginalRepeatTableElement(el) {
+  const tmeta = el?.table || el?.tbl || el?.meta || {};
+  const repeat = tmeta?.repeat || {};
+  return el?.type === "table" && !!repeat?.enabled;
+}
+
+function isBodyElement(el) {
+  const band = String(el?.attachBand || "").toLowerCase();
+  return band !== "header" && band !== "footer";
+}
+
 function isFirstRepeatChunkElement(el) {
   const id = String(el?.id || "");
   if (!el) return false;
@@ -2057,6 +2389,292 @@ function enforceRepeatTablesFollowTopNeighbor(tpl, sourceTpl, opts = {}) {
   });
 
   return { ...tpl, pages };
+}
+
+function compactElementsAfterRepeatTopNeighbor(tpl, sourceTpl, opts = {}) {
+  if (!tpl || !Array.isArray(tpl?.pages)) return tpl;
+
+  const debug = !!opts.debug;
+  const originalMap = collectOriginalElementsFromTemplate(sourceTpl || {});
+
+  const pages = tpl.pages.map((page) => {
+    const elements = (Array.isArray(page?.elements) ? page.elements : []).map(
+      (el) => ({ ...el }),
+    );
+
+    const followerInfos = [];
+    const minGapByTopId = new Map();
+
+    elements.forEach((el, index) => {
+      if (!el || el.hidden || !isBodyElement(el)) return;
+      if (isGeneratedFlowElement(el)) return;
+
+      const originalId = getOriginalIdForElement(el);
+      const originalEl = originalMap.get(originalId);
+      if (!originalEl || !isBodyElement(originalEl)) return;
+
+      const topId = readTopNeighborId(originalEl);
+      if (!topId || topId === originalId) return;
+
+      const originalTopEl = originalMap.get(topId);
+      if (!originalTopEl || !isOriginalRepeatTableElement(originalTopEl)) {
+        return;
+      }
+
+      const currentTopEl = findLastCurrentElementByOriginalId(elements, topId);
+      if (!currentTopEl) return;
+
+      const originalGap =
+        Number(originalEl.y || 0) -
+        (Number(originalTopEl.y || 0) + Number(originalTopEl.h || 0));
+      const safeGap = Number.isFinite(originalGap)
+        ? Math.max(0, originalGap)
+        : 0;
+
+      followerInfos.push({
+        index,
+        el,
+        originalId,
+        topId,
+        originalGap: safeGap,
+        currentTopEl,
+      });
+
+      const prev = minGapByTopId.get(topId);
+      minGapByTopId.set(topId, prev == null ? safeGap : Math.min(prev, safeGap));
+    });
+
+    if (!followerInfos.length) return page;
+
+    let changed = false;
+
+    followerInfos.forEach((info) => {
+      const minGap = minGapByTopId.get(info.topId) ?? 0;
+      const preservedOffset = Math.max(0, info.originalGap - minGap);
+      const nextY =
+        Number(info.currentTopEl.y || 0) +
+        Number(info.currentTopEl.h || 0) +
+        preservedOffset;
+
+      if (
+        Number.isFinite(nextY) &&
+        Math.abs(Number(info.el.y || 0) - nextY) > 0.01
+      ) {
+        if (debug) {
+          dbgLog(debug, "[ATTACHMENT/COMPACT-AFTER-REPEAT]", {
+            pageId: page?.id,
+            elementId: info.el.id,
+            originalId: info.originalId,
+            repeatTopId: info.topId,
+            oldY: info.el.y,
+            newY: nextY,
+            originalGap: info.originalGap,
+            removedGroupGap: minGap,
+            preservedOffset,
+          });
+        }
+
+        elements[info.index] = { ...info.el, y: nextY };
+        changed = true;
+      }
+    });
+
+    return changed ? { ...page, elements } : page;
+  });
+
+  return { ...tpl, pages };
+}
+
+function readBottomNeighborId(el) {
+  const n =
+    el?.neighbors || el?.neighbours || el?.neighbor || el?.neighbour || {};
+  return n.bottomId || n.belowId || n.bottom || n.below || null;
+}
+
+function isRenderedRepeatAnchor(el) {
+  if (!el || String(el?.type || "").toLowerCase() !== "table") return false;
+
+  const tmeta = el.table || el.tbl || el.meta || {};
+  const repeat = tmeta.repeat || {};
+
+  return !!(
+    el.__repeatBaseId ||
+    el.__flowBaseId ||
+    tmeta.repeatPrint ||
+    repeat.enabled
+  );
+}
+
+function isRenderedRepeatTableAnchor(el) {
+  if (!isRenderedRepeatAnchor(el)) return false;
+  if (isGeneratedFlowElement(el)) return false;
+
+  const tmeta = el.table || el.tbl || el.meta || {};
+  const repeat = tmeta.repeat || {};
+
+  return !!(
+    el.__repeatBaseId ||
+    tmeta.__repeatBaseId ||
+    tmeta.repeatPrint ||
+    repeat.enabled
+  );
+}
+
+function normalizeGeneratedFlowChunkPositions(elements) {
+  const els = (Array.isArray(elements) ? elements : []).map((el) =>
+    el ? { ...el } : el,
+  );
+  if (!els.length) return els;
+
+  const groups = new Map();
+  els.forEach((el, index) => {
+    if (!el || !isGeneratedFlowElement(el)) return;
+
+    const baseId = getOriginalIdForElement(el);
+    if (!baseId) return;
+
+    const rec = groups.get(baseId) || [];
+    rec.push({ el, index });
+    groups.set(baseId, rec);
+  });
+
+  let changed = false;
+
+  groups.forEach((records) => {
+    if (!records.length) return;
+
+    records.sort((a, b) => {
+      const ai = getGeneratedChunkIndex(a.el);
+      const bi = getGeneratedChunkIndex(b.el);
+      if (ai !== bi) return ai - bi;
+      return Number(a.el.y || 0) - Number(b.el.y || 0);
+    });
+
+    const first = records[0];
+    const topId = readTopNeighborId(first.el);
+    const topEl = topId ? findCurrentElementByOriginalId(els, topId) : null;
+
+    let nextY =
+      topEl && isBodyElement(topEl)
+        ? Number(topEl.y || 0) + Number(topEl.h || 0)
+        : Number(first.el.y || 0);
+
+    records.forEach((record) => {
+      const oldY = Number(record.el.y || 0);
+      if (Number.isFinite(nextY) && Math.abs(oldY - nextY) > 0.01) {
+        const updated = { ...record.el, y: nextY };
+        els[record.index] = updated;
+        record.el = updated;
+        changed = true;
+      }
+
+      nextY = Number(record.el.y || 0) + Number(record.el.h || 0);
+    });
+  });
+
+  return changed ? els : elements;
+}
+
+function compactRenderableRepeatFollowers(elements) {
+  const els = (Array.isArray(elements) ? elements : []).map((el) =>
+    el ? { ...el } : el,
+  );
+  if (!els.length) return els;
+
+  const byId = new Map();
+  els.forEach((el, index) => {
+    if (el?.id) byId.set(String(el.id), { el, index });
+  });
+
+  const findRecordByIdOrBase = (id) => {
+    if (!id) return null;
+
+    const direct = byId.get(String(id));
+    if (direct) return direct;
+
+    const baseId = stripGeneratedSuffix(id);
+    let best = null;
+    let bestBottom = -Infinity;
+
+    els.forEach((el, index) => {
+      if (!el) return;
+      const originalId = getOriginalIdForElement(el);
+      if (
+        String(originalId || "") !== baseId &&
+        stripGeneratedSuffix(el?.id) !== baseId
+      ) {
+        return;
+      }
+
+      const bottom = Number(el.y || 0) + Number(el.h || 0);
+      if (!best || bottom >= bestBottom) {
+        best = { el, index };
+        bestBottom = bottom;
+      }
+    });
+
+    return best;
+  };
+
+  let changed = false;
+
+  for (let iter = 0; iter < 20; iter++) {
+    let did = false;
+
+    for (let i = 0; i < els.length; i++) {
+      const anchor = els[i];
+      if (!isRenderedRepeatTableAnchor(anchor)) continue;
+      if (!isBodyElement(anchor)) continue;
+
+      const bottomId = readBottomNeighborId(anchor);
+      if (!bottomId) continue;
+
+      const rec = findRecordByIdOrBase(bottomId);
+      if (!rec?.el || !isBodyElement(rec.el)) continue;
+
+      const nextY = Number(anchor.y || 0) + Number(anchor.h || 0);
+      const oldY = Number(rec.el.y || 0);
+      if (!Number.isFinite(nextY) || Math.abs(nextY - oldY) <= 0.01) {
+        continue;
+      }
+
+      const updated = { ...rec.el, y: nextY };
+      els[rec.index] = updated;
+      byId.set(String(updated.id), { el: updated, index: rec.index });
+      did = true;
+      changed = true;
+    }
+
+    for (let i = 0; i < els.length; i++) {
+      const follower = els[i];
+      if (!follower?.id) continue;
+      if (!isBodyElement(follower)) continue;
+      if (isRenderedRepeatTableAnchor(follower)) continue;
+
+      const topId = readTopNeighborId(follower);
+      if (!topId) continue;
+
+      const rec = findRecordByIdOrBase(topId);
+      if (!rec?.el || !isBodyElement(rec.el)) continue;
+      if (!isRenderedRepeatTableAnchor(rec.el)) continue;
+
+      const nextY = Number(rec.el.y || 0) + Number(rec.el.h || 0);
+      const oldY = Number(follower.y || 0);
+      if (!Number.isFinite(nextY) || Math.abs(nextY - oldY) <= 0.01) {
+        continue;
+      }
+
+      const updated = { ...follower, y: nextY };
+      els[i] = updated;
+      byId.set(String(updated.id), { el: updated, index: i });
+      did = true;
+      changed = true;
+    }
+
+    if (!did) break;
+  }
+
+  return changed ? els : elements;
 }
 
 /* =========================================================
@@ -2695,8 +3313,9 @@ function renderElement(el, data) {
         .join("");
 
       let bodyRowsHtml = "";
-      for (let i = 0; i < takeRows; i++) {
-        const rowObj = arr[i] || {};
+      const renderRows = arr.length === 0 && maxBodyRows > 0 ? 1 : takeRows;
+      for (let i = 0; i < renderRows; i++) {
+        const rowObj = arr.length === 0 ? {} : arr[i] || {};
         const rowCells = colsDef
           .map((c) => {
             const align = normalizeTextAlign(c.align || "left");
@@ -2963,7 +3582,9 @@ function getPageRenderHeightMm(pg, paperMm) {
   const baseH = Number(paperMm?.h || A4_H_MM) || A4_H_MM;
   if (pg?.__disableAttachmentSheets) return baseH;
 
-  const els = Array.isArray(pg?.elements) ? pg.elements : [];
+  const els = compactRenderableRepeatFollowers(
+    Array.isArray(pg?.elements) ? pg.elements : [],
+  );
 
   const maxBottom = els.reduce((mx, el) => {
     if (!el || el.hidden) return mx;
@@ -2977,6 +3598,7 @@ function getPageRenderHeightMm(pg, paperMm) {
   // Chrome can treat 297.5mm as "page 1 + tiny page 2", which generates a blank
   // PDF page. Keep normal A4 pages exactly A4 unless there is real overflow.
   if (maxBottom <= baseH + PAGE_HEIGHT_EPSILON_MM) return baseH;
+  if (isTinyTrailingTableOnlyOverflow(els, baseH, maxBottom)) return baseH;
 
   // If one fixed element grows beyond A4 (for example, a long description table),
   // preview it as an extended page. Print/PDF uses physical A4 slices below.
@@ -2987,12 +3609,44 @@ function getPageRenderHeightMm(pg, paperMm) {
 }
 
 function renderPageBodyHtml(pg, data) {
-  const elements = Array.isArray(pg?.elements) ? pg.elements : [];
+  const elements = compactRenderableRepeatFollowers(
+    Array.isArray(pg?.elements) ? pg.elements : [],
+  );
   return elements
     .filter((e) => !e?.hidden)
     .sort((a, b) => (a?.z || 0) - (b?.z || 0))
     .map((el) => renderElement(el, data))
     .join("");
+}
+
+function isTinyTrailingTableOnlyOverflow(elements, baseH, maxBottom) {
+  const overflowMm = Number(maxBottom || 0) - Number(baseH || 0);
+  if (overflowMm <= PAGE_HEIGHT_EPSILON_MM) return true;
+  if (overflowMm > TRAILING_BLANK_TABLE_OVERFLOW_MM) return false;
+
+  const overflowing = (Array.isArray(elements) ? elements : []).filter((el) => {
+    if (!el || el.hidden) return false;
+    const y = Number(el?.y || 0) || 0;
+    const h = Number(el?.h || 0) || 0;
+    return y + h > baseH + PAGE_HEIGHT_EPSILON_MM;
+  });
+
+  return (
+    overflowing.length > 0 &&
+    overflowing.every((el) => {
+      const type = String(el?.type || "").toLowerCase();
+      return (
+        type === "table" ||
+        type === "box" ||
+        type === "line" ||
+        type === "lineh" ||
+        type === "linev" ||
+        type === "hline" ||
+        type === "vline" ||
+        type.includes("line_")
+      );
+    })
+  );
 }
 
 function renderPageHtml(pg, pageIndex, paperMm, data) {
@@ -3130,7 +3784,9 @@ function buildPhysicalPagePlan(tpl) {
 // show vertical borders but no closing horizontal border at the cut point.
 // Add only table cut-boundary lines (not a full A4 page border).
 function renderSplitTableBoundaryLinesHtml(pg, slice, paperMm) {
-  const elements = Array.isArray(pg?.elements) ? pg.elements : [];
+  const elements = compactRenderableRepeatFollowers(
+    Array.isArray(pg?.elements) ? pg.elements : [],
+  );
   const paperW = Number(paperMm?.w || A4_W_MM) || A4_W_MM;
   const paperH = Number(paperMm?.h || A4_H_MM) || A4_H_MM;
 
@@ -4082,7 +4738,11 @@ export default function BlReportPage() {
           ? `MainPage${pageIndex + 1}`
           : `AttachmentPage${pageIndex}`;
 
-      const elements = (Array.isArray(pg?.elements) ? pg.elements : [])
+      const renderElements = compactRenderableRepeatFollowers(
+        Array.isArray(pg?.elements) ? pg.elements : [],
+      );
+
+      const elements = renderElements
         .filter((el) => !el?.hidden)
         .slice()
         .sort(
@@ -4262,10 +4922,16 @@ export default function BlReportPage() {
       });
 
       debugDumpPages(DEBUG, flowed, "After enforceRepeatTablesFollowTopNeighbor");
-      debugNeighborGraph(DEBUG, flowed);
-      debugAnalyzeTableSnapping(DEBUG, flowed, 3);
 
-      let finalTpl = flowed;
+      const compacted = compactElementsAfterRepeatTopNeighbor(flowed, tpl, {
+        debug: DEBUG,
+      });
+
+      debugDumpPages(DEBUG, compacted, "After compactElementsAfterRepeatTopNeighbor");
+      debugNeighborGraph(DEBUG, compacted);
+      debugAnalyzeTableSnapping(DEBUG, compacted, 3);
+
+      let finalTpl = compacted;
 
       const finalPageCount = Array.isArray(finalTpl?.pages)
         ? finalTpl.pages.length
@@ -4286,6 +4952,8 @@ export default function BlReportPage() {
           "snapTouchingTables is NOT applied (only analysis logs are shown).",
         );
       }
+
+      debugPhysicalPagePlan(DEBUG, finalTpl, "Final layout physical split");
 
       dbgGroupEnd(DEBUG);
       return finalTpl;
@@ -4435,14 +5103,60 @@ export default function BlReportPage() {
     if (!laidTpl || !DEBUG) return;
 
     const blPagesDetails = buildBlPagesDetails(laidTpl);
+    const blRepeatDebugDetails = collectRepeatDebugDetails(laidTpl);
+    const { plan: physicalPlan } = buildPhysicalPagePlan(laidTpl);
+    const blPhysicalPlanDetails = physicalPlan.map((item) => ({
+      physicalPageIndex: item.physicalIndex + 1,
+      logicalPageIndex: item.pageIndex + 1,
+      logicalPageName: item.pg?.name || null,
+      sliceIndex: item.sliceIndex + 1,
+      sliceCount: item.sliceCount,
+      offsetMm: item.slice?.offsetMm,
+      topMarginMm: item.slice?.topMarginMm,
+      visibleHeightMm: item.slice?.visibleHeightMm,
+      bottomMarginMm: item.slice?.bottomMarginMm,
+      forcingElements: (Array.isArray(item.pg?.elements)
+        ? item.pg.elements
+        : []
+      )
+        .filter((el) => !el?.hidden)
+        .slice()
+        .sort((a, b) => getDebugElementBottom(b) - getDebugElementBottom(a))
+        .slice(0, 5)
+        .map(summarizeDebugElement),
+    }));
 
     if (typeof window !== "undefined") {
       window.blPagesDetails = blPagesDetails;
+      window.blRepeatDebugDetails = blRepeatDebugDetails;
+      window.blPhysicalPlanDetails = blPhysicalPlanDetails;
       window.blLayoutWarnings = layoutMessages.warnings;
       window.blLayoutErrors = layoutMessages.errors;
     }
 
     console.log("Akash blPagesDetails", blPagesDetails);
+    console.log("Akash blRepeatDebugDetails", blRepeatDebugDetails);
+    if (blRepeatDebugDetails.length) {
+      console.table(
+        blRepeatDebugDetails.map((x) => ({
+          page: x.pageIndex,
+          id: x.id,
+          arrayPath: x.arrayPath,
+          sourceRows: x.sourceRowCount,
+          chunkRows: x.chunkRowCount,
+          bodyRows: x.bodyRows,
+          emptyRow: x.renderEmptyRow,
+          blankRows: x.blankBodyRows,
+          y: Number(x.yMm || 0).toFixed(2),
+          h: Number(x.hMm || 0).toFixed(2),
+          bottom: Number(x.bottomMm || 0).toFixed(2),
+          nextId: x.nextId,
+          gapToNext: x.gapToNextMm == null ? "" : x.gapToNextMm.toFixed(2),
+          overlapsNext: x.overlapsNext,
+        })),
+      );
+    }
+    console.log("Akash blPhysicalPlanDetails", blPhysicalPlanDetails);
   }, [laidTpl, layoutMessages, DEBUG]);
 
   const onDownloadPdf = async () => {

@@ -7,6 +7,7 @@ import {
   masterTableInfo,
   disableEdit,
   disableAdd,
+  disableDelete,
 } from "@/services/auth/FormControl.services.js";
 import Image from "next/image";
 import Stack from "@mui/material/Stack";
@@ -274,12 +275,12 @@ export default function StickyHeadTable() {
   const [isAdvanceSearchOpen, setIsAdvanceSearchOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [advanceSearch, setadvanceSearch] = useState({});
-  const [prevSearchInput, setPrevSearchInput] = useState("");
+  const [prevSearchInput, setPrevSearchInput] = useState(currentMenu?.keyValue);
   const [dropHeaderFields, setDropHeaderFields] = useState([]);
   const [dropPageNo, setDropPageNo] = useState(1);
   const [isNewSearch, setIsNewSearch] = useState(false);
-  const [columnSearchKeyName, setColumnSearchKeyName] = useState("");
-  const [columnSearchKeyValue, setColumnSearchKeyValue] = useState("");
+  const [columnSearchKeyName, setColumnSearchKeyName] = useState(null);
+  const [columnSearchKeyValue, setColumnSearchKeyValue] = useState(null);
   const [selectedPageNumber, setSelectedPageNumber] = useState(1); // setSelectedPageNumber
   const [isRequiredAttachment, setIsRequiredAttachment] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -315,10 +316,6 @@ export default function StickyHeadTable() {
   }, [selectedMenuId]);
 
   const isLgUp = useMediaQuery("(min-width:1024px)");
-
-  console.log("Previous Menu ID:", previousMenuId);
-  console.log("Current Menu ID:", search);
-
   // ✅ small screen height = full viewport height (dynamic, correct on mobile address bar too)
   const [mobileViewportH, setMobileViewportH] = React.useState(0);
 
@@ -450,8 +447,6 @@ export default function StickyHeadTable() {
       window.visualViewport?.removeEventListener("resize", setH);
     };
   }, []);
-
-  console.log("isLgUp=>", isLgUp);
 
   // const validateEdit = async (tableName, recordId) => {
   //   const requestBody = {
@@ -758,6 +753,8 @@ export default function StickyHeadTable() {
           order: sortData.order,
           search: advanceSearch,
           searchQuery: searchInput,
+          keyName: columnSearchKeyName || currentMenu?.keyName,
+          keyValue: columnSearchKeyValue || currentMenu?.keyValue,
           sortingCondition: tableHeadingsData?.data[0]?.sortingCondition,
         };
         const apiResponse = await masterTableList(requestData);
@@ -958,7 +955,6 @@ export default function StickyHeadTable() {
     }
   };
 
-
   async function fetchDropDownData(field, inputValueForDataFetch) {
     const requestData = {
       onfilterkey: "status",
@@ -1008,6 +1004,8 @@ export default function StickyHeadTable() {
       menuName: search,
       isCopy: isCopy || false,
       isView: isView || false,
+      keyName: columnSearchKeyName || currentMenu?.keyName,
+      keyValue: columnSearchKeyValue || currentMenu?.keyValue,
     });
 
     const addPageQueryString = encryptUrlFun({
@@ -1057,7 +1055,7 @@ export default function StickyHeadTable() {
           autoClose: 1000,
         });
       }
-      router.push(`/formControl/addEdit//${queryString}`);
+      router.push(`/formControl/addEdit/${queryString}`);
     } else if (data === "add") {
       router.push(`/formControl/search/${addPageQueryString}`);
     } else {
@@ -1067,7 +1065,21 @@ export default function StickyHeadTable() {
   };
 
   const deleteController = async (data) => {
+    let recordId = data?.id;
+    const { clientId, userId } = getUserDetails();
     try {
+      const requestBody = {
+        tableName: tableName,
+        recordId: recordId,
+        clientId: clientId,
+        menuId: search,
+      };
+      const data = await disableDelete(requestBody);
+      if (data.success === false) {
+        setParaText(data.message);
+        setOpenModal((prev) => !prev);
+        return;
+      }
       if (
         formControlData.functionOnDelete &&
         formControlData.functionOnDelete !== null
@@ -1080,7 +1092,6 @@ export default function StickyHeadTable() {
       return toast.error(error.message);
     }
     console.log("deleteController", data);
-    const { clientId, userId } = getUserDetails();
     setDeleteData({
       id: data.id,
       tableName,
@@ -3363,6 +3374,9 @@ export default function StickyHeadTable() {
                                     setIsNewSearch={setIsNewSearch}
                                     setRowsPerPage={setRowsPerPage}
                                     setPage={setPage}
+                                    router={router}
+                                    currentMenu={currentMenu}
+                                    encryptUrlFun={encryptUrlFun}
                                   />
                                 )}
                             </span>
@@ -3739,6 +3753,9 @@ CustomizedInputBase.propTypes = {
   setIsNewSearch: PropTypes.func,
   setRowsPerPage: PropTypes.func,
   setPage: PropTypes.number,
+  router: PropTypes.func,
+  currentMenu: PropTypes.object,
+  encryptUrlFun: PropTypes.func,
 };
 
 function CustomizedInputBase({
@@ -3753,6 +3770,9 @@ function CustomizedInputBase({
   setIsNewSearch,
   setRowsPerPage,
   setPage,
+  router,
+  currentMenu,
+  encryptUrlFun,
 }) {
   const inputRef = useRef(null); // Ref to the Paper component
   const [searchInputGridData, setSearchInputGridData] = useState(
@@ -3769,6 +3789,15 @@ function CustomizedInputBase({
     if (searchValue === "") {
       setRowsPerPage(17);
       setPage(1);
+    }
+    if (currentMenu?.keyName) {
+      router.push(
+        `/formControl?menuName=${encryptUrlFun({
+          id: currentMenu.id,
+          menuName: currentMenu.menuName,
+          parentMenuId: currentMenu.parentMenuId,
+        })}`,
+      );
     }
   };
 

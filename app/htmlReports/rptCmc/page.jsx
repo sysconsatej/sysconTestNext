@@ -574,10 +574,10 @@ export default function RptIGM() {
           }}
         >
           We would kindly request you to grant us permission to move the
-          Loaded/ICD/Empty {totalContainers} Cntr i.e. from CITPL port to
+          Loaded/ICD/Empty {totalContainers} Cntr i.e. {data?.[0]?.berth || ""} from  port to
           CFS/CWC/ICD(ANY) & Import CFS for Movement of loaded Cntrs to our
-          storage yard after Destuffing/Export Stuffing Cargo from any CFS
-          CITPL.
+          storage yard after Destuffing/Export Stuffing Cargo from any CFS {" "}
+          {data?.[0]?.berth || ""}.
         </p>
       </>
     );

@@ -229,6 +229,7 @@ export default function AddEditFormControll({ reportData }) {
   const [ledgerReportTypeRadio, setReportTypeRadio] = useState(null);
   const [fileNameUploaded, setFileNameUploaded] = useState(null);
   const [uploadedFileData, setUploadedFileData] = useState(null);
+  const uploadedFileDataRef = useRef(null);
   const [uploadedWarnings, setUploadedWarnings] = useState(null);
   const [uploadedMessages, setUploadedMessages] = useState(null);
   const [uploadedTitle, setUploadedTitle] = useState(null);
@@ -566,14 +567,22 @@ export default function AddEditFormControll({ reportData }) {
   const handleFieldValuesChange = (updatedValues) => {
     const entries = Object.entries(updatedValues);
     console.log("updatedValues", updatedValues);
-    if (updatedValues) {
-      setUploadedFileData(updatedValues);
-    }
     const hasFile = entries.some(([, value]) => {
       if (value instanceof File) return true;
       if (Array.isArray(value)) return value.some((v) => v instanceof File);
       return false;
     });
+
+    if (hasFile) {
+      uploadedFileDataRef.current = {
+        ...(uploadedFileDataRef.current || {}),
+        ...updatedValues,
+      };
+      setUploadedFileData((prev) => ({
+        ...prev,
+        ...updatedValues,
+      }));
+    }
 
     if (hasFile) {
       entries.forEach(([key, value]) => {
@@ -6399,6 +6408,9 @@ export default function AddEditFormControll({ reportData }) {
         setFileUploadStage("starting");
         setFileUploadMessage("Starting PDF extraction");
         setUploadedMessages([]);
+        setAllErrors([]);
+        setEditableErrors(false);
+        setEditableErrorsData([]);
         setUploadedTitle("Processing Purchase Invoice");
         await showFileUploadStatus(5, "starting", "Starting PDF extraction");
 
@@ -6421,8 +6433,10 @@ export default function AddEditFormControll({ reportData }) {
         const spName = reportData?.data?.[0]?.spName;
 
         await showFileUploadStatus(18, "validating", "Validating selected PDF");
-        const files = uploadedFileData?.invoiceUploads || [];
-
+        const latestUploadedFileData =
+          uploadedFileDataRef.current || uploadedFileData || {};
+        const files = latestUploadedFileData?.invoiceUploads || [];
+        console.log("filesName=>>", files);
         if (!Array.isArray(files) || files.length === 0) {
           toast.error("Please select a PDF file");
           setFileUploadingLoader(false);
@@ -6438,21 +6452,13 @@ export default function AddEditFormControll({ reportData }) {
         }
 
         await showFileUploadStatus(25, "uploading", "Uploading PDF file");
-        const startResponse = await UploadPurchaseInvoice(uploadedFileData);
+        const formData = new FormData();
+        formData.append("file", file);
+        const startResponse = await UploadPurchaseInvoice(file);
 
-        if (
-          startResponse?.statusCode === 409 &&
-          startResponse?.readingStatus?.status === "running"
-        ) {
-          setFileUploadProgress(
-            Number(startResponse?.readingStatus?.progress || 0),
-          );
-          setFileUploadStage(startResponse?.readingStatus?.stage || "running");
-          setFileUploadMessage(
-            startResponse?.readingStatus?.message ||
-              "Another extraction is already running",
-          );
-        } else if (!startResponse?.success) {
+        const extractionId = startResponse?.extractionId;
+
+        if (!startResponse?.success || !extractionId) {
           toast.error(
             startResponse?.error ||
               startResponse?.message ||
@@ -6462,12 +6468,23 @@ export default function AddEditFormControll({ reportData }) {
           return null;
         }
 
+        if (startResponse?.readingStatus) {
+          setFileUploadProgress(
+            Number(startResponse.readingStatus.progress || 0),
+          );
+          setFileUploadStage(startResponse.readingStatus.stage || "queued");
+          setFileUploadMessage(
+            startResponse.readingStatus.message || "PDF extraction started",
+          );
+        }
+
         await showFileUploadStatus(
           35,
           "extracting",
           "PDF uploaded, extracting data",
         );
         const finalStatus = await pollPdfReadingStatus({
+          extractionId,
           setFileUploadingLoader,
           setFileUploadProgress,
           setFileUploadStage,
@@ -6491,7 +6508,7 @@ export default function AddEditFormControll({ reportData }) {
           userId,
           clientId,
         };
-
+        console.log("json Of Invoice", json);
         await showFileUploadStatus(92, "formatting", "Formatting data");
         const formatJson = removeSingleQuotes(json);
         await showFileUploadStatus(96, "saving", "Saving extracted PDF data");
@@ -6499,6 +6516,8 @@ export default function AddEditFormControll({ reportData }) {
         const spResponse = await fetchExcelDataInsert(spName, formatJson);
 
         if (spResponse.rowsAffected[0].success == true) {
+          uploadedFileDataRef.current = null;
+          setUploadedFileData(null);
           setFileUploadProgress(100);
           setFileUploadStage("completed");
           setFileUploadMessage("PDF data extracted successfully");
@@ -6508,6 +6527,8 @@ export default function AddEditFormControll({ reportData }) {
             `${spResponse?.rowsAffected[0]?.message || "PDF Uploaded successfully"}`,
           );
         } else {
+          uploadedFileDataRef.current = null;
+          setUploadedFileData(null);
           setAllErrors(spResponse.rowsAffected[0].errors);
           setEditableErrors(true);
           setEditableErrorsData(spResponse.rowsAffected[0].errors);
@@ -6522,7 +6543,6 @@ export default function AddEditFormControll({ reportData }) {
           );
           return extractedData;
         }
-
         // toast.success("PDF data extracted successfully");
       } catch (error) {
         console.error("handleUploadPurchaseInvoice error =>", error);
@@ -7000,6 +7020,7 @@ export default function AddEditFormControll({ reportData }) {
   };
 
   async function pollPdfReadingStatus({
+    extractionId,
     setFileUploadingLoader,
     setFileUploadProgress,
     setFileUploadStage,
@@ -7009,8 +7030,13 @@ export default function AddEditFormControll({ reportData }) {
   }) {
     const startTime = Date.now();
 
+    if (!extractionId) {
+      throw new Error("extractionId is required for PDF extraction status");
+    }
+
     while (true) {
-      const statusResponse = await GetPurchaseInvoiceReadingStatus();
+      const statusResponse =
+        await GetPurchaseInvoiceReadingStatus(extractionId);
 
       if (!statusResponse?.success) {
         throw new Error(
@@ -7033,7 +7059,7 @@ export default function AddEditFormControll({ reportData }) {
       setFileUploadMessage?.(currentStatus?.message || "");
 
       if (currentStatus?.status === "completed") {
-        return currentStatus; // important: return readingStatus directly
+        return currentStatus;
       }
 
       if (currentStatus?.status === "failed") {

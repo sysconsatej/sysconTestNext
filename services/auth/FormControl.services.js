@@ -2,6 +2,7 @@
 /* eslint-disable */
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 const baseUrlSQl = process.env.NEXT_PUBLIC_BASE_URL_SQL;
+const aiReadingbaseUrlSQl = process.env.NEXT_PUBLIC_AI_READING_BASE_URL;
 import { decrypt, encrypt } from "@/helper/security";
 import { getUserDetails } from "@/helper/userDetails";
 import { menu } from "@material-tailwind/react";
@@ -1831,6 +1832,28 @@ export async function disableEdit(data) {
     return false;
   }
 }
+export async function disableDelete(data) {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${baseUrlSQl}/api/FormControl/disableDelete`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(data),
+      },
+    ).then((response) => response.json());
+
+    return response;
+  } catch (error) {
+    console.log(error);
+    console.error(error);
+    return false;
+  }
+}
 export async function disableAdd(data) {
   try {
     const token = localStorage.getItem("token");
@@ -2587,43 +2610,78 @@ export async function getBillingPartyOnBlData(data) {
 export async function UploadPurchaseInvoice(data) {
   try {
     const token = localStorage.getItem("token");
-    const files = data?.invoiceUploads || [];
 
-    if (!Array.isArray(files) || files.length === 0) {
+    let file = null;
+
+    // Case 1: data is direct File
+    if (data instanceof File) {
+      file = data;
+    }
+
+    // Case 2: data has invoiceUploads array
+    else if (Array.isArray(data?.invoiceUploads)) {
+      file = data.invoiceUploads[0];
+    }
+
+    // Case 3: data has filesName array
+    else if (Array.isArray(data?.filesName)) {
+      file = data.filesName[0];
+    }
+
+    // Case 4: data is event
+    else if (data?.target?.files?.[0]) {
+      file = data.target.files[0];
+    }
+
+    if (!file) {
       return {
         success: false,
         statusCode: 400,
-        message: "No file found to upload",
-        data: null,
+        error: "PDF file not found",
       };
     }
 
-    const file = files[0];
     const formData = new FormData();
+
+    // IMPORTANT: append actual File, not FormData
     formData.append("file", file);
 
-    const res = await fetch(`${baseUrlSQl}/api/extract/pdfData`, {
+    for (const [key, value] of formData.entries()) {
+      console.log("FORM DATA:", key, value);
+      console.log("FILE NAME:", value?.name);
+      console.log("FILE SIZE:", value?.size);
+      console.log("FILE TYPE:", value?.type);
+    }
+
+    const headers = {};
+
+    if (token) {
+      try {
+        headers["x-access-token"] = JSON.parse(token);
+      } catch {
+        headers["x-access-token"] = token;
+      }
+    }
+
+    const res = await fetch(`${aiReadingbaseUrlSQl}/api/extract/pdfData`, {
       method: "POST",
-      headers: {
-        "x-access-token": JSON.parse(token),
-      },
+      headers,
       body: formData,
     });
 
     const response = await res.json();
-    console.log("response Ak", response);
+
     return {
       ...response,
       statusCode: res.status,
     };
   } catch (error) {
-    console.log(error);
     console.error(error);
+
     return {
       success: false,
       statusCode: 500,
-      message: "File upload failed",
-      data: null,
+      error: "Failed to upload purchase invoice PDF",
     };
   }
 }
@@ -2672,16 +2730,42 @@ export async function UploadBl(data) {
   }
 }
 
-export async function GetPurchaseInvoiceReadingStatus() {
+export async function GetPurchaseInvoiceReadingStatus(extractionId) {
   try {
     const token = localStorage.getItem("token");
 
-    const res = await fetch(`${baseUrlSQl}/api/extract/pdfData/readingStatus`, {
-      method: "GET",
-      headers: {
-        "x-access-token": JSON.parse(token),
+    if (!extractionId) {
+      return {
+        success: false,
+        statusCode: 400,
+        message: "extractionId is required",
+        readingStatus: null,
+      };
+    }
+
+    const headers = {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    };
+
+    if (token) {
+      try {
+        headers["x-access-token"] = JSON.parse(token);
+      } catch {
+        headers["x-access-token"] = token;
+      }
+    }
+
+    const res = await fetch(
+      `${aiReadingbaseUrlSQl}/api/extract/pdfData/readingStatus?extractionId=${encodeURIComponent(
+        extractionId,
+      )}&t=${Date.now()}`,
+      {
+        method: "GET",
+        cache: "no-store",
+        headers,
       },
-    });
+    );
 
     const response = await res.json();
 
@@ -2692,11 +2776,13 @@ export async function GetPurchaseInvoiceReadingStatus() {
   } catch (error) {
     console.log(error);
     console.error(error);
+
     return {
       success: false,
       statusCode: 500,
       message: "Failed to fetch reading status",
       readingStatus: null,
+      //fixed
     };
   }
 }

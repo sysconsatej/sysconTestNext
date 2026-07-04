@@ -190,10 +190,10 @@ export default function LedgerDetailedReport({
     window.open(url, "_blank");
   };
 
-        // const appBaseUrl =
-        // typeof window !== "undefined"
-        //   ? window.location.origin.replace(/\/$/, "")
-        //   : "";
+  // const appBaseUrl =
+  // typeof window !== "undefined"
+  //   ? window.location.origin.replace(/\/$/, "")
+  //   : "";
 
   if (!blocks.length) {
     return (
@@ -221,6 +221,7 @@ export default function LedgerDetailedReport({
         { key: "voucherType", label: "Voucher Type", minWidth: 130 },
         { key: "referenceNo", label: "Reference No", minWidth: 110 },
         { key: "referenceDate", label: "Reference Date", minWidth: 105 },
+        { key: "partyName", label: "Party Name", minWidth: 130 },
         { key: "narration", label: "Narration", minWidth: 260 },
 
         // ✅ numeric cols
@@ -236,6 +237,7 @@ export default function LedgerDetailedReport({
         { key: "voucherType", label: "Voucher Type", minWidth: 130 },
         { key: "referenceNo", label: "Reference No", minWidth: 110 },
         { key: "referenceDate", label: "Reference Date", minWidth: 105 },
+        { key: "partyName", label: "Party Name", minWidth: 130 },
         { key: "narration", label: "Narration", minWidth: 260 },
 
         // ✅ numeric cols
@@ -246,9 +248,9 @@ export default function LedgerDetailedReport({
         { key: "currencyCode", label: "Currency", minWidth: 80 },
       ];
 
-  // columns: ... Narration (index 5), Dr (index 6), Cr (index 7), Balance (index 8), Currency (index 9)
-  const DR_INDEX = 6;
-  const CR_INDEX = 7;
+  // columns: ... Narration (index 6), Dr (index 7), Cr (index 8), Balance (index 9), Currency (index 10)
+  const DR_INDEX = 7;
+  const CR_INDEX = 8;
 
   // ✅ helper to render Opening/Closing row aligned under Dr/Cr
   const renderOCRow = (label, amount, bg) => {
@@ -474,6 +476,18 @@ export default function LedgerDetailedReport({
                           </TableCell>
                           <TableCell align="left">
                             {fmtDate(r?.referenceDate)}
+                          </TableCell>
+                          <TableCell
+                            align="left"
+                            sx={{
+                              maxWidth: 180,
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                            title={r?.partyName || ""}
+                          >
+                            {r?.partyName || ""}
                           </TableCell>
 
                           <TableCell

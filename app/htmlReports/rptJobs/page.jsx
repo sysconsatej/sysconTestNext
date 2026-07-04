@@ -4108,7 +4108,25 @@ const rptJobs = () => {
   };
 
   // Job Sheet
-  const JobContainerModule = ({ jobData }) => {
+  const getJobContainerRows = (sourceJobData = jobData) =>
+    (Array.isArray(sourceJobData) ? sourceJobData : []).flatMap((job) =>
+      Array.isArray(job?.tblJobContainer) ? job.tblJobContainer : [],
+    );
+
+  const getJobChargeRows = (sourceJobData = jobData) =>
+    (Array.isArray(sourceJobData) ? sourceJobData : []).flatMap((job) =>
+      Array.isArray(job?.tblJobCharge) ? job.tblJobCharge : [],
+    );
+
+  const chunkRows = (rows = [], size = 1) => {
+    const chunks = [];
+    for (let i = 0; i < rows.length; i += size) {
+      chunks.push(rows.slice(i, i + size));
+    }
+    return chunks;
+  };
+
+  const JobContainerModule = ({ jobData, containerRows }) => {
     const thStyle = {
       width: "15%",
       padding: "2px",
@@ -4153,12 +4171,10 @@ const rptJobs = () => {
               </tr>
             </thead>
             <tbody>
-              {Array.isArray(jobData)
-                ? jobData.map((job, jobIndex) =>
-                  Array.isArray(job.tblJobContainer)
-                    ? job.tblJobContainer.map((container, containerIndex) => (
+              {(Array.isArray(containerRows) ? containerRows : getJobContainerRows(jobData))
+                .map((container, containerIndex) => (
                       <tr
-                        key={`${jobIndex}-${containerIndex}`}
+                        key={`container-${containerIndex}`}
                         style={hoverHighlightStyle}
                       >
                         <td style={tdStyle}>
@@ -4176,10 +4192,7 @@ const rptJobs = () => {
                           {container.noOfPackages || ""}
                         </td>
                       </tr>
-                    ))
-                    : null,
-                )
-                : null}
+                    ))}
             </tbody>
           </table>
         </div>
@@ -5238,7 +5251,12 @@ const rptJobs = () => {
     </div>
   );
 
-  const JobChargeModule = ({ jobData = [] }) => {
+  const JobChargeModule = ({
+    jobData = [],
+    chargeRows,
+    totalChargeRows,
+    showGrandTotal = true,
+  }) => {
     const tableStyle = {
       width: "100%",
       borderCollapse: "collapse",
@@ -5268,10 +5286,32 @@ const rptJobs = () => {
       return Number.isFinite(num) ? num : 0;
     };
 
-    let totalRevenueProvisional = 0;
-    let totalCostProvisional = 0;
-    let totalRevenueActual = 0;
-    let totalCostActual = 0;
+    const rowsToRender = Array.isArray(chargeRows)
+      ? chargeRows
+      : getJobChargeRows(jobData);
+    const rowsForTotals = Array.isArray(totalChargeRows)
+      ? totalChargeRows
+      : rowsToRender;
+    const totals = rowsForTotals.reduce(
+      (acc, charge) => {
+        const provisionalRevenue = toNumber(charge?.sellNetAmount);
+        const provisionalCost = toNumber(charge?.buyNetAmount);
+        const actualRevenue = toNumber(charge?.sellTotalAmountHc);
+        const actualCost = toNumber(charge?.buyTotalAmountHc);
+
+        acc.totalRevenueProvisional += provisionalRevenue;
+        acc.totalCostProvisional += provisionalCost;
+        acc.totalRevenueActual += actualRevenue;
+        acc.totalCostActual += actualCost;
+        return acc;
+      },
+      {
+        totalRevenueProvisional: 0,
+        totalCostProvisional: 0,
+        totalRevenueActual: 0,
+        totalCostActual: 0,
+      },
+    );
 
     return (
       <>
@@ -5308,8 +5348,7 @@ const rptJobs = () => {
             </thead>
 
             <tbody>
-              {jobData?.map((job, jobIndex) =>
-                job?.tblJobCharge?.map((charge, chargeIndex) => {
+              {rowsToRender.map((charge, chargeIndex) => {
                   // Provisional
                   const provisionalRevenue = toNumber(charge?.sellNetAmount);
                   const provisionalCost = toNumber(charge?.buyNetAmount);
@@ -5321,13 +5360,8 @@ const rptJobs = () => {
                   const actualCost = toNumber(charge?.buyTotalAmountHc);
                   const actualProfit = actualRevenue - actualCost;
 
-                  totalRevenueProvisional += provisionalRevenue;
-                  totalCostProvisional += provisionalCost;
-                  totalRevenueActual += actualRevenue;
-                  totalCostActual += actualCost;
-
                   return (
-                    <tr key={`job-${jobIndex}-charge-${chargeIndex}`}>
+                    <tr key={`job-charge-${chargeIndex}`}>
                       <td style={cellStyle}>{charge?.charge || "/"}</td>
 
                       <td style={cellStyle}>{provisionalRevenue.toFixed(2)}</td>
@@ -5341,42 +5375,86 @@ const rptJobs = () => {
                       <td style={cellStyle}></td>
                     </tr>
                   );
-                }),
-              )}
+                })}
             </tbody>
 
-            <tfoot>
-              <tr>
-                <th style={cellStyle}>Grand Total:</th>
+            {showGrandTotal && (
+              <tfoot>
+                <tr>
+                  <th style={cellStyle}>Grand Total:</th>
 
-                <td style={cellStyle}>{totalRevenueProvisional.toFixed(2)}</td>
-                <td style={cellStyle}>{totalCostProvisional.toFixed(2)}</td>
-                <td style={cellStyle}>
-                  {(totalRevenueProvisional - totalCostProvisional).toFixed(2)}
-                </td>
-                <td style={cellStyle}>/</td>
+                  <td style={cellStyle}>
+                    {totals.totalRevenueProvisional.toFixed(2)}
+                  </td>
+                  <td style={cellStyle}>
+                    {totals.totalCostProvisional.toFixed(2)}
+                  </td>
+                  <td style={cellStyle}>
+                    {(
+                      totals.totalRevenueProvisional -
+                      totals.totalCostProvisional
+                    ).toFixed(2)}
+                  </td>
+                  <td style={cellStyle}>/</td>
 
-                <td style={cellStyle}>{totalRevenueActual.toFixed(2)}</td>
-                <td style={cellStyle}>{totalCostActual.toFixed(2)}</td>
-                <td style={cellStyle}>
-                  {(totalRevenueActual - totalCostActual).toFixed(2)}
-                </td>
-                <td style={cellStyle}>/</td>
-              </tr>
-            </tfoot>
+                  <td style={cellStyle}>
+                    {totals.totalRevenueActual.toFixed(2)}
+                  </td>
+                  <td style={cellStyle}>{totals.totalCostActual.toFixed(2)}</td>
+                  <td style={cellStyle}>
+                    {(
+                      totals.totalRevenueActual - totals.totalCostActual
+                    ).toFixed(2)}
+                  </td>
+                  <td style={cellStyle}>/</td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </>
     );
   };
   JobChargeModule.propTypes = {
-    jobData: PropTypes.object.isRequired,
-    voucherData: PropTypes.object.isRequired,
+    jobData: PropTypes.arrayOf(PropTypes.object),
+    chargeRows: PropTypes.arrayOf(PropTypes.object),
+    totalChargeRows: PropTypes.arrayOf(PropTypes.object),
+    showGrandTotal: PropTypes.bool,
   };
 
-  const JobSheetSeaReport = () => (
-    <div className="!text-black">
-      <div id="129" className="mx-auto p-8" style={{ height: "297mm" }}>
+  const JobSheetSeaSectionHeading = ({ children, className = "mt-3 mb-3" }) => (
+    <div
+      className={`${className} text-xs`}
+      style={{ width: "30%", backgroundColor: "#e0e0e0" }}
+    >
+      <h2 className="font-semibold px-3 py-1">{children}</h2>
+    </div>
+  );
+
+  const JobSheetSeaPage = ({
+    page,
+    pageIndex,
+    totalPages,
+    containerRows,
+    chargeRows,
+    allChargeRows,
+  }) => {
+    const showDetails = pageIndex === 0;
+    const showChargeTotal = page.showChargeTotal === true;
+
+    return (
+      <div
+        id={pageIndex === 0 ? "129" : `129-${pageIndex + 1}`}
+        className="job-sheet-sea-page mx-auto bg-white"
+        style={{
+          width: "210mm",
+          height: "297mm",
+          boxSizing: "border-box",
+          pageBreakAfter: pageIndex < totalPages - 1 ? "always" : "auto",
+          overflow: "hidden",
+          padding: "8mm",
+        }}
+      >
         <CompanyImgModule />
         <div className="flex justify-center">
           <div
@@ -5391,30 +5469,123 @@ const rptJobs = () => {
             </h1>
           </div>
         </div>
-        <div
-          className="mt-5 mb-3 text-xs"
-          style={{ width: "30%", backgroundColor: "#e0e0e0" }}
-        >
-          <h2 className="font-semibold px-3 py-1 ">Job Details: </h2>
-        </div>
-        <JobDetailsModule jobData={jobData} />
-        <div
-          className="mt-5 mb-3 text-xs "
-          style={{ width: "30%", backgroundColor: "#e0e0e0" }}
-        >
-          <h2 className=" font-semibold px-3 py-1 ">Container Details :</h2>
-        </div>
-        <JobContainerModule jobData={jobData} />
-        <div
-          className="mt-3 text-xs "
-          style={{ width: "30%", backgroundColor: "#e0e0e0" }}
-        >
-          <h2 className="font-semibold px-3 py-1">Charge Details :</h2>
-        </div>
-        <JobChargeModule jobData={jobData} />
+
+        {showDetails && (
+          <>
+            <JobSheetSeaSectionHeading className="mt-5 mb-3">
+              Job Details:
+            </JobSheetSeaSectionHeading>
+            <JobDetailsModule jobData={jobData} />
+          </>
+        )}
+
+        {containerRows.length > 0 && (
+          <>
+            <JobSheetSeaSectionHeading className="mt-5 mb-3">
+              Container Details :
+            </JobSheetSeaSectionHeading>
+            <JobContainerModule
+              jobData={jobData}
+              containerRows={containerRows}
+            />
+          </>
+        )}
+
+        {chargeRows.length > 0 && (
+          <>
+            <JobSheetSeaSectionHeading>Charge Details :</JobSheetSeaSectionHeading>
+            <JobChargeModule
+              jobData={jobData}
+              chargeRows={chargeRows}
+              totalChargeRows={allChargeRows}
+              showGrandTotal={showChargeTotal}
+            />
+          </>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
+
+  const JobSheetSeaReport = () => {
+    const containerRows = getJobContainerRows(jobData);
+    const chargeRows = getJobChargeRows(jobData);
+    const firstContainerLimit = 8;
+    const continuationContainerLimit = 24;
+    const firstChargeLimit = containerRows.length > firstContainerLimit ? 0 : 9;
+    const continuationChargeLimit = 24;
+
+    const pages = [
+      {
+        type: "first",
+        containerRows: containerRows.slice(0, firstContainerLimit),
+        chargeRows: chargeRows.slice(0, firstChargeLimit),
+      },
+    ];
+
+    chunkRows(
+      containerRows.slice(firstContainerLimit),
+      continuationContainerLimit,
+    ).forEach((rows) => {
+      pages.push({ type: "container", containerRows: rows, chargeRows: [] });
+    });
+
+    chunkRows(
+      chargeRows.slice(firstChargeLimit),
+      continuationChargeLimit,
+    ).forEach((rows) => {
+      pages.push({ type: "charge", containerRows: [], chargeRows: rows });
+    });
+
+    const lastChargePageIndex = pages.reduce(
+      (lastIndex, page, pageIndex) =>
+        page.chargeRows.length > 0 ? pageIndex : lastIndex,
+      -1,
+    );
+    if (lastChargePageIndex >= 0) {
+      pages[lastChargePageIndex].showChargeTotal = true;
+    }
+
+    return (
+      <div className="!text-black">
+        <style jsx global>{`
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 0;
+            }
+            .job-sheet-sea-page {
+              width: 210mm !important;
+              height: 297mm !important;
+              break-after: page;
+              page-break-after: always;
+              overflow: hidden !important;
+              box-shadow: none !important;
+              margin: 0 auto !important;
+            }
+            .job-sheet-sea-page:last-child {
+              break-after: auto;
+              page-break-after: auto;
+            }
+          }
+        `}</style>
+        {pages.map((page, pageIndex) => (
+          <React.Fragment key={`job-sheet-sea-page-${pageIndex}`}>
+            <JobSheetSeaPage
+              page={page}
+              pageIndex={pageIndex}
+              totalPages={pages.length}
+              containerRows={page.containerRows}
+              chargeRows={page.chargeRows}
+              allChargeRows={chargeRows}
+            />
+            {pageIndex < pages.length - 1 && (
+              <div className="bg-gray-300 h-2 no-print" />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
 
   const BlPrint = ({ jobData }) => {
     console.log("=>>", jobData);
@@ -9658,7 +9829,7 @@ const rptJobs = () => {
                       flexDirection: "column",
                     }}
                   >
-                    <div className="p-4 bgTheme">{JobSheetSeaReport()}</div>
+                    <div className="bgTheme">{JobSheetSeaReport()}</div>
                     <style jsx>{`
                       .black-text {
                         color: black !important;

@@ -23,7 +23,7 @@ const FONT_L1 = "11px";
 const FONT_L2 = "10px";
 const FONT_L3 = "9px";
 
-const LEVEL1_ORDER = ["Liability", "Assets", "Income", "Expense"];
+const LEVEL1_ORDER = ["Assets", "Liability", "Income", "Expense"];
 const INCOME_L2_ORDER = ["Direct Incomes", "Indirect Incomes"];
 const EXPENSE_L2_ORDER = ["Direct Expenses", "Indirect Expenses"];
 
@@ -663,11 +663,10 @@ const TrialBalanceGrid = forwardRef(
                 };
 
                 const topKeys = Object.keys(tree);
-                const fixedKeys = ["Liability", "Assets", "Income", "Expense"];
 
                 const orderedKeys = [
-                  ...fixedKeys.filter((k) => tree[k]),
-                  ...topKeys.filter((k) => !fixedKeys.includes(k)),
+                  ...LEVEL1_ORDER.filter((k) => tree[k]),
+                  ...topKeys.filter((k) => !LEVEL1_ORDER.includes(k)),
                 ];
 
                 return orderedKeys.map((k) => renderTree({ [k]: tree[k] }, 0));
