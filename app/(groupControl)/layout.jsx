@@ -4,7 +4,6 @@ import React from "react";
 import NavbarPage from "@/components/Navbar/navbar";
 import SideBarMenu from "@/components/Sidebar/sidebarTree";
 import styles from "@/app/app.module.css";
-import FloatingActionButtons from "@/components/FloatButtons/FloatButtons";
 import PropTypes from "prop-types";
 
 RootLayout.propTypes = {
@@ -32,7 +31,6 @@ export default function RootLayout({ children }) {
         >
           <div className="pr-[10px]">{children}</div>
         </div>
-        <FloatingActionButtons />
       </div>
     </div>
   );
