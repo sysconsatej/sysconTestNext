@@ -52,7 +52,7 @@ export const config = {
     {
       // negative lookahead: do NOT match these public paths
       source:
-        "/((?!api|_next/static|_next/image|favicon.ico|LoginHelp|LoginReset|ForgotPassword|CreateDashboard|htmlReports|redashChart|active).*)",
+"/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|workbox-|icons|apple-touch-icon.png|LoginHelp|LoginReset|ForgotPassword|CreateDashboard|htmlReports|redashChart|active).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },
