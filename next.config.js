@@ -1,6 +1,15 @@
 /** @type {import('next').NextConfig} */
 require("dotenv").config();
 
+
+const withPWA = require("next-pwa")({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === "development",
+});
+
+
 const nextConfig = {
   images: {
     domains: ["source.unsplash.com"],
@@ -26,4 +35,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withPWA(nextConfig);
