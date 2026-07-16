@@ -18,7 +18,6 @@ const ChartReports = ({
   clientId,
   menuType,
 }) => {
-  console.log(menuType, "menuType");
   const chartRef = useRef(null); // canvas
   const wrapRef = useRef(null); // wrapper for ResizeObserver
   const chartInstanceRef = useRef(null);

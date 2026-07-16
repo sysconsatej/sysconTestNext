@@ -111,11 +111,34 @@ import {
 } from "@/app/globalCss";
 import { image } from "d3";
 
+const convertLedgerDate = (value) => {
+  if (!value) return null;
+
+  const dateValue = String(value).trim();
+
+  // Already in dd/mm/yyyy format
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateValue)) {
+    return dateValue;
+  }
+
+  // Handles: 2026-04-01T00:00:00 or 2026-04-01
+  const match = dateValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if (match) {
+    const [, year, month, day] = match;
+    return `${day}/${month}/${year}`;
+  }
+
+  return null;
+};
+
 export default function AddEditFormControll({ reportData }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = reportData ? reportData : searchParams.get("menuName");
   const glId = searchParams.get("glId") || null;
+  const ledgerFromDate = convertLedgerDate(searchParams.get("fromDate"));
+  const ledgerToDate = convertLedgerDate(searchParams.get("toDate"));
   const [saveSpName, setSaveSpName] = useState(null);
   const [parentsFields, setParentsFields] = useState([]);
   const [newState, setNewState] = useState({});
@@ -253,8 +276,9 @@ export default function AddEditFormControll({ reportData }) {
     }
   }, [analysisData, activeTableKey]);
 
+  // to close the accordion when menuType is C or Z
   useEffect(() => {
-    if (menuType == "C") {
+    if (menuType === "C" || menuType === "Z") {
       setToggle(false);
     }
   }, [menuType]);
@@ -719,19 +743,52 @@ export default function AddEditFormControll({ reportData }) {
     return payload;
   }
 
+  // const formatDate = (date) => {
+  //   // no selection / empty -> null
+  //   if (date == null || date === "") return null;
+
+  //   // accept Date, string, or timestamp
+  //   const d = date instanceof Date ? date : new Date(date);
+
+  //   // invalid date -> null
+  //   if (Number.isNaN(d.getTime())) return null;
+
+  //   const month = String(d.getMonth() + 1).padStart(2, "0");
+  //   const day = String(d.getDate()).padStart(2, "0");
+  //   const year = d.getFullYear();
+  //   return `${day}/${month}/${year}`;
+  // };
+
   const formatDate = (date) => {
-    // no selection / empty -> null
     if (date == null || date === "") return null;
 
-    // accept Date, string, or timestamp
-    const d = date instanceof Date ? date : new Date(date);
+    let d;
 
-    // invalid date -> null
+    // Handle DD/MM/YYYY strings
+    if (typeof date === "string" && /^\d{2}\/\d{2}\/\d{4}$/.test(date.trim())) {
+      const [day, month, year] = date.trim().split("/").map(Number);
+
+      d = new Date(year, month - 1, day);
+
+      // Validate the manually created date
+      if (
+        d.getFullYear() !== year ||
+        d.getMonth() !== month - 1 ||
+        d.getDate() !== day
+      ) {
+        return null;
+      }
+    } else {
+      // Handle Date objects, timestamps and ISO date strings
+      d = date instanceof Date ? date : new Date(date);
+    }
+
     if (Number.isNaN(d.getTime())) return null;
 
-    const month = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
     const year = d.getFullYear();
+
     return `${day}/${month}/${year}`;
   };
 
@@ -4377,6 +4434,12 @@ export default function AddEditFormControll({ reportData }) {
               w: 15,
               isNumeric: false,
             },
+            {
+              key: "partyName",
+              label: "Party Name",
+              w: 25,
+              isNumeric: false,
+            },
             { key: "narration", label: "Narration", w: 42, isNumeric: false },
             { key: "debitAmountHC", label: "Dr", w: 14, isNumeric: true },
             { key: "creditAmountHC", label: "Cr", w: 14, isNumeric: true },
@@ -4407,6 +4470,12 @@ export default function AddEditFormControll({ reportData }) {
               key: "referenceDate",
               label: "Reference Date",
               w: 15,
+              isNumeric: false,
+            },
+            {
+              key: "partyName",
+              label: "Party Name",
+              w: 25,
               isNumeric: false,
             },
             { key: "narration", label: "Narration", w: 42, isNumeric: false },
@@ -4874,6 +4943,7 @@ export default function AddEditFormControll({ reportData }) {
             { key: "voucherType", label: "Voucher Type", isNumeric: false },
             { key: "referenceNo", label: "Reference No", isNumeric: false },
             { key: "referenceDate", label: "Reference Date", isNumeric: false },
+            { key: "partyName", label: "Party Name", isNumeric: false },
             { key: "narration", label: "Narration", isNumeric: false },
             { key: "debitAmountHC", label: "Dr", isNumeric: true },
             { key: "creditAmountHC", label: "Cr", isNumeric: true },
@@ -4886,6 +4956,7 @@ export default function AddEditFormControll({ reportData }) {
             { key: "voucherType", label: "Voucher Type", isNumeric: false },
             { key: "referenceNo", label: "Reference No", isNumeric: false },
             { key: "referenceDate", label: "Reference Date", isNumeric: false },
+            { key: "partyName", label: "Party Name", isNumeric: false },
             { key: "narration", label: "Narration", isNumeric: false },
             { key: "debitAmountFc", label: "Dr", isNumeric: true },
             { key: "creditAmountFc", label: "Cr", isNumeric: true },
@@ -7944,12 +8015,14 @@ export default function AddEditFormControll({ reportData }) {
           ...prev,
           ledgerName: String(ledgerId),
           ledgerNamemultiselect: [selectedLedgerOption],
+          fromDate: formatDate(ledgerFromDate),
+          toDate: formatDate(ledgerToDate),
         }));
       }
 
       const filterCondition = {
-        fromDate: formatDate(newState?.fromDate),
-        toDate: formatDate(newState?.toDate),
+        fromDate: formatDate(ledgerFromDate),
+        toDate: formatDate(ledgerToDate),
         companyBranchId: toIntOrNull(branchId),
         companyId: toIntOrNull(companyId),
         ledgerId: toIntOrNull(ledgerId),

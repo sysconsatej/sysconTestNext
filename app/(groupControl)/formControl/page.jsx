@@ -19,6 +19,7 @@ import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
+import CustomeDisableDeleteModal from "@/components/Modal/customeDisableModel.jsx";
 import TableRow from "@mui/material/TableRow";
 import { useRouter, useParams } from "next/navigation";
 import TextField from "@mui/material/TextField";
@@ -148,7 +149,7 @@ const chipBtnStyleDanger = {
   border: "1px solid rgba(239,68,68,0.26)",
   background: "rgba(239,68,68,0.10)",
 };
-
+const DEFAULT_ROWS_PER_PAGE = 17;
 function onEditAndDeleteFunctionCall(
   functionData,
   newState,
@@ -253,7 +254,7 @@ export default function StickyHeadTable() {
   const { clientId, defaultCompanyId } = getUserDetails();
   const [menuSearch, setMenuSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(17);
+  const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
   const [gridData, setGridData] = useState([]);
   const [headerFields, setHeaderFields] = useState([]);
   const [viewFields, setViewFieldData] = useState([]);
@@ -262,6 +263,8 @@ export default function StickyHeadTable() {
   const [tableName, setTableName] = useState("");
   const [isError, setIsError] = useState(false);
   const [paraText, setParaText] = useState("");
+  const [openDisableDeleteModal, setOpenDisableDeleteModal] = useState(false);
+  const [disableDeleteParaText, setDisableDeleteParaText] = useState("");
   const [selectedPage, setSelectedPage] = useState("1");
   const [totalPages, setTotalPages] = useState(0);
   const [isAscending, setIsAscending] = useState(true);
@@ -600,7 +603,6 @@ export default function StickyHeadTable() {
         };
         const fetchedUserData = await fetchReportData(menuAccessRequest);
         const menuAccessData = fetchedUserData.data[0];
-        console.log("Menu Access Data:", menuAccessData);
         setIsAddVisible(menuAccessData?.isAdd);
         setIsEditVisible(menuAccessData?.isEdit);
         setIsDeleteVisible(menuAccessData?.isDelete);
@@ -609,6 +611,9 @@ export default function StickyHeadTable() {
         setIsPrintVisible(menuAccessData?.isPrint);
         // setisAttachmentVisible(menuAccessData?.isPrint);
         setisAttachmentVisible(true);
+        setColumnSearchKeyName(null);
+        setColumnSearchKeyValue(null);
+        setSearchInput("");
       } catch (error) {
         console.error("Failed to fetch data:", error);
       }
@@ -704,14 +709,14 @@ export default function StickyHeadTable() {
 
   function calculatePageNo() {
     // If there's a search input, check if the user is navigating to other pages post-search
-    if (searchInput.length > 0 && !isNewSearch) {
+    if ((searchInput || "").length > 0 && !isNewSearch) {
       setIsNewSearch(true);
       return 1; // Reset to page 1 for new searches or if the user is not navigating
     }
     // Use the user-specified page number when there is no search input affecting the results
     return page == 0 ? 1 : page;
   }
-  async function fetchData() {
+  async function fetchData(pageNoOverride) {
     setMenuSearch(() => search);
     try {
       setLoader(true);
@@ -752,7 +757,7 @@ export default function StickyHeadTable() {
           label: sortData.label,
           order: sortData.order,
           search: advanceSearch,
-          searchQuery: searchInput,
+          searchQuery: searchInput || "",
           keyName: columnSearchKeyName || currentMenu?.keyName,
           keyValue: columnSearchKeyValue || currentMenu?.keyValue,
           sortingCondition: tableHeadingsData?.data[0]?.sortingCondition,
@@ -821,7 +826,9 @@ export default function StickyHeadTable() {
           label: sortData.label,
           order: sortData.order,
           search: advanceSearch,
-          searchQuery: searchInput,
+          searchQuery: searchInput || "",
+          keyName: columnSearchKeyName || currentMenu?.keyName,
+          keyValue: columnSearchKeyValue || currentMenu?.keyValue,
           sortingCondition: tableHeadingsData?.data[0]?.sortingCondition,
         };
         const apiResponse = await masterTableList(requestData);
@@ -855,23 +862,23 @@ export default function StickyHeadTable() {
         }
         let apiResponse = [];
         let requestData = {
-          tableName: tableName,
-          pageNo: calculatePageNo(),
+          tableName: tableName || tableHeadingsData.data[0]?.tableName,
+          pageNo: pageNoOverride || calculatePageNo(),
           limit: rowsPerPage,
           label: sortData.label,
           order: sortData.order,
           menuID: search,
           search: advanceSearch,
-          searchQuery: searchInput,
-          keyName: columnSearchKeyName,
-          keyValue: columnSearchKeyValue,
+          searchQuery: searchInput || "",
+          keyName: columnSearchKeyName || currentMenu?.keyName,
+          keyValue: columnSearchKeyValue || currentMenu?.keyValue,
           sortingCondition: tableHeadingsData?.data[0]?.sortingCondition,
         };
 
         apiResponse = await masterTableList(requestData);
         if (apiResponse.data?.length > 0) {
           const { data, Count } = apiResponse;
-          setTableName(tableName);
+          setTableName(requestData.tableName);
           setGridData(data);
           // setOriginalData(data);
 
@@ -891,22 +898,22 @@ export default function StickyHeadTable() {
             return;
           }
           let requestData = {
-            tableName: tableName,
-            pageNo: 1,
+            tableName: tableName || tableHeadingsData.data[0]?.tableName,
+            pageNo: pageNoOverride || 1,
             limit: rowsPerPage,
             label: sortData.label,
             order: sortData.order,
             menuID: search,
             search: advanceSearch,
-            searchQuery: searchInput,
-            keyName: columnSearchKeyName,
-            keyValue: columnSearchKeyValue,
+            searchQuery: searchInput || "",
+            keyName: columnSearchKeyName || currentMenu?.keyName,
+            keyValue: columnSearchKeyValue || currentMenu?.keyValue,
             sortingCondition: tableHeadingsData?.data[0]?.sortingCondition,
           };
           apiResponse = await masterTableList(requestData);
           const { data, Count } = apiResponse;
-          setTableName(tableName);
-          setGridData(data);
+          setTableName(requestData.tableName);
+          setGridData(data || []);
           // setOriginalData(data);
 
           if (Count !== 0) {
@@ -916,7 +923,6 @@ export default function StickyHeadTable() {
             Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage),
           );
           pageSelected(requestData.pageNo);
-          setGridData([]);
           setLoader(false);
         }
       }
@@ -994,6 +1000,7 @@ export default function StickyHeadTable() {
     columnSearchKeyName,
     columnSearchKeyValue,
     sortData,
+    searchParams,
   ]);
 
   const addEditController = async (data, isCopy, isView) => {
@@ -1076,8 +1083,8 @@ export default function StickyHeadTable() {
       };
       const data = await disableDelete(requestBody);
       if (data.success === false) {
-        setParaText(data.message);
-        setOpenModal((prev) => !prev);
+        setDisableDeleteParaText(data.message);
+        setOpenDisableDeleteModal((prev) => !prev);
         return;
       }
       if (
@@ -1165,7 +1172,7 @@ export default function StickyHeadTable() {
       if (responseData && responseData.success) {
         toast.success(responseData.message);
         closeDeleteReasonModal();
-        fetchData();
+        await fetchData(1);
       } else {
         toast.error(responseData?.message || "Delete failed.");
       }
@@ -1188,7 +1195,7 @@ export default function StickyHeadTable() {
           toast.success(responseData.message);
           setDeleteData(null);
           setOpenModal((prev) => !prev);
-          fetchData();
+          await fetchData(1);
         } else {
           setIsError(false);
           setOpenModal((prev) => !prev);
@@ -1205,9 +1212,10 @@ export default function StickyHeadTable() {
   // Filter fields with isRequired true for headers
   // var headers = headerFields?.filter((field) => field.isGridView);
   var headers =
-    formControlData.gridConfig && typeof formControlData.gridConfig === "string"
-      ? JSON.parse(formControlData.gridConfig)
-      : headerFields?.filter((field) => field.isGridView);
+    formControlData?.gridConfig &&
+    typeof formControlData?.gridConfig === "string"
+      ? JSON.parse(formControlData?.gridConfig)
+      : headerFields?.filter((field) => field?.isGridView);
 
   headers = headers?.concat(viewFields);
 
@@ -1459,25 +1467,26 @@ export default function StickyHeadTable() {
 
   const handleCustomRowsPerPageChange = (event) => {
     const value = parseInt(event.target.value, 10);
-    if (!isNaN(value) && value >= 0) {
-      sessionStorage?.setItem("rowsPerPage", value);
+
+    if (!isNaN(value) && value > 0) {
       setRowsPerPage(value);
       setSelectedPageNumber(page);
-      setRowsPerPage(value);
+
       setTotalPages(
-        Math.ceil((pageCount !== 0 ? pageCount : pageCount) / value),
-      );
-      console.log(
-        "pageCount",
         Math.ceil((pageCount !== 0 ? pageCount : pageCount) / value),
       );
     }
   };
-
   useEffect(() => {
-    const storedRowsPerPage = sessionStorage.getItem("rowsPerPage");
-    setRowsPerPage(storedRowsPerPage ? parseInt(storedRowsPerPage) : 17);
-  }, [sessionStorage.getItem("rowsPerPage"), search]);
+    // Clear the value saved by the old implementation
+    sessionStorage.removeItem("rowsPerPage");
+
+    // Reset pagination whenever the menu changes
+    setRowsPerPage(DEFAULT_ROWS_PER_PAGE);
+    setPage(1);
+    setSelectedPage("1");
+    setSelectedPageNumber(1);
+  }, [search]);
   function pageSelected(selectedValue) {
     setSelectedPage(selectedValue);
     setPage(selectedValue);
@@ -1832,7 +1841,7 @@ export default function StickyHeadTable() {
     ]);
     setSearchInput("");
     setadvanceSearch({});
-    setRowsPerPage(17);
+    setRowsPerPage(DEFAULT_ROWS_PER_PAGE);
     setPage(1);
   };
 
@@ -3737,6 +3746,17 @@ export default function StickyHeadTable() {
           labelValue={""}
         />
       )}
+
+      {openDisableDeleteModal && (
+        <CustomeDisableDeleteModal
+          setOpenDisableDeleteModal={setOpenDisableDeleteModal}
+          openDisableDeleteModal={openDisableDeleteModal}
+          onConfirm={onConfirm}
+          isError={isError}
+          paraText={disableDeleteParaText}
+          labelValue={""}
+        />
+      )}
     </div>
   );
 }
@@ -3787,7 +3807,7 @@ function CustomizedInputBase({
     setInputVisible(false);
     setPrevSearchInput(searchValue);
     if (searchValue === "") {
-      setRowsPerPage(17);
+      setRowsPerPage(DEFAULT_ROWS_PER_PAGE);
       setPage(1);
     }
     if (currentMenu?.keyName) {

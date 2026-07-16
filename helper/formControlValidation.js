@@ -264,9 +264,8 @@ const SetDecimalsGeneric = (obj) => {
         return {
           isCheck: false,
           type: "success",
-          message: `You can enter Max ${
-            fieldSize - decimalCheck - 1
-          } Characters`,
+          message: `You can enter Max ${fieldSize - decimalCheck - 1
+            } Characters`,
           alertShow: true,
           fieldName: fieldName,
           values: values,
@@ -915,11 +914,11 @@ const setNoOfContainer = (obj) => {
 
       let size = currentItem.length
         ? currentItem[0].sizeIdDropdown ||
-          currentItem[0].sizeIddropdown[0]?.label
+        currentItem[0].sizeIddropdown[0]?.label
         : "";
       let type = currentItem.length
         ? currentItem[0].typeIdDropdown ||
-          currentItem[0].typeIddropdown[0]?.label
+        currentItem[0].typeIddropdown[0]?.label
         : "";
 
       if (fieldName === "sizeId" && childCommonItem.length !== 0) {
@@ -934,11 +933,9 @@ const setNoOfContainer = (obj) => {
             return {
               isCheck: false,
               type: "error",
-              message: `For type ${
-                typeIdDropdown || type
-              } and No Of Containers ${values.qty}, the size should be ${
-                sizeIdDropdown || size
-              }.`,
+              message: `For type ${typeIdDropdown || type
+                } and No Of Containers ${values.qty}, the size should be ${sizeIdDropdown || size
+                }.`,
               alertShow: true,
               values: values,
               newState: newState,
@@ -967,11 +964,9 @@ const setNoOfContainer = (obj) => {
             return {
               isCheck: false,
               type: "error",
-              message: `For size ${
-                sizeIdDropdown || size
-              } and No Of Container ${values.qty} the type should be ${
-                typeIdDropdown || type
-              } `,
+              message: `For size ${sizeIdDropdown || size
+                } and No Of Container ${values.qty} the type should be ${typeIdDropdown || type
+                } `,
               alertShow: true,
               values: values,
               newState: newState,
@@ -2630,8 +2625,8 @@ const getJobCharges = async (obj) => {
 
           const tdsData = normalizeArray(
             fetchTDSDetails?.data ||
-              fetchTDSDetails?.tblTds ||
-              fetchTDSDetails?.tblInvoiceChargeTds,
+            fetchTDSDetails?.tblTds ||
+            fetchTDSDetails?.tblInvoiceChargeTds,
           );
 
           updatedCharges[index].tblInvoiceChargeTds = tdsData;
@@ -3201,10 +3196,10 @@ const removeFilterCondition = (obj) => {
         ...prev.formControlData,
         fields: prev.formControlData?.fields
           ? prev.formControlData.fields.map((field) =>
-              field.fieldname === fieldName
-                ? { ...field, dropdownFilter: null }
-                : field,
-            )
+            field.fieldname === fieldName
+              ? { ...field, dropdownFilter: null }
+              : field,
+          )
           : [],
       },
     }));
@@ -4091,9 +4086,8 @@ const checkGridsDuplication = (obj) => {
     const fieldsList =
       labels.slice(0, -1).join(", ") +
       (labels.length > 1 ? `, and ${labels.slice(-1)}` : labels[0]);
-    const message = `Duplicate entry found for ${fieldsList}. Please enter different ${
-      labels[labels.length - 1]
-    }.`;
+    const message = `Duplicate entry found for ${fieldsList}. Please enter different ${labels[labels.length - 1]
+      }.`;
 
     return {
       type: "error",
@@ -6261,10 +6255,29 @@ const validateFields = async (obj) => {
   return result;
 };
 
-const setSameSizeValues = (obj) => {
+const setSameSizeValues = (obj = {}) => {
   let { args, formControlData, values, newState } = obj;
-  // debugger
-  let argsArray = args.split(",");
+  const createResult = (fieldName = "") => ({
+    isCheck: false,
+    type: "success",
+    message: "Error",
+    alertShow: false,
+    fieldName,
+    values,
+    newState,
+    formControlData,
+  });
+
+  if (typeof args !== "string" || !formControlData || !newState) {
+    console.error("setSameSizeValues received invalid input", {
+      args,
+      formControlData,
+      newState,
+    });
+    return createResult();
+  }
+
+  let argsArray = args.split(",").map((item) => item.trim());
   let condition = argsArray[argsArray.length - 1];
   let fieldCondition = argsArray[argsArray.length - 2];
   let fieldName = fieldCondition?.slice(0, -8);
@@ -6275,6 +6288,10 @@ const setSameSizeValues = (obj) => {
     case "pp": {
       let getterSize = newState[fieldName];
       const sizeIds = getterSize;
+
+      if (!Array.isArray(formControlData.fields)) {
+        return createResult(fieldName);
+      }
 
       const getterTbl = formControlData.fields.find(
         (item) => item.fieldname === fieldName,
@@ -6296,12 +6313,15 @@ const setSameSizeValues = (obj) => {
         (item) => item.fieldname === argsArray[1],
       );
 
+      if (!setterTbl || typeof getterDropDown !== "string") {
+        return createResult(fieldName);
+      }
+
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
-      const editedString = `${dropFilterValueWithoutBraces} and ${
-        Array.isArray(sizeIds)
-          ? `id in (${sizeIds.join(",")})`
-          : `id = ${sizeIds}`
-      } `;
+      const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
+        ? `id in (${sizeIds.join(",")})`
+        : `id = ${sizeIds}`
+        } `;
 
       console.log("editedString", editedString);
 
@@ -6324,6 +6344,13 @@ const setSameSizeValues = (obj) => {
       let getterSize = newState[fieldName];
       const sizeIds = getterSize;
 
+      if (
+        !Array.isArray(formControlData.fields) ||
+        !Array.isArray(formControlData.child)
+      ) {
+        return createResult(fieldName);
+      }
+
       const getterTbl = formControlData.fields.find(
         (item) => item.fieldname === fieldName,
       );
@@ -6343,16 +6370,19 @@ const setSameSizeValues = (obj) => {
       const setterTbl = formControlData.child.find(
         (item) => item.tableName === argsArray[1],
       );
-      const setterField = setterTbl?.fields.find(
+      const setterField = setterTbl?.fields?.find(
         (item) => item.fieldname === fieldName,
       );
 
+      if (!setterField || typeof getterDropDown !== "string") {
+        return createResult(fieldName);
+      }
+
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
-      const editedString = `${dropFilterValueWithoutBraces} and ${
-        Array.isArray(sizeIds)
-          ? `id in (${sizeIds.join(",")})`
-          : `id = ${sizeIds}`
-      } `;
+      const editedString = `${dropFilterValueWithoutBraces} and ${Array.isArray(sizeIds)
+        ? `id in (${sizeIds.join(",")})`
+        : `id = ${sizeIds}`
+        } `;
 
       if (editedString.trim()) {
         setterField.dropdownFilter = editedString;
@@ -6370,11 +6400,13 @@ const setSameSizeValues = (obj) => {
       };
     }
     case "cc": {
-      let getterSize = newState[argsArray[0]];
+      let getterSize = Array.isArray(newState[argsArray[0]])
+        ? newState[argsArray[0]]
+        : [];
       let currentSize =
         values &&
-        Array.isArray(values.sizeIddropdown) &&
-        values.sizeIddropdown.length > 0
+          Array.isArray(values.sizeIddropdown) &&
+          values.sizeIddropdown.length > 0
           ? values.sizeIddropdown[0].label
           : "";
 
@@ -6409,6 +6441,10 @@ const setSameSizeValues = (obj) => {
         ),
       ];
 
+      if (!Array.isArray(formControlData.child)) {
+        return createResult(fieldName);
+      }
+
       const getterTbl = formControlData.child.find(
         (item) => item.tableName === argsArray[0],
       );
@@ -6424,7 +6460,7 @@ const setSameSizeValues = (obj) => {
           formControlData: formControlData,
         };
       }
-      const getterField = getterTbl.fields.find(
+      const getterField = getterTbl.fields?.find(
         (item) => item.fieldname === fieldName,
       );
       const getterDropDown = getterField ? getterField.dropdownFilter : "";
@@ -6432,9 +6468,13 @@ const setSameSizeValues = (obj) => {
       const setterTbl = formControlData.child.find(
         (item) => item.tableName === argsArray[1],
       );
-      const setterField = setterTbl?.fields.find(
+      const setterField = setterTbl?.fields?.find(
         (item) => item.fieldname === fieldName,
       );
+
+      if (!setterField || typeof getterDropDown !== "string") {
+        return createResult(fieldName);
+      }
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
       const nameObject = `and name in (${uniqueNumbers
@@ -6461,11 +6501,13 @@ const setSameSizeValues = (obj) => {
     }
 
     case "cp": {
-      let getterSize = newState[argsArray[0]];
+      let getterSize = Array.isArray(newState[argsArray[0]])
+        ? newState[argsArray[0]]
+        : [];
       let currentSize =
         values &&
-        Array.isArray(values.sizeIddropdown) &&
-        values.sizeIddropdown.length > 0
+          Array.isArray(values.sizeIddropdown) &&
+          values.sizeIddropdown.length > 0
           ? values.sizeIddropdown[0].label
           : "";
 
@@ -6494,6 +6536,17 @@ const setSameSizeValues = (obj) => {
       const allSizes = [currentSize, ...flattenedArray];
       // Convert each element to a number if possible
       let uniqueNumbers = [...new Set(allSizes.map((item) => item))];
+
+      if (
+        !Array.isArray(formControlData.child) ||
+        !Array.isArray(formControlData.fields)
+      ) {
+        return createResult(fieldName);
+      }
+
+      const getterTbl = formControlData.child.find(
+        (item) => item.tableName === argsArray[0],
+      );
       if (!getterTbl) {
         return {
           isCheck: false,
@@ -6506,17 +6559,18 @@ const setSameSizeValues = (obj) => {
           formControlData: formControlData,
         };
       }
-      const getterTbl = formControlData.child.find(
-        (item) => item.tableName === argsArray[0],
-      );
-      const getterField = getterTbl.fields.find(
+      const getterField = getterTbl.fields?.find(
         (item) => item.fieldname === fieldName,
       );
-      const getterDropDown = getterField.dropdownFilter;
+      const getterDropDown = getterField?.dropdownFilter;
 
       const setterTbl = formControlData.fields.find(
         (item) => item.fieldname === fieldName,
       );
+
+      if (!setterTbl || typeof getterDropDown !== "string") {
+        return createResult(fieldName);
+      }
 
       const dropFilterValueWithoutBraces = getterDropDown.replace(/[{}]/g, "");
       const nameObject = `and name in (${uniqueNumbers
@@ -6555,26 +6609,70 @@ const setSameSizeValues = (obj) => {
   };
 };
 
-const setSameTypeValues = (obj) => {
-  const { args, formControlData, values = {}, fieldName = "", newState } = obj;
-  const [parentTable, childTable, filterField] = args.split(",");
+const setSameTypeValues = (obj = {}) => {
+  const {
+    args,
+    formControlData,
+    values: receivedValues,
+    fieldName = "",
+    newState,
+  } = obj || {};
+  const values = receivedValues || {};
+  const createResult = (type, message) => ({
+    isCheck: false,
+    type,
+    message,
+    alertShow: false,
+    fieldName,
+    values,
+    newState,
+    formControlData,
+  });
 
-  const parentField = newState[parentTable] || [];
-  const currentId = values.sizeId || null;
+  if (typeof args !== "string" || !formControlData || !newState) {
+    console.error("setSameTypeValues received invalid input", {
+      args,
+      formControlData,
+      newState,
+    });
+    return createResult(
+      "warning",
+      "Unable to update dropdown because required form data is missing.",
+    );
+  }
+
+  const [parentTable, childTable, filterField] = args
+    .split(",")
+    .map((item) => item.trim());
+
+  if (!parentTable || !childTable || !filterField) {
+    return createResult(
+      "warning",
+      "Unable to update dropdown because its configuration is incomplete.",
+    );
+  }
+
+  const childTables = Array.isArray(formControlData.child)
+    ? formControlData.child
+    : [];
+  const parentField = Array.isArray(newState[parentTable])
+    ? newState[parentTable]
+    : [];
+  const currentId = values.sizeId ?? null;
 
   const dropdownKeyUpper = filterField + "Dropdown";
   const dropdownKeyLower = filterField + "dropdown";
 
   // Find the parent filter string (from existing dropdownFilter)
+  const parentFilterValue = childTables
+    .find((item) => item?.tableName === parentTable)
+    ?.fields?.find((item) => item?.fieldname === filterField)?.dropdownFilter;
   const parentFilter =
-    formControlData.child
-      ?.find((item) => item.tableName === parentTable)
-      ?.fields.find((item) => item.fieldname === filterField)?.dropdownFilter ||
-    "";
+    typeof parentFilterValue === "string" ? parentFilterValue : "";
 
   // Gather dropdown labels
   const filteredItems = parentField.filter(
-    (item) => item.fieldname === currentId,
+    (item) => item?.fieldname === currentId,
   );
 
   const labels = filteredItems
@@ -6597,39 +6695,28 @@ const setSameTypeValues = (obj) => {
   const finalFilter = `${cleanedFilter} ${nameCondition}`.trim();
 
   const childFields =
-    formControlData.child.find(
-      (item) => item.tableName.toLowerCase() === childTable.toLowerCase(),
+    childTables.find(
+      (item) =>
+        typeof item?.tableName === "string" &&
+        item.tableName.toLowerCase() === childTable.toLowerCase(),
     )?.fields || [];
 
-  const childField = childFields.find((item) => item.fieldname === filterField);
+  const childField = Array.isArray(childFields)
+    ? childFields.find((item) => item?.fieldname === filterField)
+    : undefined;
 
   if (childField && finalFilter && uniqueLabels.length > 0) {
     childField.dropdownFilter = finalFilter;
 
     console.log("Updated dropdownFilter:", finalFilter);
 
-    return {
-      isCheck: false,
-      type: "success",
-      message: "Dropdown filter updated.",
-      alertShow: false,
-      fieldName,
-      values,
-      newState,
-      formControlData,
-    };
+    return createResult("success", "Dropdown filter updated.");
   }
 
-  return {
-    isCheck: false,
-    type: "warning",
-    message: "No matching values found to update dropdown.",
-    alertShow: false,
-    fieldName,
-    values,
-    newState,
-    formControlData,
-  };
+  return createResult(
+    "warning",
+    "No matching values found to update dropdown.",
+  );
 };
 
 const setVesselSec = async (obj) => {
@@ -7251,13 +7338,13 @@ const getBranchInvoice = async (obj) => {
       const updatedValues = {
         ...values,
         billingPartyBranchId: branchId,
-        // billingPartyaddress: address,
+        billingPartyaddress: address,
       };
 
       setStateVariable((prev) => ({
         ...prev,
         billingPartyBranchId: branchId,
-        // billingPartyaddress: address,
+        billingPartyaddress: address,
       }));
 
       return {
@@ -7266,7 +7353,7 @@ const getBranchInvoice = async (obj) => {
         newState: {
           ...newState,
           billingPartyBranchId: branchId,
-          // billingPartyaddress: address,
+          billingPartyaddress: address,
         },
         values: updatedValues,
         message: "Data found!",
@@ -7550,9 +7637,9 @@ const getVoucherInvoiceDetails = async (obj) => {
     const invoiceNumbers =
       Array.isArray(fetchInvoice?.Chargers) && fetchInvoice.Chargers.length > 0
         ? fetchInvoice.Chargers.map((invoice) => ({
-            value: invoice?.value ?? invoice?.invoiceNo, // Use invoiceNo if value is missing
-            label: invoice?.label ?? invoice?.invoiceNo, // Ensure label is never undefined
-          }))
+          value: invoice?.value ?? invoice?.invoiceNo, // Use invoiceNo if value is missing
+          label: invoice?.label ?? invoice?.invoiceNo, // Ensure label is never undefined
+        }))
         : [];
 
     console.log("invoiceNumbers", invoiceNumbers);
@@ -9595,11 +9682,11 @@ const getThirdLevelDetails = async (obj) => {
         containerIddropdown:
           _containerId !== null
             ? [
-                {
-                  value: _containerId,
-                  label: item.containerNo ?? String(_containerId),
-                },
-              ]
+              {
+                value: _containerId,
+                label: item.containerNo ?? String(_containerId),
+              },
+            ]
             : [],
         sizeIddropdown:
           _sizeId !== null
@@ -9616,22 +9703,22 @@ const getThirdLevelDetails = async (obj) => {
         containerTransactionIddropdown:
           _containerTransactionId !== null
             ? [
-                {
-                  value: _containerTransactionId,
-                  label:
-                    item.containerTransactionName ??
-                    String(_containerTransactionId),
-                },
-              ]
+              {
+                value: _containerTransactionId,
+                label:
+                  item.containerTransactionName ??
+                  String(_containerTransactionId),
+              },
+            ]
             : [],
         containerRepairIddropdown:
           _containerRepairId !== null
             ? [
-                {
-                  value: _containerRepairId,
-                  label: item.containerRepairName ?? String(_containerRepairId),
-                },
-              ]
+              {
+                value: _containerRepairId,
+                label: item.containerRepairName ?? String(_containerRepairId),
+              },
+            ]
             : [],
         blIddropdown:
           _blId !== null
@@ -10068,11 +10155,11 @@ const getBlChargesForPaty = async (obj) => {
         billingPartyId: finalBillingPartyId,
         billingPartyIddropdown: finalBillingPartyId
           ? [
-              {
-                value: finalBillingPartyId,
-                label: selectedLedger?.LedgerName || "",
-              },
-            ]
+            {
+              value: finalBillingPartyId,
+              label: selectedLedger?.LedgerName || "",
+            },
+          ]
           : [],
       };
 
@@ -10506,9 +10593,8 @@ const setTransit = async (obj) => {
 
     // --- Prepare Updated goodsDesc ---
     let updatedGoodsDesc = goodsDesc || "";
-    const transitRemark = `Cargo in transit to ${
-      countryDestination || "(country of destination)"
-    } on consignee’s risk, cost & responsibilities`;
+    const transitRemark = `Cargo in transit to ${countryDestination || "(country of destination)"
+      } on consignee’s risk, cost & responsibilities`;
 
     // Remove any previous existing instance of this line (avoid duplicates)
     updatedGoodsDesc = updatedGoodsDesc
@@ -11466,8 +11552,8 @@ const fetchPartyBalanceThirdLevel = async (obj) => {
     }
   }
   const { glId } = values;
-  const { clientId } = getUserDetails();
-  const requestBody = { clientId, glId: glId };
+  const { clientId,companyId,branchId } = getUserDetails();
+  const requestBody = { clientId, glId: glId,companyId:companyId,companyBranchId:branchId };
 
   const fetchChargeDetails = await getVoucherThirdLevelData(requestBody);
   if (fetchChargeDetails && fetchChargeDetails?.vouchers?.length > 0) {
@@ -12034,9 +12120,9 @@ const getBlChargesForTariff = async (obj) => {
     const argNames = Array.isArray(args)
       ? args.map((a) => String(a).trim())
       : String(args ?? "")
-          .split(",")
-          .map((a) => a.trim())
-          .filter(Boolean);
+        .split(",")
+        .map((a) => a.trim())
+        .filter(Boolean);
 
     const rateKey = argNames[0];
     const currencyIdKey = argNames[1];
@@ -12192,7 +12278,7 @@ const sailDate = async (obj) => {
   const request = {
     columns: "*",
     tableName: "tblVoyageRoute",
-    whereCondition: `voyageId = ${voyageId} and status = 1 portOfCallId = ${portOfCallId}`,
+    whereCondition: `voyageId = ${voyageId} and status = 1 and portOfCallId = ${portOfCallId}`,
     clientIdCondition: `clientId IN (${clientId}, (SELECT id FROM tblClient WHERE clientCode = 'SYSCON')) FOR JSON PATH`,
   };
   return fetchReportData(request).then((response) => {
@@ -12469,8 +12555,8 @@ const checkRate = (obj) => {
       );
       const vCurrencyId = pickVal(
         values?.currencyId ??
-          values?.currencyIdText ??
-          values?.currencyIddropdown,
+        values?.currencyIdText ??
+        values?.currencyIddropdown,
       );
       const vRateBasisId = pickVal(
         values?.rateBasisId ?? values?.rateBasisIddropdown,
@@ -13909,7 +13995,7 @@ const checkDuplicateVendorInvoiceNo = async (obj) => {
     const response = await fetchReportData({
       columns: `vendorInvoiceNo`,
       tableName: "tblInvoice",
-      whereCondition: `clientId=${clientId} and vendorInvoiceNo='${values.vendorInvoiceNo}'`,
+      whereCondition: `clientId=${clientId} and vendorInvoiceNo='${values.vendorInvoiceNo} and YEAR(invoiceDate)=${currentYear}'`,
       clientIdCondition: "status=1 FOR JSON PATH, INCLUDE_NULL_VALUES",
     });
     if (!response?.data?.length)
@@ -14176,11 +14262,11 @@ const setRepairStatus = (obj) => {
     repairStatusId: hasApprovalDate ? "11922" : "",
     repairStatusIddropdown: hasApprovalDate
       ? [
-          {
-            value: 11922,
-            label: "Under Repair",
-          },
-        ]
+        {
+          value: 11922,
+          label: "Under Repair",
+        },
+      ]
       : [],
   }));
 
@@ -14204,11 +14290,11 @@ const setRepairStatusComplete = (obj) => {
     repairStatusId: hasApprovalDate ? "11924" : "",
     repairStatusIddropdown: hasApprovalDate
       ? [
-          {
-            value: 11924,
-            label: "Repair Completed",
-          },
-        ]
+        {
+          value: 11924,
+          label: "Repair Completed",
+        },
+      ]
       : [],
   }));
 
@@ -14438,9 +14524,9 @@ const capsLock = (obj = {}) => {
   const fieldNames =
     typeof args === "string" && args.trim() !== ""
       ? args
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean)
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
       : [fieldName];
 
   fieldNames.forEach((name) => {
@@ -14458,7 +14544,6 @@ const capsLock = (obj = {}) => {
       }));
     }
   });
-  console.log(newState);
   return {
     isCheck: true,
     type: "success",
@@ -14470,6 +14555,116 @@ const capsLock = (obj = {}) => {
     formControlData,
   };
 };
+const setSingleBranch = async (obj) => {
+  const {
+    args,
+    values,
+    newState,
+    fieldName,
+    formControlData,
+    setChildDefaultValues,
+  } = obj;
+
+  try {
+    const argNames = String(args || "")
+      .split(",")
+      .map((arg) => arg.trim());
+
+    const [companyFieldName, childBranchFieldName] = argNames;
+
+    const companyId =
+      values?.[companyFieldName] ||
+      newState?.[companyFieldName] ||
+      values?.[fieldName] ||
+      newState?.[fieldName];
+
+    if (!childBranchFieldName) {
+      return {
+        type: "success",
+        result: true,
+        values,
+        newState,
+        formControlData,
+      };
+    }
+
+    if (!companyId) {
+      if (typeof setChildDefaultValues === "function") {
+        setChildDefaultValues((prev) => ({
+          ...prev,
+          [childBranchFieldName]: "",
+          [`${childBranchFieldName}dropdown`]: [],
+          [`${childBranchFieldName}Dropdown`]: "",
+        }));
+      }
+
+      return {
+        type: "success",
+        result: true,
+        values,
+        newState,
+        formControlData,
+      };
+    }
+
+    const requestBody = {
+      columns: "id as value, name as label",
+      tableName: "tblCompanyBranch",
+      whereCondition: `companyId = ${companyId}`,
+      clientIdCondition: `status = 1 FOR JSON PATH`,
+    };
+
+    const response = await fetchReportData(requestBody);
+
+    const branches = response?.data || [];
+
+    // Auto-select only when exactly one branch exists
+ if (branches.length === 1) {
+  const branch = branches[0];
+
+  const branchId = branch?.value || "";
+  const branchName = branch?.label || "";
+
+  setChildDefaultValues?.((prev) => ({
+    ...prev,
+    [childBranchFieldName]: branchId,
+    [`${childBranchFieldName}dropdown`]: [
+      {
+        value: branchId,
+        label: branchName,
+      },
+    ],
+    [`${childBranchFieldName}Dropdown`]: branchName,
+  }));
+} else {
+  setChildDefaultValues?.((prev) => ({
+    ...prev,
+    [childBranchFieldName]: "",
+    [`${childBranchFieldName}dropdown`]: [],
+    [`${childBranchFieldName}Dropdown`]: "",
+  }));
+}
+
+    return {
+      type: "success",
+      result: true,
+      message: "Branch check completed.",
+      values,
+      newState,
+      formControlData,
+    };
+  } catch (error) {
+    return {
+      type: "error",
+      result: false,
+      message: "Error while setting branch.",
+      values,
+      newState,
+      formControlData,
+    };
+  }
+};
+
 export {
   setSameCurrencyFc,
   setSameCurrencyHc,
@@ -14640,4 +14835,5 @@ export {
   setVendorChargeApprovalOnLoad,
   calcualteTaxMaual,
   capsLock,
+  setSingleBranch ,
 };

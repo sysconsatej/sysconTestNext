@@ -13,7 +13,12 @@ import Backdrop from "@mui/material/Backdrop";
 import Modal from "@mui/material/Modal";
 import Fade from "@mui/material/Fade";
 import Tooltip from "@mui/material/Tooltip";
+import Popover from "@mui/material/Popover";
 import { Avatar } from "@mui/material";
+import WifiRoundedIcon from "@mui/icons-material/WifiRounded";
+import WifiOffRoundedIcon from "@mui/icons-material/WifiOffRounded";
+import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 
 import { logoutBtn, homeLogo, homeHoverLogo } from "@/assets/index.jsx";
 import {
@@ -133,6 +138,620 @@ const customStyles = {
     fontFamily: "var(--commonFontFamily)",
   }),
 };
+
+function AssistantNavbarTrigger() {
+  const handleClick = () => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new CustomEvent("assistant:toggle"));
+  };
+
+  return (
+    <Tooltip
+      title="Assistant"
+      placement="bottom"
+      slotProps={{
+        tooltip: {
+          sx: {
+            bgcolor: "#ffffff",
+            color: "#111827",
+            fontSize: "11px",
+            fontWeight: 700,
+            borderRadius: "6px",
+            px: 1,
+            py: 0.6,
+            boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+            border: "1px solid rgba(0,0,0,0.08)",
+          },
+        },
+      }}
+    >
+      <button
+        type="button"
+        aria-label="Open assistant"
+        className="assistant-navbar-trigger"
+        onClick={handleClick}
+      >
+        <span className="assistant-navbar-core">
+          <img
+            src="/assistant-gemini-ai.png"
+            alt=""
+            className="assistant-navbar-icon"
+            draggable={false}
+          />
+        </span>
+        <style jsx>{`
+          .assistant-navbar-trigger {
+            position: relative;
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 6px;
+            padding: 0;
+            cursor: pointer;
+            overflow: visible;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            box-shadow: none;
+            opacity: 0.95;
+            transition:
+              transform 0.18s ease,
+              background-color 0.18s ease,
+              opacity 0.18s ease,
+              filter 0.18s ease;
+          }
+
+          .assistant-navbar-trigger:hover {
+            transform: translateY(-1px);
+            opacity: 1;
+            background: rgba(21, 94, 239, 0.08);
+            filter: saturate(1.05);
+          }
+
+          .assistant-navbar-trigger::before {
+            content: "";
+            position: absolute;
+            left: 8px;
+            right: 8px;
+            bottom: 3px;
+            height: 3px;
+            border-radius: 999px;
+            background: rgba(79, 70, 229, 0.26);
+            filter: blur(1px);
+            animation: assistantGeminiShadow 1.65s ease-in-out infinite;
+          }
+
+          .assistant-navbar-core {
+            position: relative;
+            z-index: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .assistant-navbar-icon {
+            width: 22px;
+            height: 22px;
+            display: block;
+            object-fit: contain;
+            user-select: none;
+            filter: drop-shadow(0 2px 3px rgba(79, 70, 229, 0.28));
+            transform-origin: 50% 78%;
+            animation: assistantGeminiBounce 1.65s cubic-bezier(0.34, 1.56, 0.64, 1)
+              infinite;
+          }
+
+          .assistant-navbar-trigger:hover .assistant-navbar-icon {
+            animation-duration: 1.15s;
+          }
+
+          @keyframes assistantGeminiBounce {
+            0%,
+            100% {
+              transform: translateY(0) scale(1);
+            }
+            34% {
+              transform: translateY(-4px) scale(1.04);
+            }
+            52% {
+              transform: translateY(0) scale(0.96, 1.04);
+            }
+            68% {
+              transform: translateY(-2px) scale(1.02);
+            }
+          }
+
+          @keyframes assistantGeminiShadow {
+            0%,
+            100% {
+              opacity: 0.3;
+              transform: scaleX(1);
+            }
+            34% {
+              opacity: 0.14;
+              transform: scaleX(0.68);
+            }
+          }
+        `}</style>
+      </button>
+    </Tooltip>
+  );
+}
+
+function NetworkStatusIndicator() {
+  const [anchorEl, setAnchorEl] = useState(null);
+  const bytesSinceLastTickRef = useRef(0);
+  const seenPerformanceEntriesRef = useRef(new Set());
+  const usageStartedAtRef = useRef(null);
+  const [network, setNetwork] = useState({
+    online: true,
+    downlink: null,
+    effectiveType: "",
+    rtt: null,
+    type: "",
+    saveData: null,
+    lastUpdated: null,
+  });
+  const [usage, setUsage] = useState({
+    downloadedBytes: 0,
+    bytesPerSecond: 0,
+    peakBytesPerSecond: 0,
+    resourceCount: 0,
+    elapsedSeconds: 0,
+    connectionChanges: 0,
+  });
+
+  const updateNetwork = useCallback(() => {
+    if (typeof navigator === "undefined") return;
+
+    const connection =
+      navigator.connection ||
+      navigator.mozConnection ||
+      navigator.webkitConnection;
+
+    setNetwork({
+      online: navigator.onLine,
+      downlink:
+        navigator.onLine && Number.isFinite(connection?.downlink)
+          ? connection.downlink
+          : null,
+      effectiveType: navigator.onLine ? connection?.effectiveType || "" : "",
+      rtt:
+        navigator.onLine && Number.isFinite(connection?.rtt)
+          ? connection.rtt
+          : null,
+      type: navigator.onLine ? connection?.type || "" : "",
+      saveData:
+        typeof connection?.saveData === "boolean" ? connection.saveData : null,
+      lastUpdated: new Date(),
+    });
+  }, []);
+
+  useEffect(() => {
+    const connection =
+      navigator.connection ||
+      navigator.mozConnection ||
+      navigator.webkitConnection;
+
+    const handleNetworkChange = () => {
+      setUsage((current) => ({
+        ...current,
+        connectionChanges: current.connectionChanges + 1,
+      }));
+      updateNetwork();
+    };
+
+    updateNetwork();
+    window.addEventListener("online", handleNetworkChange);
+    window.addEventListener("offline", handleNetworkChange);
+    connection?.addEventListener?.("change", handleNetworkChange);
+
+    return () => {
+      window.removeEventListener("online", handleNetworkChange);
+      window.removeEventListener("offline", handleNetworkChange);
+      connection?.removeEventListener?.("change", handleNetworkChange);
+    };
+  }, [updateNetwork]);
+
+  useEffect(() => {
+    const startedAt = Date.now();
+    usageStartedAtRef.current = startedAt;
+
+    if (
+      typeof performance === "undefined" ||
+      typeof PerformanceObserver === "undefined"
+    ) {
+      return undefined;
+    }
+
+    const recordEntries = (entries) => {
+      let newBytes = 0;
+      let newResources = 0;
+
+      entries.forEach((entry) => {
+        if (!["navigation", "resource"].includes(entry.entryType)) return;
+
+        const entryKey = `${entry.entryType}:${entry.name}:${entry.startTime}:${entry.responseEnd}`;
+        if (seenPerformanceEntriesRef.current.has(entryKey)) return;
+
+        seenPerformanceEntriesRef.current.add(entryKey);
+        newResources += 1;
+
+        if (Number.isFinite(entry.transferSize) && entry.transferSize > 0) {
+          newBytes += entry.transferSize;
+        }
+      });
+
+      if (!newBytes && !newResources) return;
+
+      bytesSinceLastTickRef.current += newBytes;
+      setUsage((current) => ({
+        ...current,
+        downloadedBytes: current.downloadedBytes + newBytes,
+        resourceCount: current.resourceCount + newResources,
+      }));
+    };
+
+    recordEntries([
+      ...performance.getEntriesByType("navigation"),
+      ...performance.getEntriesByType("resource"),
+    ]);
+
+    const observer = new PerformanceObserver((list) => {
+      recordEntries(list.getEntries());
+    });
+    observer.observe({ entryTypes: ["resource"] });
+
+    const usageTimer = window.setInterval(() => {
+      const currentRate = bytesSinceLastTickRef.current;
+      bytesSinceLastTickRef.current = 0;
+
+      setUsage((current) => ({
+        ...current,
+        bytesPerSecond: currentRate,
+        peakBytesPerSecond: Math.max(current.peakBytesPerSecond, currentRate),
+        elapsedSeconds: Math.floor(
+          (Date.now() - usageStartedAtRef.current) / 1000,
+        ),
+      }));
+    }, 1000);
+
+    return () => {
+      observer.disconnect();
+      window.clearInterval(usageTimer);
+    };
+  }, []);
+
+  const formatBytes = (bytes) => {
+    if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+
+    const units = ["B", "KB", "MB", "GB"];
+    const unitIndex = Math.min(
+      Math.floor(Math.log(bytes) / Math.log(1024)),
+      units.length - 1,
+    );
+    const value = bytes / 1024 ** unitIndex;
+    return `${value.toFixed(unitIndex === 0 || value >= 100 ? 0 : 1)} ${units[unitIndex]}`;
+  };
+
+  const formatDuration = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    if (hours) return `${hours}h ${minutes}m`;
+    if (minutes) return `${minutes}m ${remainingSeconds}s`;
+    return `${remainingSeconds}s`;
+  };
+
+  const resetUsage = () => {
+    bytesSinceLastTickRef.current = 0;
+    usageStartedAtRef.current = Date.now();
+    setUsage((current) => ({
+      ...current,
+      downloadedBytes: 0,
+      bytesPerSecond: 0,
+      peakBytesPerSecond: 0,
+      resourceCount: 0,
+      elapsedSeconds: 0,
+      connectionChanges: 0,
+    }));
+  };
+
+  const getQuality = () => {
+    if (!network.online) {
+      return { label: "Offline", color: "#dc2626", background: "#fef2f2" };
+    }
+
+    if (
+      ["slow-2g", "2g"].includes(network.effectiveType) ||
+      (network.downlink !== null && network.downlink < 1) ||
+      (network.rtt !== null && network.rtt > 600)
+    ) {
+      return { label: "Poor", color: "#dc2626", background: "#fef2f2" };
+    }
+
+    if (
+      network.effectiveType === "3g" ||
+      (network.downlink !== null && network.downlink < 5) ||
+      (network.rtt !== null && network.rtt > 250)
+    ) {
+      return { label: "Fair", color: "#d97706", background: "#fffbeb" };
+    }
+
+    if (
+      network.effectiveType === "4g" &&
+      network.downlink !== null &&
+      network.downlink >= 10 &&
+      (network.rtt === null || network.rtt <= 150)
+    ) {
+      return { label: "Excellent", color: "#15803d", background: "#f0fdf4" };
+    }
+
+    if (
+      !network.effectiveType &&
+      network.downlink === null &&
+      network.rtt === null
+    ) {
+      return { label: "Connected", color: "#2563eb", background: "#eff6ff" };
+    }
+
+    return { label: "Good", color: "#16a34a", background: "#f0fdf4" };
+  };
+
+  const quality = getQuality();
+  const speedLabel =
+    network.downlink === null ? null : `${network.downlink.toFixed(1)} Mbps`;
+  const statusLabel = network.online ? "Online" : "Offline";
+  const liveDownloadLabel = `${formatBytes(usage.bytesPerSecond)}/s`;
+  const navbarSpeedLabel = !network.online
+    ? statusLabel
+    : usage.bytesPerSecond > 0
+      ? `↓ ${liveDownloadLabel}`
+      : speedLabel || statusLabel;
+  const tooltipDetails = [
+    statusLabel,
+    `Live download: ${liveDownloadLabel}`,
+    speedLabel && `Estimated speed: ${speedLabel}`,
+    network.effectiveType && `Connection: ${network.effectiveType.toUpperCase()}`,
+    network.rtt !== null && `Latency: ${network.rtt} ms`,
+  ]
+    .filter(Boolean)
+    .join(" • ");
+  const isOpen = Boolean(anchorEl);
+  const detailValue = (value) => value || "Not available";
+
+  return (
+    <>
+      <Tooltip
+        title={isOpen ? "" : `${tooltipDetails} • Click for details`}
+        placement="bottom"
+        slotProps={{
+          tooltip: {
+            sx: {
+              bgcolor: "#ffffff",
+              color: "#111827",
+              fontSize: "11px",
+              fontWeight: 600,
+              borderRadius: "6px",
+              px: 1,
+              py: 0.6,
+              boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
+              border: "1px solid rgba(0,0,0,0.08)",
+            },
+          },
+        }}
+      >
+        <button
+          type="button"
+          aria-live="polite"
+          aria-label={tooltipDetails}
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
+          onClick={(event) => {
+            updateNetwork();
+            setAnchorEl(event.currentTarget);
+          }}
+          className="flex h-7 items-center gap-1 rounded-md border-0 px-1.5 transition-transform hover:-translate-y-px"
+          style={{
+            color: quality.color,
+            backgroundColor: quality.background,
+            cursor: "pointer",
+          }}
+        >
+          {network.online ? (
+            <WifiRoundedIcon sx={{ fontSize: 19 }} />
+          ) : (
+            <WifiOffRoundedIcon sx={{ fontSize: 19 }} />
+          )}
+          <span className="whitespace-nowrap text-[10px] font-semibold leading-none">
+            {navbarSpeedLabel}
+          </span>
+          {usage.bytesPerSecond > 0 && (
+            <span
+              aria-hidden="true"
+              className="h-1.5 w-1.5 animate-pulse rounded-full bg-current"
+            />
+          )}
+        </button>
+      </Tooltip>
+
+      <Popover
+        open={isOpen}
+        anchorEl={anchorEl}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        transformOrigin={{ vertical: "top", horizontal: "center" }}
+        slotProps={{
+          paper: {
+            sx: {
+              mt: 1,
+              width: 320,
+              overflow: "hidden",
+              borderRadius: "12px",
+              bgcolor: "var(--navbarBg)",
+              color: "var(--navbarTextColor)",
+              border: "1px solid rgba(148, 163, 184, 0.25)",
+              boxShadow: "0 16px 40px rgba(15, 23, 42, 0.22)",
+            },
+          },
+        }}
+      >
+        <div className="p-3">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <div className="text-[13px] font-bold">Network diagnostics</div>
+              <div className="mt-0.5 text-[10px] opacity-60">
+                Live browser connection data
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={updateNetwork}
+              aria-label="Refresh network information"
+              title="Refresh"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-transparent hover:bg-slate-100"
+              style={{ color: "inherit", cursor: "pointer" }}
+            >
+              <RefreshRoundedIcon sx={{ fontSize: 17 }} />
+            </button>
+          </div>
+
+          <div
+            className="mb-3 flex items-center justify-between rounded-lg px-3 py-2"
+            style={{ color: quality.color, backgroundColor: quality.background }}
+          >
+            <div className="flex items-center gap-2">
+              {network.online ? (
+                <WifiRoundedIcon sx={{ fontSize: 22 }} />
+              ) : (
+                <WifiOffRoundedIcon sx={{ fontSize: 22 }} />
+              )}
+              <div>
+                <div className="text-[12px] font-bold">{statusLabel}</div>
+                <div className="text-[10px] opacity-80">Connection quality</div>
+              </div>
+            </div>
+            <span className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-bold">
+              {quality.label}
+            </span>
+          </div>
+
+          <div className="mb-3 rounded-lg border border-slate-200/70 p-2.5">
+            <div className="mb-2 flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-1.5 text-[11px] font-bold">
+                  Live usage
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                </div>
+                <div className="mt-0.5 text-[9px] opacity-55">
+                  Current browser tab
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[15px] font-bold text-emerald-600">
+                  ↓ {formatBytes(usage.bytesPerSecond)}/s
+                </div>
+                <div className="text-[9px] opacity-55">current transfer rate</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-200/70 pt-2 text-[10px]">
+              <div className="flex items-center justify-between gap-2">
+                <span className="opacity-60">Downloaded</span>
+                <span className="font-bold">{formatBytes(usage.downloadedBytes)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="opacity-60">Peak rate</span>
+                <span className="font-bold">
+                  {formatBytes(usage.peakBytesPerSecond)}/s
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="opacity-60">Requests</span>
+                <span className="font-bold">{usage.resourceCount}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="opacity-60">Session</span>
+                <span className="font-bold">
+                  {formatDuration(usage.elapsedSeconds)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="opacity-60">Network events</span>
+                <span className="font-bold">{usage.connectionChanges}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="opacity-60">Upload usage</span>
+                <span className="font-bold">Restricted</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={resetUsage}
+              className="mt-2 flex w-full items-center justify-center gap-1 rounded-md border border-slate-200 bg-transparent py-1 text-[10px] font-semibold hover:bg-slate-100"
+              style={{ color: "inherit", cursor: "pointer" }}
+            >
+              <RestartAltRoundedIcon sx={{ fontSize: 14 }} />
+              Reset usage counters
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-[10px]">
+            <div className="rounded-lg border border-slate-200/70 p-2">
+              <div className="opacity-60">Estimated speed</div>
+              <div className="mt-1 text-[12px] font-bold">
+                {detailValue(speedLabel)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-slate-200/70 p-2">
+              <div className="opacity-60">Latency</div>
+              <div className="mt-1 text-[12px] font-bold">
+                {detailValue(network.rtt !== null ? `${network.rtt} ms` : null)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-slate-200/70 p-2">
+              <div className="opacity-60">Effective type</div>
+              <div className="mt-1 text-[12px] font-bold uppercase">
+                {detailValue(network.effectiveType)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-slate-200/70 p-2">
+              <div className="opacity-60">Connection</div>
+              <div className="mt-1 text-[12px] font-bold capitalize">
+                {detailValue(network.type)}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between border-t border-slate-200/70 pt-2 text-[10px] opacity-70">
+            <span>
+              Data saver:{" "}
+              {network.saveData === null
+                ? "Unavailable"
+                : network.saveData
+                  ? "On"
+                  : "Off"}
+            </span>
+            <span>
+              Updated {network.lastUpdated?.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              }) || "just now"}
+            </span>
+          </div>
+          <div className="mt-2 text-[9px] leading-3 opacity-50">
+            Usage covers this tab only. Cached and cross-origin resources may not
+            expose their transfer size.
+          </div>
+        </div>
+      </Popover>
+    </>
+  );
+}
 
 NavbarPage.propTypes = {};
 
@@ -1034,6 +1653,10 @@ export default function NavbarPage() {
                   </button>
                 </Tooltip>
               )}
+
+              <AssistantNavbarTrigger />
+
+              <NetworkStatusIndicator />
 
               <div
                 className={`flex items-center gap-1 relative cursor-pointer text-[12px] ${styles.txtColorDark}`}

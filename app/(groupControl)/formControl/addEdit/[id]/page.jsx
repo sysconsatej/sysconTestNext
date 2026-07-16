@@ -284,6 +284,7 @@ export default function AddEditFormControll() {
   const childTableRow = useSelector((state) => state?.counter?.childRecord);
   const { clientId } = getUserDetails();
   const [clientName, setClientName] = useState(null);
+  const [childDefaultValues, setChildDefaultValues] = useState({});
   console.log("newState", newState);
 
   useEffect(() => {
@@ -2231,8 +2232,8 @@ export default function AddEditFormControll() {
                   id: search.menuName,
                   menuName: search.menuName,
                   parentMenuId: search.menuName,
-                  keyName:search.keyName,
-                  keyValue:search.keyValue,
+                  keyName: search.keyName,
+                  keyValue: search.keyValue,
                 })}`,
               );
             }, 500);
@@ -2374,6 +2375,21 @@ export default function AddEditFormControll() {
         toast.error("Something went wrong while fetching charge details");
       }
     },
+    handleProfitCheck: () => {
+      const amount = newState?.tblJobCharge?.reduce((acc,cur) => {
+        acc.buy += Number(cur?.buyTotalAmountHc);
+        acc.sell += Number(cur?.sellTotalAmountHc);
+        return acc;
+      }, {buy:0, sell: 0});
+
+        setParaText(
+          `Total Buy Amount: ${amount?.buy}
+          Total Sell Amount: ${amount?.sell}
+          Total Profit Amount: ${amount?.sell - amount?.buy}
+          `
+        )
+        setOpenModal(true);
+    }
   };
 
   const onConfirm = async (conformData) => {
@@ -2387,8 +2403,8 @@ export default function AddEditFormControll() {
             id: search.menuName,
             menuName: search.menuName,
             parentMenuId: search.menuName,
-            keyName:search.keyName,
-            keyValue:search.keyValue, 
+            keyName: search.keyName,
+            keyValue: search.keyValue,
           })}`,
         );
       }
@@ -2449,6 +2465,7 @@ export default function AddEditFormControll() {
                 //handleFieldValuesChange2={handleFieldValuesChange2}
                 //
                 getLabelValue={getLabelValue}
+                setChildDefaultValues={setChildDefaultValues}
               />
             </React.Fragment>
           ))}
@@ -2478,6 +2495,7 @@ export default function AddEditFormControll() {
                 getLabelValue={getLabelValue}
                 childsFields={childsFields}
                 childTableRow={childTableRow}
+                childDefaultValues={childDefaultValues}
               />
             </div>
           ))}
@@ -2603,6 +2621,7 @@ ParentAccordianComponent.propTypes = {
   formControlData: PropTypes.any,
   setFormControlData: PropTypes.any,
   getLabelValue: PropTypes.any,
+  setChildDefaultValues: PropTypes.func,
 };
 
 function ParentAccordianComponent({
@@ -2626,6 +2645,7 @@ function ParentAccordianComponent({
   formControlData,
   setFormControlData,
   getLabelValue,
+  setChildDefaultValues,
 }) {
   const [isParentAccordionOpen, setIsParentAccordionOpen] = useState(false);
   // Assuming you have a ref to your accordion component
@@ -2754,6 +2774,7 @@ function ParentAccordianComponent({
             setStateVariable={setNewState}
             //
             getLabelValue={getLabelValue}
+            setChildDefaultValues={setChildDefaultValues}
           />
         </AccordionDetails>
       </Accordion>
@@ -2785,6 +2806,7 @@ ChildAccordianComponent.propTypes = {
   getLabelValue: PropTypes.any,
   childsFields: PropTypes.any,
   childTableRow: PropTypes.any,
+  childDefaultValues: PropTypes.any,
 };
 
 function ChildAccordianComponent({
@@ -2809,7 +2831,9 @@ function ChildAccordianComponent({
   getLabelValue,
   childsFields,
   childTableRow,
+  childDefaultValues,
 }) {
+  const dispatch = useDispatch();
   const tableRef = useRef(null);
   const [clickCount, setClickCount] = useState(0);
   const [isChildAccordionOpen, setIschildAccordionOpen] = useState(false);
@@ -2826,7 +2850,12 @@ function ChildAccordianComponent({
   const [dummyFieldArray, setDummyFieldArray] = useState([]);
   const [isGridEdit, setIsGridEdit] = useState(false);
   const [checker, setChecker] = useState(true);
-  const [copyChildValueObj, setCopyChildValueObj] = useState([]);
+  const [copyChildValueObj, setCopyChildValueObj] = useState({});
+  const latestGridStateRef = useRef({
+    childTableRow,
+    copyChildValueObj: {},
+    newState,
+  });
   const [columnTotals, setColumnTotals] = useState({ tableName: "" });
   const [containerWidth, setContainerWidth] = useState(0);
   const [inputFieldsVisible, setInputFieldsVisible] = useState(
@@ -2840,6 +2869,47 @@ function ChildAccordianComponent({
   const hasDestinationFreeDaysField = section?.fields?.some(
     (field) => field?.fieldname === "destinationFreeDays",
   );
+
+  useEffect(() => {
+    latestGridStateRef.current = {
+      childTableRow,
+      copyChildValueObj,
+      newState,
+    };
+  }, [childTableRow, copyChildValueObj, newState]);
+
+  useEffect(() => {
+    const tableName = section?.tableName;
+    const editableOnLoad =
+      String(section?.gridEditableOnLoad).toLowerCase() === "true";
+
+    if (!checker || !editableOnLoad || !tableName) return;
+
+    const existingRows = structuredClone(
+      Array.isArray(newState?.[tableName]) ? newState[tableName] : [],
+    );
+
+    const initialGridData = {
+      [tableName]: existingRows,
+    };
+
+    // gridEditableOnLoad does not call gridEditHandle, therefore seed the
+    // edit buffer here so already-saved rows can be updated by their id.
+    setCopyChildValueObj(initialGridData);
+
+    dispatch(
+      updateFlag({
+        flag: "childRecord",
+        value: initialGridData,
+      }),
+    );
+  }, [
+    checker,
+    section?.gridEditableOnLoad,
+    section?.tableName,
+    newState?.[section?.tableName],
+    dispatch,
+  ]);
 
   useEffect(() => {
     if (!hasDestinationFreeDaysField || !section?.tableName) return;
@@ -3701,92 +3771,181 @@ function ChildAccordianComponent({
 
   function gridEditHandle(tableName) {
     setChecker(false);
+
     if (isGridEdit) {
       toast.warn("Please save the changes before editing");
       return;
     }
-    //setIsGridEdit(true);
-    setCopyChildValueObj((prev) => {
-      // Clone the previous state
-      const newCopy = { ...prev };
-      // Ensure there's an array to push to for the tableName
-      if (newCopy[tableName] === undefined) {
-        newCopy[tableName] = [];
-      }
-      // Append the new state for the tableName
-      // newCopy[tableName].push(newState[tableName]);
-      // Return the modified copy
-      return newCopy;
-    });
 
-    // Toggle the isGridEdit state
-    setIsGridEdit((prevState) => !prevState);
+    const existingRows = structuredClone(
+      Array.isArray(newState?.[tableName]) ? newState[tableName] : [],
+    );
+
+    const initialGridData = {
+      [tableName]: existingRows,
+    };
+
+    // Existing database rows must be copied into the edit buffer first.
+    // RowComponent updates rows in this buffer by matching their saved id.
+    setCopyChildValueObj(initialGridData);
+
+    dispatch(
+      updateFlag({
+        flag: "childRecord",
+        value: initialGridData,
+      }),
+    );
+
+    setIsGridEdit(true);
   }
 
-  function gridEditSaveFunction(tableName, section) {
-    //k
-    //const objectsToValidate = copyChildValueObj[tableName][0];
-    const childData = childTableRow
-      ? childTableRow
-      : copyChildValueObj[tableName]?.[0];
-    console.log("copyChildValueObj", copyChildValueObj);
+  const normalizeGridRows = (value) => {
+    if (!Array.isArray(value)) return [];
+
+    if (value.length === 1 && Array.isArray(value[0])) {
+      return value[0];
+    }
+
+    return value;
+  };
+
+  function gridEditSaveFunction(tableName, section, rowsOverride = null) {
     setChecker(false);
+
+    const latestChildTableRow =
+      latestGridStateRef.current?.childTableRow;
+    const latestCopyChildValueObj =
+      latestGridStateRef.current?.copyChildValueObj;
+    const latestNewState = latestGridStateRef.current?.newState;
+
+    const reduxRows = normalizeGridRows(
+      latestChildTableRow?.[tableName],
+    );
+    const copiedRows = normalizeGridRows(
+      latestCopyChildValueObj?.[tableName],
+    );
+    const stateRows = normalizeGridRows(latestNewState?.[tableName]);
+
+    const overrideRows = normalizeGridRows(rowsOverride);
+
     const objectsToValidate =
-      childData[tableName] ||
-      copyChildValueObj[tableName]?.[0] ||
-      newState[tableName];
+      overrideRows.length > 0
+        ? overrideRows
+        : copiedRows.length > 0
+          ? copiedRows
+          : reduxRows.length > 0
+            ? reduxRows
+            : stateRows;
 
     for (const field of section.fields) {
-      // Loop through the fields that need validation
-      let isFieldValid = false; // Track if the current field is valid
+      let isFieldValid = false;
 
       for (const object of objectsToValidate) {
-        // Loop through each object in your array
         if (field.isRequired) {
-          // Check if the field exists in the object and it is not empty
           if (
             Object.prototype.hasOwnProperty.call(object, field.fieldname) &&
             object[field.fieldname]
           ) {
-            isFieldValid = true; // Field is valid, break out of the loop for this field
+            isFieldValid = true;
             break;
           }
         }
       }
 
       if (!isFieldValid && field.isRequired) {
-        // If no valid entry was found and the field is required
         toast.error(`Value for ${field.yourlabel} is missing or empty.`);
-        return; // Exit the function if a validation fails
+        return;
       }
     }
-    setNewState((prev) => {
-      return {
-        ...prev,
-        [tableName]:
-          childData[tableName] ||
-          copyChildValueObj[tableName]?.[0] ||
-          newState[tableName],
-      };
-    });
-    //console.log("copyChildValueObj", copyChildValueObj);
-    setSubmitNewState((prev) => {
-      return {
-        ...prev,
-        [tableName]:
-          childData[tableName] ||
-          copyChildValueObj[tableName]?.[0] ||
-          newState[tableName],
-      };
-    });
-    setIsGridEdit(!isGridEdit);
-    setCopyChildValueObj([]);
+
+    setNewState((prev) => ({
+      ...prev,
+      [tableName]: objectsToValidate,
+    }));
+
+    setSubmitNewState((prev) => ({
+      ...prev,
+      [tableName]: objectsToValidate,
+    }));
+
+    setRenderedData(objectsToValidate.slice(0, 10));
+    setIsGridEdit(false);
+    setCopyChildValueObj({});
+
+    dispatch(
+      updateFlag({
+        flag: "childRecord",
+        value: {},
+      }),
+    );
   }
 
   function gridEditCloseFunction(tableName) {
-    setCopyChildValueObj([]);
-    setIsGridEdit(!isGridEdit);
+    setCopyChildValueObj({});
+    setIsGridEdit(false);
+
+    dispatch(
+      updateFlag({
+        flag: "childRecord",
+        value: {},
+      }),
+    );
   }
+
+  const handleGridLastTabSave = (event, tableName, currentSection) => {
+    const isGridCurrentlyEditable =
+      isGridEdit ||
+      (checker &&
+        String(currentSection?.gridEditableOnLoad).toLowerCase() === "true");
+
+    if (
+      event.key !== "Tab" ||
+      event.shiftKey ||
+      !isGridCurrentlyEditable
+    ) {
+      return;
+    }
+
+    const tableContainer = tableRef.current;
+    const target = event.target;
+
+    if (!tableContainer || !(target instanceof HTMLElement)) return;
+
+    const currentRow = target.closest("tr");
+    if (!currentRow) return;
+
+    const bodyRows = Array.from(
+      tableContainer.querySelectorAll("tbody > tr"),
+    );
+    const dataRows = bodyRows.slice(0, renderedData?.length || 0);
+    const lastDataRow = dataRows[dataRows.length - 1];
+
+    if (!lastDataRow || currentRow !== lastDataRow) return;
+
+    const editableCells = Array.from(
+      lastDataRow.querySelectorAll("td"),
+    ).filter((cell) =>
+      cell.querySelector(
+        'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [contenteditable="true"], [role="combobox"]',
+      ),
+    );
+
+    const lastEditableCell = editableCells.at(-1);
+
+    if (!lastEditableCell || !lastEditableCell.contains(target)) return;
+
+    const saveAfterLatestFieldUpdate = () => {
+      gridEditSaveFunction(tableName, currentSection);
+    };
+
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(saveAfterLatestFieldUpdate);
+      });
+    } else {
+      setTimeout(saveAfterLatestFieldUpdate, 0);
+    }
+  };
 
   function handleChangeFunction(result) {
     // if (result?.isCheck === false) {
@@ -3942,12 +4101,15 @@ function ChildAccordianComponent({
   const onSave = () => {
     childButtonHandler(section, indexValue);
   };
+const latestChildObject = {
+  ...childObject,
+  ...childDefaultValues,
+};
 
   const addRowProps = {
     // array or data
     childFieldsData: childFieldsData,
-    childObject: childObject,
-
+    childObject: latestChildObject,
     // boolean
     inputFieldsVisible: inputFieldsVisible,
     isGridEdit: isGridEdit,
@@ -3972,7 +4134,9 @@ function ChildAccordianComponent({
         ),
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
-        setTableBodyWidth(`${right - 70}`);
+        let hoverBtnWidth = document.getElementById("hoverBtn");
+        hoverBtnWidth = hoverBtnWidth?.offsetWidth;
+        setTableBodyWidth(`${right - Math.max(hoverBtnWidth, 70)}`);
       } else {
         setTableBodyWidth(`0`);
       }
@@ -3985,7 +4149,7 @@ function ChildAccordianComponent({
     return () => {
       tableRef.current?.removeEventListener("scroll", horiScroll);
     };
-  }, [tableRef.current]);
+  }, [tableRef.current, document.getElementById("hoverBtn")]);
 
   async function onLoadFunctionCall(
     functionData,
@@ -4169,7 +4333,7 @@ function ChildAccordianComponent({
                   inputFieldData={section.fields}
                   onValuesChange={handleFieldChildrenValuesChange}
                   // handleFieldValuesChange2={handleFieldValuesChange2}
-                  values={childObject}
+                  values={latestChildObject}
                   inEditMode={{ isEditMode: true, isCopy: isCopy }}
                   onChangeHandler={(result) => {
                     handleChangeFunction(result);
@@ -4420,6 +4584,14 @@ function ChildAccordianComponent({
                               setIsGridEdit={setIsGridEdit}
                               copyChildValueObj={copyChildValueObj}
                               setCopyChildValueObj={setCopyChildValueObj}
+                              isLastRow={index === renderedData.length - 1}
+                              onGridLastTab={(latestRows) =>
+                                gridEditSaveFunction(
+                                  section.tableName,
+                                  section,
+                                  latestRows,
+                                )
+                              }
                               isView={isView}
                               setOpenModal={setOpenModal}
                               setParaText={setParaText}

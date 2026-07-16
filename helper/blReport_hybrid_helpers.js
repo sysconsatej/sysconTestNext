@@ -403,6 +403,63 @@ function isFlowSplitChunkEl(el) {
   );
 }
 
+function hasStrongHorizontalOverlapForTables(a, b, ratio = 0.55) {
+  const ax = Number(a?.x || 0);
+  const aw = Number(a?.w || 0);
+  const bx = Number(b?.x || 0);
+  const bw = Number(b?.w || 0);
+  if (aw <= 0 || bw <= 0) return false;
+
+  const overlap = Math.min(ax + aw, bx + bw) - Math.max(ax, bx);
+  return overlap >= Math.min(aw, bw) * ratio;
+}
+
+function isBodyTableForOverlap(el) {
+  if (!el || String(el?.type || "").toLowerCase() !== "table") return false;
+  const band = String(el?.attachBand || "").toLowerCase();
+  return band !== "header" && band !== "footer";
+}
+
+function resolveBodyTableOverlaps(elements, { minGapMm = 0.2 } = {}) {
+  const els = Array.isArray(elements)
+    ? elements.map((el) => (el ? { ...el } : el))
+    : [];
+  if (!els.length) return elements;
+
+  const records = els
+    .map((el, index) => ({ el, index }))
+    .filter(({ el }) => isBodyTableForOverlap(el) && !el?.hidden)
+    .sort(
+      (a, b) =>
+        Number(a.el?.y || 0) - Number(b.el?.y || 0) ||
+        Number(a.el?.z || 0) - Number(b.el?.z || 0),
+    );
+
+  let changed = false;
+
+  for (let i = 0; i < records.length; i++) {
+    const upper = records[i].el;
+    if (!upper) continue;
+
+    const upperBottom = Number(upper.y || 0) + Number(upper.h || 0);
+    for (let j = i + 1; j < records.length; j++) {
+      const lower = records[j].el;
+      if (!lower) continue;
+      if (!hasStrongHorizontalOverlapForTables(upper, lower)) continue;
+
+      const lowerY = Number(lower.y || 0);
+      if (lowerY >= upperBottom - 0.01) continue;
+
+      const updated = { ...lower, y: upperBottom + minGapMm };
+      els[records[j].index] = updated;
+      records[j].el = updated;
+      changed = true;
+    }
+  }
+
+  return changed ? els : elements;
+}
+
 function stripGeneratedElementSuffix(id) {
   return String(id || "")
     .replace(/__(?:flow|chunk|auto)_\d+$/i, "")
@@ -425,6 +482,189 @@ function isRepeatFollowerAnchor(el) {
   const repeat = t.repeat || {};
 
   return !!(isSplitChunkEl(el) || t.repeatPrint || repeat.enabled);
+}
+
+function isEmptyRepeatGridAnchor(el) {
+  if (!el || String(el?.type || "").toLowerCase() !== "table") return false;
+
+  const t = el.table || el.tbl || el.meta || {};
+  const repeatPrint = t.repeatPrint || null;
+  if (!repeatPrint) return false;
+
+  const sourceRowCount =
+    repeatPrint.sourceRowCount == null
+      ? Array.isArray(repeatPrint.body)
+        ? repeatPrint.body.length
+        : 0
+      : repeatPrint.sourceRowCount;
+  const allBlank =
+    Array.isArray(repeatPrint.body) &&
+    repeatPrint.body.length > 0 &&
+    repeatPrint.body.every((row) =>
+      isBlankRepeatBodyRow(row, repeatPrint.columns),
+    );
+
+  return !!(
+    el.__emptyRepeatGridHidden ||
+    repeatPrint.hiddenWhenEmpty ||
+    allBlank ||
+    (Array.isArray(repeatPrint.body) &&
+      repeatPrint.body.length === 0 &&
+      Number(sourceRowCount || 0) === 0)
+  );
+}
+
+function compactEmptyRepeatGridSpace(
+  elements,
+  { maxIters = 50, debug = true } = {},
+) {
+  const els = Array.isArray(elements)
+    ? elements.map((e) => (e ? { ...e } : e))
+    : [];
+  if (!els.length) return elements;
+
+  const findRecordByIdOrBase = (id) => {
+    if (!id) return null;
+
+    const targetId = String(id);
+    const targetBase = stripGeneratedElementSuffix(targetId);
+
+    for (let index = 0; index < els.length; index++) {
+      const el = els[index];
+      if (String(el?.id || "") === targetId) return { el, index };
+    }
+
+    let best = null;
+    let bestBottom = -Infinity;
+
+    for (let index = 0; index < els.length; index++) {
+      const el = els[index];
+      if (!el) continue;
+
+      const elId = String(el?.id || "");
+      const elBase = getElementBaseId(el);
+
+      if (
+        elId !== targetId &&
+        elBase !== targetId &&
+        elBase !== targetBase &&
+        stripGeneratedElementSuffix(elId) !== targetBase
+      ) {
+        continue;
+      }
+
+      const bottom = Number(el.y || 0) + Number(el.h || 0);
+      if (!best || bottom >= bestBottom) {
+        best = { el, index };
+        bestBottom = bottom;
+      }
+    }
+
+    return best;
+  };
+
+  const refMatchesAnchor = (refId, anchor) => {
+    if (!refId || !anchor) return false;
+
+    const ref = String(refId);
+    const anchorId = String(anchor.id || "");
+    const anchorBase = getElementBaseId(anchor);
+    const refBase = stripGeneratedElementSuffix(ref);
+
+    return (
+      ref === anchorId ||
+      ref === anchorBase ||
+      refBase === anchorBase ||
+      refBase === stripGeneratedElementSuffix(anchorId)
+    );
+  };
+
+  const moveRecordToY = (rec, nextY) => {
+    if (!rec?.el || !Number.isFinite(nextY)) return false;
+
+    const curY = Number(rec.el.y || 0);
+    if (Math.abs(curY - nextY) <= 0.001) return false;
+
+    const updated = { ...rec.el, y: nextY };
+    els[rec.index] = updated;
+    rec.el = updated;
+    return true;
+  };
+
+  let changed = false;
+
+  for (let iter = 0; iter < maxIters; iter++) {
+    let did = false;
+
+    const anchors = els
+      .map((el, index) => ({ el, index }))
+      .filter(({ el }) => isEmptyRepeatGridAnchor(el) && !isHeaderFooterEl(el))
+      .sort(
+        (a, b) =>
+          Number(a.el?.y || 0) - Number(b.el?.y || 0) ||
+          Number(a.el?.z || 0) - Number(b.el?.z || 0),
+      );
+
+    if (!anchors.length) break;
+
+    for (const rec of anchors) {
+      let anchor = els[rec.index];
+      if (!anchor) continue;
+
+      if (!anchor.hidden || Number(anchor.h || 0) !== 0) {
+        anchor = {
+          ...anchor,
+          hidden: true,
+          h: 0,
+          __emptyRepeatGridHidden: true,
+        };
+        els[rec.index] = anchor;
+        did = true;
+      }
+
+      const ids = readNeighborIds(anchor);
+      const topRec = findRecordByIdOrBase(ids.topId);
+      if (topRec?.el && topRec.index !== rec.index && !isHeaderFooterEl(topRec.el)) {
+        const nextY = Number(topRec.el.y || 0) + Number(topRec.el.h || 0);
+        if (moveRecordToY({ el: anchor, index: rec.index }, nextY)) {
+          anchor = els[rec.index];
+          did = true;
+        }
+      }
+
+      const collapsedY = Number(anchor.y || 0);
+      const bottomRec = findRecordByIdOrBase(ids.bottomId);
+      if (
+        bottomRec?.el &&
+        bottomRec.index !== rec.index &&
+        !isHeaderFooterEl(bottomRec.el)
+      ) {
+        if (moveRecordToY(bottomRec, collapsedY)) did = true;
+      }
+
+      for (let i = 0; i < els.length; i++) {
+        if (i === rec.index) continue;
+        const follower = els[i];
+        if (!follower || isHeaderFooterEl(follower)) continue;
+
+        const followerTopId = readNeighborIds(follower).topId;
+        if (!refMatchesAnchor(followerTopId, anchor)) continue;
+
+        if (moveRecordToY({ el: follower, index: i }, collapsedY)) did = true;
+      }
+    }
+
+    if (!did) break;
+    changed = true;
+  }
+
+  if (debug && changed) {
+    console.log("[EMPTY-REPEAT-COLLAPSE]", {
+      count: els.filter(isEmptyRepeatGridAnchor).length,
+    });
+  }
+
+  return changed ? els : elements;
 }
 
 function compactDirectFollowersAfterChunkGrowth(
@@ -680,20 +920,54 @@ function getByPath(obj, path) {
     .split(".")
     .map((s) => String(s).trim())
     .filter(Boolean);
+  const pathVariants = [parts];
+  if (
+    ["data", "result", "recordset", "records", "row", "record"].includes(
+      String(parts[0] || "").toLowerCase(),
+    ) &&
+    parts.length > 1
+  ) {
+    pathVariants.push(parts.slice(1));
+  }
 
-  const tryFrom = (base) => {
+  const tryFromParts = (base, pathParts) => {
     let cur = base;
-    for (const k of parts) {
+    for (const k of pathParts) {
       cur = getPropCI(cur, k);
       if (cur === undefined || cur === null) return undefined;
     }
     return cur;
   };
 
+  const tryFrom = (base) => {
+    for (const pathParts of pathVariants) {
+      const v = tryFromParts(base, pathParts);
+      if (v !== undefined && v !== null) return v;
+    }
+    return undefined;
+  };
+
   const direct = tryFrom(obj);
   if (direct !== undefined && direct !== null) return direct;
 
-  const candidates = [obj?.bl, obj?.bldata, obj?.tblBl, obj?.data, obj?.row];
+  const pushCandidate = (list, value) => {
+    if (value === undefined || value === null) return;
+    list.push(value);
+    if (Array.isArray(value) && value.length > 0) list.push(value[0]);
+  };
+
+  const candidates = [];
+  pushCandidate(candidates, obj);
+  pushCandidate(candidates, Array.isArray(obj) ? obj[0] : null);
+  pushCandidate(candidates, obj?.bl);
+  pushCandidate(candidates, obj?.bldata);
+  pushCandidate(candidates, obj?.tblBl);
+  pushCandidate(candidates, obj?.data);
+  pushCandidate(candidates, obj?.result);
+  pushCandidate(candidates, obj?.recordset);
+  pushCandidate(candidates, obj?.row);
+  pushCandidate(candidates, obj?.record);
+
   for (const c of candidates) {
     if (!c) continue;
     const v = tryFrom(c);
@@ -1515,12 +1789,58 @@ function isRepeatTableElementMm(el) {
   if (!el || String(el.type || "").toLowerCase() !== "table") return false;
   const t = el.table || {};
   const rep = t.repeat || {};
+  const arrayPath = getEffectiveRepeatArrayPath(rep);
   return (
     rep.enabled === true &&
-    !!rep.arrayPath &&
+    !!arrayPath &&
     Array.isArray(rep.columns) &&
     rep.columns.length > 0
   );
+}
+
+function repeatColumnsLookLikeContainerGrid(columns = []) {
+  return (Array.isArray(columns) ? columns : []).some((col) =>
+    getRepeatColumnHints(col).some(
+      (hint) =>
+        hint.includes("container") ||
+        hint.includes("seal") ||
+        hint.includes("grosswt") ||
+        hint.includes("netwt") ||
+        hint.includes("package") ||
+        hint.includes("volume"),
+    ),
+  );
+}
+
+function repeatPathLooksLikeContainerGrid(path) {
+  const hint = normalizeRepeatColumnHint(path);
+  return hint.includes("container") || hint.includes("tblblcontainer");
+}
+
+function getEffectiveRepeatArrayPath(repeat = {}) {
+  const raw = String(repeat?.arrayPath || "").trim();
+  if (raw) return raw;
+  if (repeatColumnsLookLikeContainerGrid(repeat?.columns)) {
+    return "tblBlContainer";
+  }
+  return "";
+}
+
+function getRepeatSourceRows(data, repeat = {}) {
+  const arrayPath = getEffectiveRepeatArrayPath(repeat);
+  let arrVal = arrayPath ? getByPath(data, arrayPath) : undefined;
+  let rows = Array.isArray(arrVal) ? arrVal : [];
+
+  if (
+    rows.length === 0 &&
+    (repeatPathLooksLikeContainerGrid(arrayPath) ||
+      repeatColumnsLookLikeContainerGrid(repeat?.columns))
+  ) {
+    arrVal = getByPath(data, "tblBlContainer");
+    rows = Array.isArray(arrVal) ? arrVal : [];
+  }
+
+  return { arrayPath, rows };
 }
 
 function resolveRepeatColumnsMm(repeat, firstRowObj) {
@@ -1541,6 +1861,501 @@ function resolveRepeatColumnsMm(repeat, firstRowObj) {
       .map((k) => ({ key: k, label: k, align: "left", widthMm: null }));
   }
   return [];
+}
+
+function isRepeatIndexColumn(col) {
+  const key = String(col?.key ?? col ?? "")
+    .trim()
+    .toLowerCase();
+  const compactLabel = String(col?.label ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s._-]+/g, "");
+
+  return (
+    key === "__index__" ||
+    key === "index" ||
+    key === "srno" ||
+    key === "sno" ||
+    key === "slno" ||
+    compactLabel === "srno" ||
+    compactLabel === "sno" ||
+    compactLabel === "slno" ||
+    compactLabel === "serialno"
+  );
+}
+
+function hasMeaningfulRepeatValue(value) {
+  if (value == null) return false;
+  if (Array.isArray(value)) return value.some(hasMeaningfulRepeatValue);
+
+  if (typeof value === "object") {
+    return Object.values(value).some(hasMeaningfulRepeatValue);
+  }
+
+  const cleaned = String(value)
+    .replace(/\u00A0/g, "")
+    .replace(/\{\{[^}]+\}\}/g, "")
+    .trim();
+  if (!cleaned) return false;
+
+  const lowered = cleaned.toLowerCase();
+  return lowered !== "null" && lowered !== "undefined";
+}
+
+function normalizeRepeatColumnHint(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function getOwnPathValue(obj, path) {
+  const parts = String(path || "")
+    .split(".")
+    .map((s) => String(s).trim())
+    .filter(Boolean);
+  if (!parts.length) return { exists: false, value: undefined };
+
+  let cur = obj;
+  for (const part of parts) {
+    if (cur == null) return { exists: false, value: undefined };
+
+    if (Array.isArray(cur) && /^\d+$/.test(part)) {
+      const index = Number(part);
+      if (index < 0 || index >= cur.length) {
+        return { exists: false, value: undefined };
+      }
+      cur = cur[index];
+      continue;
+    }
+
+    if (typeof cur !== "object") return { exists: false, value: undefined };
+
+    let key = part;
+    if (!Object.prototype.hasOwnProperty.call(cur, key)) {
+      const lower = part.toLowerCase();
+      key = Object.keys(cur).find((k) => k.toLowerCase() === lower);
+    }
+
+    if (!key) return { exists: false, value: undefined };
+    cur = cur[key];
+  }
+
+  return { exists: true, value: cur };
+}
+
+function getAttachmentRepeatColumnAlias(col) {
+  const hints = getRepeatColumnHints(col);
+
+  if (
+    hints.some(
+      (h) =>
+        h === "containermarksandnosattach" ||
+        h === "containermarksandnos" ||
+        h === "marksandnumbers" ||
+        h === "marksnumbers" ||
+        h.includes("marksandnumbers"),
+    )
+  ) {
+    return "containerMarksAndNosAttach";
+  }
+
+  if (
+    hints.some(
+      (h) =>
+        h === "goodsdescdetailsattach" ||
+        h === "goodsdescdetails" ||
+        h === "descriptionofgoods" ||
+        h === "goodsdescription" ||
+        h.includes("descriptionofgoods"),
+    )
+  ) {
+    return "goodsDescDetailsAttach";
+  }
+
+  return "";
+}
+
+function getRepeatColumnHints(col) {
+  return [
+    col?.key,
+    col?.label,
+    col?.field,
+    col?.fieldKey,
+    col?.columnKey,
+    col?.path,
+    col?.token,
+  ].map(normalizeRepeatColumnHint);
+}
+
+function getFirstOwnRepeatValue(rowObj, paths) {
+  let firstExisting = { exists: false, value: undefined };
+
+  for (const path of paths) {
+    const found = getOwnPathValue(rowObj || {}, path);
+    if (!found.exists) continue;
+    if (!firstExisting.exists) firstExisting = found;
+    if (hasMeaningfulRepeatValue(found.value)) return found.value;
+  }
+
+  return firstExisting.exists ? firstExisting.value : undefined;
+}
+
+function getContainerRepeatColumnValue(rowObj, col) {
+  const hints = getRepeatColumnHints(col);
+  const hasHint = (...needles) =>
+    hints.some((hint) => needles.some((needle) => hint.includes(needle)));
+
+  if (
+    hasHint(
+      "containerno",
+      "containernos",
+      "containernumber",
+      "containernumbers",
+    )
+  ) {
+    return getFirstOwnRepeatValue(rowObj, [
+      "containerNo",
+      "containerNos",
+      "containerNumber",
+      "containerNumbers",
+    ]);
+  }
+
+  if (hasHint("agentsealno", "agentsealnos")) {
+    return getFirstOwnRepeatValue(rowObj, [
+      "agentSealNo",
+      "agentSealNoNew",
+    ]);
+  }
+
+  if (
+    hasHint(
+      "customsealno",
+      "customsealnos",
+      "customersealno",
+      "customersealnos",
+    )
+  ) {
+    return getFirstOwnRepeatValue(rowObj, [
+      "customSealNo",
+      "customSealNoNew",
+      "customerSealNo",
+      "customerSealNoNew",
+    ]);
+  }
+
+  if (hasHint("sealno", "sealnos")) {
+    const direct = getFirstOwnRepeatValue(rowObj, [
+      "sealNo",
+      "sealNos",
+      "agentSealNo",
+      "agentSealNoNew",
+      "customSealNo",
+      "customSealNoNew",
+      "customerSealNo",
+      "customerSealNoNew",
+    ]);
+    if (hasMeaningfulRepeatValue(direct)) return direct;
+    return direct;
+  }
+
+  if (hasHint("sizetype") || hints.some((hint) => hint === "type")) {
+    return getFirstOwnRepeatValue(rowObj, [
+      "sizeType",
+      "containerType",
+      "type",
+    ]);
+  }
+
+  if (hasHint("grosswt", "grossweight")) {
+    return getFirstOwnRepeatValue(rowObj, [
+      "grossWtAndUnit",
+      "grossWt",
+      "grossWeight",
+    ]);
+  }
+
+  if (hasHint("netwt", "netweight")) {
+    return getFirstOwnRepeatValue(rowObj, [
+      "netWtAndUnit",
+      "netWt",
+      "netWeight",
+    ]);
+  }
+
+  if (hasHint("noofpackages", "packages", "package")) {
+    const qty = getFirstOwnRepeatValue(rowObj, [
+      "noOfPackages",
+      "noOfPackagesAndCode",
+      "package",
+      "packages",
+    ]);
+    const unit = getFirstOwnRepeatValue(rowObj, [
+      "packageCode",
+      "packagesCode",
+      "packageUnit",
+    ]);
+    if (hasMeaningfulRepeatValue(qty) && hasMeaningfulRepeatValue(unit)) {
+      return `${qty} ${unit}`;
+    }
+    return hasMeaningfulRepeatValue(qty) ? qty : unit;
+  }
+
+  if (hasHint("volume", "measurement", "cbm")) {
+    return getFirstOwnRepeatValue(rowObj, ["volume", "measurement", "cbm"]);
+  }
+
+  return undefined;
+}
+
+function hasMeaningfulContainerRowData(rowObj) {
+  return [
+    "containerNo",
+    "containerNos",
+    "sealNo",
+    "agentSealNo",
+    "customSealNo",
+    "sizeType",
+    "grossWtAndUnit",
+    "grossWt",
+    "netWtAndUnit",
+    "netWt",
+    "noOfPackages",
+    "package",
+    "volume",
+  ].some((key) => hasMeaningfulRepeatValue(getFirstOwnRepeatValue(rowObj, [key])));
+}
+
+function getRepeatRowValue(rowObj, col) {
+  const alias = getAttachmentRepeatColumnAlias(col);
+  if (alias) {
+    const aliasValue = getOwnPathValue(rowObj || {}, alias);
+    if (aliasValue.exists) return aliasValue.value;
+  }
+
+  const containerValue = getContainerRepeatColumnValue(rowObj || {}, col);
+  if (hasMeaningfulRepeatValue(containerValue)) return containerValue;
+
+  const key = String(col?.key || "");
+  if (!key) return undefined;
+
+  const ownValue = getOwnPathValue(rowObj || {}, key);
+  if (ownValue.exists) return ownValue.value;
+
+  return getByPath(rowObj || {}, key);
+}
+
+function repeatRowHasMeaningfulData(rowObj, colsDef = []) {
+  const cols = Array.isArray(colsDef) ? colsDef : [];
+  const dataCols = cols.filter((c) => !isRepeatIndexColumn(c));
+
+  if (dataCols.length) {
+    const hasColumnData = dataCols.some((c) =>
+      hasMeaningfulRepeatValue(getRepeatRowValue(rowObj || {}, c)),
+    );
+    return hasColumnData || hasMeaningfulContainerRowData(rowObj || {});
+  }
+
+  return hasMeaningfulRepeatValue(rowObj);
+}
+
+function filterMeaningfulRepeatRows(rows, colsDef = []) {
+  return (Array.isArray(rows) ? rows : []).filter((row) =>
+    repeatRowHasMeaningfulData(row, colsDef),
+  );
+}
+
+function isBlankRepeatBodyRow(row, colsDef = []) {
+  if (!Array.isArray(row)) return false;
+
+  const cols = Array.isArray(colsDef) ? colsDef : [];
+  const dataIndexes = cols
+    .map((c, idx) => (isRepeatIndexColumn(c) ? null : idx))
+    .filter((idx) => idx !== null);
+  const indexes = dataIndexes.length ? dataIndexes : row.map((_, idx) => idx);
+
+  return indexes.every((idx) => !hasMeaningfulRepeatValue(row[idx]));
+}
+
+function shouldHideEmptyRepeatGrid(sourceRowCount, chunkRows = [], colsDef = []) {
+  const sourceCount =
+    sourceRowCount == null
+      ? Array.isArray(chunkRows)
+        ? chunkRows.length
+        : 0
+      : Number(sourceRowCount || 0);
+  const bodyCount = Array.isArray(chunkRows) ? chunkRows.length : 0;
+  const allBlank =
+    Array.isArray(chunkRows) && chunkRows.length > 0
+      ? chunkRows.every((row) => isBlankRepeatBodyRow(row, colsDef))
+      : false;
+
+  return Number(sourceCount || 0) === 0 || bodyCount === 0 || allBlank;
+}
+
+function normalizeAttachmentGridText(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function getAttachmentStaticFieldSnapshot(data) {
+  const fields = [
+    "containerMarksAndNosAttach",
+    "marksAndNosDetailsAttach",
+    "goodsDescDetailsAttach",
+  ];
+
+  return fields.reduce((acc, key) => {
+    acc[key] = getByPath(data || {}, key);
+    return acc;
+  }, {});
+}
+
+function hasMeaningfulAttachmentStaticFields(data) {
+  const values = Object.values(getAttachmentStaticFieldSnapshot(data));
+  return values.some(hasMeaningfulRepeatValue);
+}
+
+function isAttachmentPageLike(page, pageIndex = null) {
+  const hint = normalizeAttachmentGridText(
+    `${page?.name || ""} ${page?.id || ""}`,
+  );
+  return (
+    hint.includes("attach") ||
+    hint.includes("annex") ||
+    hint.includes("attachedsheet") ||
+    (pageIndex != null && pageIndex > 0 && hint.includes("page"))
+  );
+}
+
+function getFixedTableResolvedTexts(el, data) {
+  if (!el || String(el?.type || "").toLowerCase() !== "table") return [];
+
+  const tmeta = el.table || el.tbl || el.meta || {};
+  const repeat = tmeta.repeat || {};
+  if (repeat?.enabled || tmeta.repeatPrint) return [];
+
+  const rows =
+    Number(tmeta.rows ?? tmeta.rowCount) ||
+    (Array.isArray(tmeta.rowH) ? tmeta.rowH.length : 0);
+  const cols =
+    Number(tmeta.cols ?? tmeta.colCount) ||
+    (Array.isArray(tmeta.colW) ? tmeta.colW.length : 0);
+
+  if (!rows || !cols) return [];
+
+  const texts = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      try {
+        const text = resolveCellTextForMeasure({ tmeta, r, c, data });
+        if (String(text || "").trim()) texts.push(String(text));
+      } catch {
+        // Some legacy cell maps are malformed; skip only that cell in debug detection.
+      }
+    }
+  }
+
+  return texts;
+}
+
+function isAttachmentMarksGoodsStaticTable(el, data) {
+  const texts = getFixedTableResolvedTexts(el, data);
+  if (!texts.length) return false;
+
+  const normalized = texts.map(normalizeAttachmentGridText);
+  const joined = normalized.join("");
+  const hasContainerGridText = normalized.some(
+    (text) =>
+      text.includes("containerno") ||
+      text.includes("containernos") ||
+      text.includes("sealno") ||
+      text.includes("grosswt") ||
+      text.includes("netwt") ||
+      text.includes("noofpackages") ||
+      text.includes("packages") ||
+      text.includes("volume"),
+  );
+  if (hasContainerGridText) return false;
+
+  const hasMarks = normalized.some(
+    (text) =>
+      text.includes("marksandnumbers") ||
+      text.includes("marksandnumber") ||
+      text.includes("marksnumber") ||
+      text.includes("marksnos") ||
+      text.includes("marksandnos"),
+  ) || joined.includes("marksandnumbers") || joined.includes("marksnumber");
+  const hasGoods = normalized.some(
+    (text) =>
+      text.includes("descriptionofgoods") ||
+      text.includes("goodsdescription") ||
+      text.includes("goodsdescdetails"),
+  ) || joined.includes("descriptionofgoods");
+
+  return hasMarks && hasGoods;
+}
+
+function shouldHideAttachmentMarksGoodsStaticTable(el, data, page, pageIndex) {
+  return (
+    isAttachmentPageLike(page, pageIndex) &&
+    isAttachmentMarksGoodsStaticTable(el, data) &&
+    !hasMeaningfulAttachmentStaticFields(data)
+  );
+}
+
+function compactEmptyAttachmentStaticTables(
+  elements,
+  data,
+  { debug = false, page = null, pageIndex = null } = {},
+) {
+  const els = Array.isArray(elements)
+    ? elements.map((el) => (el ? { ...el } : el))
+    : [];
+  if (!els.length) return elements;
+
+  let changed = false;
+  const fieldSnapshot = getAttachmentStaticFieldSnapshot(data);
+
+  for (let index = 0; index < els.length; index++) {
+    const el = els[index];
+    if (!el || el.hidden) continue;
+    if (!isAttachmentMarksGoodsStaticTable(el, data)) continue;
+
+    const shouldHide = shouldHideAttachmentMarksGoodsStaticTable(
+      el,
+      data,
+      page,
+      pageIndex,
+    );
+
+    if (debug) {
+      console.log("[BLReport][ATTACHMENT-STATIC-GRID-CHECK:HELPER]", {
+        pageId: page?.id || null,
+        pageName: page?.name || null,
+        pageIndex,
+        elementId: el?.id || null,
+        shouldHide,
+        fieldSnapshot,
+        texts: getFixedTableResolvedTexts(el, data),
+      });
+    }
+
+    if (!shouldHide) continue;
+
+    els[index] = {
+      ...el,
+      hidden: true,
+      h: 0,
+      __emptyAttachmentStaticGridHidden: true,
+    };
+    changed = true;
+  }
+
+  return changed ? els : elements;
 }
 
 function resolveRepeatTableMetricsMm(el, repeat) {
@@ -1596,18 +2411,19 @@ function buildRepeatChunkTableMm({
   repeat,
   colsDef,
   rowsSlice,
-  renderEmptyRow = false,
   sourceRowCount = null,
   chunkIndex = 0,
   debug = false,
 }) {
   const header = colsDef.map((c) => String(c.label ?? c.key ?? ""));
   const safeRowsSlice = Array.isArray(rowsSlice) ? rowsSlice : [];
+  const resolvedSourceRowCount =
+    sourceRowCount == null ? safeRowsSlice.length : sourceRowCount;
   const body = safeRowsSlice.length
     ? safeRowsSlice.map((rowObj, idx) =>
         colsDef.map((c) => {
           if (c.key === "__index__") return String(idx + 1);
-          const v = getByPath(rowObj || {}, String(c.key || ""));
+          const v = getRepeatRowValue(rowObj || {}, c);
           if (v == null) return "";
           if (typeof v === "object") {
             try {
@@ -1619,23 +2435,29 @@ function buildRepeatChunkTableMm({
           return String(v);
         }),
       )
-    : renderEmptyRow
-      ? [colsDef.map(() => "")]
-      : [];
+    : [];
+
+  const hideWhenEmpty = shouldHideEmptyRepeatGrid(
+    resolvedSourceRowCount,
+    body,
+    colsDef,
+  );
 
   const metrics = resolveRepeatTableMetricsMm(el, repeat);
-  const h = metrics.headerRowMm + body.length * metrics.bodyRowMm;
+  const h = hideWhenEmpty
+    ? 0
+    : metrics.headerRowMm + body.length * metrics.bodyRowMm;
 
   if (debug) {
     console.log("[REPEAT-CHUNK-BUILD:HELPER]", {
       id: el?.id,
-      arrayPath: repeat?.arrayPath || null,
+      arrayPath: getEffectiveRepeatArrayPath(repeat) || null,
       chunkIndex,
-      sourceRowCount:
-        sourceRowCount == null ? safeRowsSlice.length : sourceRowCount,
+      sourceRowCount: resolvedSourceRowCount,
       chunkRowCount: safeRowsSlice.length,
       bodyRows: body.length,
-      renderEmptyRow,
+      renderEmptyRow: false,
+      hiddenWhenEmpty: hideWhenEmpty,
       h,
     });
   }
@@ -1644,18 +2466,20 @@ function buildRepeatChunkTableMm({
   return {
     ...el,
     h,
+    hidden: hideWhenEmpty ? true : el.hidden,
+    __emptyRepeatGridHidden: hideWhenEmpty || undefined,
     table: {
       ...t,
       repeatPrint: {
         header,
         body,
         columns: colsDef,
-        arrayPath: repeat?.arrayPath || null,
+        arrayPath: getEffectiveRepeatArrayPath(repeat) || null,
         chunkIndex,
         chunkRowCount: safeRowsSlice.length,
-        sourceRowCount:
-          sourceRowCount == null ? safeRowsSlice.length : sourceRowCount,
-        renderEmptyRow,
+        sourceRowCount: resolvedSourceRowCount,
+        renderEmptyRow: false,
+        hiddenWhenEmpty: hideWhenEmpty,
       },
       repeat: { ...(repeat || {}), enabled: false },
     },
@@ -1682,11 +2506,12 @@ function splitRepeatTableElementMm(
   const baseId = String(el.id || "");
   const baseNeighborIds = readNeighborIds(el);
 
-  const arrVal = getByPath(data, String(repeat.arrayPath || ""));
-  const arr = Array.isArray(arrVal) ? arrVal : [];
+  const { arrayPath, rows: sourceRows } = getRepeatSourceRows(data, repeat);
 
-  const colsDef = resolveRepeatColumnsMm(repeat, arr[0]);
+  const colsDef = resolveRepeatColumnsMm(repeat, sourceRows[0]);
   if (!colsDef.length) return [el];
+
+  const arr = filterMeaningfulRepeatRows(sourceRows, colsDef);
 
   const metrics = resolveRepeatTableMetricsMm(el, repeat);
   const headerH = metrics.headerRowMm;
@@ -1695,7 +2520,13 @@ function splitRepeatTableElementMm(
   const baseY = Math.max(Number(el.y || 0), Number(usableTop || 0));
   const sliceH = Math.max(1, Number(sliceHeightEff || 0));
 
-  const availableFirst = usableTop + sliceH - baseY;
+  const firstSliceIndex = Math.max(
+    0,
+    Math.floor((baseY - Number(usableTop || 0)) / sliceH),
+  );
+  const firstSliceBottom =
+    Number(usableTop || 0) + (firstSliceIndex + 1) * sliceH;
+  const availableFirst = firstSliceBottom - baseY;
   const capFirst = Math.max(0, Math.floor((availableFirst - headerH) / rowH));
 
   if (dbg) {
@@ -1708,13 +2539,17 @@ function splitRepeatTableElementMm(
       headerH,
       rowH,
       rows: arr.length,
+      sourceRows: sourceRows.length,
+      arrayPath,
+      firstSliceIndex,
+      firstSliceBottom,
       capFirst,
     });
   }
 
   if (capFirst <= 0) {
     const moved = clone(el);
-    moved.y = baseY + sliceH;
+    moved.y = firstSliceBottom;
     return [moved];
   }
 
@@ -1728,8 +2563,7 @@ function splitRepeatTableElementMm(
       repeat,
       colsDef,
       rowsSlice: [],
-      renderEmptyRow: true,
-      sourceRowCount: arr.length,
+      sourceRowCount: sourceRows.length,
       chunkIndex: pageIndex,
       debug: dbg,
     });
@@ -1760,7 +2594,7 @@ function splitRepeatTableElementMm(
       repeat,
       colsDef,
       rowsSlice,
-      sourceRowCount: arr.length,
+      sourceRowCount: sourceRows.length,
       chunkIndex: pageIndex,
       debug: dbg,
     });
@@ -1870,13 +2704,18 @@ function hasMeaningfulTableElement(el, data) {
   const repeatPrint = t.repeatPrint;
 
   if (repeatPrint && Array.isArray(repeatPrint.body)) {
-    return repeatPrint.body.some((row) => hasMeaningfulScalarValue(row));
+    return repeatPrint.body.some(
+      (row) => !isBlankRepeatBodyRow(row, repeatPrint.columns),
+    );
   }
 
   const repeat = t.repeat || {};
-  if (repeat.enabled && repeat.arrayPath) {
-    const arr = getByPath(data || {}, String(repeat.arrayPath || ""));
-    if (Array.isArray(arr) && arr.length > 0) return true;
+  if (repeat.enabled && getEffectiveRepeatArrayPath(repeat)) {
+    const { rows: arr } = getRepeatSourceRows(data || {}, repeat);
+    if (Array.isArray(arr) && arr.length > 0) {
+      const colsDef = resolveRepeatColumnsMm(repeat, arr[0]);
+      return filterMeaningfulRepeatRows(arr, colsDef).length > 0;
+    }
   }
 
   const bindings = t.bindings || t.binding || {};
@@ -1933,7 +2772,7 @@ function isDrawingOnlyElement(el) {
   );
 }
 
-function isTinyDrawingOnlyContinuationBody(elements) {
+function isTinyDrawingOnlyContinuationBody(elements, data) {
   const bodyEls = (Array.isArray(elements) ? elements : []).filter((el) => {
     if (!el || el.hidden) return false;
     const band = String(el.attachBand || "").toLowerCase();
@@ -1941,6 +2780,15 @@ function isTinyDrawingOnlyContinuationBody(elements) {
   });
 
   if (!bodyEls.length) return true;
+  if (
+    bodyEls.some(
+      (el) =>
+        String(el?.type || "").toLowerCase() === "table" &&
+        hasMeaningfulTableElement(el, data),
+    )
+  ) {
+    return false;
+  }
   if (!bodyEls.every(isDrawingOnlyElement)) return false;
 
   const usedTop = bodyEls.reduce(
@@ -1961,7 +2809,7 @@ function isTinyDrawingOnlyContinuationBody(elements) {
 function hasMeaningfulBodyElements(elements, data) {
   const els = Array.isArray(elements) ? elements : [];
 
-  if (isTinyDrawingOnlyContinuationBody(els)) return false;
+  if (isTinyDrawingOnlyContinuationBody(els, data)) return false;
 
   return els.some((el) => {
     if (!el || el.hidden) return false;
@@ -2017,9 +2865,9 @@ function deriveAttachBandsAndHeights(
 ) {
   const els = Array.isArray(page?.elements) ? page.elements : [];
 
-  const hasBandMarkers = els.some((e) => {
+  const hasExplicitHeaderFooterMarkers = els.some((e) => {
     const b = String(e?.attachBand || "").toLowerCase();
-    return b === "header" || b === "footer" || b === "body";
+    return b === "header" || b === "footer";
   });
 
   let attachHeaderMm = Number(page?.attachHeaderMm || 0) || 0;
@@ -2032,7 +2880,7 @@ function deriveAttachBandsAndHeights(
 
   const clamp = (v, max) => Math.max(0, Math.min(Number(v || 0) || 0, max));
 
-  if (hasBandMarkers) {
+  if (hasExplicitHeaderFooterMarkers) {
     if (attachHeaderMm <= 0) {
       const headerBottom = els
         .filter((e) => String(e?.attachBand || "").toLowerCase() === "header")
@@ -2077,7 +2925,11 @@ function deriveAttachBandsAndHeights(
   attachHeaderMm = clamp(attachHeaderMm, MAX_HEADER_MM);
   attachFooterMm = clamp(attachFooterMm, MAX_FOOTER_MM);
 
-  return { hasBandMarkers, attachHeaderMm, attachFooterMm };
+  return {
+    hasBandMarkers: hasExplicitHeaderFooterMarkers,
+    attachHeaderMm,
+    attachFooterMm,
+  };
 }
 
 /* =========================================================
@@ -2388,6 +3240,36 @@ function tightenHeaderBodyGap(page, { epsilon = 0.2 } = {}) {
   return { ...page, elements: next };
 }
 
+function alignContinuationBodyToTop(page, desiredTopMm = 0, { epsilon = 0.2 } = {}) {
+  const els = Array.isArray(page?.elements) ? page.elements : [];
+  if (!els.length) return page;
+
+  const bodyEls = els.filter((e) => {
+    if (!e || e.hidden) return false;
+    const band = String(e?.attachBand || "").toLowerCase();
+    return band !== "header" && band !== "footer";
+  });
+  if (!bodyEls.length) return page;
+
+  const bodyMinY = bodyEls.reduce(
+    (m, e) => Math.min(m, Number(e.y || 0)),
+    Infinity,
+  );
+  if (!Number.isFinite(bodyMinY)) return page;
+
+  const targetY = Math.max(0, Number(desiredTopMm || 0));
+  const shift = targetY - bodyMinY;
+  if (Math.abs(shift) <= epsilon) return page;
+
+  const next = els.map((e) => {
+    const band = String(e?.attachBand || "").toLowerCase();
+    if (band === "header" || band === "footer") return e;
+    return { ...e, y: Number(e.y || 0) + shift };
+  });
+
+  return { ...page, elements: next };
+}
+
 /* =========================================================
    Force A4 sizing consistently
 ========================================================= */
@@ -2627,6 +3509,7 @@ export function layoutTemplateForData(
           __origPosMap,
           { debug },
         );
+        page.elements = resolveBodyTableOverlaps(page.elements);
 
         if (ENABLE_GEOMETRY_OVERLAP_RESOLVER) {
           page.elements = resolveVerticalOverlapsInBands(page.elements, {
@@ -2874,7 +3757,17 @@ export function layoutTemplateForData(
         page.elements = compactTopFollowersAfterRepeatAnchors(page.elements, {
           debug,
         });
+        page.elements = compactEmptyRepeatGridSpace(page.elements, {
+          debug,
+        });
         page.elements = snapTouchingTables(page, 3).elements;
+        page.elements = compactEmptyRepeatGridSpace(page.elements, {
+          debug,
+        });
+        page.elements = compactEmptyAttachmentStaticTables(page.elements, data, {
+          debug,
+          page,
+        });
 
         if (ENABLE_GEOMETRY_OVERLAP_RESOLVER) {
           page.elements = resolveVerticalOverlapsInBands(page.elements, {
@@ -2916,17 +3809,18 @@ export function layoutTemplateForData(
 
           const band = String(el.attachBand || "").toLowerCase();
 
-          if (bandInfo.hasBandMarkers) {
-            if (band === "header") headerEls.push(el);
-            else if (band === "footer") footerEls.push(el);
-            else bodyEls.push({ ...el, attachBand: "body" });
-          } else {
-            const isHeader = attachHeaderMm > 0 && y < headerLimitY;
-            const isFooter = attachFooterMm > 0 && bottom > footerStartY;
+          const isHeader = attachHeaderMm > 0 && y < headerLimitY;
+          const isFooter = attachFooterMm > 0 && bottom > footerStartY;
 
-            if (isHeader) headerEls.push({ ...el, attachBand: "header" });
-            else if (isFooter) footerEls.push({ ...el, attachBand: "footer" });
-            else bodyEls.push({ ...el, attachBand: "body" });
+          if (band === "header" || (!bandInfo.hasBandMarkers && isHeader)) {
+            headerEls.push({ ...el, attachBand: "header" });
+          } else if (
+            band === "footer" ||
+            (!bandInfo.hasBandMarkers && isFooter)
+          ) {
+            footerEls.push({ ...el, attachBand: "footer" });
+          } else {
+            bodyEls.push({ ...el, attachBand: "body" });
           }
         }
 
@@ -3008,8 +3902,19 @@ export function layoutTemplateForData(
 
           pe.elements = [...headerRepeat, ...bodyThisPage, ...footerRepeat];
 
+          if (pi > 0) {
+            pe.elements = alignContinuationBodyToTop(pe, bodyTop).elements;
+          }
           pe.elements = tightenHeaderBodyGap(pe).elements;
           pe.elements = snapTouchingTables(pe, 3).elements;
+          pe.elements = compactEmptyRepeatGridSpace(pe.elements, {
+            debug,
+          });
+          pe.elements = compactEmptyAttachmentStaticTables(pe.elements, data, {
+            debug,
+            page: pe,
+            pageIndex: pi,
+          });
 
           if (ENABLE_GEOMETRY_OVERLAP_RESOLVER) {
             pe.elements = resolveVerticalOverlapsInBands(pe.elements, {

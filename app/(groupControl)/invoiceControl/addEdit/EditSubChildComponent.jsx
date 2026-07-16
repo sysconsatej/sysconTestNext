@@ -19,6 +19,7 @@ import {
   DeleteHover,
   saveIconHover,
   revertHover,
+  PlayIcon1
 } from "@/assets";
 import LightTooltip from "@/components/Tooltip/customToolTip";
 import PropTypes from "prop-types";
@@ -721,6 +722,22 @@ export default function EditSubChildComponent(props) {
             {/* icons  */}
             <>
               <div className="absolute right-0 w-fit hh group-hover:bg-[var(--table-hover-bg)]  ">
+                <LightTooltip title="Data Retrieve">
+                    <IconButton
+                      aria-label="play"
+                      className={styles.icon}
+                      // onClick={() => alert("WIP")}
+                      onMouseEnter={() => setHoveredIcon("play")}
+                      onMouseLeave={() => setHoveredIcon(null)}
+                    >
+                      <Image
+                        src={PlayIcon1}
+                        alt="paly Icon"
+                        priority={false}
+                        className="gridIcons2"
+                      />
+                    </IconButton>
+                  </LightTooltip>
                 {!isSubChildDeleteHidden && (
                   <LightTooltip title="Delete Record ">
                     <IconButton

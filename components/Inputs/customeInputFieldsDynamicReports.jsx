@@ -75,6 +75,31 @@ const parseFlexibleDate = (dateStr) => {
   return dayjs(`${day}/${month}/${year}`, "DD/MM/YYYY", true);
 };
 
+const getDatePickerValue = (value, dateFormat) => {
+  if (!value) return null;
+
+  if (dayjs.isDayjs(value)) {
+    return value.isValid() ? value : null;
+  }
+
+  if (value instanceof Date) {
+    const parsedDate = dayjs(value);
+    return parsedDate.isValid() ? parsedDate : null;
+  }
+
+  const pickerFormat = dateFormat || "DD-MM-YYYY";
+  const parsedDate = dayjs(
+    String(value).trim(),
+    [pickerFormat, "DD/MM/YYYY", "DD-MM-YYYY", "YYYY-MM-DD"],
+    true,
+  );
+
+  if (parsedDate.isValid()) return parsedDate;
+
+  const fallbackDate = dayjs(value);
+  return fallbackDate.isValid() ? fallbackDate : null;
+};
+
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
   clipPath: "inset(50%)",
@@ -2847,11 +2872,10 @@ function InputFieldRenderer(props) {
                 }
               }}
               name={field.fieldname}
-              value={
-                values[`${field.fieldname}`]
-                  ? dayjs(values[`${field.fieldname}`])
-                  : null
-              } // Use the state value, converted to a Day.js object
+              value={getDatePickerValue(
+                values[`${field.fieldname}`],
+                dateFormat,
+              )}
               slots={{
                 actionBar: CustomActionBar,
               }}

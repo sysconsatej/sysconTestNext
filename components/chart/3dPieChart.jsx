@@ -89,11 +89,13 @@ export default function ThreePieChart({ node, onDrillDown }) {
         "#EC4899", // pink
         "#14B8A6", // teal
       ];
-
-      const getPaletteColor = () => {
-        return palette[Math.floor(Math.random() * palette.length)];
-      };
-      const col = new THREE.Color(getPaletteColor());
+      const hashStr = (str) =>
+        String(str)
+          .split("")
+          .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+      const col = new THREE.Color(
+        palette[hashStr(child.name) % palette.length],
+      );
 
       const geo = makePieSlice(startA, endA, outerR, innerR, sliceH, 52);
       const mat = new THREE.MeshPhongMaterial({
@@ -134,11 +136,12 @@ export default function ThreePieChart({ node, onDrillDown }) {
       const lz = Math.sin(midA) * labelR;
 
       const labelDiv = document.createElement("div");
-      labelDiv.style.cssText =
-        "position:absolute;pointer-events:none;font-size:11px;font-weight:500;" +
-        "color:#111;text-align:center;white-space:nowrap;background:rgba(255,255,255,0.93);" +
-        "padding:2px 5px;border-radius:4px;border:0.5px solid rgba(0,0,0,0.12);" +
-        "max-width:90px;overflow:hidden;text-overflow:ellipsis;";
+      labelDiv.style.cssText = "";
+        // "position:absolute;pointer-events:none;font-size:11px;font-weight:500;" +
+        // "color:#111;text-align:center;white-space:nowrap;background:rgba(255,255,255,0.93);" +
+        // "padding:2px 5px;border-radius:4px;border:0.5px solid rgba(0,0,0,0.12);" +
+        // "max-width:90px;overflow:hidden;text-overflow:ellipsis;" +
+        // "transform:translate(-50%,-50%);";
       labelDiv.textContent = child.name;
       el.appendChild(labelDiv);
       labelRefs.current.push(labelDiv);
@@ -158,6 +161,8 @@ export default function ThreePieChart({ node, onDrillDown }) {
     // Fly-in animation
     let flyInT = 0,
       flyIn = true;
+    const STAGGER = 0.06;
+    const flyInDuration = 1 + (slices.length - 1) * STAGGER;
     slices.forEach((s) => {
       s.mesh.scale.set(0.01, 0.01, 0.01);
       s.topMesh.scale.set(0.01, 0.01, 0.01);
@@ -178,9 +183,9 @@ export default function ThreePieChart({ node, onDrillDown }) {
 
       if (flyIn) {
         flyInT += dt * 1.8;
-        if (flyInT >= 1) flyIn = false;
+        if (flyInT >= flyInDuration) flyIn = false; // was: flyInT >= 1
         slices.forEach((s, i) => {
-          const delay = i * 0.06;
+          const delay = i * STAGGER; // use the same constant
           const prog = Math.max(0, Math.min(1, (flyInT - delay) * 2.2));
           const ease = 1 - Math.pow(1 - prog, 3);
           s.mesh.scale.set(ease, ease, ease);
@@ -205,8 +210,8 @@ export default function ThreePieChart({ node, onDrillDown }) {
         const sp = project(s.lx, s.mesh.position.y + sliceH + 0.42, s.lz);
         const ld = labelRefs.current[i];
         if (ld) {
-          ld.style.left = sp.x - 45 + "px";
-          ld.style.top = sp.y - 10 + "px";
+          ld.style.left = sp.x + "px";
+          ld.style.top = sp.y + "px";
         }
       });
 

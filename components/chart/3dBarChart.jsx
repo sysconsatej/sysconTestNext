@@ -8,7 +8,6 @@ ThreeBarChart.propTypes = {
 };
 
 export default function ThreeBarChart({ node, onDrillDown }) {
-  console.log("Rendering ThreeBarChart with node:", node);
   const mountRef = useRef(null);
   const stateRef = useRef({});
   const tooltipRef = useRef(null);
@@ -94,10 +93,13 @@ export default function ThreeBarChart({ node, onDrillDown }) {
         "#14B8A6", // teal
       ];
 
-      const getPaletteColor = () => {
-        return palette[Math.floor(Math.random() * palette.length)];
-      };
-      const col = new THREE.Color(getPaletteColor());
+      const hashStr = (str) =>
+        String(str)
+          .split("")
+          .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+      const col = new THREE.Color(
+        palette[hashStr(child.name) % palette.length],
+      );
 
       const geo = new THREE.BoxGeometry(barW, normH, barW);
       const mat = new THREE.MeshPhongMaterial({
@@ -157,6 +159,8 @@ export default function ThreeBarChart({ node, onDrillDown }) {
     // fly-in state
     let flyInT = 0,
       flyIn = true;
+    const STAGGER = 0.08;
+    const flyInDuration = 1 + (n - 1) * STAGGER;
     bars.forEach((b) => {
       b.mesh.position.y = 0;
       b.mesh.scale.y = 0.01;
@@ -181,9 +185,9 @@ export default function ThreeBarChart({ node, onDrillDown }) {
 
       if (flyIn) {
         flyInT += dt * 2.5;
-        if (flyInT >= 1) flyIn = false;
+        if (flyInT >= flyInDuration) flyIn = false;
         bars.forEach((b, i) => {
-          const delay = i * 0.08;
+          const delay = i * STAGGER;
           const prog = Math.max(0, Math.min(1, (flyInT - delay) * 2.5));
           const ease = 1 - Math.pow(1 - prog, 3);
           b.mesh.position.y = b.baseY * ease;

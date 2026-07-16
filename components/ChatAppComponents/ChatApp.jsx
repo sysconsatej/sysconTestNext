@@ -1,344 +1,388 @@
-// "use client";
-// import React, { useEffect, useMemo, useRef, useState } from "react";
-// import PropTypes from "prop-types";
-// import "./ChatApp.css";
-// //hooks start
-// import { useChatSocket } from "./useChatSocket";
-// import { useCall } from "./useCall";
-// import { useFileUpload } from "./useFileUpload";
-// import { useMention } from "./useMention";
-// import { useReactions } from "./useReaction";
+"use client";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import PropTypes from "prop-types";
+import "./ChatApp.css";
+//hooks start
+import { useChatSocket } from "./useChatSocket";
+import { useCall } from "./useCall";
+import { useFileUpload } from "./useFileUpload";
+import { useMention } from "./useMention";
+import { useReactions } from "./useReaction";
 
-// // fetch all the user from the api
-// import { useUsers } from "./useUsers";
+// fetch all the user from the api
+import { useUsers } from "./useUsers";
 
-// // components
-// import { TopBar } from "./TopBar";
-// import { ChatSidebar } from "./ChatSideBar";
-// import { ChatArea } from "./ChatArea";
-// import { CallScreen } from "./CallScreen";
-// import { getUserDetails } from "@/helper/userDetails";
+// components
+import { TopBar } from "./TopBar";
+import { ChatSidebar } from "./ChatSideBar";
+import { ChatArea } from "./ChatArea";
+import { CallScreen } from "./CallScreen";
+import { getUserDetails } from "@/helper/userDetails";
 
-// export default function ChatApp({
-//   socketUrl,
-//   ioFactory,
-//   socketFactory,
-//   destroySocket,
-//   apiBase = "",
-//   closeWindow,
-// }) {
-//   // ── User roster from API ────────────────────────────────────────────
-//   const userDetails = getUserDetails();
-//   const {
-//     users,
-//     loading: usersLoading,
-//     error: usersError,
-//     inActiveUsers,
-//   } = useUsers();
-//   console.log(users, "users");
-//   const me = users?.find((u) => u.id === userDetails?.userId) || null;
+import { useResize } from "./useResize";
+import { useDraggable } from "./useDraggable";
 
-//   const [activePeerKey, setActivePeerKey] = useState(null);
-//   const [filterStr, setFilterStr] = useState("");
-//   const [draft, setDraft] = useState("");
-//   const [replyingTo, setReplyingTo] = useState(null);
-//   const [notif, setNotif] = useState({
-//     label: "Enable Notifications",
-//     className: "notif-btn",
-//     disabled: false,
-//     icon: "🔔",
-//   });
-//   const [isActive, setIsactive] = useState(true);
+export default function ChatApp({
+  socketUrl,
+  ioFactory,
+  socketFactory,
+  destroySocket,
+  apiBase,
+  closeWindow,
+}) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" && window.innerWidth <= 768,
+  );
 
-//   const inputRef = useRef(null);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const shellRef = useRef(null);
 
-//   // ── Derived active peer ──────────────────────────────────────────────────
-//   const activePeer = useMemo(() => {
-//     if (activePeerKey === "group") return "group";
-//     return users.find((u) => u.id === activePeerKey) || null;
-//   }, [activePeerKey, users]);
+  // ── User roster from API ────────────────────────────────────────────
+  const userDetails = getUserDetails();
+  const {
+    users,
+    loading: usersLoading,
+    error: usersError,
+    inActiveUsers,
+  } = useUsers();
+  console.log(users, "users");
+  const me = users?.find((u) => u.id === userDetails?.userId) || null;
 
-//   // ── Hooks ────────────────────────────────────────────────────────────────
-//   const { reactions, toggleReaction } = useReactions();
+  const [activePeerKey, setActivePeerKey] = useState(null);
+  const [filterStr, setFilterStr] = useState("");
+  const [draft, setDraft] = useState("");
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [notif, setNotif] = useState({
+    label: "Enable Notifications",
+    className: "notif-btn",
+    disabled: false,
+    icon: "🔔",
+  });
+  const [isActive, setIsactive] = useState(true);
 
-//   // socketRef is wired below after useChatSocket initialises it
+  const inputRef = useRef(null);
 
-//   const chat = useChatSocket({
-//     socketUrl,
-//     ioFactory,
-//     socketFactory,
-//     destroySocket,
-//     users,
-//   });
-//   const call = useCall({ socketRef: chat.socketRef, users, me });
-//   chat.setWireCallEvents(call.wireCallEvents);
+  // ── Derived active peer ──────────────────────────────────────────────────
+  const activePeer = useMemo(() => {
+    if (activePeerKey === "group") return "group";
+    return users.find((u) => u.id === activePeerKey) || null;
+  }, [activePeerKey, users]);
 
-//   // Patch call's socketRef to use chat's socketRef
-//   // call.socketRef = chat.socketRef;
+  // ── Hooks ────────────────────────────────────────────────────────────────
+  const { reactions, toggleReaction } = useReactions();
 
-//   // Keep chat's activePeerKeyRef in sync
-//   useEffect(() => {
-//     chat.syncActivePeerKey(activePeerKey);
-//   }, [activePeerKey]);
+  // socketRef is wired below after useChatSocket initialises it
 
-//   const { fileInputRef, uploadToast, uploadProgress, onFileChosen } =
-//     useFileUpload({
-//       apiBase,
-//       me,
-//       activePeer,
-//       socketRef: chat.socketRef,
-//     });
+  const chat = useChatSocket({
+    socketUrl,
+    ioFactory,
+    socketFactory,
+    destroySocket,
+    users,
+  });
+  const call = useCall({ socketRef: chat.socketRef, users, me });
+  chat.setWireCallEvents(call.wireCallEvents);
 
-//   const {
-//     mention,
-//     mentionCandidates,
-//     detectMention,
-//     pickMention,
-//     handleMentionKeyDown,
-//     clearMention,
-//   } = useMention({ users, me, activePeer, inputRef, draft, setDraft });
+  // Patch call's socketRef to use chat's socketRef
+  // call.socketRef = chat.socketRef;
 
-//   // ── Notifications
-//   useEffect(() => {
-//     fetch(`${apiBase}/api/health`)
-//       .then(() => {}) // serverStatus is managed in useChatSocket
-//       .catch(() => {});
-//   }, [apiBase]);
+  // Keep chat's activePeerKeyRef in sync
+  useEffect(() => {
+    chat.syncActivePeerKey(activePeerKey);
+  }, [activePeerKey]);
 
-//   useEffect(() => {
-//     if (!("Notification" in window)) {
-//       setNotif((n) => ({
-//         ...n,
-//         label: "Not supported",
-//         disabled: true,
-//         icon: "🚫",
-//       }));
-//       return;
-//     }
-//     if (Notification.permission === "granted")
-//       setNotif({
-//         label: "Notifications on",
-//         className: "notif-btn granted",
-//         disabled: true,
-//         icon: "🔔",
-//       });
-//     if (Notification.permission === "denied")
-//       setNotif({
-//         label: "Blocked",
-//         className: "notif-btn denied",
-//         disabled: true,
-//         icon: "🔕",
-//       });
-//   }, []);
+  const { fileInputRef, uploadToast, uploadProgress, onFileChosen } =
+    useFileUpload({
+      apiBase,
+      me,
+      activePeer,
+      socketRef: chat.socketRef,
+    });
 
-//   // ── Auto-connect once user is resolved
-//   useEffect(() => {
-//     if (!me) return;
-//     chat.connectSocket(me);
-//     return () => {
-//       chat.disconnectSocket();
-//       call.cleanupCall();
-//     };
-//   }, [me?.id]);
+  const {
+    mention,
+    mentionCandidates,
+    detectMention,
+    pickMention,
+    handleMentionKeyDown,
+    clearMention,
+  } = useMention({ users, me, activePeer, inputRef, draft, setDraft });
 
-//   async function requestNotifications() {
-//     if (!("Notification" in window)) return;
-//     const permission = await Notification.requestPermission();
-//     if (permission === "granted")
-//       setNotif({
-//         label: "Notifications on",
-//         className: "notif-btn granted",
-//         disabled: true,
-//         icon: "🔔",
-//       });
-//     if (permission === "denied")
-//       setNotif({
-//         label: "Blocked",
-//         className: "notif-btn denied",
-//         disabled: true,
-//         icon: "🔕",
-//       });
-//   }
+  // ── Notifications
+  useEffect(() => {
+    fetch(`${apiBase}/api/health`)
+      .then(() => {}) // serverStatus is managed in useChatSocket
+      .catch(() => {});
+  }, [apiBase]);
 
-//   const checkIsActiveOrNot = () => {
-//     setIsactive((prev) => !prev);
-//   };
+  useEffect(() => {
+    if (!("Notification" in window)) {
+      setNotif((n) => ({
+        ...n,
+        label: "Not supported",
+        disabled: true,
+        icon: "🚫",
+      }));
+      return;
+    }
+    if (Notification.permission === "granted")
+      setNotif({
+        label: "Notifications on",
+        className: "notif-btn granted",
+        disabled: true,
+        icon: "🔔",
+      });
+    if (Notification.permission === "denied")
+      setNotif({
+        label: "Blocked",
+        className: "notif-btn denied",
+        disabled: true,
+        icon: "🔕",
+      });
+  }, []);
 
-//   // ── Open chat ────────────────────────────────────────────────────────────
-//   function openChat(key) {
-//     if (!me) return;
-//     setActivePeerKey(key);
-//     chat.markRead(key);
-//     if (key !== "group") chat.getDmHistory(key);
-//   }
+  // ── Auto-connect once user is resolved
+  useEffect(() => {
+    if (!me) return;
+    chat.connectSocket(me);
+    return () => {
+      chat.disconnectSocket();
+      call.cleanupCall();
+    };
+  }, [me?.id]);
 
-//   // ── Messaging ────────────────────────────────────────────────────────────
-//   function handleSend() {
-//     if (!me || !activePeer || !draft.trim()) return;
-//     chat.sendMessage({ activePeer, draft, replyingTo });
-//     setDraft("");
-//     setReplyingTo(null);
-//     clearMention();
-//   }
+  async function requestNotifications() {
+    if (!("Notification" in window)) return;
+    const permission = await Notification.requestPermission();
+    if (permission === "granted")
+      setNotif({
+        label: "Notifications on",
+        className: "notif-btn granted",
+        disabled: true,
+        icon: "🔔",
+      });
+    if (permission === "denied")
+      setNotif({
+        label: "Blocked",
+        className: "notif-btn denied",
+        disabled: true,
+        icon: "🔕",
+      });
+  }
 
-//   function handleDraftChange(e) {
-//     const value = e.target.value;
-//     setDraft(value);
-//     chat.emitTyping(activePeer);
-//     detectMention(value, e.target.selectionStart);
-//   }
+  const checkIsActiveOrNot = () => {
+    setIsactive((prev) => !prev);
+  };
 
-//   function handleKeyDown(e) {
-//     if (mention.show) {
-//       const handled = handleMentionKeyDown(e, mentionCandidates);
-//       if (handled) return;
-//     }
-//     if (e.key === "Enter" && !e.shiftKey) {
-//       e.preventDefault();
-//       handleSend();
-//     }
-//   }
+  // ── Open chat ────────────────────────────────────────────────────────────
+  function openChat(key) {
+    if (!me) return;
+    setActivePeerKey(key);
+    chat.markRead(key);
+    if (key !== "group") chat.getDmHistory(key);
+  }
 
-//   function beginReply(msg) {
-//     setReplyingTo({
-//       id: msg.id,
-//       senderId: msg.senderId,
-//       senderName: msg.senderName,
-//       content: msg.content,
-//       type: msg.type,
-//     });
-//     inputRef.current?.focus();
-//   }
+  // ── Messaging ────────────────────────────────────────────────────────────
+  function handleSend() {
+    if (!me || !activePeer || !draft.trim()) return;
+    chat.sendMessage({ activePeer, draft, replyingTo });
+    setDraft("");
+    setReplyingTo(null);
+    clearMention();
+  }
 
-//   // ── Typing text ──────────────────────────────────────────────────────────
-//   const typingText =
-//     activePeer === "group"
-//       ? users
-//           .filter((u) => u.id !== me?.id && chat.peerTyping[u.id])
-//           .map((u) => u.name)
-//           .join(", ")
-//       : activePeer && chat.dmTyping[activePeer?.id]
-//         ? `${activePeer.name} is typing`
-//         : "";
+  function handleDraftChange(e) {
+    const value = e.target.value;
+    setDraft(value);
+    chat.emitTyping(activePeer);
+    detectMention(value, e.target.selectionStart);
+  }
 
-//   const activeMessages =
-//     activePeer === "group"
-//       ? chat.groupMessages
-//       : chat.dmMessages[activePeer?.id] || [];
+  function handleKeyDown(e) {
+    if (mention.show) {
+      const handled = handleMentionKeyDown(e, mentionCandidates);
+      if (handled) return;
+    }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  }
 
-//   if (usersLoading) {
-//     return (
-//       <div
-//         className="chat-app-shell"
-//         style={{
-//           display: "flex",
-//           alignItems: "center",
-//           justifyContent: "center",
-//           height: "80vh",
-//           color: "var(--muted)",
-//         }}
-//       >
-//         Loading…
-//       </div>
-//     );
-//   }
+  function beginReply(msg) {
+    setReplyingTo({
+      id: msg.id,
+      senderId: msg.senderId,
+      senderName: msg.senderName,
+      content: msg.content,
+      type: msg.type,
+    });
+    inputRef.current?.focus();
+  }
 
-//   if (usersError) {
-//     return (
-//       <div
-//         className="chat-app-shell"
-//         style={{
-//           display: "flex",
-//           alignItems: "center",
-//           justifyContent: "center",
-//           height: "80vh",
-//           color: "var(--muted)",
-//         }}
-//       >
-//         Could not load users: {usersError}
-//       </div>
-//     );
-//   }
+  // ── Typing text ──────────────────────────────────────────────────────────
+  const typingText =
+    activePeer === "group"
+      ? users
+          .filter((u) => u.id !== me?.id && chat.peerTyping[u.id])
+          .map((u) => u.name)
+          .join(", ")
+      : activePeer && chat.dmTyping[activePeer?.id]
+        ? `${activePeer.name} is typing`
+        : "";
 
-//   return (
-//     <div className="chat-app-shell">
-//       <TopBar
-//         serverOnline={chat.serverOnline}
-//         serverStatus={chat.serverStatus}
-//         notif={notif}
-//         onRequestNotifications={requestNotifications}
-//         closeWindow={closeWindow}
-//         checkIsActiveOrNot={checkIsActiveOrNot}
-//         isActive={isActive}
-//       />
+  const activeMessages =
+    activePeer === "group"
+      ? chat.groupMessages
+      : chat.dmMessages[activePeer?.id] || [];
 
-//       <div className="app">
-//         <ChatSidebar
-//           me={me}
-//           users={isActive ? users : inActiveUsers}
-//           onlineIds={chat.onlineIds}
-//           unread={chat.unread}
-//           lastMsgInfo={chat.lastMsgInfo}
-//           activePeerKey={activePeerKey}
-//           filterStr={filterStr}
-//           // peerTyping={chat.peerTyping}
-//           dmTyping={chat.dmTyping}
-//           onOpenChat={openChat}
-//           onFilterChange={setFilterStr}
-//           isActive={isActive}
-//         />
+  const { size, startResize } = useResize({
+    initialWidth: 950,
+    initialHeight: 550,
+  });
 
-//         <ChatArea
-//           me={me}
-//           activePeer={activePeer}
-//           onlineIds={chat.onlineIds}
-//           activeMessages={activeMessages}
-//           users={users}
-//           reactions={reactions}
-//           onReact={(msgId, emoji) => toggleReaction(msgId, emoji, me?.id)}
-//           onReply={beginReply}
-//           typingText={typingText}
-//           replyingTo={replyingTo}
-//           onCancelReply={() => setReplyingTo(null)}
-//           draft={draft}
-//           onDraftChange={handleDraftChange}
-//           onKeyDown={handleKeyDown}
-//           onSendMsg={handleSend}
-//           onAttachClick={() => fileInputRef.current?.click()}
-//           fileInputRef={fileInputRef}
-//           onFileChosen={onFileChosen}
-//           uploadProgress={uploadProgress}
-//           mention={mention}
-//           mentionCandidates={mentionCandidates}
-//           onPickMention={pickMention}
-//           onStartCall={call.startCall}
-//         />
-//       </div>
+  const { position, startDrag, isDragging } = useDraggable({
+    initialX: 0,
+    initialY: 0,
+    disabled: isMobile,
+  });
 
-//       <div className={`upload-toast${uploadToast ? " show" : ""}`}>
-//         {uploadToast}
-//       </div>
+  if (usersLoading) {
+    return (
+      <div
+        className="chat-app-shell"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "80vh",
+          color: "var(--muted)",
+        }}
+      >
+        Loading…
+      </div>
+    );
+  }
 
-//       <CallScreen
-//         callState={call.callState}
-//         callToast={call.callToast}
-//         remoteVideoRef={call.remoteVideoRef}
-//         localVideoRef={call.localVideoRef}
-//         onAccept={call.acceptCall}
-//         onReject={call.rejectCall}
-//         onHangUp={call.hangUp}
-//         onToggleMute={call.toggleMute}
-//         onToggleCam={call.toggleCam}
-//       />
-//     </div>
-//   );
-// }
+  if (usersError) {
+    return (
+      <div
+        className="chat-app-shell"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "80vh",
+          color: "var(--muted)",
+        }}
+      >
+        Could not load users: {usersError}
+      </div>
+    );
+  }
 
-// ChatApp.propTypes = {
-//   socketUrl: PropTypes.string,
-//   ioFactory: PropTypes.func,
-//   socketFactory: PropTypes.func,
-//   destroySocket: PropTypes.any,
-//   apiBase: PropTypes.string,
-//   closeWindow: PropTypes.func,
-// };
+  return (
+    <div
+      ref={shellRef}
+      className={`chat-app-shell${isDragging ? " dragging" : ""}`}
+      style={{
+        width: size.width,
+        height: size.height,
+        // position: isMobile ? "fixed" : "relative",
+        left: isMobile ? 0 : position.x,
+        top: isMobile ? 0 : position.y,
+      }}
+    >
+      <TopBar
+        serverOnline={chat.serverOnline}
+        serverStatus={chat.serverStatus}
+        notif={notif}
+        onRequestNotifications={requestNotifications}
+        closeWindow={closeWindow}
+        checkIsActiveOrNot={checkIsActiveOrNot}
+        isActive={isActive}
+        onDragStart={(e) => startDrag(e, shellRef)}
+      />
+
+      <div className={`app${activePeerKey ? " chat-open" : ""}`}>
+        <ChatSidebar
+          me={me}
+          users={isActive ? users : inActiveUsers}
+          onlineIds={chat.onlineIds}
+          unread={chat.unread}
+          lastMsgInfo={chat.lastMsgInfo}
+          activePeerKey={activePeerKey}
+          filterStr={filterStr}
+          // peerTyping={chat.peerTyping}
+          dmTyping={chat.dmTyping}
+          onOpenChat={openChat}
+          onFilterChange={setFilterStr}
+          isActive={isActive}
+        />
+
+        <ChatArea
+          me={me}
+          activePeer={activePeer}
+          onlineIds={chat.onlineIds}
+          activeMessages={activeMessages}
+          users={users}
+          reactions={reactions}
+          onReact={(msgId, emoji) => toggleReaction(msgId, emoji, me?.id)}
+          onReply={beginReply}
+          typingText={typingText}
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
+          draft={draft}
+          onDraftChange={handleDraftChange}
+          onKeyDown={handleKeyDown}
+          onSendMsg={handleSend}
+          onAttachClick={() => fileInputRef.current?.click()}
+          fileInputRef={fileInputRef}
+          onFileChosen={onFileChosen}
+          uploadProgress={uploadProgress}
+          mention={mention}
+          mentionCandidates={mentionCandidates}
+          onPickMention={pickMention}
+          onStartCall={call.startCall}
+          apiBase={apiBase}
+          onBack={() => setActivePeerKey(null)}
+        />
+      </div>
+
+      <div className={`upload-toast${uploadToast ? " show" : ""}`}>
+        {uploadToast}
+      </div>
+
+      <CallScreen
+        callState={call.callState}
+        callToast={call.callToast}
+        remoteVideoRef={call.remoteVideoRef}
+        localVideoRef={call.localVideoRef}
+        onAccept={call.acceptCall}
+        onReject={call.rejectCall}
+        onHangUp={call.hangUp}
+        onToggleMute={call.toggleMute}
+        onToggleCam={call.toggleCam}
+      />
+
+      <div
+        className="resize-handle"
+        onMouseDown={(e) => startResize(e, ["right", "bottom"])}
+        onTouchStart={(e) => startResize(e, ["right", "bottom"])}
+      ></div>
+    </div>
+  );
+}
+
+ChatApp.propTypes = {
+  socketUrl: PropTypes.string,
+  ioFactory: PropTypes.func,
+  socketFactory: PropTypes.func,
+  destroySocket: PropTypes.any,
+  apiBase: PropTypes.string,
+  closeWindow: PropTypes.func,
+};

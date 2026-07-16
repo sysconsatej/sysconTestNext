@@ -47,6 +47,30 @@ const Attachments = () => {
     setCheckedFiles({ ...checkedFiles, [fileName]: event.target.checked });
   };
 
+  const removeFile = (indexToRemove) => {
+    const updated = files.filter((_, i) => i !== indexToRemove);
+    setFiles(updated);
+    // also clean checkedFiles state for removed file
+    const remainingChecked = { ...checkedFiles };
+    const removed = files[indexToRemove];
+    if (removed) delete remainingChecked[removed.name];
+    setCheckedFiles(remainingChecked);
+  };
+
+  const handleDelete = () => {
+    const anySelected = Object.keys(checkedFiles).some((k) => checkedFiles[k]);
+    if (anySelected) {
+      const updated = files.filter((f) => !checkedFiles[f.name]);
+      setFiles(updated);
+      setCheckedFiles({});
+      setSelectAll(false);
+    } else {
+      setFiles([]);
+      setCheckedFiles({});
+      setSelectAll(false);
+    }
+  };
+
   const getFileIcon = (fileType) => {
     if (fileType.startsWith("image/")) {
       return <Image src={imageType} alt="Upload" className={fileImageStyles} />;
@@ -78,7 +102,7 @@ const Attachments = () => {
           hoverIcon={DeleteHover}
           altText={"Delete"}
           title={"Delete"}
-          onClick={() => setFiles([])}
+          onClick={handleDelete}
         />
       </div>
       <div className="mt-4 text-black flex gap-10">
@@ -115,9 +139,10 @@ const Attachments = () => {
             />
           </div>
         </div>
-        <div className={fileContainer}>
-          {files.map((file, index) => (
-            <div key={index} className="relative ">
+        {files.length > 0 && (
+          <div className={fileContainer}>
+            {files.map((file, index) => (
+              <div key={index} className="relative ">
               <FormGroup className="absolute top-[-11px] left-[-11px] z-50 ">
                 <Checkbox
                   checked={!!checkedFiles[file.name]}
@@ -141,14 +166,22 @@ const Attachments = () => {
                   }
                 />
               </FormGroup>
-              <div className={filePaperStyles}>{getFileIcon(file.type)}</div>
-              <p className="truncate w-[150px] text-[12px] mt-[10px]">
-                {" "}
-                {file.name}{" "}
-              </p>
+                <div className={filePaperStyles}>{getFileIcon(file.type)}</div>
+                <p className="truncate w-[150px] text-[12px] mt-[10px]">
+                  {file.name}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => removeFile(index)}
+                  className="absolute top-[-8px] right-[-8px] bg-white rounded-full p-1 shadow-md"
+                  aria-label={`Remove ${file.name}`}
+                >
+                  ×
+                </button>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

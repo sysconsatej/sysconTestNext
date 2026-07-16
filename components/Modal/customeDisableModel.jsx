@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable */
 import React from "react";
 import Backdrop from "@mui/material/Backdrop";
 import Modal from "@mui/material/Modal";
@@ -6,33 +7,32 @@ import Fade from "@mui/material/Fade";
 import PropTyes from "prop-types";
 import styles from "@/components/common.module.css";
 
-
-export default function CustomeModal({
-  setOpenModal,
-  openModal,
+export default function CustomeDisableDeleteModal({
+  setOpenDisableDeleteModal,
+  openDisableDeleteModal,
   onConfirm,
   isError,
   paraText,
   typeEvent,
-  labelValue
+  labelValue,
 }) {
-  const handleClose = () => setOpenModal(false);
+  const handleClose = () => setOpenDisableDeleteModal(false);
   const handleConfirm = async () => {
     try {
-      if (typeof onConfirm === "function") {
-        await onConfirm({
-          value: true,
-          isError: isError,
-          type: typeEvent,
-        });
-      }
+      //   if (typeof onConfirm === "function") {
+      //     await onConfirm({
+      //       value: true,
+      //       isError: isError,
+      //       type: typeEvent,
+      //     });
+      //   }
     } finally {
-      setOpenModal(false);
+      setOpenDisableDeleteModal(false);
     }
   };
 
   //  code to remove the fieldName and add LabelName
-  const arrStr = paraText?.split(' ');
+  const arrStr = paraText?.split(" ");
   const newArr = arrStr?.reduce((acc, current, index) => {
     if (index !== 0) {
       acc.push(current);
@@ -40,14 +40,14 @@ export default function CustomeModal({
     return acc;
   }, []);
 
-  const modalText = newArr?.join(' ');
+  const modalText = newArr?.join(" ");
 
   return (
     <div>
       <Modal
         aria-labelledby="transition-modal-title"
         aria-describedby="transition-modal-description"
-        open={openModal}
+        open={openDisableDeleteModal}
         onClose={handleClose}
         closeAfterTransition
         slots={{ backdrop: Backdrop }}
@@ -57,17 +57,18 @@ export default function CustomeModal({
           },
         }}
       >
-        <Fade in={openModal}>
+        <Fade in={openDisableDeleteModal}>
           <div
             className={`relative inset-0 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center px-4 `}
           >
             <div
-              className={`${styles.modalTextColor}  ${styles.modalBg} p-[30px] rounded-lg shadow-xl  w-full sm:w-[460px] h-auto sm:h-[175px]  flex flex-col justify-between mx-auto max-w-full sm:max-w-[520px] ${isError ? "top-0 absolute" : ""
-                }`}
+              className={`${styles.modalTextColor}  ${styles.modalBg} p-[30px] rounded-lg shadow-xl  w-full sm:w-[460px] h-auto sm:h-[175px]  flex flex-col justify-between mx-auto max-w-full sm:max-w-[520px] ${
+                isError ? "top-0 absolute" : ""
+              }`}
             >
               <div className="">
                 <h3 className={`${styles.modalTextColor} text-[12px] `}>
-                  www.sysconinfotech.com says
+                  www.sysconinfotec.com says
                 </h3>
               </div>
               <div className="flex-grow py-[10px]">
@@ -76,7 +77,7 @@ export default function CustomeModal({
                   {paraText}
                 </p> */}
                 {/* prevCode ends here  */}
-                <p className={`${styles.modalTextColor} text-[12px] whitespace-pre-line `}>
+                <p className={`${styles.modalTextColor} text-[12px]`}>
                   {labelValue ? labelValue + " " + modalText : paraText}
                 </p>
               </div>
@@ -102,13 +103,12 @@ export default function CustomeModal({
   );
 }
 
-
-CustomeModal.propTypes = {
-  openModal: PropTyes.bool,
-  setOpenModal: PropTyes.func,
+CustomeDisableDeleteModal.propTypes = {
+  openDisableDeleteModal: PropTyes.bool,
+  setOpenDisableDeleteModal: PropTyes.func,
   onConfirm: PropTyes.func,
   isError: PropTyes.bool,
   paraText: PropTyes.string,
   typeEvent: PropTyes.string,
-  labelValue: PropTyes.string
+  labelValue: PropTyes.string,
 };

@@ -7,6 +7,64 @@ import { decrypt, encrypt } from "@/helper/security";
 import { getUserDetails } from "@/helper/userDetails";
 import { menu } from "@material-tailwind/react";
 
+function normalizeSqlSortOrder(order) {
+  if (order === 1 || order === "1") return "ASC";
+  if (order === -1 || order === "-1") return "DESC";
+
+  if (typeof order === "string") {
+    const normalized = order.trim().toLowerCase();
+    if (normalized === "asc" || normalized === "ascending") return "ASC";
+    if (normalized === "desc" || normalized === "descending") return "DESC";
+  }
+
+  return order;
+}
+
+function hasSortRequest(data) {
+  return Boolean(data?.label && data?.order !== "" && data?.order != null);
+}
+
+function sortComparableValue(value) {
+  if (value == null) return "";
+
+  if (Array.isArray(value)) {
+    return sortComparableValue(value[0]);
+  }
+
+  if (typeof value === "object") {
+    return sortComparableValue(
+      value.label ?? value.name ?? value.value ?? value.id ?? JSON.stringify(value),
+    );
+  }
+
+  const dateValue = Date.parse(value);
+  if (!Number.isNaN(dateValue) && String(value).match(/\d{1,4}[-/]\d{1,2}[-/]\d{1,4}/)) {
+    return dateValue;
+  }
+
+  const numericValue = Number(value);
+  if (value !== "" && Number.isFinite(numericValue)) {
+    return numericValue;
+  }
+
+  return String(value).toLowerCase();
+}
+
+function applyClientSort(data, label, order) {
+  if (!Array.isArray(data) || !label) return data;
+
+  const direction = String(normalizeSqlSortOrder(order)).toUpperCase() === "DESC" ? -1 : 1;
+
+  return [...data].sort((a, b) => {
+    const valueA = sortComparableValue(a?.[label]);
+    const valueB = sortComparableValue(b?.[label]);
+
+    if (valueA < valueB) return -1 * direction;
+    if (valueA > valueB) return 1 * direction;
+    return 0;
+  });
+}
+
 /**
  * Fetches data from the API with caching. The cache expires after 30 seconds.
  * @param {string} url - The endpoint URL.
@@ -22,8 +80,12 @@ export async function masterTableList(data) {
   // masterTableList
   const { userTypeId } = getUserDetails();
   try {
+    const sortRequested = hasSortRequest(data);
+    const normalizedOrder = normalizeSqlSortOrder(data?.order);
     let insertedData = {
       ...data,
+      label: sortRequested ? "" : data?.label || "",
+      order: sortRequested ? "" : data?.label ? normalizedOrder : "",
       loginCompany: sessionStorage.getItem("companyId"),
       loginBranch: sessionStorage.getItem("branchId"),
       loginfinYear: sessionStorage.getItem("financialYear"),
@@ -39,6 +101,33 @@ export async function masterTableList(data) {
       },
       body: JSON.stringify(insertedData),
     }).then((response) => response.json());
+
+    if (sortRequested && response?.data?.length) {
+      return {
+        ...response,
+        data: applyClientSort(response.data, data.label, normalizedOrder),
+      };
+    }
+
+    if (sortRequested && !response?.data?.length) {
+      const retryData = { ...insertedData, label: "", order: "" };
+      const retryResponse = await fetch(`${baseUrlSQl}/api/master/dytablelist`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": JSON.parse(token),
+        },
+        body: JSON.stringify(retryData),
+      }).then((response) => response.json());
+
+      if (retryResponse?.data?.length) {
+        return {
+          ...retryResponse,
+          data: applyClientSort(retryResponse.data, data.label, normalizedOrder),
+        };
+      }
+    }
+
     return response;
   } catch (error) {
     console.log(error);

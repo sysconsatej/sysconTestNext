@@ -1,4 +1,4 @@
-'use client';
+"use client";
 import React, { lazy, Suspense, useCallback, useState } from "react";
 import PropTypes from "prop-types";
 import ChartsBreadCrumbs from "./ChartsBreadCrumbs";
@@ -18,7 +18,9 @@ LogisticsThreeDCharts.propTypes = {
 export default function LogisticsThreeDCharts({ chartData, type }) {
   const [stack, setStack] = useState([]);
   const currentNode = stack.length === 0 ? chartData : stack[stack.length - 1];
-  const children = Array.isArray(currentNode) ? currentNode[0].children : currentNode.children || [];
+  const children = Array.isArray(currentNode)
+    ? currentNode[0].children
+    : currentNode.children || [];
   const total = children?.reduce((s, c) => s + c.value, 0);
 
   const handleDrillDown = useCallback((child) => {
@@ -34,16 +36,9 @@ export default function LogisticsThreeDCharts({ chartData, type }) {
 
   if (!ChartComponent) return <div>Invalid Chart type</div>;
 
-
   return (
     <div className="p-4 font-sans">
       <ChartsBreadCrumbs stack={stack} onNavigate={handleNavigate} />
-      <div className="text-sm text-gray-500 mb-4">
-        {children?.length} segments · Total: {total?.toLocaleString()} units
-        {children  &&  children[0]?.children
-          ? "  ·  Click a slice to drill down"
-          : "  ·  Deepest level"}
-      </div>
       <Suspense fallback={<div>Loading chart...</div>}>
         <ChartComponent
           node={Array.isArray(currentNode) ? currentNode[0] : currentNode || {}}
@@ -51,7 +46,6 @@ export default function LogisticsThreeDCharts({ chartData, type }) {
         />
       </Suspense>
       {children?.length > 0 ? <Legend total={total}>{children}</Legend> : <></>}
-
       <p className="text-xs text-gray-400 mt-2.5 text-center">
         Click a slice to drill down · Scroll to zoom · Drag to rotate
       </p>

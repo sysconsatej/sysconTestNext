@@ -77,6 +77,7 @@ import Modal from "@mui/material/Modal";
 import Fade from "@mui/material/Fade";
 import commonModalStyles from "@/components/common.module.css";
 import CustomeModal from "@/components/Modal/customModal.jsx";
+import CustomeDisableDeleteModal from "@/components/Modal/customeDisableModel.jsx";
 import { toast } from "react-toastify";
 import { useSearchParams } from "next/navigation";
 import PaginationButtons from "@/components/Pagination/index.jsx";
@@ -109,6 +110,7 @@ import { encryptUrlFun, operatorFunc } from "@/utils";
 import PrintModal from "@/components/Modal/printModal.jsx";
 import { useSelector } from "react-redux";
 
+const DEFAULT_ROWS_PER_PAGE = 17;
 /** Form control can supply deleteReasonDropdownConfig (JSON or object) or a fields[] entry (deleteReason / isDeleteReasonSource). */
 function getDeleteReasonFieldConfig(formControlData) {
   if (!formControlData || Array.isArray(formControlData)) return null;
@@ -167,10 +169,12 @@ export default function StickyHeadTable() {
   const search = currentMenu.id;
   const [menuSearch, setMenuSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(17);
+  const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
   const [gridData, setGridData] = useState([]);
   const [headerFields, setHeaderFields] = useState([]);
   const [openModal, setOpenModal] = useState(false);
+  const [openDisableDeleteModal, setOpenDisableDeleteModal] = useState(false);
+  const [disableDeleteParaText, setDisableDeleteParaText] = useState("");
   const [deleteData, setDeleteData] = useState(null);
   const [tableName, setTableName] = useState("");
   const [isError, setIsError] = useState(false);
@@ -237,7 +241,6 @@ export default function StickyHeadTable() {
   const [isDeleteReasonSubmitting, setIsDeleteReasonSubmitting] =
     useState(false);
   const [operatorsBg, setOperatorsBg] = useState("blue");
-
   const previousMenuIdRef = useRef();
 
   useEffect(() => {
@@ -295,13 +298,15 @@ export default function StickyHeadTable() {
         };
         const fetchedUserData = await fetchReportData(menuAccessRequest);
         const menuAccessData = fetchedUserData.data[0];
-        console.log("Menu Access Data:", menuAccessData);
         setIsAddVisible(menuAccessData?.isAdd);
         setIsEditVisible(menuAccessData?.isEdit);
         setIsDeleteVisible(menuAccessData?.isDelete);
         setIsViewVisible(menuAccessData?.isView);
         setIsCopyVisible(menuAccessData?.isCopy);
         setIsPrintVisible(menuAccessData?.isPrint);
+        setColumnSearchKeyName(null);
+        setColumnSearchKeyValue(null);
+        setSearchInput("");
       } catch (error) {
         console.error("Failed to fetch data:", error);
       }
@@ -428,7 +433,7 @@ export default function StickyHeadTable() {
 
   function calculatePageNo() {
     // If there's a search input, check if the user is navigating to other pages post-search
-    if (searchInput.length > 0 && !isNewSearch) {
+    if ((searchInput || "").length > 0 && !isNewSearch) {
       setIsNewSearch(true);
       return 1; // Reset to page 1 for new searches or if the user is not navigating
     }
@@ -436,7 +441,7 @@ export default function StickyHeadTable() {
     // Use the user-specified page number when there is no search input affecting the results
     return page == 0 ? 1 : page;
   }
-  async function fetchData() {
+  async function fetchData(pageNoOverride) {
     setMenuSearch(() => search);
     try {
       setLoader(true);
@@ -476,7 +481,7 @@ export default function StickyHeadTable() {
           label: sortData.label,
           order: sortData.order,
           search: advanceSearch,
-          searchQuery: searchInput,
+          searchQuery: searchInput || "",
           keyName: columnSearchKeyName || currentMenu?.keyName,
           keyValue: columnSearchKeyValue || currentMenu?.keyValue,
           sortingCondition: tableHeadingsData?.data[0]?.sortingCondition,
@@ -537,7 +542,9 @@ export default function StickyHeadTable() {
           label: sortData.label,
           order: sortData.order,
           search: advanceSearch,
-          searchQuery: searchInput,
+          searchQuery: searchInput || "",
+          keyName: columnSearchKeyName || currentMenu?.keyName,
+          keyValue: columnSearchKeyValue || currentMenu?.keyValue,
           sortingCondition: tableHeadingsData?.data[0]?.sortingCondition,
         };
         const apiResponse = await masterTableList(requestData);
@@ -570,23 +577,23 @@ export default function StickyHeadTable() {
           return;
         }
         let requestData = {
-          tableName: tableName,
-          pageNo: calculatePageNo(),
+          tableName: tableName || tableHeadingsData.data[0]?.tableName,
+          pageNo: pageNoOverride || calculatePageNo(),
           limit: rowsPerPage,
           label: sortData.label,
           order: sortData.order,
           menuID: search,
           search: advanceSearch,
-          searchQuery: searchInput,
-          keyName: columnSearchKeyName,
-          keyValue: columnSearchKeyValue,
+          searchQuery: searchInput || "",
+          keyName: columnSearchKeyName || currentMenu?.keyName,
+          keyValue: columnSearchKeyValue || currentMenu?.keyValue,
           sortingCondition: tableHeadingsData?.data[0]?.sortingCondition,
         };
 
         const apiResponse = await masterTableList(requestData);
         if (apiResponse.data?.length > 0) {
           const { data, Count } = apiResponse;
-          setTableName(tableName);
+          setTableName(requestData.tableName);
           setGridData(data);
           if (Count !== 0) {
             setPageCount(Count);
@@ -596,7 +603,25 @@ export default function StickyHeadTable() {
           );
           pageSelected(requestData.pageNo);
         } else {
-          setGridData([]);
+          const retryRequestData = {
+            ...requestData,
+            pageNo: pageNoOverride || 1,
+          };
+          const retryResponse = await masterTableList(retryRequestData);
+          if (retryResponse.data?.length > 0) {
+            const { data, Count } = retryResponse;
+            setTableName(retryRequestData.tableName);
+            setGridData(data);
+            if (Count !== 0) {
+              setPageCount(Count);
+            }
+            setTotalPages(
+              Math.ceil((Count !== 0 ? Count : pageCount) / rowsPerPage),
+            );
+            pageSelected(retryRequestData.pageNo);
+          } else {
+            setGridData([]);
+          }
           setLoader(false);
         }
       }
@@ -647,6 +672,7 @@ export default function StickyHeadTable() {
     columnSearchKeyName,
     columnSearchKeyValue,
     sortData,
+    searchParams
   ]);
 
   useEffect(() => {
@@ -742,8 +768,8 @@ export default function StickyHeadTable() {
       };
       const data = await disableDelete(requestBody);
       if (data.success === false) {
-        setParaText(data.message);
-        setOpenModal((prev) => !prev);
+        setDisableDeleteParaText(data.message);
+        setOpenDisableDeleteModal((prev) => !prev);
         return;
       }
     } catch (error) {
@@ -829,7 +855,7 @@ export default function StickyHeadTable() {
       if (responseData && responseData.success) {
         toast.success(responseData.message);
         closeDeleteReasonModal();
-        fetchData();
+        await fetchData(1);
       } else {
         toast.error(responseData?.message || "Delete failed.");
       }
@@ -854,7 +880,7 @@ export default function StickyHeadTable() {
           toast.success(responseData.message);
           setDeleteData(null);
           setOpenModal((prev) => !prev);
-          fetchData();
+          await fetchData(1);
         } else {
           toast.error(responseData.message);
         }
@@ -1123,15 +1149,16 @@ export default function StickyHeadTable() {
   const handleCustomRowsPerPageChange = (event) => {
     const value = parseInt(event.target.value, 10);
     if (!isNaN(value) && value >= 0) {
-      sessionStorage?.setItem("rowsPerPage", value);
       setRowsPerPage(value);
       setSelectedPageNumber(page);
     }
   };
-  useEffect(() => {
-    const storedRowsPerPage = sessionStorage.getItem("rowsPerPage");
-    setRowsPerPage(storedRowsPerPage ? parseInt(storedRowsPerPage) : 17);
-  }, [sessionStorage.getItem("rowsPerPage"), search]);
+useEffect(() => {
+  setRowsPerPage(DEFAULT_ROWS_PER_PAGE);
+  setPage(1);
+  setSelectedPage("1");
+  setSelectedPageNumber(1);
+}, [search]);
 
   function pageSelected(selectedValue) {
     // console.log("pageSelected - - - - - ", selectedValue);
@@ -2804,6 +2831,17 @@ export default function StickyHeadTable() {
           onConfirm={onConfirm}
           isError={isError}
           paraText={paraText}
+          labelValue={""}
+        />
+      )}
+
+      {openDisableDeleteModal && (
+        <CustomeDisableDeleteModal
+          setOpenDisableDeleteModal={setOpenDisableDeleteModal}
+          openDisableDeleteModal={openDisableDeleteModal}
+          onConfirm={onConfirm}
+          isError={isError}
+          paraText={disableDeleteParaText}
           labelValue={""}
         />
       )}

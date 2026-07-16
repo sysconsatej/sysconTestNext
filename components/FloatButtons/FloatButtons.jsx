@@ -9,10 +9,11 @@ import { destroySocket, getSocket } from "@/helper/socket";
 
 const modalStyle = {
   position: "absolute",
-  top: "50%",
+  top: "40%",
   left: "50%",
   transform: "translate(-50%, -50%)",
-  width: 1400,
+  width: 950,
+  height: 550,
   bgcolor: "background.paper",
   boxShadow: 24,
   borderRadius: 12,

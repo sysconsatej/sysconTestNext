@@ -174,14 +174,17 @@ const getColumnLabel = (key) => {
   return map[key] || key;
 };
 
-const handleGlClick = (glId) => {
+const handleGlClick = (glId, newState) => {
   if (!glId) return;
-  const url = `/dynamicReports?menuName=993&glId=${glId}`;
+  const url = `/dynamicReports?menuName=993&glId=${glId}&fromDate=${newState?.fromDate || ""}&toDate=${newState?.toDate || ""}`;
   window.open(url, "_blank");
 };
 
 const TrialBalanceGrid = forwardRef(
-  ({ balanceSheetData, selectedRadio, selectedRadioType, toggle }, ref) => {
+  (
+    { balanceSheetData, selectedRadio, selectedRadioType, toggle, newState },
+    ref,
+  ) => {
     const [hoveredGlId, setHoveredGlId] = React.useState(null);
 
     const safeData = Array.isArray(balanceSheetData) ? balanceSheetData : [];
@@ -590,7 +593,7 @@ const TrialBalanceGrid = forwardRef(
                       >
                         <TableRow
                           onClick={() => {
-                            if (isClickable) handleGlClick(glId);
+                            if (isClickable) handleGlClick(glId, newState);
                           }}
                           onMouseEnter={() => {
                             if (isClickable) setHoveredGlId(glId);

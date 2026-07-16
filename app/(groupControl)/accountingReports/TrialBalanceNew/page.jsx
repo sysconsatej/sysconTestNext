@@ -571,6 +571,7 @@ const TrialBalance = () => {
           selectedRadio={selectedRadio}
           selectedRadioType={selectedRadioType}
           toggle={toggle}
+          newState={newState}
         />
       </div>
     </>

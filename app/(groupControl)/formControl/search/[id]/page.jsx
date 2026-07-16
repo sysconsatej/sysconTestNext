@@ -258,6 +258,7 @@ export default function AddEditFormControll() {
   const [tblRateRequestCharge, setTblRateRequestCharge] = useState(null);
   const [scopeOfWork, setScopeOfWork] = useState(null);
   const [vendorModal, setVendorModal] = useState(false);
+  const [childDefaultValues, setChildDefaultValues] = useState({});
   // const [sectionName, setSectionName] = useState(null);
   //omkar
   const [createBatch, setCreateBatch] = useState(false);
@@ -281,8 +282,6 @@ export default function AddEditFormControll() {
   const [submittedRecordId, setSubmittedRecordId] = useState(null);
   const [submittedMenuId, setSubmittedMenuId] = useState(null);
   const [isFormSaved, setIsFormSaved] = useState(false);
-
-  console.log("childsFields", childsFields);
 
   useEffect(() => {
     function checkIsDataSaved(firstState, newState) {
@@ -445,26 +444,52 @@ export default function AddEditFormControll() {
     });
   }, [childsFields]);
 
+  // function replaceNullStrings(value, childTableNames = []) {
+  //   // 1) If it’s literally null, undefined, the string "null", or the empty string → null
+  //   if (value == null || value === "null" || value === "") {
+  //     return null;
+  //   }
+
+  //   // 2) Arrays: recurse into every element
+  //   if (Array.isArray(value)) {
+  //     return value.map((item) => replaceNullStrings(item, childTableNames));
+  //   }
+
+  //   // 3) Objects: recurse into every property
+  //   if (typeof value === "object") {
+  //     for (const key of Object.keys(value)) {
+  //       value[key] = replaceNullStrings(value[key], childTableNames);
+  //     }
+  //     return value;
+  //   }
+
+  //   // 4) Everything else (numbers, booleans, non-empty strings) stays untouched
+  //   return value;
+  // }
+
+  // change on bach up 14 jul 2026
   function replaceNullStrings(value, childTableNames = []) {
-    // 1) If it’s literally null, undefined, the string "null", or the empty string → null
+    // Convert null-like values into actual null
     if (value == null || value === "null" || value === "") {
       return null;
     }
 
-    // 2) Arrays: recurse into every element
+    // Create a new array and process every item
     if (Array.isArray(value)) {
       return value.map((item) => replaceNullStrings(item, childTableNames));
     }
 
-    // 3) Objects: recurse into every property
+    // Create a new object instead of modifying the original object
     if (typeof value === "object") {
-      for (const key of Object.keys(value)) {
-        value[key] = replaceNullStrings(value[key], childTableNames);
-      }
-      return value;
+      return Object.fromEntries(
+        Object.entries(value).map(([key, itemValue]) => [
+          key,
+          replaceNullStrings(itemValue, childTableNames),
+        ]),
+      );
     }
 
-    // 4) Everything else (numbers, booleans, non-empty strings) stays untouched
+    // Keep numbers, booleans and non-empty strings unchanged
     return value;
   }
 
@@ -1574,6 +1599,21 @@ export default function AddEditFormControll() {
         toast.error("Something went wrong while fetching charge details");
       }
     },
+    handleProfitCheck: () => {
+      const amount = newState?.tblJobCharge?.reduce((acc,cur) => {
+        acc.buy += Number(cur?.buyTotalAmountHc);
+        acc.sell += Number(cur?.sellTotalAmountHc);
+        return acc;
+      }, {buy:0, sell: 0});
+
+        setParaText(
+          `Total Buy Amount: ${amount?.buy}
+          Total Sell Amount: ${amount?.sell}
+          Total Profit Amount: ${amount?.sell - amount?.buy}
+          `
+        )
+        setOpenModal(true);
+    }
   };
 
   const onConfirm = async (conformData) => {
@@ -2591,6 +2631,7 @@ export default function AddEditFormControll() {
                   setFormControlData={setFormControlData}
                   getLabelValue={getLabelValue}
                   hideColumnsId={hideFieldName}
+                  setChildDefaultValues={setChildDefaultValues}
                 />
               </React.Fragment>
             );
@@ -2620,6 +2661,7 @@ export default function AddEditFormControll() {
                 setFormControlData={setFormControlData}
                 // getLabelValue
                 getLabelValue={getLabelValue}
+                childDefaultValues={childDefaultValues}
               />
             </div>
           ))}
@@ -2736,6 +2778,7 @@ ParentAccordianComponent.propTypes = {
   formControlData: PropTypes.any,
   setFormControlData: PropTypes.any,
   hideColumnsId: PropTypes.any,
+  setChildDefaultValues: PropTypes.func,
   //
   // getLabelValue
   getLabelValue: PropTypes.any,
@@ -2762,6 +2805,7 @@ function ParentAccordianComponent({
   setFormControlData,
   getLabelValue,
   hideColumnsId,
+  setChildDefaultValues,
 }) {
   const [isParentAccordionOpen, setIsParentAccordionOpen] = useState(false);
   const [fieldId, setFieldId] = useState([]);
@@ -2889,6 +2933,7 @@ function ParentAccordianComponent({
               setStateVariable={setNewState}
               getLabelValue={getLabelValue}
               hideColumnsId={fieldId}
+              setChildDefaultValues={setChildDefaultValues}
             />
           </div>
         </AccordionDetails>
@@ -2916,6 +2961,7 @@ ChildAccordianComponent.propTypes = {
   setFormControlData: PropTypes.any,
   //
   getLabelValue: PropTypes.any,
+  childDefaultValues: PropTypes.any,
 };
 function ChildAccordianComponent({
   section,
@@ -2936,6 +2982,7 @@ function ChildAccordianComponent({
   setFormControlData,
   //
   getLabelValue,
+  childDefaultValues,
 }) {
   const tableRef = useRef(null);
   const [clickCount, setClickCount] = useState(0);
@@ -3038,6 +3085,11 @@ function ChildAccordianComponent({
     setChildObject((prevObject) => ({ ...prevObject, ...updatedValues }));
   };
 
+  const latestChildObject = {
+    ...childObject,
+    ...childDefaultValues,
+  };
+
   const childButtonHandler = async (section, indexValue, islastTab) => {
     if (isConfigFlagEnabled(section?.isAddHide)) return;
     if (isChildAccordionOpen) {
@@ -3046,15 +3098,15 @@ function ChildAccordianComponent({
 
     inputFieldsVisible == false && setInputFieldsVisible((prev) => !prev);
     if (inputFieldsVisible) {
-      let Data = { ...childObject };
+      let Data = { ...latestChildObject };
       for (var feild of section.fields) {
         if (
           feild.isRequired &&
           (!Object.prototype.hasOwnProperty.call(
-            childObject,
+            latestChildObject,
             feild.fieldname,
           ) ||
-            String(childObject[feild.fieldname] || "").trim() === "")
+            String(latestChildObject[feild.fieldname] || "").trim() === "")
         ) {
           toast.error(`Value for ${feild.yourlabel} is missing or empty.`);
           return;
@@ -3920,7 +3972,9 @@ function ChildAccordianComponent({
         ),
       );
       if (tableRef.current?.scrollWidth > tableRef.current?.clientWidth) {
-        setTableBodyWidth(`${right - 70}`);
+        let hoverBtnWidth = document.getElementById("hoverBtn");
+        hoverBtnWidth = hoverBtnWidth?.offsetWidth;
+        setTableBodyWidth(`${right - Math.max(hoverBtnWidth, 70)}`);
       } else {
         setTableBodyWidth(`0`);
       }
@@ -3933,7 +3987,7 @@ function ChildAccordianComponent({
     return () => {
       tableRef.current?.removeEventListener("scroll", horiScroll);
     };
-  }, [tableRef.current]);
+  }, [tableRef.current, document.getElementById("hoverBtn")]);
 
   async function onLoadFunctionCall(
     functionData,
@@ -4109,7 +4163,7 @@ function ChildAccordianComponent({
                   inputFieldData={section.fields}
                   onValuesChange={handleFieldChildrenValuesChange}
                   handleFieldValuesChange2={handleFieldValuesChange2}
-                  values={childObject}
+                  values={latestChildObject}
                   onChangeHandler={(result) => {
                     handleChangeFunction(result);
                   }}

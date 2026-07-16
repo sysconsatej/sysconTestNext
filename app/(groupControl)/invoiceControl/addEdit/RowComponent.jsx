@@ -131,6 +131,7 @@ RowComponent.propTypes = {
   setFormControlData: PropTypes.any,
   showSrNo: PropTypes.bool,
   tableBodyWidth: PropTypes.string,
+  getThirdLevelDetails: PropTypes.func
 };
 export default function RowComponent({
   row,
@@ -166,6 +167,7 @@ export default function RowComponent({
   setFormControlData,
   showSrNo = false,
   tableBodyWidth,
+  getThirdLevelDetails
 }) {
   const [childValuseObj, setChildValuseObj] = useState({ ...row });
   const [openChildEdit, setOpenChildEdit] = useState(false); // State to manage open/close of this particular row
@@ -607,6 +609,7 @@ export default function RowComponent({
             <div
               // className="group absolute right-0 w-fit"
               className={`group-hover:visible flex flex-nowrap justify-end invisible absolute`}
+              id="hoverBtn"
               style={stylesIconsHover}
             >
               {!isChildDeleteHidden && (
@@ -656,6 +659,24 @@ export default function RowComponent({
                 </LightTooltip>
               )}
 
+            {Object.keys(groupedData).includes("tblInvoiceChargeDetails") && (            
+            <LightTooltip title="Purchase Retrieve">
+                  <IconButton
+                    aria-label="Purchase"
+                    className={styles.icon}
+                    onClick={() => getThirdLevelDetails(childIndex)}
+                    // onMouseEnter={() => setHoveredIcon("copy")}
+                    // onMouseLeave={() => setHoveredIcon(null)}
+                  >
+                    <Image
+                      src={PlayIcon4}
+                      alt="Document Icon"
+                      priority={false}
+                      className="gridIcons2"
+                    />
+                  </IconButton>
+                </LightTooltip>
+            )} 
               {Object.keys(groupedData).map((key, index) => {
                 if (groupedData[key]?.isHideGrid) return null;
                 return (
@@ -1034,6 +1055,7 @@ export default function RowComponent({
                       setSubChildViewData={setSubChildViewData}
                       formControlData={formControlData}
                       setFormControlData={setFormControlData}
+                      getThirdLevelDetails={getThirdLevelDetails}
                     />
                   </Box>
                 </Collapse>

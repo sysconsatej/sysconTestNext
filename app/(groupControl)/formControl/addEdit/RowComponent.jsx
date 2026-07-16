@@ -1,5 +1,7 @@
 "use client";
+
 /* eslint-disable */
+
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import TableCell from "@mui/material/TableCell";
 import LightTooltip from "@/components/Tooltip/customToolTip";
@@ -44,9 +46,7 @@ import { ActionButton } from "@/components/ActionsButtons";
 ("");
 import { useDispatch } from "react-redux";
 import { updateFlag } from "@/app/counterSlice";
-
 const icons = [PlayIcon1, PlayIcon2, PlayIcon3, PlayIcon4];
-
 function isConfigFlagEnabled(value) {
   if (value === true || value === 1 || value === "1") return true;
   if (typeof value === "string") {
@@ -55,7 +55,6 @@ function isConfigFlagEnabled(value) {
   }
   return false;
 }
-
 async function onSubmitFunctionCall(
   functionData,
   newState,
@@ -66,16 +65,11 @@ async function onSubmitFunctionCall(
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
   console.log(functionData, "functionData");
-  // Check if we have a function name match, and we have an argsMatch (even if there are no arguments)
   if (funcNameMatch && argsMatch !== null) {
     const funcName = funcNameMatch[1];
-    const argsStr = argsMatch[1] || "";
-
-    // Find the function in formControlValidation by the extracted name
+    const argsStr = argsMatch[1] || ""
     const func = onSubmitValidation?.[funcName];
-
     if (typeof func === "function") {
-      // Prepare arguments: If there are no arguments, argsStr will be an empty string
       let args;
       if (argsStr === "") {
         args = {}; // No arguments, so pass an empty object or as per the function's expected parameters
@@ -95,7 +89,6 @@ async function onSubmitFunctionCall(
     }
   }
 }
-
 async function onGridSaveFunctionCall(
   functionData,
   newState,
@@ -107,25 +100,17 @@ async function onGridSaveFunctionCall(
 ) {
   const funcNameMatch = functionData?.match(/^(\w+)/);
   const argsMatch = functionData?.match(/\((.*)\)/);
-  //console.log(functionData, "functionData");
-  // Check if we have a function name match, and we have an argsMatch (even if there are no arguments)
   if (funcNameMatch && argsMatch !== null) {
     const funcName = funcNameMatch[1];
     const argsStr = argsMatch[1] || "";
-
-    // Find the function in formControlValidation by the extracted name
     const func = onGridSaveValidation?.[funcName];
-
     if (typeof func === "function") {
-      // Prepare arguments: If there are no arguments, argsStr will be an empty string
       let args;
       if (argsStr === "") {
         args = {}; // No arguments, so pass an empty object or as per the function's expected parameters
       } else {
         args = argsStr; // Has arguments, pass them as an object
       }
-      //console.log(args);
-      // Call the function with the prepared arguments
       let result = onGridSaveValidation?.[funcName]({
         args,
         newState,
@@ -140,22 +125,18 @@ async function onGridSaveFunctionCall(
     }
   }
 }
+
 async function onGridClickFunctionCall(functionName, functionObject) {
   const name = String(functionName || "").trim();
-
   if (!name) return null;
-
   const functionToCall = onGridClickFunctions?.[name];
-
   if (typeof functionToCall !== "function") {
     throw new Error(
       `Grid click function "${name}" not found in onGridClick.js`,
     );
   }
-
   return await functionToCall(functionObject);
 }
-
 RowComponent.propTypes = {
   row: PropTypes.any,
   fields: PropTypes.any,
@@ -176,7 +157,10 @@ RowComponent.propTypes = {
   dummyFieldArray: PropTypes.any,
   setDummyFieldArray: PropTypes.any,
   isGridEdit: PropTypes.any,
+  copyChildValueObj: PropTypes.any,
   setCopyChildValueObj: PropTypes.any,
+  isLastRow: PropTypes.bool,
+  onGridLastTab: PropTypes.func,
   isView: PropTypes.any,
   setOpenModal: PropTypes.any,
   setParaText: PropTypes.any,
@@ -193,6 +177,7 @@ RowComponent.propTypes = {
   tableBodyWidhth: PropTypes.string,
   showSrNo: PropTypes.bool,
 };
+
 export default function RowComponent({
   row,
   fields,
@@ -211,7 +196,10 @@ export default function RowComponent({
   setCalculateData,
   setDummyFieldArray,
   isGridEdit,
+  copyChildValueObj,
   setCopyChildValueObj,
+  isLastRow = false,
+  onGridLastTab,
   isView,
   setOpenModal,
   setParaText,
@@ -228,12 +216,23 @@ export default function RowComponent({
   tableBodyWidhth,
   showSrNo = false,
 }) {
+
   const dispatch = useDispatch();
   const [childValuseObj, setChildValuseObj] = useState({ ...row });
   const [openChildEdit, setOpenChildEdit] = useState(false); // State to manage open/close of this particular row
   const [subChildViewData, setSubChildViewData] = useState([]);
   const [hoveredIcon, setHoveredIcon] = useState(null);
   const [indexValue, setIndexValue] = useState({ ...row });
+  const latestGridRowsRef = useRef([]);
+  const latestChildValuesRef = useRef({ ...row });
+  const gridViewFields = useMemo(
+    () =>
+      (Array.isArray(fields) ? fields : []).filter(
+        (field) => field?.isGridView,
+      ),
+    [fields],
+  );
+
   // const [isChecked, setIsChecked] = useState(true);
   const [subChildComponent, setSubChildComponent] = useState(
     expandAll ? true : false,
@@ -252,16 +251,16 @@ export default function RowComponent({
     subChild ||
     [].reduce((result, obj) => {
       const { tableName } = obj;
-
       if (!result[tableName]) {
         result[tableName] = obj;
       }
       return result;
     }, {});
-
   const toggleRow = () => {
     setOpenChildEdit((prev) => !prev);
   };
+
+
 
   const toggleSubChildRow = (key) => {
     if (groupedData[key]?.isHideGrid) return;
@@ -291,8 +290,8 @@ export default function RowComponent({
       setSubmitNewState(tmpData);
       setRenderedData(newState[sectionData.tableName]);
     }
-  }
 
+  }
   useEffect(() => {
     if (expandAll) {
       Object.keys(groupedData).forEach((key) => {
@@ -302,10 +301,19 @@ export default function RowComponent({
       });
     }
   }, [expandAll]);
-
   useEffect(() => {
-    setChildValuseObj({ ...row });
+    const latestRow = { ...row };
+    latestChildValuesRef.current = latestRow;
+    setChildValuseObj(latestRow);
   }, [row]);
+  useEffect(() => {
+    const latestRows = Array.isArray(copyChildValueObj?.[childName])
+      ? copyChildValueObj[childName]
+      : Array.isArray(newState?.[childName])
+        ? newState[childName]
+        : [];
+    latestGridRowsRef.current = latestRows;
+  }, [copyChildValueObj, newState, childName]);
 
   useEffect(() => {
     Object.keys(groupedData).forEach((key) => {
@@ -317,7 +325,6 @@ export default function RowComponent({
       }
     });
   }, []);
-
   const dummyData = () => {
     const tmpData = fields
       .filter((elem) => elem.isDummy)
@@ -330,27 +337,32 @@ export default function RowComponent({
         Object.assign(obj, item);
         return obj;
       }, {});
-
     setCalculateData(
       Object.values(tmpData).reduce((acc, item) => {
         return acc + Number(item) ? Number(item) : 0;
       }, 0) + calculateData,
     );
-
     setDummyFieldArray(
       Object.keys(tmpData).map((key) => ({
         [key]:
           Object.values(tmpData).reduce((acc, item) => {
-            return acc + Number(item);
+           return acc + Number(item);
           }, 0) + calculateData,
       })),
     );
   };
-
   useEffect(() => {
     dummyData();
   }, []);
-
+  const updateExpandedChildValues = (updatedValues = {}) => {
+    const latestValues = {
+      ...latestChildValuesRef.current,
+      ...updatedValues,
+    };
+    latestChildValuesRef.current = latestValues;
+    setChildValuseObj(latestValues);
+    return latestValues;
+  };
   function handleChangeFunction(result) {
     if (result?.isCheck === false) {
       if (result?.alertShow) {
@@ -359,20 +371,14 @@ export default function RowComponent({
         setOpenModal((previous) => !previous);
         setTypeofModal("onCheck");
       }
-
       return;
     }
-
     if (!result?.values) return;
-
-    setChildValuseObj((previous) => ({
-      ...previous,
-      ...result.values,
-    }));
+    updateExpandedChildValues(result.values);
   }
   function handleBlurFunction(result) {
-    if (result.isCheck === false) {
-      if (result.alertShow) {
+    if (result?.isCheck === false) {
+      if (result?.alertShow) {
         setParaText(result.message);
         setIsError(true);
         setOpenModal((prev) => !prev);
@@ -380,98 +386,51 @@ export default function RowComponent({
       }
       return;
     }
-    let data = { ...result.values };
-    // let data = { ...result.newState };
-    setChildValuseObj((pre) => {
-      return {
-        ...pre,
-        ...data,
-      };
-    });
+    updateExpandedChildValues(result?.values || {});
   }
-
-  // function addChildRecordToInsert(obj, index) {
-  //   // if (Object.keys(obj).length !== 0) {
-  //   //   const tmpData = { ...submitNewState };
-  //   //   tmpData[sectionData.tableName].push({ ...obj, isChecked: true });
-  //   //   setSubmitNewState(tmpData);
-  //   // }
-  //   if (Object.keys(obj).length !== 0) {
-  //     setSubmitNewState((prevState) => {
-  //       const newStateCopy = { ...newState, ...prevState };
-  //       // Assume each entry in the array has an 'id' property
-  //       let updatedData = newStateCopy[sectionData.tableName].filter(
-  //         (_, idx) => idx === index,
-  //       );
-  //       updatedData = { ...updatedData[0], isChecked: true };
-  //       newStateCopy[sectionData.tableName][index] = updatedData;
-  //       return newStateCopy;
-  //     });
-  //     setNewState((prevState) => {
-  //       const newStateCopy = { ...newState, ...prevState };
-  //       // Assume each entry in the array has an 'id' property
-  //       let updatedData = newStateCopy[sectionData.tableName].filter(
-  //         (_, idx) => idx === index,
-  //       );
-  //       updatedData = { ...updatedData[0], isChecked: true };
-  //       newStateCopy[sectionData.tableName][index] = updatedData;
-  //       return newStateCopy;
-  //     });
-  //   }
-  // }
-
+ 
   async function addChildRecordToInsert(obj, index, isChecked = true) {
     if (!obj || Object.keys(obj).length === 0) return;
-
     const tableName = sectionData?.tableName;
-
     if (!tableName) return;
-
     const configuredFunctions = String(sectionData?.functionOnClick || "")
       .split(";")
       .map((functionName) => functionName.trim())
       .filter(Boolean);
-
-    // Preserve old checkbox behaviour for other grids.
     if (configuredFunctions.length === 0) {
       if (!isChecked) {
-        removeChildRecordFromInsert(obj.id, index);
+      removeChildRecordFromInsert(obj.id, index);
         return;
       }
-
       setNewState((previous) => ({
         ...previous,
         [tableName]: previous[tableName].map((item, rowIndex) =>
           rowIndex === index
             ? {
-                ...item,
-                isChecked: true,
-              }
+              ...item,
+              isChecked: true,
+            }
             : item,
         ),
       }));
-
       setSubmitNewState((previous) => ({
         ...previous,
         [tableName]: (previous?.[tableName] || newState?.[tableName] || []).map(
           (item, rowIndex) =>
             rowIndex === index
               ? {
-                  ...item,
-                  isChecked: true,
-                }
+                ...item,
+                isChecked: true,
+              }
               : item,
         ),
       }));
-
       return;
     }
-
     try {
       const functionValues = await configuredFunctions.reduce(
         async (previousPromise, functionName) => {
           const previousValues = await previousPromise;
-
           const result = await onGridClickFunctionCall(functionName, {
             values: {
               ...obj,
@@ -480,7 +439,6 @@ export default function RowComponent({
             isChecked,
             newState,
           });
-
           if (result?.isCheck === false) {
             if (result?.alertShow) {
               setParaText(result.message);
@@ -488,10 +446,8 @@ export default function RowComponent({
               setOpenModal((previous) => !previous);
               setTypeofModal("onCheck");
             }
-
             throw new Error("__VALIDATION_STOP__");
           }
-
           return {
             ...previousValues,
             ...(result?.values || {}),
@@ -499,60 +455,54 @@ export default function RowComponent({
         },
         Promise.resolve({}),
       );
-
       setChildValuseObj((previous) => ({
         ...previous,
         ...functionValues,
         isChecked,
       }));
-
       setRenderedData((previous) =>
         (previous || []).map((item, rowIndex) =>
           rowIndex === index
             ? {
-                ...item,
-                ...functionValues,
-                isChecked,
-              }
+              ...item,
+              ...functionValues,
+              isChecked,
+            }
             : item,
         ),
       );
-
       setNewState((previous) => ({
         ...previous,
         [tableName]: (previous?.[tableName] || []).map((item, rowIndex) =>
           rowIndex === index
             ? {
-                ...item,
-                ...functionValues,
-                isChecked,
-              }
+              ...item,
+              ...functionValues,
+              isChecked,
+            }
             : item,
         ),
       }));
-
       setSubmitNewState((previous) => ({
         ...previous,
         [tableName]: (previous?.[tableName] || newState?.[tableName] || []).map(
           (item, rowIndex) =>
             rowIndex === index
               ? {
-                  ...item,
-                  ...functionValues,
-                  isChecked,
-                }
+                ...item,
+                ...functionValues,
+                isChecked,
+              }
               : item,
         ),
       }));
     } catch (error) {
       if (error?.message === "__VALIDATION_STOP__") return;
-
       toast.error(
         error?.message || "Error while executing grid checkbox function.",
       );
     }
   }
-
   const handleChange = async (event, currentRow, index) => {
     const checked = event.target.checked;
     setChildValuseObj((previous) => ({
@@ -564,101 +514,351 @@ export default function RowComponent({
       ...childValuseObj,
       isChecked: checked,
     };
-
     await addChildRecordToInsert(latestRowValues, index, checked);
   };
 
-  // const handleValuesChangeOfChildGrid = (e,index) => {
-  //   setChildValuseObj((prev) => {
-  //     return { ...prev, ...e };
-  //   });
-  //   setCopyChildValueObj((prev) => {
-  //     // Clone the previous state to avoid direct mutation
-  //     const newCopy = { ...prev };
-  //     let tableName = Object.keys(newCopy)[0];
-  //     // Loop through the outer array of 'tblJobQty'
-  //     newCopy[tableName] = newCopy[tableName]?.map((nestedArray) => {
-  //       // Loop through the objects in the nested array
-  //       return nestedArray.map((item) => {
-  //         // Find the object with the matching '_id'
-  //         if (item.id === childValuseObj.id) {
-  //           // Update the 'qty' of the matched object
-  //           return { ...item, ...e };
-  //         }
-  //         // Return the item unchanged if it's not the one to update
-  //         return item;
-  //       });
-  //     });
-
-  //     // Return the updated state
-  //     return newCopy;
-  //   });
-  // };
-
-  const handleValuesChangeOfChildGrid = (e, index) => {
-    console.log("Incoming event object (e):", e);
-    console.log("Index:", index);
-
-    setChildValuseObj((prev) => {
-      const updated = { ...prev, ...e };
-      console.log("Updated childValuseObj:", updated);
-      return updated;
-    });
-
-    setCopyChildValueObj((prev) => {
-      const newCopy = { ...prev };
-      const tableName = Object.keys(newCopy)[0];
-
-      console.log("Previous copyChildValueObj:", prev);
-      console.log("Table name:", tableName);
-      console.log("Before updating newCopy[tableName]:", newCopy[tableName]);
-
-      // If newCopy[tableName] is an array of objects (not nested arrays), remove the inner map
-      if (!Array.isArray(newCopy[tableName])) {
-        console.error(
-          `Expected an array at newCopy[${tableName}], but got:`,
-          newCopy[tableName],
-        );
-        return prev; // don't update state if data is malformed
-      }
-
-      newCopy[tableName] = newCopy[tableName].map((item) => {
-        if (item.id === childValuseObj.id) {
-          console.log("Matched item to update:", item);
-          return { ...item, ...e };
+  const isSameGridRow = (item, rowIndex) => {
+    if (row?.id !== null && row?.id !== undefined && item?.id !== null && item?.id !== undefined) {
+      return String(item.id) === String(row.id);
+    }
+    if (
+      row?.indexValue !== null &&
+      row?.indexValue !== undefined &&
+      item?.indexValue !== null &&
+      item?.indexValue !== undefined
+    ) {
+      return String(item.indexValue) === String(row.indexValue);
+    }
+    return rowIndex === childIndex;
+  };
+  const updateGridRows = (rows, updatedValues) => {
+    const sourceRows = Array.isArray(rows) ? rows : [];
+    return sourceRows.map((item, rowIndex) =>
+      isSameGridRow(item, rowIndex)
+        ? {
+          ...item,
+          ...updatedValues,
         }
-        return item;
-      });
+        : item,
+    );
+  };
 
-      console.log("After updating:", newCopy[tableName]);
-      dispatch(
-        updateFlag({
-          flag: "childRecord",
-          value: newCopy,
-        }),
-      );
-      return newCopy;
+  const handleValuesChangeOfChildGrid = (updatedValues) => {
+
+    const latestRowValues = {
+
+      ...latestChildValuesRef.current,
+
+      ...updatedValues,
+
+    };
+
+
+
+    latestChildValuesRef.current = latestRowValues;
+
+    setChildValuseObj(latestRowValues);
+
+
+
+    const currentRows = Array.isArray(latestGridRowsRef.current)
+
+      ? latestGridRowsRef.current
+
+      : Array.isArray(copyChildValueObj?.[childName])
+
+        ? copyChildValueObj[childName]
+
+        : Array.isArray(newState?.[childName])
+
+          ? newState[childName]
+
+          : [];
+
+
+
+    const latestRows = updateGridRows(currentRows, latestRowValues);
+
+    latestGridRowsRef.current = latestRows;
+
+
+
+    const latestCopy = {
+
+      ...(copyChildValueObj &&
+
+        typeof copyChildValueObj === "object" &&
+
+        !Array.isArray(copyChildValueObj)
+
+        ? copyChildValueObj
+
+        : {}),
+
+      [childName]: latestRows,
+
+    };
+
+
+
+    if (typeof setCopyChildValueObj === "function") {
+
+      setCopyChildValueObj((previous) => ({
+
+        ...(previous &&
+
+          typeof previous === "object" &&
+
+          !Array.isArray(previous)
+
+          ? previous
+
+          : {}),
+
+        [childName]: latestRows,
+
+      }));
+
+    }
+
+
+
+    dispatch(
+
+      updateFlag({
+
+        flag: "childRecord",
+
+        value: latestCopy,
+
+      }),
+
+    );
+
+  };
+  const handleLastGridTab = (event) => {
+    if (event.key !== "Tab" || event.shiftKey || !isLastRow) return;
+    const currentRow = event.currentTarget?.closest?.("tr");
+    const target = event.target;
+    if (!currentRow || !(target instanceof HTMLElement)) return;
+    const focusableElements = Array.from(
+      currentRow.querySelectorAll(
+        'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"], [role="combobox"]',
+
+      ),
+
+    ).filter((element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      return style.display !== "none" && style.visibility !== "hidden";
     });
+    const lastFocusableElement = focusableElements.at(-1);
+    if (
+      !lastFocusableElement ||
+      !(
+        lastFocusableElement === target ||
+        lastFocusableElement.contains(target) ||
+        target.contains(lastFocusableElement)
+      )
+    ) {
+      return;
+    }
+
+    setTimeout(() => {
+      if (typeof onGridLastTab === "function") {
+        onGridLastTab(latestGridRowsRef.current);
+      }
+    }, 0);
+  };
+
+  const saveExistingChildRow = async () => {
+    const tableName = sectionData?.tableName;
+    if (!tableName) return;
+    let valuesToSave = {
+      ...row,
+      ...childValuseObj,
+      ...latestChildValuesRef.current,
+    };
+
+    for (const field of Array.isArray(fields) ? fields : []) {
+      const fieldValue = valuesToSave?.[field?.fieldname];
+      const isEmptyValue =
+        fieldValue === null ||
+        fieldValue === undefined ||
+        String(fieldValue).trim() === "";
+
+      if (field?.isRequired && isEmptyValue) {
+        toast.error(`Value for ${field.yourlabel} is missing or empty.`);
+        return;
+      }
+    }
+    let updatedNewStateValues = {};
+    let updatedSubmitStateValues = {};
+
+    try {
+      const configuredFunctions = String(
+        sectionData?.functionOnGridSave || "",
+      )
+        .split(";")
+        .map((functionName) => functionName.trim())
+        .filter(Boolean);
+
+      for (const functionName of configuredFunctions) {
+        const functionInputState = {
+          ...newState,
+          ...updatedNewStateValues,
+        };
+
+        const updatedData = await onGridSaveFunctionCall(
+          functionName,
+          functionInputState,
+          formControlData,
+          valuesToSave,
+          setChildValuseObj,
+          {
+            ...submitNewState,
+            ...updatedSubmitStateValues,
+          },
+          setSubmitNewState,
+        );
+
+        if (updatedData?.alertShow === true) {
+          setParaText(updatedData.message);
+          setIsError(true);
+          setOpenModal((previous) => !previous);
+          setTypeofModal("onCheck");
+        }
+
+        if (updatedData?.isCheck === false) return;
+
+        if (updatedData?.values) {
+          valuesToSave = {
+            ...valuesToSave,
+            ...updatedData.values,
+          };
+        }
+
+        if (updatedData?.newState) {
+          updatedNewStateValues = {
+            ...updatedNewStateValues,
+            ...updatedData.newState,
+          };
+        }
+
+        if (updatedData?.submitNewState) {
+          updatedSubmitStateValues = {
+            ...updatedSubmitStateValues,
+            ...updatedData.submitNewState,
+          };
+        }
+      }
+    } catch (error) {
+      toast.error(error?.message || "Unable to save child row.");
+      return;
+    }
+
+    latestChildValuesRef.current = valuesToSave;
+    setChildValuseObj(valuesToSave);
+    setNewState((previous) => {
+      const mergedState = {
+        ...previous,
+        ...updatedNewStateValues,
+      };
+      const functionRows = Array.isArray(
+        updatedNewStateValues?.[tableName],
+      )
+        ? updatedNewStateValues[tableName]
+        : Array.isArray(mergedState?.[tableName])
+          ? mergedState[tableName]
+          : [];
+
+      return {
+        ...mergedState,
+        [tableName]: updateGridRows(functionRows, valuesToSave),
+      };
+    });
+
+    setSubmitNewState((previous) => {
+      const mergedState = {
+        ...previous,
+        ...updatedNewStateValues,
+        ...updatedSubmitStateValues,
+      };
+
+      const functionRows = Array.isArray(
+        updatedSubmitStateValues?.[tableName],
+      )
+        ? updatedSubmitStateValues[tableName]
+        : Array.isArray(updatedNewStateValues?.[tableName])
+          ? updatedNewStateValues[tableName]
+          : Array.isArray(mergedState?.[tableName])
+            ? mergedState[tableName]
+            : [];
+
+      return {
+        ...mergedState,
+        [tableName]: updateGridRows(functionRows, valuesToSave),
+      };
+    });
+
+    const renderedBaseRows = Array.isArray(
+      updatedNewStateValues?.[tableName],
+    )
+      ? updatedNewStateValues[tableName]
+      : Array.isArray(updatedSubmitStateValues?.[tableName])
+        ? updatedSubmitStateValues[tableName]
+        : Array.isArray(newState?.[tableName])
+          ? newState[tableName]
+          : [];
+
+    const finalRenderedRows = updateGridRows(
+      renderedBaseRows,
+      valuesToSave,
+    );
+
+    latestGridRowsRef.current = finalRenderedRows;
+    setRenderedData(finalRenderedRows);
+
+    if (typeof setCopyChildValueObj === "function") {
+      setCopyChildValueObj((previous) => ({
+        ...(previous &&
+          typeof previous === "object" &&
+          !Array.isArray(previous)
+          ? previous
+          : {}),
+        [tableName]: finalRenderedRows,
+      }));
+    }
+
+    dispatch(
+      updateFlag({
+        flag: "childRecord",
+        value: {
+          [tableName]: finalRenderedRows,
+        },
+      }),
+    );
+
+    toggleRow();
+
+    setTimeout(() => {
+      copyFirstRowToAllRowsExceptContainer();
+    }, 0);
   };
 
   const reCalculate = (childIndex, tableName) => {
     if (tableName !== "tblRateRequestQty") return;
-
     if (!newState || !Array.isArray(newState[tableName])) return;
-
     const filteredRows = newState[tableName].filter(
       (_, index) => index !== childIndex,
     );
-
     let totalVolume = 0;
     let totalVolumeWt = 0;
     let totalNoOfPackages = 0;
-
     filteredRows.forEach((row) => {
-      const volume = parseFloat(row.volume) || 0;
+    const volume = parseFloat(row.volume) || 0;
       const volumeWt = parseFloat(row.volumeWt) || 0;
       const noOfPackages = parseInt(row.noOfPackages, 10) || 0;
-
       totalVolume += volume;
       totalVolumeWt += volumeWt;
       totalNoOfPackages += noOfPackages;
@@ -667,7 +867,6 @@ export default function RowComponent({
     const updatedVolume = parseFloat(totalVolume.toFixed(2));
     const updatedVolumeWt = parseFloat(totalVolumeWt.toFixed(2));
     const updatedNoOfPackages = totalNoOfPackages.toString();
-
     setNewState((prevState) => ({
       ...prevState,
       volume: updatedVolume,
@@ -675,35 +874,27 @@ export default function RowComponent({
       noOfPackages: updatedNoOfPackages,
     }));
   };
-
   const stylesIconsHover =
     tableBodyWidhth === "0"
       ? { right: tableBodyWidhth + "px", width: "auto" }
       : { left: tableBodyWidhth + "px", width: "auto" };
-
   const didInitCopyRef = useRef(false);
   const prevFirstRowRef = useRef(""); // (kept, but now stores JSON of patch)
   const rowOverridesRef = useRef({}); // { [rowIndex]: Set(fieldNames) }
-
   const stableSignature = (obj) => {
     const normalize = (v) => {
       if (v instanceof Date) return v.toISOString();
-
-      // dayjs/moment-like
       if (v && typeof v === "object") {
         if (typeof v.toDate === "function") return v.toDate().toISOString();
         if (v.$d instanceof Date) return v.$d.toISOString();
       }
-
       return v;
     };
-
     const keys = Object.keys(obj || {}).sort();
     const out = {};
     for (const k of keys) out[k] = normalize(obj[k]);
     return JSON.stringify(out);
   };
-
   const PROTECT_KEYS = useMemo(
     () =>
       new Set([
@@ -722,35 +913,26 @@ export default function RowComponent({
         "containerIdDropdown",
       ]),
     [],
-  );
 
+  );
   // ✅ SAME NAME (updated behavior: only changed field(s) copied)
   const copyFirstRowToAllRowsExceptContainer = () => {
     const rows = newState?.tblContainerTransactionDetails;
     if (!Array.isArray(rows) || rows.length < 2) return;
-
     const firstRow = rows[0] || {};
-
-    // patch = everything from row 0 except protected keys
     const patch = {};
     Object.keys(firstRow).forEach((k) => {
+
       if (!PROTECT_KEYS.has(k)) patch[k] = firstRow[k];
     });
-
-    // store snapshot of row0 patch
     const currentPatchStr = stableSignature(patch);
-
-    // 1) don’t auto-copy on initial load
     if (!didInitCopyRef.current) {
       didInitCopyRef.current = true;
       prevFirstRowRef.current = currentPatchStr;
       return;
     }
-
-    // 2) compute ONLY changed keys vs previous patch
     const prevPatchStr = prevFirstRowRef.current || "";
     if (prevPatchStr === currentPatchStr) return; // no changes
-
     let prevPatchObj = {};
     try {
       prevPatchObj = prevPatchStr ? JSON.parse(prevPatchStr) : {};
@@ -765,40 +947,27 @@ export default function RowComponent({
     ]);
     allKeys.forEach((k) => {
       if (PROTECT_KEYS.has(k)) return;
-      // compare via stableSignature to handle date/dayjs
       const a = stableSignature({ v: prevPatchObj[k] });
       const b = stableSignature({ v: patch[k] });
       if (a !== b) changedKeys.push(k);
     });
-
-    // update stored patch snapshot
     prevFirstRowRef.current = currentPatchStr;
-
     if (changedKeys.length === 0) return;
-
     const updatedRows = rows.map((r, i) => {
       if (i === 0 || !r) return r;
-
       const overrides = rowOverridesRef.current?.[i]; // Set(keys) or undefined
-
-      // ✅ apply only changed keys (and respect overrides per row)
       const safePatch = {};
       changedKeys.forEach((k) => {
         if (!overrides || !overrides.has(k)) safePatch[k] = patch[k];
       });
-
-      // nothing to apply for this row
       if (Object.keys(safePatch).length === 0) return r;
-
       return { ...r, ...safePatch };
     });
-
     setNewState((prev) => ({
       ...prev,
       tblContainerTransactionDetails: updatedRows,
     }));
   };
-
   useEffect(() => {
     copyFirstRowToAllRowsExceptContainer();
   }, [
@@ -810,8 +979,11 @@ export default function RowComponent({
         Object.keys(r0).forEach((k) => {
           if (!PROTECT_KEYS.has(k)) patch[k] = r0[k];
         });
+
         return patch;
+
       })(),
+
     ),
     newState?.tblContainerTransactionDetails?.length,
   ]);
@@ -876,7 +1048,9 @@ export default function RowComponent({
                         {childIndex + 1}
                       </div>
                     </TableCell>
+
                   )}
+
                   <TableCell
                     align="left"
                     sx={{
@@ -895,35 +1069,34 @@ export default function RowComponent({
                         <LightTooltip
                           title={
                             field.controlname === "dropdown" ||
-                            field.controlname === "multiselect"
+                              field.controlname === "multiselect"
                               ? row[`${field.fieldname}dropdown`]?.[0]?.label ||
-                                row[`${field.fieldname}Dropdown`] ||
-                                ""
+                              row[`${field.fieldname}Dropdown`] ||
+                              ""
                               : isDateFormat(row[`${field.fieldname}`]) || ""
                           }
                           arrow
                         >
                           <span>
                             {field.controlname === "dropdown" ||
-                            field.controlname === "multiselect"
+                              field.controlname === "multiselect"
                               ? (
-                                  row[`${field.fieldname}dropdown`]?.[0]
-                                    ?.label || row[`${field.fieldname}Dropdown`]
-                                )?.length > 50
+                                row[`${field.fieldname}dropdown`]?.[0]
+                                  ?.label || row[`${field.fieldname}Dropdown`]
+                              )?.length > 50
                                 ? (
-                                    row[`${field.fieldname}dropdown`]?.[0]
-                                      ?.label ||
-                                    row[`${field.fieldname}Dropdown`]
-                                  )?.slice(0, 50) + "..."
-                                : row[`${field.fieldname}dropdown`]?.[0]
+                                  row[`${field.fieldname}dropdown`]?.[0]
                                     ?.label ||
-                                  row[`${field.fieldname}Dropdown`] ||
-                                  ""
+                                  row[`${field.fieldname}Dropdown`]
+                                )?.slice(0, 50) + "..."
+                                : row[`${field.fieldname}dropdown`]?.[0]
+                                  ?.label ||
+                                row[`${field.fieldname}Dropdown`] ||
+                                ""
                               : isDateFormat(row[`${field.fieldname}`]) || ""}
                           </span>
                         </LightTooltip>
                       </div>
-
                       {!showSrNo && index == 0 && (
                         <div className={` ${styles.iconContainer}`}>
                           <div className="absolute left-[-7px] top-[-2px] cursor-pointer">
@@ -954,6 +1127,7 @@ export default function RowComponent({
             <div
               className={`group-hover:visible flex flex-nowrap justify-end invisible absolute`}
               style={stylesIconsHover}
+              id="hoverBtn"
             >
               {!isChildDeleteHidden && (
                 <LightTooltip title="Delete Record ">
@@ -1039,70 +1213,71 @@ export default function RowComponent({
               // ...formChildTableRowStyles, { commmented as the hover effect is not needed for edit mode }
             }}
           >
-            {fields
-              .filter((elem) => elem.isGridView)
-              .map((field, index) => (
-                <React.Fragment key={index}>
+            {gridViewFields.map((field, index) => (
+              <React.Fragment key={index}>
+                <TableCell
+                  align="left"
+                  sx={{
+                    padding: "0 ",
+                    lineHeight: "0",
+                    fontSize: "12px",
+                    position: "relative",
+                  }}
+                >
+                  <Box
+                    className="flex gap-4"
+                    onKeyDownCapture={(event) =>
+                      handleLastGridTab(event)
+                    }
+                  >
+                    {childName != "tblVoucherLedgerDetails" && index === 0 ? (
+                      <ActionButton
+                        onDelete={() => deleteChildRecord(childIndex)}
+                        key={index}
+                        onCopy={() => copyDocument(childValuseObj)}
+                        hover={hoveredIcon}
+                        copyImagepath={copyDoc}
+                        deleteImagePath={DeleteIcon2}
+                        showDelete={!isChildDeleteHidden}
+                        showCopy={!isChildCopyHidden}
+                      />
+                    ) : (
+                      <></>
+                    )}
+                    <GridInputFields
+                      fieldData={field}
+                      indexValue={index}
+                      onValuesChange={(e) =>
+                        handleValuesChangeOfChildGrid(e, index)
+                      }
+                      values={childValuseObj}
+                      inEditMode={inEditMode}
+                      onChangeHandler={null}
+                      onBlurHandler={null}
+                    />
+                  </Box>
+                </TableCell>
+                {showSrNo && index === 0 && (
                   <TableCell
                     align="left"
                     sx={{
-                      padding: "0 ",
+                      padding: "0 8px",
                       lineHeight: "0",
                       fontSize: "12px",
-                      position: "relative",
-                    }}
+                      width: "64px",
+                      minWidth: "64px",
+                  }}
                   >
-                    <Box className="flex gap-4">
-                      {childName != "tblVoucherLedgerDetails" && index === 0 ? (
-                        <ActionButton
-                          onDelete={() => deleteChildRecord(childIndex)}
-                          key={index}
-                          onCopy={() => copyDocument(childValuseObj)}
-                          hover={hoveredIcon}
-                          copyImagepath={copyDoc}
-                          deleteImagePath={DeleteIcon2}
-                          showDelete={!isChildDeleteHidden}
-                          showCopy={!isChildCopyHidden}
-                        />
-                      ) : (
-                        <></>
-                      )}
-                      <GridInputFields
-                        fieldData={field}
-                        indexValue={index}
-                        onValuesChange={(e) =>
-                          handleValuesChangeOfChildGrid(e, index)
-                        }
-                        values={childValuseObj}
-                        inEditMode={inEditMode}
-                        onChangeHandler={null}
-                        onBlurHandler={null}
-                      />
+                    <Box className="flex items-center h-full pl-1 text-xs font-semibold">
+                      {childIndex + 1}
                     </Box>
                   </TableCell>
-                  {showSrNo && index === 0 && (
-                    <TableCell
-                      align="left"
-                      sx={{
-                        padding: "0 8px",
-                        lineHeight: "0",
-                        fontSize: "12px",
-                        width: "64px",
-                        minWidth: "64px",
-                      }}
-                    >
-                      <Box className="flex items-center h-full pl-1 text-xs font-semibold">
-                        {childIndex + 1}
-                      </Box>
-                    </TableCell>
-                  )}
-                </React.Fragment>
-              ))}
+                )}
+              </React.Fragment>
+            ))}
           </TableRow>
         </>
       )}
-
-      {/* EDIT CHILD */}
       {openChildEdit && (
         <TableRow>
           <TableCell style={{ padding: 0 }} colSpan={4} className="">
@@ -1121,10 +1296,8 @@ export default function RowComponent({
                   <CustomeInputFields
                     isView={isView}
                     inputFieldData={fields}
-                    onValuesChange={(e) => {
-                      setChildValuseObj((prev) => {
-                        return { ...prev, ...e };
-                      });
+                    onValuesChange={(updatedValues) => {
+                      updateExpandedChildValues(updatedValues);
                     }}
                     values={childValuseObj}
                     inEditMode={inEditMode}
@@ -1139,6 +1312,7 @@ export default function RowComponent({
                     formControlData={formControlData}
                     setFormControlData={setFormControlData}
                     setStateVariable={setChildValuseObj}
+                    callSaveFunctionOnLastTab={saveExistingChildRow}
                   />
                   {/* Icon Button on the right */}
                   {!isView && (
@@ -1151,154 +1325,14 @@ export default function RowComponent({
                         onClick={() => {
                           setChildValuseObj({ ...row });
                           toggleRow();
-                        }}
+                       }}
                       />
-
                       <HoverIcon
                         defaultIcon={saveIcon}
                         hoverIcon={saveIconHover}
                         altText={"Save"}
                         title={"Save"}
-                        onClick={async () => {
-                          for (const feild of fields) {
-                            if (
-                              feild.isRequired &&
-                              (!Object.prototype.hasOwnProperty.call(
-                                childValuseObj,
-                                feild.fieldname,
-                              ) ||
-                                childValuseObj[feild.fieldname]
-                                  ?.toString()
-                                  ?.trim() === "")
-                            ) {
-                              toast.error(
-                                `Value for ${feild.yourlabel} is missing or empty.`,
-                              );
-                              return;
-                            }
-                          }
-
-                          setNewState((prev) => {
-                            const newState = { ...prev };
-                            // Assuming you have the index of the item you want to update
-                            // For example, let's say the index is stored in childValuseObj.index
-                            const idToUpdate = childValuseObj.indexValue;
-
-                            newState[sectionData.tableName] = newState[
-                              sectionData.tableName
-                            ].map((record) => {
-                              // Check if the record's id matches the idToUpdate
-                              console.log(record.indexValue);
-                              if (record.indexValue === idToUpdate) {
-                                // Update the record
-                                return childValuseObj;
-                              }
-                              return record;
-                            });
-
-                            return newState;
-                          });
-
-                          setSubmitNewState((prev) => {
-                            const newState = { ...prev };
-                            // Assuming you have the index of the item you want to update
-                            // For example, let's say the index is stored in childValuseObj.index
-                            const idToUpdate = childValuseObj.indexValue;
-
-                            newState[sectionData.tableName] = newState[
-                              sectionData.tableName
-                            ].map((record) => {
-                              // Check if the record's id matches the idToUpdate
-
-                              if (record.indexValue === idToUpdate) {
-                                // Update the record
-                                return childValuseObj;
-                              }
-                              return record;
-                            });
-
-                            return newState;
-                          });
-
-                          try {
-                            if (
-                              sectionData.functionOnGridSave &&
-                              sectionData.functionOnGridSave != null
-                            ) {
-                              for (const fun of sectionData.functionOnGridSave
-                                .trim()
-                                .split(";") || []) {
-                                let updatedData = await onGridSaveFunctionCall(
-                                  fun,
-                                  newState,
-                                  formControlData,
-                                  childValuseObj,
-                                  setChildValuseObj,
-                                );
-                                if (updatedData?.alertShow == true) {
-                                  setParaText(updatedData.message);
-                                  setIsError(true);
-                                  setOpenModal((prev) => !prev);
-                                  setTypeofModal("onCheck");
-                                }
-                                if (updatedData) {
-                                  setChildValuseObj((prev) => {
-                                    return { ...prev, ...updatedData?.values };
-                                  });
-
-                                  setNewState((prev) => {
-                                    const newState = {
-                                      ...prev,
-                                      ...updatedData?.newState,
-                                    };
-
-                                    const idToUpdate =
-                                      childValuseObj.indexValue;
-
-                                    newState[sectionData.tableName] = newState[
-                                      sectionData.tableName
-                                    ].map((record) => {
-                                      console.log(record.indexValue);
-                                      if (record.indexValue === idToUpdate) {
-                                        return childValuseObj;
-                                      }
-                                      return record;
-                                    });
-
-                                    return newState;
-                                  });
-
-                                  setSubmitNewState((prev) => {
-                                    const newState = {
-                                      ...prev,
-                                      ...updatedData?.newState,
-                                    };
-
-                                    const idToUpdate =
-                                      childValuseObj.indexValue;
-
-                                    newState[sectionData.tableName] = newState[
-                                      sectionData.tableName
-                                    ].map((record) => {
-                                      if (record.indexValue === idToUpdate) {
-                                        return childValuseObj;
-                                      }
-                                      return record;
-                                    });
-
-                                    return newState;
-                                  });
-                                }
-                              }
-                            }
-                          } catch (error) {
-                            return toast.error(error.message);
-                          }
-
-                          setRenderedData(newState[sectionData.tableName]);
-                          toggleRow();
-                          copyFirstRowToAllRowsExceptContainer();
-                        }}
+                        onClick={saveExistingChildRow}
                       />
                     </div>
                   )}
@@ -1308,8 +1342,6 @@ export default function RowComponent({
           </TableCell>
         </TableRow>
       )}
-
-      {/* ADD & EDIT SUB CHILD DATA */}
       {subChildComponent &&
         subChildViewData.map((key, index) => {
           if (groupedData[key]?.isHideGrid) return;
@@ -1358,4 +1390,5 @@ export default function RowComponent({
         })}
     </React.Fragment>
   );
+
 }

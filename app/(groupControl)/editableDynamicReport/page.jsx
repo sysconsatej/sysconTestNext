@@ -129,9 +129,653 @@ export default function AddEditFormControll({ reportData }) {
   const [paginatedData, setPaginatedData] = useState([]);
   const [dataToGetSelectedRowData, setDataToGetSelectedRowData] = useState([]);
   const [finalPaginatedData, setFinalPaginatedData] = useState([]);
+  const [tableGroups, setTableGroups] = useState([]);
+  const [useMultipleTables, setUseMultipleTables] = useState(false);
   const [DateFormat, setDateFormat] = useState([]);
+  // Track last reconciled date typed/changed by user so selections can inherit it
+  const [bankRecLastDate, setBankRecLastDate] = useState(null);
+
+  const getTableRowId = (row) =>
+    row?.ID ??
+    row?.id ??
+    row?.Id ??
+    row?.rowIndex ??
+    row?.RowIndex ??
+    row?.index ??
+    null;
+
+  const toggleFirstTableRowSelection = (rowId) => {
+    if (rowId == null) return;
+    // Update only the selectedRow Set; effect updates selectedIds/fullRowJson
+    setselectedRow((prev) => {
+      const newSet = new Set(prev);
+      const adding = !newSet.has(rowId);
+      if (adding) newSet.add(rowId);
+      else newSet.delete(rowId);
+
+      // If we are adding a selection and we have a last reconciled date,
+      // apply it to the newly selected row so the date is propagated.
+      if (adding && bankRecLastDate) {
+        try {
+          updateTableGroupRowValue(0, rowId, {
+            reconciledDate: bankRecLastDate,
+          });
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      // If we are removing a selection, clear the reconciled date for that row
+      if (!adding) {
+        try {
+          updateTableGroupRowValue(0, rowId, { reconciledDate: null });
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      return newSet;
+    });
+  };
+
+  const toggleFirstTableSelectAll = (rowIds) => {
+    // Only update the selectedRow Set; the selection effect will update selectedIds
+    setselectedRow((prev) => {
+      const newSet = new Set(prev);
+      const allSelected = rowIds.every((id) => newSet.has(id));
+      if (allSelected) {
+        rowIds.forEach((id) => newSet.delete(id));
+      } else {
+        rowIds.forEach((id) => newSet.add(id));
+      }
+      return newSet;
+    });
+  };
+
   const [editableFields, setEditableFields] = useState([]);
   const [saveSpName, setSaveSpName] = useState(null);
+
+  const prettifyHeader = (key) => {
+    if (!key) return "";
+    return String(key)
+      .replace(/_/g, " ")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
+  function handleBankReconciliationSelectAll(rowIndexes, allSelected) {
+    // If header is deselecting (allSelected === true), clear reconciledDate for those rows
+    if (allSelected) {
+      rowIndexes.forEach((idx) => {
+        try {
+          updateTableGroupRowValue(0, idx, { reconciledDate: null });
+        } catch (e) {
+          // ignore
+        }
+      });
+      return;
+    }
+
+    // Try to determine a date to apply. Prefer the last date the user edited,
+    // otherwise look for an existing date among the target rows.
+    let dateToApply = bankRecLastDate;
+
+    if (!dateToApply) {
+      const dataSource = getSelectionDataSource();
+      const dateKeys = [
+        "reconciledDate",
+        "ReconciledDate",
+        "reconciled_date",
+        "reconcileDate",
+        "reconciledOn",
+        "reconciledon",
+      ];
+
+      for (const idx of rowIndexes) {
+        const found = (Array.isArray(dataSource) ? dataSource : []).find(
+          (r) => {
+            const rIdx =
+              r?.rowIndex ??
+              r?.RowIndex ??
+              r?.row_index ??
+              r?.index ??
+              r?.Id ??
+              r?.id ??
+              null;
+            return String(rIdx) === String(idx);
+          },
+        );
+
+        if (found) {
+          for (const k of dateKeys) {
+            if (found[k]) {
+              dateToApply = found[k];
+              break;
+            }
+          }
+        }
+
+        if (dateToApply) break;
+      }
+    }
+
+    if (!dateToApply) return;
+
+    // Apply the date to each requested row in the first table (groupId 0)
+    rowIndexes.forEach((idx) => {
+      updateTableGroupRowValue(0, idx, { reconciledDate: dateToApply });
+    });
+  }
+
+  const extractTablesFromResponse = (src) => {
+    if (!src) return [];
+
+    const createTable = (title, rows) => ({
+      title: title || "Table",
+      rows: Array.isArray(rows)
+        ? rows.filter((x) => x !== null && x !== undefined)
+        : [],
+    });
+
+    if (Array.isArray(src)) {
+      if (src.length === 0) return [];
+
+      if (src.every(Array.isArray)) {
+        return src.map((rows, index) =>
+          createTable(`Table ${index + 1}`, rows),
+        );
+      }
+
+      const groupableTables = [];
+      let foundNested = false;
+      for (const item of src) {
+        if (item && typeof item === "object" && !Array.isArray(item)) {
+          const keys = Object.keys(item);
+          if (keys.length === 1 && Array.isArray(item[keys[0]])) {
+            foundNested = true;
+            groupableTables.push(
+              createTable(
+                prettifyHeader(keys[0]) ||
+                  `Table ${groupableTables.length + 1}`,
+                item[keys[0]],
+              ),
+            );
+          }
+        }
+      }
+      if (foundNested) return groupableTables;
+
+      return [createTable("Table 1", src)];
+    }
+
+    if (src && typeof src === "object") {
+      const objectTables = Object.keys(src)
+        .filter((key) => Array.isArray(src[key]))
+        .map((key) => createTable(prettifyHeader(key), src[key]));
+
+      if (objectTables.length > 1) return objectTables;
+      if (objectTables.length === 1) return objectTables;
+
+      const rows =
+        Array.isArray(src.data) && src.data.length > 0
+          ? src.data
+          : Array.isArray(src.rows) && src.rows.length > 0
+            ? src.rows
+            : Array.isArray(src.result) && src.result.length > 0
+              ? src.result
+              : [];
+
+      if (rows.length) return [createTable("Table 1", rows)];
+    }
+
+    return [];
+  };
+
+  const initializeTableGroups = (tables) =>
+    tables.map((table, index) => {
+      const rows = table.rows.map((row, rowIndex) => ({
+        ...row,
+        rowIndex,
+      }));
+      const lastPage = Math.max(1, Math.ceil(rows.length / itemsPerPage));
+      return {
+        id: index,
+        title: table.title || `Table ${index + 1}`,
+        rows,
+        currentPage: 1,
+        lastPage,
+        displayedRows: rows.slice(0, itemsPerPage),
+      };
+    });
+
+  const handleTablePageChange = (tableId, page) => {
+    setTableGroups((prevGroups) => {
+      const newGroups = prevGroups.map((group) => {
+        if (group.id !== tableId) return group;
+        const startIndex = (page - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        return {
+          ...group,
+          currentPage: page,
+          displayedRows: group.rows.slice(startIndex, endIndex),
+        };
+      });
+      if (tableId === 0) {
+        const changed = newGroups.find((g) => g.id === 0);
+        if (changed) setDataToGetSelectedRowData(changed.rows);
+      }
+      return newGroups;
+    });
+  };
+
+  const formatCellValue = (value) => {
+    if (value === null || value === undefined) return "";
+    if (Array.isArray(value)) return value.join(", ");
+    if (typeof value === "object") return JSON.stringify(value);
+    return value;
+  };
+
+  const internalFieldNames = [
+    "groupSpans",
+    "startIndexForGroup",
+    "rowIndex",
+    "RowIndex",
+    "row_index",
+    "index",
+  ];
+
+  const getSelectionDataSource = () => {
+    if (useMultipleTables) {
+      return (
+        (Array.isArray(tableGroups) &&
+          tableGroups[0] &&
+          Array.isArray(tableGroups[0].rows) &&
+          tableGroups[0].rows) ||
+        (Array.isArray(dataToGetSelectedRowData)
+          ? dataToGetSelectedRowData
+          : []) ||
+        []
+      );
+    }
+    return (
+      (Array.isArray(finalPaginatedData) &&
+        finalPaginatedData.length &&
+        finalPaginatedData) ||
+      (Array.isArray(paginatedData) && paginatedData.length && paginatedData) ||
+      (Array.isArray(tableData) && tableData.length && tableData) ||
+      []
+    );
+  };
+
+  const updateRowsByStableKey = (rows, stableRowKey, value) => {
+    if (!Array.isArray(rows)) return rows;
+
+    return rows.map((row, idx) => {
+      const rowKey =
+        row?.rowIndex ??
+        row?.RowIndex ??
+        row?.row_index ??
+        row?.index ??
+        row?.Id ??
+        row?.id ??
+        row?.ID ??
+        idx;
+
+      if (String(rowKey) !== String(stableRowKey)) return row;
+
+      const normalizedValue =
+        value && typeof value === "object" && !Array.isArray(value)
+          ? value
+          : { [stableRowKey]: value };
+
+      return { ...row, ...normalizedValue };
+    });
+  };
+
+  const updateTableGroupRowValue = (groupId, stableRowKey, value) => {
+    setTableGroups((prevGroups) =>
+      prevGroups.map((group) => {
+        if (group.id !== groupId) return group;
+
+        return {
+          ...group,
+          rows: updateRowsByStableKey(group.rows, stableRowKey, value),
+          displayedRows: updateRowsByStableKey(
+            group.displayedRows,
+            stableRowKey,
+            value,
+          ),
+        };
+      }),
+    );
+
+    setFinalPaginatedData((prev) =>
+      updateRowsByStableKey(prev, stableRowKey, value),
+    );
+    setDataToGetSelectedRowData((prev) =>
+      updateRowsByStableKey(prev, stableRowKey, value),
+    );
+    setPaginatedData((prev) =>
+      updateRowsByStableKey(prev, stableRowKey, value),
+    );
+    setTableData((prev) => updateRowsByStableKey(prev, stableRowKey, value));
+    setFilteredSortData((prev) =>
+      updateRowsByStableKey(prev, stableRowKey, value),
+    );
+    // If the update contains a reconciled date, remember it so future selections inherit it
+    try {
+      const dateKeys = [
+        "reconciledDate",
+        "ReconciledDate",
+        "reconciled_date",
+        "reconcileDate",
+        "reconciledOn",
+        "reconciledon",
+      ];
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        for (const k of dateKeys) {
+          if (value[k]) {
+            setBankRecLastDate(value[k]);
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const renderMultiTableGroups = () => {
+    if (!tableGroups.length) return null;
+
+    return tableGroups.map((group) => {
+      const headers = group.rows.length
+        ? Object.keys(group.rows[0]).filter((key) => {
+            const internal = [
+              "groupSpans",
+              "startIndexForGroup",
+              "rowIndex",
+              "RowIndex",
+              "row_index",
+              "index",
+              "id",
+              "Id",
+              "ID",
+            ];
+            return !internal.includes(key);
+          })
+        : [];
+      const isFirstTable = group.id === 0;
+      const firstTableRowIndexes = isFirstTable
+        ? group.displayedRows.map((row, idx) =>
+            row?.rowIndex != null ? row.rowIndex : idx,
+          )
+        : [];
+      const allSelected =
+        isFirstTable &&
+        firstTableRowIndexes.length > 0 &&
+        firstTableRowIndexes.every((idx) => selectedRow.has(idx));
+      const tableHeaders = isFirstTable ? ["__select__", ...headers] : headers;
+
+      const multiTablePaperStyles = {
+        width: "100%",
+        overflow: "visible",
+        position: "relative",
+        backgroundColor: "var(--page-bg-color)",
+      };
+      const multiTableContainerStyles = {
+        height: "auto",
+        maxHeight: "calc(65vh)",
+        overflow: "auto",
+        backgroundColor: "var(--tableRowBg)",
+      };
+
+      return (
+        <Paper
+          key={`multi-table-${group.id}`}
+          sx={{
+            ...multiTablePaperStyles,
+            marginBottom: "24px",
+          }}
+        >
+          <TableContainer
+            className={`${styles.thinScrollBar} ${styles.tableContainer} `}
+            sx={{
+              ...multiTableContainerStyles,
+              position: "relative !important",
+            }}
+          >
+            <Table
+              stickyHeader
+              aria-label={`table-${group.id}`}
+              style={{
+                border: "1px solid grey",
+                borderCollapse: "collapse",
+                borderSpacing: 0,
+              }}
+              className={`min-w-full text-sm overflow-auto ${styles.stripedRow} ${styles.hideScrollbar} ${styles.thinScrollBar}`}
+            >
+              <TableHead
+                className={`${styles.inputTextColor}`}
+                sx={{ ...displaytableHeadStyles }}
+              >
+                <TableRow className={`${styles.tblHead}`}>
+                  {tableHeaders.map((field) => (
+                    <TableCell
+                      key={field}
+                      style={{
+                        minWidth:
+                          isFirstTable && field === "__select__" ? 60 : 120,
+                        width:
+                          isFirstTable && field === "__select__" ? 60 : 150,
+                      }}
+                      className={`${styles.cellHeading} ${styles.tableCell} whitespace-nowrap text-xs`}
+                    >
+                      {field === "__select__" ? (
+                        <input
+                          type="checkbox"
+                          checked={allSelected}
+                          onChange={() => {
+                            toggleFirstTableSelectAll(firstTableRowIndexes);
+
+                            if (menuName === "Bank Reconciliation") {
+                              handleBankReconciliationSelectAll(
+                                firstTableRowIndexes,
+                                allSelected,
+                              );
+                            }
+                          }}
+                          aria-label="Select all rows"
+                        />
+                      ) : (
+                        prettifyHeader(field)
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody
+                id={`bodyRow-${group.id}`}
+                style={{ overflow: "auto", border: "1px solid grey" }}
+                className="text-gray-900 dark:text-white"
+              >
+                {group.displayedRows.length > 0 ? (
+                  group.displayedRows.map((row, rowIndex) => {
+                    const rowKey = `${group.id}-${row?.rowIndex ?? rowIndex}`;
+                    const rowIndexValue =
+                      row?.rowIndex != null ? row.rowIndex : rowIndex;
+                    const isSelected = selectedRow.has(rowIndexValue);
+
+                    return (
+                      <TableRow
+                        key={rowKey}
+                        style={{ border: "1px solid grey" }}
+                        className={`${styles.tableCellHoverEffect} ${styles.hh} rounded-lg p-0 opacity-1 z-0`}
+                        sx={{
+                          ...(toggledThemeValue
+                            ? displayTableRowStylesNoHover
+                            : displaytableRowStyles),
+                        }}
+                      >
+                        {isFirstTable && (
+                          <TableCell
+                            style={{
+                              border: "1px solid grey",
+                              padding: "0px 5px",
+                              width: 60,
+                            }}
+                            className="whitespace-nowrap text-xs text-gray-900 dark:text-white"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() =>
+                                toggleFirstTableRowSelection(rowIndexValue)
+                              }
+                            />
+                          </TableCell>
+                        )}
+                        {headers.map((field) => {
+                          const editableField = editableFields.find(
+                            (g) => g.fieldname === field,
+                          );
+
+                          return (
+                            <TableCell
+                              key={`${field}-${rowKey}`}
+                              style={{
+                                border: "1px solid grey",
+                                padding: "0px 5px",
+                              }}
+                              className="whitespace-nowrap text-xs text-gray-900 dark:text-white"
+                            >
+                              {editableField ? (
+                                <CustomeInputFields
+                                  inputFieldData={[editableField]}
+                                  values={row}
+                                  onValuesChange={(value) =>
+                                    updateTableGroupRowValue(
+                                      group.id,
+                                      rowIndexValue,
+                                      value,
+                                    )
+                                  }
+                                  onKeyDown={handleChangeData}
+                                />
+                              ) : (
+                                formatCellValue(row[field])
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow
+                    style={{ border: "1px solid grey" }}
+                    className={`${styles.tableCellHoverEffect} ${styles.hh} rounded-lg p-0 opacity-1 z-0`}
+                    sx={{
+                      ...(toggledThemeValue
+                        ? displayTableRowStylesNoHover
+                        : displaytableRowStyles),
+                    }}
+                  >
+                    <TableCell colSpan={tableHeaders.length || 1}>
+                      No rows found for this table.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <div className="flex items-center justify-between pt-2 px-4 text-black">
+            <div className="flex items-end ml-auto">
+              {/* Pagination Buttons */}
+              <div className="mr-5">
+                <Stack>
+                  <Pagination
+                    count={group.lastPage}
+                    page={group.currentPage}
+                    showFirstButton
+                    showLastButton
+                    sx={{
+                      ...paginationStyle,
+                    }}
+                    onChange={(event, value) => {
+                      handleTablePageChange(group.id, value);
+                    }}
+                    renderItem={(item) => {
+                      const { type } = item;
+                      const isDisabled =
+                        ((type === "first" || type === "previous") &&
+                          group.currentPage === 1) ||
+                        ((type === "last" || type === "next") &&
+                          group.currentPage === group.lastPage);
+                      return (
+                        <PaginationItem
+                          {...item}
+                          className={`${paginationStyles.txtColorDark}`}
+                          disabled={isDisabled}
+                          sx={{
+                            fontSize: 10,
+                            height: 21,
+                            width: 21,
+                            minWidth: 0,
+                            color: isDisabled
+                              ? "grey"
+                              : "var(--text-color-dark)",
+                          }}
+                        />
+                      );
+                    }}
+                  />
+                </Stack>
+              </div>
+              <input
+                type="number"
+                value={itemsPerPage}
+                onChange={(e) => {
+                  const newItemsPerPage = parseInt(e.target.value, 10);
+                  if (newItemsPerPage > 0) {
+                    setItemsPerPage(newItemsPerPage);
+                    setCurrentPage(1);
+                  }
+                }}
+                className={`border ${styles.txtColorDark} ${styles.pageBackground} border-gray-300 rounded-md p-2 h-[17px] w-14 text-[10px] mr-[15px] outline-gray-300 outline-0`}
+              />
+              <p className={`text-[10px] ${styles.txtColorDark}`}>
+                {group.currentPage} of {group.lastPage} Pages
+              </p>
+            </div>
+          </div>
+        </Paper>
+      );
+    });
+  };
+
+  useEffect(() => {
+    if (!useMultipleTables) return;
+    setTableGroups((prevGroups) =>
+      prevGroups.map((group) => {
+        const lastPage = Math.max(
+          1,
+          Math.ceil(group.rows.length / itemsPerPage),
+        );
+        const currentPage = Math.min(group.currentPage, lastPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        return {
+          ...group,
+          currentPage,
+          lastPage,
+          displayedRows: group.rows.slice(startIndex, endIndex),
+        };
+      }),
+    );
+  }, [itemsPerPage, useMultipleTables]);
   const [generatedFileName, setGeneratedFileName] = useState(null);
   const [clearFlag, setClearFlag] = useState({
     isClear: false,
@@ -192,7 +836,8 @@ export default function AddEditFormControll({ reportData }) {
   const [qrItems, setQrItems] = useState([]);
   const [qrLoading, setQrLoading] = useState(false);
   const [codeType, setCodeType] = useState("Q"); // "Q" = QR, "B" = Barcode
-  console.log("selectedRowFullData", selectedRowFullData);
+  console.log("ak setselectedRow", selectedRow);
+  console.log("ak 1 setSelectedIds", selectedIds);
 
   useEffect(() => {
     if (menuType == "C") {
@@ -208,8 +853,16 @@ export default function AddEditFormControll({ reportData }) {
       return;
     }
 
+    console.log("[selection effect] selectedRow (raw):", selectedRow);
+    // Use the unified selection data source so rowIndex keys align with what was rendered
+    const selectionSource = getSelectionDataSource();
+    console.log(
+      "[selection effect] selectionSource length:",
+      Array.isArray(selectionSource) ? selectionSource.length : 0,
+    );
+
     const byRowIndex = new Map(
-      (Array.isArray(dataToGetSelectedRowData) ? dataToGetSelectedRowData : [])
+      (Array.isArray(selectionSource) ? selectionSource : [])
         .map((rec) => {
           // main key
           const key =
@@ -227,17 +880,59 @@ export default function AddEditFormControll({ reportData }) {
       selectedRow?.values ? selectedRow.values() : selectedRow,
     );
 
+    console.log("[selection effect] rowsArray:", rowsArray);
+    console.log("[selection effect] byRowIndex size:", byRowIndex.size);
+
+    // Use a tolerant finder for selected identifiers instead of pruning the set.
+    // This will try several strategies (rowIndex map, +/-1 heuristics, id fields, positional)
+    const findRecordForSelected = (sel) => {
+      if (!Array.isArray(selectionSource)) return null;
+      const candidates = selectionSource;
+      const str = String(sel);
+
+      // 1) direct map lookup by rowIndex-like key
+      const direct = byRowIndex.get(str);
+      if (direct) return direct;
+
+      // 2) numeric heuristics: try exact, +/-1 positional keys
+      const n = Number(sel);
+      if (!Number.isNaN(n)) {
+        const found = candidates.find((r, i) => {
+          const key = String(
+            r?.rowIndex ?? r?.RowIndex ?? r?.row_index ?? r?.index ?? i,
+          );
+          return (
+            key === String(n) || key === String(n - 1) || key === String(n + 1)
+          );
+        });
+        if (found) return found;
+      }
+
+      // 3) match against ID fields
+      const byId = candidates.find((r) => {
+        const id = r?.ID ?? r?.id ?? r?.Id;
+        return id != null && String(id) === str;
+      });
+      if (byId) return byId;
+
+      // 4) fallback to positional index
+      if (!Number.isNaN(n) && candidates[n]) return candidates[n];
+
+      return null;
+    };
+
     // Selected IDs
     if (rowsArray.length > 0) {
       const ids = rowsArray
         .map((row) => {
           const rowIndex = row?.value ?? row; // handles Set values() or raw number
-          // 1) Prefer lookup by rowIndex
-          let record = byRowIndex.get(String(rowIndex));
-          // 2) Fallback to positional index if not found
-          if (!record && Array.isArray(dataToGetSelectedRowData)) {
-            record = dataToGetSelectedRowData[Number(rowIndex)];
-          }
+          console.log(
+            "[selection effect] resolving rowIndex:",
+            rowIndex,
+            "-> byRowIndex.has:",
+            byRowIndex.has(String(rowIndex)),
+          );
+          const record = findRecordForSelected(rowIndex);
           const id =
             record?.ID ?? record?.id ?? record?.Id ?? record?.rowIndex ?? null;
           return id != null ? { id } : null;
@@ -253,10 +948,7 @@ export default function AddEditFormControll({ reportData }) {
       const fullSelectedRowJson = rowsArray
         .map((row) => {
           const rowIndex = row?.value ?? row;
-          let record = byRowIndex.get(String(rowIndex));
-          if (!record && Array.isArray(dataToGetSelectedRowData)) {
-            record = dataToGetSelectedRowData[Number(rowIndex)];
-          }
+          const record = findRecordForSelected(rowIndex);
           return record ? { record } : null;
         })
         .filter(Boolean);
@@ -605,7 +1297,17 @@ export default function AddEditFormControll({ reportData }) {
 
               if (data.length > 0) {
                 // Create headers from the keys of the first item in the array
-                const headers = Object.keys(data[0]);
+                const internal = [
+                  "groupSpans",
+                  "startIndexForGroup",
+                  "rowIndex",
+                  "RowIndex",
+                  "row_index",
+                  "index",
+                ];
+                const headers = Object.keys(data[0]).filter(
+                  (k) => !internal.includes(k),
+                );
                 worksheet.addRow(headers); // Adding header row
 
                 // Add data rows
@@ -677,13 +1379,32 @@ export default function AddEditFormControll({ reportData }) {
               if (data.length > 0) {
                 if (dataSetIndex === 0 && index === 0) {
                   // Create headers from the keys of the first item in the array
-                  const headers = Object.keys(data[0]).join(",");
+                  const internal = [
+                    "groupSpans",
+                    "startIndexForGroup",
+                    "rowIndex",
+                    "RowIndex",
+                    "row_index",
+                    "index",
+                  ];
+                  const headers = Object.keys(data[0])
+                    .filter((k) => !internal.includes(k))
+                    .join(",");
                   csvContent += headers + "\r\n"; // Adding header row
                 }
 
                 // Add data rows
                 data.forEach((item) => {
+                  const internal = [
+                    "groupSpans",
+                    "startIndexForGroup",
+                    "rowIndex",
+                    "RowIndex",
+                    "row_index",
+                    "index",
+                  ];
                   const row = Object.keys(data[0])
+                    .filter((k) => !internal.includes(k))
                     .map((header) => {
                       const value = item[header];
                       // Check if the value is an object and handle it appropriately
@@ -830,21 +1551,58 @@ export default function AddEditFormControll({ reportData }) {
             spName,
           );
           if (responseData && responseData.success) {
+            const tablesFromResponse = extractTablesFromResponse(
+              responseData.data,
+            );
+            const isMultiTable = tablesFromResponse.length > 1;
+
             const processedData = preprocessDataForGrouping(
               responseData.data,
               grid,
               groupingDepth,
             );
 
+            setUseMultipleTables(isMultiTable);
+            if (isMultiTable) {
+              setTableGroups(initializeTableGroups(tablesFromResponse));
+              // set the data source used by the single-table selection pipeline
+              const firstTableRows =
+                (tablesFromResponse &&
+                  tablesFromResponse[0] &&
+                  tablesFromResponse[0].rows) ||
+                (tablesFromResponse &&
+                  tablesFromResponse[0] &&
+                  tablesFromResponse[0].data) ||
+                [];
+              setDataToGetSelectedRowData(firstTableRows);
+              // clear any existing paginated/table states to avoid cross-contamination
+              setPaginatedData([]);
+              setTableData([]);
+              setFinalPaginatedData([]);
+              setFilteredSortData([]);
+              // clear selections when switching to multi-table
+              setSelectedIds([]);
+              setselectedRow(new Set());
+            } else {
+              setTableGroups([]);
+            }
+
             if (isDataFromStoredProcedure) {
               if (processedData.length > 0) {
                 const keys = Object.keys(processedData[0]);
 
                 const fieldNamesFormattedArray = keys
-                  .filter(
-                    (key) =>
-                      key !== "groupSpans" && key !== "startIndexForGroup",
-                  )
+                  .filter((key) => {
+                    const internal = [
+                      "groupSpans",
+                      "startIndexForGroup",
+                      "rowIndex",
+                      "RowIndex",
+                      "row_index",
+                      "index",
+                    ];
+                    return !internal.includes(key);
+                  })
                   .map((key) => ({
                     fieldname: key,
                     label: key,
@@ -1424,6 +2182,61 @@ export default function AddEditFormControll({ reportData }) {
       try {
         fileName = safeFileName(fileName);
 
+        // If multiple tables mode is active, export each table group to its own worksheet
+        if (
+          useMultipleTables &&
+          Array.isArray(tableGroups) &&
+          tableGroups.length > 0
+        ) {
+          const internal = internalFieldNames || [
+            "groupSpans",
+            "startIndexForGroup",
+            "rowIndex",
+            "RowIndex",
+            "row_index",
+            "index",
+          ];
+
+          tableGroups.forEach((group, gIndex) => {
+            const sheetName = getUniqueWorksheetName(
+              group.title || `Table ${gIndex + 1}`,
+            );
+            const worksheet = workbook.addWorksheet(sheetName);
+
+            const rows = Array.isArray(group.rows) ? group.rows : [];
+            const headers = rows.length
+              ? Object.keys(rows[0]).filter((k) => !internal.includes(k))
+              : [];
+
+            // add header row
+            worksheet.addRow(headers.map((h) => prettifyHeader(h)));
+
+            // add data rows
+            rows.forEach((r) => {
+              const row = headers.map((h) => safeExcelValue(r[h], h));
+              worksheet.addRow(row);
+            });
+
+            // style and date formatting
+            if (worksheet.rowCount > 0) {
+              styleHeaderRow(worksheet.getRow(1));
+              applyDateColumnTextFormat(
+                worksheet,
+                headers,
+                2,
+                worksheet.rowCount,
+              );
+              worksheet.eachRow((row, rowNumber) => {
+                if (rowNumber > 1) styleNormalRow(row);
+              });
+            }
+          });
+
+          await downloadWorkbook();
+          toast.success("Excel file exported successfully!");
+          return;
+        }
+
         if (isDefaultDataShow === false && outputFileFormat === "Excel") {
           let fetchData = null;
 
@@ -1744,6 +2557,7 @@ export default function AddEditFormControll({ reportData }) {
         }
       }
     },
+
     handleExportToPDF: async () => {
       if (!reportCalled) {
         toast.error("Please generate report first");
@@ -2080,10 +2894,32 @@ export default function AddEditFormControll({ reportData }) {
         //   data: selectedRows,
         // };
         if (menuName === "Update Nominated Area" && selectedIds?.length > 0) {
-          const selectedIdsSet = new Set(selectedIds.map((obj) => obj.id));
-          const selectedRows = finalPaginatedData.filter((row) =>
-            selectedIdsSet.has(row.id),
+          const selectedIdsNormalized = new Set(
+            selectedIds.map((obj) => String(obj.id)),
           );
+          const dataSource = getSelectionDataSource();
+          console.log("selection debug Update Nominated Area", {
+            selectedIds,
+            selectedIdsNormalized: Array.from(selectedIdsNormalized),
+            dataSourceLen: dataSource.length,
+            sampleRows: dataSource.slice(0, 3).map((r) => ({
+              id: r?.id,
+              ID: r?.ID,
+              Id: r?.Id,
+              rowIndex: r?.rowIndex,
+              RowIndex: r?.RowIndex,
+            })),
+          });
+          const selectedRows = dataSource.filter((row) => {
+            const key =
+              row?.id ??
+              row?.ID ??
+              row?.Id ??
+              row?.rowIndex ??
+              row?.RowIndex ??
+              null;
+            return key != null && selectedIdsNormalized.has(String(key));
+          });
           console.log("Selected Rows:", selectedRows);
           let response = await saveEditedReport({
             json: selectedRows,
@@ -2097,13 +2933,45 @@ export default function AddEditFormControll({ reportData }) {
           }
         }
         if (menuName === "Bank Reconciliation" && selectedIds?.length > 0) {
-          const selectedIdsSet = new Set(selectedIds.map((obj) => obj.id));
-          const selectedRows = finalPaginatedData.filter((row) =>
-            selectedIdsSet.has(row?.id),
+          const selectedIdsNormalized = new Set(
+            selectedIds.map((obj) => String(obj.id)),
           );
+          const dataSource = getSelectionDataSource();
+          console.log("selection debug Bank Reconciliation", {
+            selectedIds,
+            selectedIdsNormalized: Array.from(selectedIdsNormalized),
+            dataSourceLen: dataSource.length,
+            sampleRows: dataSource.slice(0, 3).map((r) => ({
+              id: r?.id,
+              ID: r?.ID,
+              Id: r?.Id,
+              rowIndex: r?.rowIndex,
+              RowIndex: r?.RowIndex,
+            })),
+          });
+          const selectedRows = dataSource.filter((row) => {
+            const key =
+              row?.id ??
+              row?.ID ??
+              row?.Id ??
+              row?.rowIndex ??
+              row?.RowIndex ??
+              null;
+            return key != null && selectedIdsNormalized.has(String(key));
+          });
+          const updatedCondition = {
+            ...filterConditionWithoutDropdowns,
+            companyId,
+            branchId,
+            financialYear,
+            userId,
+            clientId,
+            menuId: search,
+            data: selectedRows,
+          };
           console.log("Selected Rows:", selectedRows);
           let response = await saveEditedReport({
-            json: selectedRows,
+            json: updatedCondition,
             spName: saveSpName,
           });
           console.log("selectedRows", selectedRows);
@@ -2451,7 +3319,17 @@ export default function AddEditFormControll({ reportData }) {
             }
 
             // 3. Build CSV string
-            const headers = Object.keys(data[0]);
+            const internal = [
+              "groupSpans",
+              "startIndexForGroup",
+              "rowIndex",
+              "RowIndex",
+              "row_index",
+              "index",
+            ];
+            const headers = Object.keys(data[0]).filter(
+              (k) => !internal.includes(k),
+            );
             // helper to escape & wrap values
             const escape = (val) =>
               `"${String(val ?? "").replace(/"/g, '""')}"`;
@@ -2717,7 +3595,8 @@ export default function AddEditFormControll({ reportData }) {
           }
           //const cleanedJson = removeRecordWrapper(fullRowJson);
           console.log("finalData", finalPaginatedData);
-          const matchingRows = finalPaginatedData.filter((row) =>
+          const dataSource = getSelectionDataSource();
+          const matchingRows = dataSource.filter((row) =>
             selectedIds.some((item) => item.id === row.rowIndex),
           );
           const filterConditionWithoutDropdowns =
@@ -2748,11 +3627,12 @@ export default function AddEditFormControll({ reportData }) {
           }
           toast.error(response.data[0].message);
           setEditableErrors(true);
-          setEditableErrorsData(response.data[0].errors);
+          setEditableErrorsData(response?.data[0]?.errors || response?.data[0]);
         } else {
           const getRowId = (row) => row?.Id ?? row?.id ?? row?.ID;
 
-          const updatedSelectedRows = finalPaginatedData.filter((row) =>
+          const dataSource = getSelectionDataSource();
+          const updatedSelectedRows = dataSource.filter((row) =>
             selectedRows.some(
               (selected) => getRowId(selected) === getRowId(row),
             ),
@@ -2799,7 +3679,7 @@ export default function AddEditFormControll({ reportData }) {
           }
           toast.error(response.data[0].message);
           setEditableErrors(true);
-          setEditableErrorsData(response.data[0].errors);
+          setEditableErrorsData(response?.data[0]?.errors || response?.data[0]);
         }
       } catch (error) {
         console.error("Error saving edited data:", error);
@@ -3863,9 +4743,25 @@ export default function AddEditFormControll({ reportData }) {
       .replace(/^./, (s) => s.toUpperCase()); // Capitalize first letter
   };
 
+  const totalRowsForPagination =
+    (Array.isArray(paginatedData) && paginatedData.length) ||
+    (Array.isArray(tableData) && tableData.length) ||
+    0;
+
   useEffect(() => {
-    setLastPagePagination(Math.ceil(paginatedData.length / itemsPerPage) || 1);
-  }, [paginatedData, itemsPerPage, tableData.length]);
+    const pageCount =
+      itemsPerPage > 0
+        ? Math.max(1, Math.ceil(totalRowsForPagination / itemsPerPage))
+        : 1;
+    setLastPagePagination(pageCount);
+  }, [totalRowsForPagination, itemsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > lastPagePagination) {
+      setCurrentPage(lastPagePagination);
+    }
+  }, [lastPagePagination, currentPage]);
+
   const ReportData = async () => {
     const storedUserData = localStorage.getItem("userData");
     if (storedUserData) {
@@ -4243,10 +5139,17 @@ export default function AddEditFormControll({ reportData }) {
                 const keys = Object.keys(processedData[0]);
 
                 const fieldNamesFormattedArray = keys
-                  .filter(
-                    (key) =>
-                      key !== "groupSpans" && key !== "startIndexForGroup",
-                  )
+                  .filter((key) => {
+                    const internal = [
+                      "groupSpans",
+                      "startIndexForGroup",
+                      "rowIndex",
+                      "RowIndex",
+                      "row_index",
+                      "index",
+                    ];
+                    return !internal.includes(key);
+                  })
                   .map((key) => ({
                     fieldname: key,
                     label: key,
@@ -4301,12 +5204,26 @@ export default function AddEditFormControll({ reportData }) {
                 }
               }
               setGrid(grid);
-              const header = fetchGrid.map((gridItem) => ({
-                fieldname: gridItem.fieldname,
-                label: gridItem.label,
-                minWidth: gridItem.minWidth || 100,
-                width: gridItem.width || 150,
-              }));
+              const internalFieldNames = [
+                "groupSpans",
+                "startIndexForGroup",
+                "rowIndex",
+                "RowIndex",
+                "row_index",
+                "index",
+              ];
+              const header = fetchGrid
+                .filter(
+                  (gridItem) =>
+                    gridItem?.fieldname &&
+                    !internalFieldNames.includes(gridItem.fieldname),
+                )
+                .map((gridItem) => ({
+                  fieldname: gridItem.fieldname,
+                  label: gridItem.label,
+                  minWidth: gridItem.minWidth || 100,
+                  width: gridItem.width || 150,
+                }));
               console.log("header =>>", header);
               setGridHeader(header);
             }
@@ -4411,7 +5328,6 @@ export default function AddEditFormControll({ reportData }) {
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
   const currentItems = paginatedData?.slice(firstItemIndex, lastItemIndex);
-  const lastPage = Math.ceil(tableData.length / itemsPerPage);
 
   // const handlePageChange = (page) => {
   //   setCurrentPage(page);
@@ -4534,10 +5450,11 @@ export default function AddEditFormControll({ reportData }) {
   let rowColors = {};
   const renderTableData = (data, rowIndex, colorCode, indexOfRow) => {
     const getRowId = (row) => row?.Id ?? row?.id ?? row?.ID;
-    const stableRowKey = getRowId(data) ?? data?.rowIndex ?? indexOfRow ?? rowIndex;
+    const stableRowKey =
+      data?.rowIndex ?? indexOfRow ?? getRowId(data) ?? rowIndex;
     const updateRowsByStableKey = (rows, value) =>
       rows.map((row, idx) => {
-        const rowKey = getRowId(row) ?? row?.rowIndex ?? idx;
+        const rowKey = row?.rowIndex ?? getRowId(row) ?? idx;
         return String(rowKey) === String(stableRowKey)
           ? { ...row, ...value }
           : row;
@@ -5372,6 +6289,14 @@ export default function AddEditFormControll({ reportData }) {
                     isDefaultDataShow &&
                     outputFileType &&
                     menuType === "D" &&
+                    useMultipleTables &&
+                    renderMultiTableGroups()}
+
+                  {editableErrors === false &&
+                    isDefaultDataShow &&
+                    outputFileType &&
+                    menuType === "D" &&
+                    !useMultipleTables &&
                     (isLoading ? (
                       <div
                         style={{
@@ -5619,10 +6544,10 @@ export default function AddEditFormControll({ reportData }) {
                               {finalPaginatedData.map((data, rowIndex) => (
                                 <TableRow
                                   key={
+                                    data?.rowIndex ??
                                     data?.Id ??
                                     data?.id ??
                                     data?.ID ??
-                                    data?.rowIndex ??
                                     rowIndex
                                   }
                                   ref={(el) => {
@@ -5714,6 +6639,14 @@ export default function AddEditFormControll({ reportData }) {
                     isDefaultDataShow &&
                     outputFileType &&
                     menuType === "Q" &&
+                    useMultipleTables &&
+                    renderMultiTableGroups()}
+
+                  {editableErrors === false &&
+                    isDefaultDataShow &&
+                    outputFileType &&
+                    menuType === "Q" &&
+                    !useMultipleTables &&
                     (isLoading ? (
                       <div
                         style={{
@@ -5961,10 +6894,10 @@ export default function AddEditFormControll({ reportData }) {
                               {finalPaginatedData.map((data, rowIndex) => (
                                 <TableRow
                                   key={
+                                    data?.rowIndex ??
                                     data?.Id ??
                                     data?.id ??
                                     data?.ID ??
-                                    data?.rowIndex ??
                                     rowIndex
                                   }
                                   ref={(el) => {
@@ -6117,66 +7050,70 @@ export default function AddEditFormControll({ reportData }) {
               );
             })}
           </div>
-          <div className="flex items-center justify-between pt-2 px-4 text-black">
-            <div className="flex items-end ml-auto">
-              {/* Pagination Buttons */}
-              <div className="mr-5">
-                <Stack>
-                  <Pagination
-                    count={lastPagePagination}
-                    showFirstButton
-                    showLastButton
-                    sx={{
-                      ...paginationStyle,
-                    }}
-                    onChange={(event, value) => {
-                      handleChange(value);
-                      handleSortPagination(sortingFieldName, value);
-                    }}
-                    renderItem={(item) => {
-                      const { type } = item;
-                      // Check if the button should be disabled
-                      const isDisabled =
-                        ((type === "first" || type === "previous") &&
-                          currentItems === 1) ||
-                        ((type === "last" || type === "next") &&
-                          currentItems === lastPage);
-                      return (
-                        <PaginationItem
-                          {...item}
-                          className={`${paginationStyles.txtColorDark}`}
-                          sx={{
-                            fontSize: 10,
-                            height: 21,
-                            width: 21,
-                            minWidth: 0,
-                            color: isDisabled
-                              ? "grey"
-                              : "var(--text-color-dark)", // Change color if disabled
-                          }}
-                        />
-                      );
-                    }}
-                  />
-                </Stack>
+          {useMultipleTables === false && (
+            <div className="flex items-center justify-between pt-2 px-4 text-black">
+              <div className="flex items-end ml-auto">
+                {/* Pagination Buttons */}
+                <div className="mr-5">
+                  <Stack>
+                    <Pagination
+                      count={lastPagePagination}
+                      page={currentPage}
+                      showFirstButton
+                      showLastButton
+                      sx={{
+                        ...paginationStyle,
+                      }}
+                      onChange={(event, value) => {
+                        handleChange(value);
+                        handleSortPagination(sortingFieldName, value);
+                      }}
+                      renderItem={(item) => {
+                        const { type } = item;
+                        // Check if the button should be disabled
+                        const isDisabled =
+                          ((type === "first" || type === "previous") &&
+                            currentPage === 1) ||
+                          ((type === "last" || type === "next") &&
+                            currentPage === lastPagePagination);
+                        return (
+                          <PaginationItem
+                            {...item}
+                            className={`${paginationStyles.txtColorDark}`}
+                            disabled={isDisabled}
+                            sx={{
+                              fontSize: 10,
+                              height: 21,
+                              width: 21,
+                              minWidth: 0,
+                              color: isDisabled
+                                ? "grey"
+                                : "var(--text-color-dark)", // Change color if disabled
+                            }}
+                          />
+                        );
+                      }}
+                    />
+                  </Stack>
+                </div>
+                <input
+                  type="number"
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    const newItemsPerPage = parseInt(e.target.value, 10);
+                    if (newItemsPerPage > 0) {
+                      setItemsPerPage(newItemsPerPage);
+                      setCurrentPage(1);
+                    }
+                  }}
+                  className={`border ${styles.txtColorDark} ${styles.pageBackground} border-gray-300 rounded-md p-2 h-[17px] w-14 text-[10px] mr-[15px] outline-gray-300 outline-0`}
+                />
+                <p className={`text-[10px] ${styles.txtColorDark}`}>
+                  {currentPage} of {lastPagePagination} Pages
+                </p>
               </div>
-              <input
-                type="number"
-                value={itemsPerPage}
-                onChange={(e) => {
-                  const newItemsPerPage = parseInt(e.target.value, 10);
-                  if (newItemsPerPage > 0) {
-                    setItemsPerPage(newItemsPerPage);
-                    setCurrentPage(1);
-                  }
-                }}
-                className={`border ${styles.txtColorDark} ${styles.pageBackground} border-gray-300 rounded-md p-2 h-[17px] w-14 text-[10px] mr-[15px] outline-gray-300 outline-0`}
-              />
-              <p className={`text-[10px] ${styles.txtColorDark}`}>
-                {currentPage} of {lastPagePagination} Pages
-              </p>
             </div>
-          </div>
+          )}
         </form>
         {/* <CustomeModal /> */}
         {openModal && (
